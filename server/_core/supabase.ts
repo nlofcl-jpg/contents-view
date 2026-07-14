@@ -10,9 +10,11 @@ type SupabaseUser = {
   user_metadata?: Record<string, unknown> | null;
 };
 
+const supabaseAuthKey = ENV.supabaseServiceRoleKey || ENV.supabaseAnonKey;
+
 const supabaseAuthClient =
-  ENV.supabaseUrl && ENV.supabaseAnonKey
-    ? createClient(ENV.supabaseUrl, ENV.supabaseAnonKey, {
+  ENV.supabaseUrl && supabaseAuthKey
+    ? createClient(ENV.supabaseUrl, supabaseAuthKey, {
         auth: {
           persistSession: false,
           autoRefreshToken: false,

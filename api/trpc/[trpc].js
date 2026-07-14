@@ -689,7 +689,8 @@ var sdk = new SDKServer();
 
 // server/_core/supabase.ts
 import { createClient } from "@supabase/supabase-js";
-var supabaseAuthClient = ENV.supabaseUrl && ENV.supabaseAnonKey ? createClient(ENV.supabaseUrl, ENV.supabaseAnonKey, {
+var supabaseAuthKey = ENV.supabaseServiceRoleKey || ENV.supabaseAnonKey;
+var supabaseAuthClient = ENV.supabaseUrl && supabaseAuthKey ? createClient(ENV.supabaseUrl, supabaseAuthKey, {
   auth: {
     persistSession: false,
     autoRefreshToken: false
