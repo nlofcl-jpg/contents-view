@@ -48,6 +48,18 @@ const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/api/trpc",
       transformer: superjson,
+      async headers() {
+        if (!supabase) return {};
+
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        if (!token) return {};
+
+        return {
+          Authorization: `Bearer ${token}`,
+          "x-supabase-access-token": token,
+        };
+      },
       async fetch(input, init) {
         const headers = new Headers(init?.headers);
         if (supabase) {
@@ -55,6 +67,7 @@ const trpcClient = trpc.createClient({
           const token = data.session?.access_token;
           if (token) {
             headers.set("Authorization", `Bearer ${token}`);
+            headers.set("x-supabase-access-token", token);
           }
         }
 

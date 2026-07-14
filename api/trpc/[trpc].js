@@ -738,8 +738,12 @@ async function createContext(opts) {
   if (!user) {
     const req = opts.req;
     const authorizationHeader = req.headers?.["authorization"];
+    const supabaseTokenHeader = req.headers?.["x-supabase-access-token"];
     const authorization = Array.isArray(authorizationHeader) ? authorizationHeader[0] : authorizationHeader;
-    user = await authenticateSupabaseBearer(authorization);
+    const supabaseToken = Array.isArray(supabaseTokenHeader) ? supabaseTokenHeader[0] : supabaseTokenHeader;
+    user = await authenticateSupabaseBearer(
+      authorization || (supabaseToken ? `Bearer ${supabaseToken}` : void 0)
+    );
   }
   return {
     req: opts.req,
