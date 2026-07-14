@@ -1,6 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
+import { supabase } from "@/lib/supabase";
 import { useState, useRef, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { Menu } from "lucide-react";
@@ -11,6 +12,15 @@ interface HeaderProps {
   onToggleMobileMenu?: (panelType: "menu" | "account") => void;
 }
 
+type NoticeItem = {
+  id: string;
+  title: string;
+  body: string;
+  created_at: string;
+};
+
+const NOTICE_LAST_SEEN_KEY = "contents-view-last-seen-notice-id";
+
 export default function Header({ 
   onOpenMyPageModal, 
   onOpenApiKeyModal, 
@@ -19,8 +29,11 @@ export default function Header({
   const { user, isAuthenticated, logout } = useAuth();
   const [location, setLocation] = useLocation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isNoticeOpen, setIsNoticeOpen] = useState(false);
+  const [notices, setNotices] = useState<NoticeItem[]>([]);
   const [openTrendMenu, setOpenTrendMenu] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const noticeRef = useRef<HTMLDivElement>(null);
   const trendMenuRef = useRef<HTMLDivElement>(null);
   const trendMenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -29,6 +42,33 @@ export default function Header({
     { name: "쇼핑 인사이트", path: "/trends/naver" },
     { name: "Google Trends", path: "/trends/google" },
   ];
+
+  const latestNoticeId = notices[0]?.id ?? null;
+  const lastSeenNoticeId = typeof window === "undefined"
+    ? null
+    : window.localStorage.getItem(NOTICE_LAST_SEEN_KEY);
+  const hasUnreadNotice = Boolean(latestNoticeId && latestNoticeId !== lastSeenNoticeId);
+
+  const loadNotices = async () => {
+    if (!supabase) return;
+
+    const { data, error } = await supabase
+      .from("notices")
+      .select("id,title,body,created_at")
+      .eq("is_published", true)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (!error && data) {
+      setNotices(data as NoticeItem[]);
+    }
+  };
+
+  useEffect(() => {
+    loadNotices();
+    const intervalId = window.setInterval(loadNotices, 60000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   // 트렌드 메뉴 외부 클릭 시 닫기
   useEffect(() => {
@@ -63,6 +103,19 @@ export default function Header({
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [isDropdownOpen]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (noticeRef.current && !noticeRef.current.contains(event.target as Node)) {
+        setIsNoticeOpen(false);
+      }
+    }
+
+    if (isNoticeOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isNoticeOpen]);
 
   const handleTrendMenuHover = (isHovering: boolean) => {
     if (trendMenuTimeoutRef.current) {
@@ -107,6 +160,15 @@ export default function Header({
 
   const handleYouTubeApiStatusClick = () => {
     onOpenApiKeyModal?.();
+  };
+
+  const handleNoticeClick = () => {
+    const nextOpen = !isNoticeOpen;
+    setIsNoticeOpen(nextOpen);
+
+    if (!isNoticeOpen && latestNoticeId) {
+      window.localStorage.setItem(NOTICE_LAST_SEEN_KEY, latestNoticeId);
+    }
   };
 
   // Determine YouTube API status based on actual connection test result
@@ -250,12 +312,40 @@ export default function Header({
           )}
 
           {/* 데스크톡: 알림 아이콘 */}
-          <button className="notificationButton desktopOnly" type="button" aria-label="알림">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-          </svg>
-          </button>
+          <div className="notificationArea desktopOnly" ref={noticeRef}>
+            <button
+              className="notificationButton"
+              type="button"
+              aria-label="공지사항"
+              onClick={handleNoticeClick}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              {hasUnreadNotice && <span className="notificationUnreadDot" />}
+            </button>
+            {isNoticeOpen && (
+              <div className="noticePopover">
+                <div className="noticePopoverHeader">공지사항</div>
+                {notices.length > 0 ? (
+                  <div className="noticeList">
+                    {notices.map(notice => (
+                      <article key={notice.id} className="noticeItem">
+                        <div className="noticeItemTitle">{notice.title}</div>
+                        <div className="noticeItemBody">{notice.body}</div>
+                        <time className="noticeItemDate">
+                          {new Date(notice.created_at).toLocaleDateString("ko-KR")}
+                        </time>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="noticeEmpty">등록된 공지가 없습니다.</div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* 데스크톡: 프로필 영역 */}
           <div className="profileArea desktopOnly" ref={dropdownRef}>

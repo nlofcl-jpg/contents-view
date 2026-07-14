@@ -772,14 +772,21 @@ a {
 
 
 
+.notificationArea {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .notificationButton {
+  position: relative;
   width: auto;
   height: auto;
   border: none;
   border-radius: 0;
   background: transparent;
   color: #b7c5de;
-  cursor: default;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -795,6 +802,86 @@ a {
   width: 20px;
   height: 20px;
   stroke: currentColor;
+}
+
+.notificationUnreadDot {
+  position: absolute;
+  top: -3px;
+  right: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #ef4444;
+  box-shadow: 0 0 0 2px rgba(5, 10, 20, 0.95);
+}
+
+.noticePopover {
+  position: absolute;
+  top: calc(100% + 14px);
+  right: -10px;
+  width: min(360px, calc(100vw - 32px));
+  max-height: 420px;
+  overflow: hidden;
+  border: 1px solid rgba(59, 130, 246, 0.24);
+  border-radius: 8px;
+  background: rgba(12, 18, 32, 0.98);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  z-index: 80;
+  animation: slideDown 0.15s ease-out;
+}
+
+.noticePopoverHeader {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.noticeList {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.noticeItem {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.noticeItem:last-child {
+  border-bottom: none;
+}
+
+.noticeItemTitle {
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.noticeItemBody {
+  margin-top: 7px;
+  color: #b7c5de;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.noticeItemDate {
+  display: block;
+  margin-top: 10px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.noticeEmpty {
+  padding: 24px 16px;
+  color: #94a3b8;
+  font-size: 13px;
+  text-align: center;
 }
 
 .profileArea {
