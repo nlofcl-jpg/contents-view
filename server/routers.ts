@@ -6,6 +6,7 @@ import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { unifiedInsightProcedure } from "./naver.unifiedInsight";
 import { runDiagnostics } from "./naver.diagnostic";
+import * as userApiKeys from "./_core/userApiKeys";
 import { createRequire } from "module";
 import { eq } from "drizzle-orm";
 import { users } from "../drizzle/schema";
@@ -247,7 +248,7 @@ export const appRouter = router({
       save: protectedProcedure
         .input(z.object({ provider: z.string().min(1), apiKey: z.string().min(1) }))
         .mutation(async ({ ctx, input }) => {
-          if (!ctx.user?.id) {
+          if (!ctx.user) {
             throw new Error("User not authenticated");
           }
 
@@ -257,18 +258,18 @@ export const appRouter = router({
             throw new Error("API key cannot be empty or whitespace only");
           }
 
-          await db.saveUserApiKey(ctx.user.id, input.provider, trimmedKey);
+          await userApiKeys.saveUserApiKey(ctx.user, input.provider, trimmedKey);
           return { success: true };
         }),
 
       delete: protectedProcedure
         .input(z.object({ provider: z.string().min(1) }))
         .mutation(async ({ ctx, input }) => {
-          if (!ctx.user?.id) {
+          if (!ctx.user) {
             throw new Error("User not authenticated");
           }
 
-          await db.deleteUserApiKey(ctx.user.id, input.provider);
+          await userApiKeys.deleteUserApiKey(ctx.user, input.provider);
           return { success: true };
         }),
 
@@ -278,11 +279,11 @@ export const appRouter = router({
       testConnection: protectedProcedure
         .input(z.object({ provider: z.string().min(1) }))
         .mutation(async ({ ctx, input }) => {
-          if (!ctx.user?.id) {
+          if (!ctx.user) {
             throw new Error("User not authenticated");
           }
 
-          const apiKey = await db.getUserApiKey(ctx.user.id, input.provider);
+          const apiKey = await userApiKeys.getUserApiKey(ctx.user, input.provider);
           if (!apiKey) {
             return {
               success: false,
@@ -306,18 +307,18 @@ export const appRouter = router({
 
             if (data.error) {
               const errorMsg = data.error.message || "Unknown error";
-              await db.updateApiKeyTestStatus(ctx.user.id, input.provider, "failed", errorMsg);
+              await userApiKeys.updateApiKeyTestStatus(ctx.user, input.provider, "failed", errorMsg);
               return {
                 success: false,
                 error: translateYouTubeError(errorMsg),
               };
             }
 
-            await db.updateApiKeyTestStatus(ctx.user.id, input.provider, "success");
+            await userApiKeys.updateApiKeyTestStatus(ctx.user, input.provider, "success");
             return { success: true };
           } catch (error) {
             const errorMsg = error instanceof Error ? error.message : "Connection failed";
-            await db.updateApiKeyTestStatus(ctx.user.id, input.provider, "failed", errorMsg);
+            await userApiKeys.updateApiKeyTestStatus(ctx.user, input.provider, "failed", errorMsg);
             return {
               success: false,
               error: translateYouTubeError(errorMsg),
@@ -331,10 +332,10 @@ export const appRouter = router({
       getWithStatus: protectedProcedure
         .input(z.object({ provider: z.string().min(1) }))
         .query(async ({ ctx, input }) => {
-          if (!ctx.user?.id) {
+          if (!ctx.user) {
             throw new Error("User not authenticated");
           }
-          const apiKey = await db.getUserApiKey(ctx.user.id, input.provider);
+          const apiKey = await userApiKeys.getUserApiKey(ctx.user, input.provider);
           if (!apiKey) {
             return {
               exists: false,
@@ -344,14 +345,9 @@ export const appRouter = router({
               lastTestedAt: null,
             };
           }
-          // Mask the key: show first 6 and last 4 characters
-          const key = apiKey.apiKey;
-          const masked = key.length > 10 
-            ? `${key.substring(0, 6)}${'*'.repeat(Math.max(1, key.length - 10))}${key.substring(key.length - 4)}`
-            : `${'*'.repeat(Math.max(1, key.length - 4))}${key.substring(Math.max(0, key.length - 4))}`;
           return {
             exists: true,
-            maskedKey: masked,
+            maskedKey: userApiKeys.maskApiKey(apiKey.apiKey),
             testStatus: apiKey.testStatus,
             testError: apiKey.testError,
             lastTestedAt: apiKey.lastTestedAt,
@@ -447,12 +443,12 @@ export const appRouter = router({
         videoCategoryId: z.number().optional(),
       }))
       .query(async ({ ctx, input }) => {
-        if (!ctx.user?.id) {
+        if (!ctx.user) {
           throw new Error("User not authenticated");
         }
 
         // Get user's YouTube API key
-        const apiKeyRecord = await db.getUserApiKey(ctx.user.id, "youtube");
+        const apiKeyRecord = await userApiKeys.getUserApiKey(ctx.user, "youtube");
         if (!apiKeyRecord) {
           return {
             success: false,
@@ -648,12 +644,12 @@ export const appRouter = router({
         videoCategoryId: z.number().optional(),
       }))
       .query(async ({ ctx, input }) => {
-        if (!ctx.user?.id) {
+        if (!ctx.user) {
           throw new Error("User not authenticated");
         }
 
         // Get user's YouTube API key
-        const apiKeyRecord = await db.getUserApiKey(ctx.user.id, "youtube");
+        const apiKeyRecord = await userApiKeys.getUserApiKey(ctx.user, "youtube");
         if (!apiKeyRecord) {
           return {
             success: false,
@@ -813,12 +809,12 @@ export const appRouter = router({
         maxResults: z.number().min(1).max(50).default(24),
       }))
       .query(async ({ ctx, input }) => {
-        if (!ctx.user?.id) {
+        if (!ctx.user) {
           throw new Error("User not authenticated");
         }
 
         // Get user's YouTube API key
-        const apiKeyRecord = await db.getUserApiKey(ctx.user.id, "youtube");
+        const apiKeyRecord = await userApiKeys.getUserApiKey(ctx.user, "youtube");
         if (!apiKeyRecord) {
           return {
             success: false,

@@ -1557,6 +1557,98 @@ async function runDiagnostics(keywords, category, startDate, endDate, timeUnit) 
   };
 }
 
+// server/_core/userApiKeys.ts
+import { createClient as createClient2 } from "@supabase/supabase-js";
+var supabaseAdmin = ENV.supabaseUrl && ENV.supabaseServiceRoleKey ? createClient2(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false
+  }
+}) : null;
+function isSupabaseUser(user) {
+  return user.loginMethod === "supabase" && user.openId && user.openId.includes("-");
+}
+function maskApiKey(apiKey) {
+  return apiKey.length > 10 ? `${apiKey.substring(0, 6)}${"*".repeat(Math.max(1, apiKey.length - 10))}${apiKey.substring(apiKey.length - 4)}` : `${"*".repeat(Math.max(1, apiKey.length - 4))}${apiKey.substring(Math.max(0, apiKey.length - 4))}`;
+}
+function requireSupabaseAdmin() {
+  if (!supabaseAdmin) {
+    throw new Error("Supabase service role key is not configured.");
+  }
+  return supabaseAdmin;
+}
+async function saveUserApiKey2(user, provider, apiKey) {
+  if (!isSupabaseUser(user)) {
+    return saveUserApiKey(user.id, provider, apiKey);
+  }
+  const trimmedKey = apiKey.trim();
+  if (!trimmedKey) {
+    throw new Error("API key cannot be empty or whitespace only");
+  }
+  const supabase = requireSupabaseAdmin();
+  const { error } = await supabase.from("user_api_keys").upsert(
+    {
+      user_id: user.openId,
+      provider,
+      encrypted_key: trimmedKey,
+      masked_key: maskApiKey(trimmedKey),
+      test_status: "untested",
+      test_error: null,
+      last_tested_at: null,
+      updated_at: (/* @__PURE__ */ new Date()).toISOString()
+    },
+    { onConflict: "user_id,provider" }
+  );
+  if (error) throw new Error(error.message);
+}
+async function deleteUserApiKey2(user, provider) {
+  if (!isSupabaseUser(user)) {
+    return deleteUserApiKey(user.id, provider);
+  }
+  const supabase = requireSupabaseAdmin();
+  const { error } = await supabase.from("user_api_keys").delete().eq("user_id", user.openId).eq("provider", provider);
+  if (error) throw new Error(error.message);
+}
+async function getUserApiKey2(user, provider) {
+  if (!isSupabaseUser(user)) {
+    const apiKey = await getUserApiKey(user.id, provider);
+    if (!apiKey) return void 0;
+    return {
+      apiKey: apiKey.apiKey,
+      testStatus: apiKey.testStatus,
+      testError: apiKey.testError,
+      lastTestedAt: apiKey.lastTestedAt,
+      createdAt: apiKey.createdAt,
+      updatedAt: apiKey.updatedAt
+    };
+  }
+  const supabase = requireSupabaseAdmin();
+  const { data, error } = await supabase.from("user_api_keys").select("encrypted_key,test_status,test_error,last_tested_at,created_at,updated_at").eq("user_id", user.openId).eq("provider", provider).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return void 0;
+  return {
+    apiKey: data.encrypted_key,
+    testStatus: data.test_status,
+    testError: data.test_error,
+    lastTestedAt: data.last_tested_at,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at
+  };
+}
+async function updateApiKeyTestStatus2(user, provider, testStatus, testError = null) {
+  if (!isSupabaseUser(user)) {
+    return updateApiKeyTestStatus(user.id, provider, testStatus, testError ?? void 0);
+  }
+  const supabase = requireSupabaseAdmin();
+  const { error } = await supabase.from("user_api_keys").update({
+    test_status: testStatus,
+    test_error: testError,
+    last_tested_at: (/* @__PURE__ */ new Date()).toISOString(),
+    updated_at: (/* @__PURE__ */ new Date()).toISOString()
+  }).eq("user_id", user.openId).eq("provider", provider);
+  if (error) throw new Error(error.message);
+}
+
 // server/routers.ts
 import { createRequire } from "module";
 var require2 = createRequire(import.meta.url);
@@ -1735,31 +1827,31 @@ var appRouter = router({
      */
     apiKey: router({
       save: protectedProcedure.input(z3.object({ provider: z3.string().min(1), apiKey: z3.string().min(1) })).mutation(async ({ ctx, input }) => {
-        if (!ctx.user?.id) {
+        if (!ctx.user) {
           throw new Error("User not authenticated");
         }
         const trimmedKey = input.apiKey.trim();
         if (!trimmedKey) {
           throw new Error("API key cannot be empty or whitespace only");
         }
-        await saveUserApiKey(ctx.user.id, input.provider, trimmedKey);
+        await saveUserApiKey2(ctx.user, input.provider, trimmedKey);
         return { success: true };
       }),
       delete: protectedProcedure.input(z3.object({ provider: z3.string().min(1) })).mutation(async ({ ctx, input }) => {
-        if (!ctx.user?.id) {
+        if (!ctx.user) {
           throw new Error("User not authenticated");
         }
-        await deleteUserApiKey(ctx.user.id, input.provider);
+        await deleteUserApiKey2(ctx.user, input.provider);
         return { success: true };
       }),
       /**
        * Test YouTube API connection
        */
       testConnection: protectedProcedure.input(z3.object({ provider: z3.string().min(1) })).mutation(async ({ ctx, input }) => {
-        if (!ctx.user?.id) {
+        if (!ctx.user) {
           throw new Error("User not authenticated");
         }
-        const apiKey = await getUserApiKey(ctx.user.id, input.provider);
+        const apiKey = await getUserApiKey2(ctx.user, input.provider);
         if (!apiKey) {
           return {
             success: false,
@@ -1779,17 +1871,17 @@ var appRouter = router({
           const data = await response.json();
           if (data.error) {
             const errorMsg = data.error.message || "Unknown error";
-            await updateApiKeyTestStatus(ctx.user.id, input.provider, "failed", errorMsg);
+            await updateApiKeyTestStatus2(ctx.user, input.provider, "failed", errorMsg);
             return {
               success: false,
               error: translateYouTubeError(errorMsg)
             };
           }
-          await updateApiKeyTestStatus(ctx.user.id, input.provider, "success");
+          await updateApiKeyTestStatus2(ctx.user, input.provider, "success");
           return { success: true };
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : "Connection failed";
-          await updateApiKeyTestStatus(ctx.user.id, input.provider, "failed", errorMsg);
+          await updateApiKeyTestStatus2(ctx.user, input.provider, "failed", errorMsg);
           return {
             success: false,
             error: translateYouTubeError(errorMsg)
@@ -1800,10 +1892,10 @@ var appRouter = router({
        * Get API key with test status
        */
       getWithStatus: protectedProcedure.input(z3.object({ provider: z3.string().min(1) })).query(async ({ ctx, input }) => {
-        if (!ctx.user?.id) {
+        if (!ctx.user) {
           throw new Error("User not authenticated");
         }
-        const apiKey = await getUserApiKey(ctx.user.id, input.provider);
+        const apiKey = await getUserApiKey2(ctx.user, input.provider);
         if (!apiKey) {
           return {
             exists: false,
@@ -1813,11 +1905,9 @@ var appRouter = router({
             lastTestedAt: null
           };
         }
-        const key = apiKey.apiKey;
-        const masked = key.length > 10 ? `${key.substring(0, 6)}${"*".repeat(Math.max(1, key.length - 10))}${key.substring(key.length - 4)}` : `${"*".repeat(Math.max(1, key.length - 4))}${key.substring(Math.max(0, key.length - 4))}`;
         return {
           exists: true,
-          maskedKey: masked,
+          maskedKey: maskApiKey(apiKey.apiKey),
           testStatus: apiKey.testStatus,
           testError: apiKey.testError,
           lastTestedAt: apiKey.lastTestedAt,
@@ -1885,10 +1975,10 @@ var appRouter = router({
       maxResults: z3.number().min(1).max(50).default(12),
       videoCategoryId: z3.number().optional()
     })).query(async ({ ctx, input }) => {
-      if (!ctx.user?.id) {
+      if (!ctx.user) {
         throw new Error("User not authenticated");
       }
-      const apiKeyRecord = await getUserApiKey(ctx.user.id, "youtube");
+      const apiKeyRecord = await getUserApiKey2(ctx.user, "youtube");
       if (!apiKeyRecord) {
         return {
           success: false,
@@ -2041,10 +2131,10 @@ var appRouter = router({
       maxResults: z3.number().min(1).max(50).default(12),
       videoCategoryId: z3.number().optional()
     })).query(async ({ ctx, input }) => {
-      if (!ctx.user?.id) {
+      if (!ctx.user) {
         throw new Error("User not authenticated");
       }
-      const apiKeyRecord = await getUserApiKey(ctx.user.id, "youtube");
+      const apiKeyRecord = await getUserApiKey2(ctx.user, "youtube");
       if (!apiKeyRecord) {
         return {
           success: false,
@@ -2172,10 +2262,10 @@ var appRouter = router({
       sortBy: z3.enum(["trending", "viewCount", "publishedAt"]).default("trending"),
       maxResults: z3.number().min(1).max(50).default(24)
     })).query(async ({ ctx, input }) => {
-      if (!ctx.user?.id) {
+      if (!ctx.user) {
         throw new Error("User not authenticated");
       }
-      const apiKeyRecord = await getUserApiKey(ctx.user.id, "youtube");
+      const apiKeyRecord = await getUserApiKey2(ctx.user, "youtube");
       if (!apiKeyRecord) {
         return {
           success: false,
