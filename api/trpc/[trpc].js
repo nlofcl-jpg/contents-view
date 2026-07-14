@@ -730,6 +730,63 @@ async function authenticateSupabaseBearer(authorization) {
   if (error || !data.user) return null;
   return mapSupabaseUser(data.user);
 }
+async function inspectSupabaseBearer(authorization) {
+  const token = getBearerToken(authorization);
+  const claims = decodeJwtPayload(token);
+  if (!supabaseAuthClient || !token) {
+    return {
+      user: null,
+      error: !supabaseAuthClient ? "supabase_auth_client_missing" : "token_missing",
+      claims
+    };
+  }
+  const { data, error } = await supabaseAuthClient.auth.getUser(token);
+  return {
+    user: data.user ? mapSupabaseUser(data.user) : null,
+    error: error ? normalizeSupabaseError(error) : null,
+    claims
+  };
+}
+function decodeJwtPayload(token) {
+  if (!token) return null;
+  try {
+    const [, payload] = token.split(".");
+    if (!payload) return null;
+    const normalizedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const json = Buffer.from(normalizedPayload, "base64").toString("utf8");
+    const decoded = JSON.parse(json);
+    const now = Math.floor(Date.now() / 1e3);
+    return {
+      issHost: decoded.iss ? safeHost(decoded.iss) : null,
+      aud: decoded.aud ?? null,
+      exp: decoded.exp ?? null,
+      expired: typeof decoded.exp === "number" ? decoded.exp <= now : null,
+      secondsUntilExpiry: typeof decoded.exp === "number" ? decoded.exp - now : null,
+      subPrefix: decoded.sub ? decoded.sub.slice(0, 8) : null,
+      role: decoded.role ?? null,
+      length: token.length
+    };
+  } catch {
+    return {
+      invalid: true,
+      length: token.length
+    };
+  }
+}
+function normalizeSupabaseError(error) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error && "message" in error) {
+    return String(error.message);
+  }
+  return "unknown_error";
+}
+function safeHost(value) {
+  try {
+    return new URL(value).host;
+  } catch {
+    return null;
+  }
+}
 
 // server/_core/context.ts
 async function createContext(opts) {
@@ -4279,7 +4336,8 @@ app.get("/auth-debug", async (req, res) => {
   const supabaseHeaderToken = getHeaderValue(req.headers["x-supabase-access-token"]);
   const cookieToken = getCookieValue2(req.headers.cookie, SUPABASE_ACCESS_TOKEN_COOKIE);
   const candidateAuthorization = authorization || (supabaseHeaderToken ? `Bearer ${supabaseHeaderToken}` : void 0) || (cookieToken ? `Bearer ${cookieToken}` : void 0);
-  const user = await authenticateSupabaseBearer(candidateAuthorization);
+  const inspection = await inspectSupabaseBearer(candidateAuthorization);
+  const user = inspection.user;
   res.status(200).json({
     ok: true,
     received: {
@@ -4290,11 +4348,14 @@ app.get("/auth-debug", async (req, res) => {
     },
     serverEnv: {
       supabaseUrl: Boolean(ENV.supabaseUrl),
+      supabaseUrlHost: safeHost2(ENV.supabaseUrl),
       supabaseAnonKey: Boolean(ENV.supabaseAnonKey),
       supabaseServiceRoleKey: Boolean(ENV.supabaseServiceRoleKey)
     },
+    token: inspection.claims,
     auth: {
       authenticated: Boolean(user),
+      error: inspection.error,
       loginMethod: user?.loginMethod ?? null,
       openIdPrefix: user?.openId ? user.openId.slice(0, 8) : null,
       emailPresent: Boolean(user?.email)
@@ -4319,6 +4380,13 @@ function getCookieValue2(cookieHeader, name) {
   const match = cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name}=`));
   if (!match) return null;
   return decodeURIComponent(match.slice(name.length + 1));
+}
+function safeHost2(value) {
+  try {
+    return new URL(value).host;
+  } catch {
+    return null;
+  }
 }
 export {
   handler as default

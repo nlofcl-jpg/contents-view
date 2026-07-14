@@ -3,7 +3,7 @@ import { SUPABASE_ACCESS_TOKEN_COOKIE } from "@shared/const";
 import express from "express";
 import { createContext } from "./_core/context";
 import { ENV } from "./_core/env";
-import { authenticateSupabaseBearer } from "./_core/supabase";
+import { inspectSupabaseBearer } from "./_core/supabase";
 import { appRouter } from "./routers";
 
 type ExpressLikeRequest = {
@@ -28,7 +28,8 @@ app.get("/auth-debug", async (req, res) => {
     authorization ||
     (supabaseHeaderToken ? `Bearer ${supabaseHeaderToken}` : undefined) ||
     (cookieToken ? `Bearer ${cookieToken}` : undefined);
-  const user = await authenticateSupabaseBearer(candidateAuthorization);
+  const inspection = await inspectSupabaseBearer(candidateAuthorization);
+  const user = inspection.user;
 
   res.status(200).json({
     ok: true,
@@ -40,11 +41,14 @@ app.get("/auth-debug", async (req, res) => {
     },
     serverEnv: {
       supabaseUrl: Boolean(ENV.supabaseUrl),
+      supabaseUrlHost: safeHost(ENV.supabaseUrl),
       supabaseAnonKey: Boolean(ENV.supabaseAnonKey),
       supabaseServiceRoleKey: Boolean(ENV.supabaseServiceRoleKey),
     },
+    token: inspection.claims,
     auth: {
       authenticated: Boolean(user),
+      error: inspection.error,
       loginMethod: user?.loginMethod ?? null,
       openIdPrefix: user?.openId ? user.openId.slice(0, 8) : null,
       emailPresent: Boolean(user?.email),
@@ -78,4 +82,12 @@ function getCookieValue(cookieHeader: string | string[] | undefined, name: strin
   if (!match) return null;
 
   return decodeURIComponent(match.slice(name.length + 1));
+}
+
+function safeHost(value: string) {
+  try {
+    return new URL(value).host;
+  } catch {
+    return null;
+  }
 }

@@ -68,3 +68,78 @@ export async function authenticateSupabaseBearer(
 
   return mapSupabaseUser(data.user);
 }
+
+export async function inspectSupabaseBearer(authorization: string | undefined) {
+  const token = getBearerToken(authorization);
+  const claims = decodeJwtPayload(token);
+
+  if (!supabaseAuthClient || !token) {
+    return {
+      user: null,
+      error: !supabaseAuthClient ? "supabase_auth_client_missing" : "token_missing",
+      claims,
+    };
+  }
+
+  const { data, error } = await (supabaseAuthClient.auth as {
+    getUser: (jwt: string) => Promise<{ data: { user: SupabaseUser | null }; error: unknown }>;
+  }).getUser(token);
+
+  return {
+    user: data.user ? mapSupabaseUser(data.user) : null,
+    error: error ? normalizeSupabaseError(error) : null,
+    claims,
+  };
+}
+
+function decodeJwtPayload(token: string | null) {
+  if (!token) return null;
+
+  try {
+    const [, payload] = token.split(".");
+    if (!payload) return null;
+
+    const normalizedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const json = Buffer.from(normalizedPayload, "base64").toString("utf8");
+    const decoded = JSON.parse(json) as {
+      iss?: string;
+      aud?: string | string[];
+      exp?: number;
+      sub?: string;
+      role?: string;
+    };
+    const now = Math.floor(Date.now() / 1000);
+
+    return {
+      issHost: decoded.iss ? safeHost(decoded.iss) : null,
+      aud: decoded.aud ?? null,
+      exp: decoded.exp ?? null,
+      expired: typeof decoded.exp === "number" ? decoded.exp <= now : null,
+      secondsUntilExpiry: typeof decoded.exp === "number" ? decoded.exp - now : null,
+      subPrefix: decoded.sub ? decoded.sub.slice(0, 8) : null,
+      role: decoded.role ?? null,
+      length: token.length,
+    };
+  } catch {
+    return {
+      invalid: true,
+      length: token.length,
+    };
+  }
+}
+
+function normalizeSupabaseError(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error && "message" in error) {
+    return String((error as { message?: unknown }).message);
+  }
+  return "unknown_error";
+}
+
+function safeHost(value: string) {
+  try {
+    return new URL(value).host;
+  } catch {
+    return null;
+  }
+}
