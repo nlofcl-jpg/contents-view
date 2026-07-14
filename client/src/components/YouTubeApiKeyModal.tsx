@@ -233,6 +233,104 @@ export function YouTubeApiKeySettingsPanel({
     );
   }
 
+  if (compact) {
+    const apiKeyInputValue = isEditing ? inputValue : maskedKey || "";
+
+    return (
+      <div className="space-y-2">
+        {error && (
+          <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+            {error}
+          </div>
+        )}
+        {isQueryLoading ? (
+          <div className="mypageModalInputWrapper">
+            <input
+              className="mypageModalNameInput"
+              value="로딩 중..."
+              disabled
+              readOnly
+            />
+            <button className="mypageModalEditButton" disabled type="button">
+              확인
+            </button>
+          </div>
+        ) : (
+          <div className="mypageModalInputWrapper">
+            <input
+              type={isEditing ? "password" : "text"}
+              className="mypageModalNameInput"
+              value={apiKeyInputValue}
+              onChange={(event) => setInputValue(event.target.value)}
+              disabled={!isEditing}
+              placeholder="YouTube Data API Key"
+            />
+            <button
+              className="mypageModalEditButton"
+              onClick={isEditing ? handleSave : () => setIsEditing(true)}
+              disabled={isLoading || isTesting || (isEditing && !inputValue.trim())}
+              type="button"
+            >
+              {isEditing
+                ? isLoading || isTesting
+                  ? "저장 중"
+                  : "저장"
+                : "수정"}
+            </button>
+          </div>
+        )}
+        {testStatus && !isEditing && (
+          <p
+            className={`text-xs ${
+              testStatus === "success"
+                ? "text-emerald-300"
+                : testStatus === "failed"
+                  ? "text-red-300"
+                  : "text-blue-300"
+            }`}
+          >
+            {testStatus === "success"
+              ? "YouTube API 연결 완료"
+              : testStatus === "failed"
+                ? testError || "YouTube API 연결 실패"
+                : "연결 테스트 필요"}
+          </p>
+        )}
+        <button
+          onClick={() => setShowHelpBox(!showHelpBox)}
+          className="apiHelpToggle !mt-2"
+          type="button"
+        >
+          <span>API 키 발급 방법 보기</span>
+          <ChevronDown
+            size={16}
+            style={{
+              transform: showHelpBox ? "rotate(180deg)" : "rotate(0deg)",
+              transition: "transform 0.2s ease",
+            }}
+          />
+        </button>
+        {showHelpBox && (
+          <div className="apiHelpBox">
+            <div className="apiHelpList">
+              {[
+                "Google Cloud Console에 접속합니다.",
+                "API 및 서비스에서 YouTube Data API v3를 사용 설정합니다.",
+                "사용자 인증 정보 메뉴에서 API 키를 생성합니다.",
+                "생성된 API Key를 복사해 입력창에 붙여넣습니다.",
+              ].map((step, index) => (
+                <div key={index} className="apiHelpStep">
+                  <span className="apiHelpStepNumber">{index + 1}</span>
+                  <span>{step}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <>
         {/* Description */}

@@ -114,15 +114,14 @@ export default function MyPageModal({ isOpen, onClose }: MyPageModalProps) {
                   disabled={!isEditingName}
                   placeholder="닉네임을 입력해주세요"
                 />
-                {!isEditingName && (
-                  <button
-                    className="mypageModalEditButton"
-                    onClick={handleEditClick}
-                    type="button"
-                  >
-                    수정
-                  </button>
-                )}
+                <button
+                  className="mypageModalEditButton"
+                  onClick={isEditingName ? handleSaveName : handleEditClick}
+                  disabled={isEditingName && (isSaving || !nameInput.trim())}
+                  type="button"
+                >
+                  {isEditingName ? (isSaving ? "저장 중" : "저장") : "수정"}
+                </button>
               </div>
             </div>
 
@@ -140,33 +139,11 @@ export default function MyPageModal({ isOpen, onClose }: MyPageModalProps) {
 
             <div className="mypageModalField">
               <label className="mypageModalLabel">YouTube API 키</label>
-              <div className="rounded-lg border border-slate-700/80 bg-slate-950/40 p-4">
+              <div className="rounded-lg border border-slate-700/80 bg-slate-950/40 p-3">
                 <YouTubeApiKeySettingsPanel isActive={isOpen} compact />
               </div>
             </div>
           </div>
-
-          {/* Footer - Action Buttons */}
-          {isEditingName && (
-            <div className="mypageModalFooter">
-              <button
-                className="mypageModalButton mypageModalButtonSecondary"
-                onClick={handleCancel}
-                disabled={isSaving}
-                type="button"
-              >
-                취소
-              </button>
-              <button
-                className="mypageModalButton mypageModalButtonPrimary"
-                onClick={handleSaveName}
-                disabled={isSaving || !nameInput.trim()}
-                type="button"
-              >
-                {isSaving ? "저장 중..." : "저장"}
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </>
