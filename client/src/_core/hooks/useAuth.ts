@@ -3,6 +3,7 @@ import {
   isSupabaseConfigured,
   normalizeSupabaseUser,
   supabase,
+  type AppProfile,
   type AppAuthUser,
 } from "@/lib/supabase";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -18,6 +19,18 @@ export function useAuth(options?: UseAuthOptions) {
   const [user, setUser] = useState<AppAuthUser | null>(null);
   const [loading, setLoading] = useState(isSupabaseConfigured);
   const [error, setError] = useState<Error | null>(null);
+
+  const loadUserWithProfile = useCallback(async (sessionUser: Parameters<typeof normalizeSupabaseUser>[0]) => {
+    if (!supabase) return normalizeSupabaseUser(sessionUser);
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("name,email,avatar_url,role,approval_status")
+      .eq("id", sessionUser.id)
+      .maybeSingle<AppProfile>();
+
+    return normalizeSupabaseUser(sessionUser, profile);
+  }, []);
 
   const logout = useCallback(async () => {
     if (!supabase) {
@@ -50,12 +63,12 @@ export function useAuth(options?: UseAuthOptions) {
     }
 
     const nextUser = data.session?.user
-      ? normalizeSupabaseUser(data.session.user)
+      ? await loadUserWithProfile(data.session.user)
       : null;
     setError(null);
     setUser(nextUser);
     return nextUser;
-  }, []);
+  }, [loadUserWithProfile]);
 
   useEffect(() => {
     if (!supabase) {
@@ -74,11 +87,13 @@ export function useAuth(options?: UseAuthOptions) {
           setUser(null);
         } else {
           setError(null);
-          setUser(
-            data.session?.user
-              ? normalizeSupabaseUser(data.session.user)
-              : null,
-          );
+          if (data.session?.user) {
+            loadUserWithProfile(data.session.user).then(nextUser => {
+              if (isMounted) setUser(nextUser);
+            });
+          } else {
+            setUser(null);
+          }
         }
       })
       .finally(() => {
@@ -88,8 +103,15 @@ export function useAuth(options?: UseAuthOptions) {
     const { data: subscription } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setError(null);
-        setUser(session?.user ? normalizeSupabaseUser(session.user) : null);
-        setLoading(false);
+        if (session?.user) {
+          loadUserWithProfile(session.user).then(nextUser => {
+            setUser(nextUser);
+            setLoading(false);
+          });
+        } else {
+          setUser(null);
+          setLoading(false);
+        }
       },
     );
 
@@ -97,7 +119,7 @@ export function useAuth(options?: UseAuthOptions) {
       isMounted = false;
       subscription.subscription.unsubscribe();
     };
-  }, []);
+  }, [loadUserWithProfile]);
 
   const state = useMemo(() => {
     localStorage.setItem(

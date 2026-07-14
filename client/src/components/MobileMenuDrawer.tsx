@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
-import { X, Home, Play, LogOut, User, Key, Bookmark } from "lucide-react";
+import { X, Home, LogOut, User, Key, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 
 interface MobileMenuDrawerProps {
@@ -56,6 +56,8 @@ export function MobileMenuDrawer({
   const isSavedContentsPage = location === "/saved-contents";
   const isCommunityPage = location === "/community";
   const isAIStudioPage = location === "/ai-studio";
+  const isAdminPage = location === "/admin";
+  const isAdmin = isAuthenticated && user?.role === "admin";
 
   return (
     <>
@@ -118,6 +120,16 @@ export function MobileMenuDrawer({
                     <Key size={18} />
                     <span>API 키 설정</span>
                   </button>
+                  {isAdmin && (
+                    <button
+                      className="mobileMenuAction"
+                      onClick={() => handleNavigation("/admin")}
+                      type="button"
+                    >
+                      <ShieldCheck size={18} />
+                      <span>관리자 센터</span>
+                    </button>
+                  )}
                   <button
                     className="mobileMenuAction logout"
                     onClick={handleLogout}
@@ -226,6 +238,16 @@ export function MobileMenuDrawer({
               >
                 <span>내 보관함</span>
               </button>
+
+              {isAdmin && (
+                <button
+                  className={`mobileNavItem ${isAdminPage ? "active" : ""}`}
+                  onClick={() => handleNavigation("/admin")}
+                  type="button"
+                >
+                  <span>관리자</span>
+                </button>
+              )}
             </div>
           )}
         </div>

@@ -12,6 +12,7 @@ import SavedContents from "@/pages/SavedContents";
 import News from "@/pages/News";
 import AIStudio from "@/pages/AIStudio";
 import Login from "@/pages/Login";
+import Admin from "@/pages/Admin";
 import MyPageModal from "@/components/MyPageModal";
 import { YouTubeApiKeyModal } from "@/components/YouTubeApiKeyModal";
 import { MobileMenuDrawer } from "@/components/MobileMenuDrawer";
@@ -35,6 +36,7 @@ function Router() {
       <Route path={"/news"} component={News} />
       <Route path={"/ai-studio"} component={AIStudio} />
       <Route path={"/login"} component={Login} />
+      <Route path={"/admin"} component={Admin} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

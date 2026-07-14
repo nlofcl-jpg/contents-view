@@ -26,26 +26,39 @@ export type AppAuthUser = {
   approvalStatus: "pending" | "approved" | "rejected";
 };
 
-export function normalizeSupabaseUser(user: SupabaseUser): AppAuthUser {
+export type AppProfile = {
+  role?: "user" | "admin" | null;
+  approval_status?: "pending" | "approved" | "rejected" | null;
+  name?: string | null;
+  email?: string | null;
+  avatar_url?: string | null;
+};
+
+export function normalizeSupabaseUser(
+  user: SupabaseUser,
+  profile?: AppProfile | null,
+): AppAuthUser {
   const metadata = user.user_metadata ?? {};
   const fullName =
-    typeof metadata.full_name === "string"
+    profile?.name ||
+    (typeof metadata.full_name === "string"
       ? metadata.full_name
       : typeof metadata.name === "string"
         ? metadata.name
-        : null;
+        : null);
   const avatarUrl =
-    typeof metadata.avatar_url === "string" ? metadata.avatar_url : null;
+    profile?.avatar_url ||
+    (typeof metadata.avatar_url === "string" ? metadata.avatar_url : null);
 
   return {
     id: user.id,
     openId: user.id,
-    name: fullName || user.email || null,
-    email: user.email ?? null,
+    name: fullName || profile?.email || user.email || null,
+    email: profile?.email || user.email || null,
     avatarUrl,
     loginMethod: "supabase",
-    role: "user",
-    approvalStatus: "approved",
+    role: profile?.role === "admin" ? "admin" : "user",
+    approvalStatus: profile?.approval_status || "approved",
   };
 }
 
