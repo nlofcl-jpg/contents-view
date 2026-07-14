@@ -298,7 +298,7 @@ export function YouTubeApiKeySettingsPanel({
         )}
         <button
           onClick={() => setShowHelpBox(!showHelpBox)}
-          className="apiHelpToggle !mt-2"
+          className="apiHelpToggle apiHelpToggleCompact"
           type="button"
         >
           <span>API 키 발급 방법 보기</span>

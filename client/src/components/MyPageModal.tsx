@@ -138,10 +138,8 @@ export default function MyPageModal({ isOpen, onClose }: MyPageModalProps) {
             </div>
 
             <div className="mypageModalField">
-              <label className="mypageModalLabel">YouTube API 키</label>
-              <div className="rounded-lg border border-slate-700/80 bg-slate-950/40 p-3">
-                <YouTubeApiKeySettingsPanel isActive={isOpen} compact />
-              </div>
+              <label className="mypageModalLabel">YouTube API key</label>
+              <YouTubeApiKeySettingsPanel isActive={isOpen} compact />
             </div>
           </div>
         </div>

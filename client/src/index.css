@@ -2622,6 +2622,18 @@ input[type="date"].youtubeSelect {
   color: #bfdbfe;
 }
 
+.apiHelpToggleCompact {
+  margin-top: 2px;
+  gap: 4px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.apiHelpToggleCompact:hover {
+  color: #94a3b8;
+}
+
 /* API Help Box */
 .apiHelpBox {
   margin-top: 12px;
