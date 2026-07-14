@@ -1,14 +1,13 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
-import { X, Home, LogOut, User, Key, ShieldCheck } from "lucide-react";
+import { X, Home, LogOut, User, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 
 interface MobileMenuDrawerProps {
   panelType: "account" | "menu" | null;
   onClose: () => void;
   onOpenMyPageModal?: () => void;
-  onOpenApiKeyModal?: () => void;
   onNavigate?: () => void;
 }
 
@@ -16,7 +15,6 @@ export function MobileMenuDrawer({
   panelType,
   onClose,
   onOpenMyPageModal,
-  onOpenApiKeyModal,
   onNavigate,
 }: MobileMenuDrawerProps) {
   const { user, isAuthenticated, logout } = useAuth();
@@ -39,13 +37,6 @@ export function MobileMenuDrawer({
   const handleMyPage = () => {
     if (onOpenMyPageModal) {
       onOpenMyPageModal();
-      onClose();
-    }
-  };
-
-  const handleApiKeySetting = () => {
-    if (onOpenApiKeyModal) {
-      onOpenApiKeyModal();
       onClose();
     }
   };
@@ -111,14 +102,6 @@ export function MobileMenuDrawer({
                   >
                     <User size={18} />
                     <span>마이페이지</span>
-                  </button>
-                  <button
-                    className="mobileMenuAction"
-                    onClick={handleApiKeySetting}
-                    type="button"
-                  >
-                    <Key size={18} />
-                    <span>API 키 설정</span>
                   </button>
                   {isAdmin && (
                     <button

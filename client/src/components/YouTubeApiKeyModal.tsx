@@ -11,11 +11,46 @@ interface YouTubeApiKeyModalProps {
   onSave?: () => void;
 }
 
+interface YouTubeApiKeySettingsPanelProps {
+  isActive: boolean;
+  onClose?: () => void;
+  onSave?: () => void;
+  compact?: boolean;
+}
+
 export function YouTubeApiKeyModal({
   isOpen,
   onClose,
   onSave,
 }: YouTubeApiKeyModalProps) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[1000] pt-20 pb-8 overflow-y-auto">
+      <div className="bg-slate-900 rounded-lg p-8 max-w-md w-full mx-4 border border-slate-700 max-h-[calc(100vh-160px)] overflow-y-auto relative z-[1001]">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-semibold text-white">
+            YouTube API 키 설정
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-white transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <YouTubeApiKeySettingsPanel isActive={isOpen} onClose={onClose} onSave={onSave} />
+      </div>
+    </div>
+  );
+}
+
+export function YouTubeApiKeySettingsPanel({
+  isActive,
+  onClose,
+  onSave,
+  compact = false,
+}: YouTubeApiKeySettingsPanelProps) {
   const { user, isAuthenticated } = useAuth();
   const [inputValue, setInputValue] = useState("");
   const [isEditing, setIsEditing] = useState(false);
@@ -30,7 +65,7 @@ export function YouTubeApiKeyModal({
   // Query to get existing API key with test status
   const { data: apiKeyData, isLoading: isQueryLoading, refetch } = trpc.user.apiKey.getWithStatus.useQuery(
     { provider: "youtube" },
-    { enabled: isAuthenticated && isOpen }
+    { enabled: isAuthenticated && isActive }
   );
 
   // Mutations
@@ -40,7 +75,7 @@ export function YouTubeApiKeyModal({
 
   // Initialize modal state
   useEffect(() => {
-    if (isOpen && apiKeyData) {
+    if (isActive && apiKeyData) {
       if (apiKeyData.exists && apiKeyData.maskedKey) {
         setMaskedKey(apiKeyData.maskedKey);
         setTestStatus(apiKeyData.testStatus as "untested" | "success" | "failed" | null);
@@ -57,7 +92,7 @@ export function YouTubeApiKeyModal({
       setError(null);
       setShowHelpBox(false);
     }
-  }, [isOpen, apiKeyData]);
+  }, [isActive, apiKeyData]);
 
   const handleSave = async () => {
     if (!inputValue.trim()) {
@@ -175,60 +210,33 @@ export function YouTubeApiKeyModal({
     setError(null);
     if (!maskedKey) {
       // If no key exists, close the modal
-      onClose();
+      onClose?.();
     } else {
       // If key exists, exit edit mode
       setIsEditing(false);
     }
   };
 
-  if (!isOpen) return null;
-
   // Show login prompt if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[1000] pt-20 pb-8 overflow-y-auto">
-        <div className="bg-slate-900 rounded-lg p-8 max-w-md w-full mx-4 border border-slate-700 relative z-[1001]">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-white">
-              로그인이 필요합니다
-            </h2>
-            <button
-              onClick={onClose}
-              className="text-slate-400 hover:text-white transition-colors"
-            >
-              <X size={20} />
-            </button>
-          </div>
-          <p className="text-slate-300 mb-6">
-            API 키를 저장하려면 로그인이 필요합니다.
-          </p>
+      <div className="rounded-md border border-slate-700 bg-slate-950/40 p-4">
+        <p className="text-slate-300 mb-4">
+          API 키를 저장하려면 로그인이 필요합니다.
+        </p>
+        {onClose && (
           <Button onClick={onClose} variant="outline" className="w-full">
             닫기
           </Button>
-        </div>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[1000] pt-20 pb-8 overflow-y-auto">
-      <div className="bg-slate-900 rounded-lg p-8 max-w-md w-full mx-4 border border-slate-700 max-h-[calc(100vh-160px)] overflow-y-auto relative z-[1001]">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-white">
-            YouTube API 키 설정
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
+    <>
         {/* Description */}
-        <p className="text-slate-300 text-sm mb-6">
+        <p className={`text-slate-300 text-sm ${compact ? "mb-4" : "mb-6"}`}>
           {isEditing && maskedKey
             ? "새 YouTube Data API Key를 입력하면 기존 키가 새 키로 교체됩니다."
             : "YouTube 트렌드 데이터를 불러오기 위해 본인의 YouTube Data API Key를 등록해주세요."}
@@ -426,7 +434,6 @@ export function YouTubeApiKeyModal({
             </Button>
           </div>
         ) : null}
-      </div>
-    </div>
+    </>
   );
 }

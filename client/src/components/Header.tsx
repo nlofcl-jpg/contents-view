@@ -8,7 +8,6 @@ import { Menu } from "lucide-react";
 
 interface HeaderProps {
   onOpenMyPageModal?: () => void;
-  onOpenApiKeyModal?: () => void;
   onToggleMobileMenu?: (panelType: "menu" | "account") => void;
 }
 
@@ -23,7 +22,6 @@ const NOTICE_LAST_SEEN_KEY = "contents-view-last-seen-notice-id";
 
 export default function Header({ 
   onOpenMyPageModal, 
-  onOpenApiKeyModal, 
   onToggleMobileMenu,
 }: HeaderProps) {
   const { user, isAuthenticated, logout } = useAuth();
@@ -149,17 +147,12 @@ export default function Header({
     onOpenMyPageModal?.();
   };
 
-  const handleApiKeySetting = () => {
-    setIsDropdownOpen(false);
-    onOpenApiKeyModal?.();
-  };
-
   const handleLogoClick = () => {
     setLocation('/');
   };
 
   const handleYouTubeApiStatusClick = () => {
-    onOpenApiKeyModal?.();
+    onOpenMyPageModal?.();
   };
 
   const handleNoticeClick = () => {
@@ -384,13 +377,6 @@ export default function Header({
                       마이페이지
                     </a>
                   )}
-                  <button
-                    className="dropdownItem"
-                    onClick={handleApiKeySetting}
-                    type="button"
-                  >
-                    API 키 설정
-                  </button>
                   {isAdmin && (
                     <a href="/admin" className="dropdownItem">
                       관리자 센터

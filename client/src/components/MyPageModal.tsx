@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { X } from "lucide-react";
+import { YouTubeApiKeySettingsPanel } from "./YouTubeApiKeyModal";
 
 interface MyPageModalProps {
   isOpen: boolean;
@@ -135,6 +136,13 @@ export default function MyPageModal({ isOpen, onClose }: MyPageModalProps) {
                 readOnly
                 disabled
               />
+            </div>
+
+            <div className="mypageModalField">
+              <label className="mypageModalLabel">YouTube API 키</label>
+              <div className="rounded-lg border border-slate-700/80 bg-slate-950/40 p-4">
+                <YouTubeApiKeySettingsPanel isActive={isOpen} compact />
+              </div>
             </div>
           </div>
 

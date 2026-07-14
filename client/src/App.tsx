@@ -14,7 +14,6 @@ import AIStudio from "@/pages/AIStudio";
 import Login from "@/pages/Login";
 import Admin from "@/pages/Admin";
 import MyPageModal from "@/components/MyPageModal";
-import { YouTubeApiKeyModal } from "@/components/YouTubeApiKeyModal";
 import { MobileMenuDrawer } from "@/components/MobileMenuDrawer";
 import { Route, Switch, Router as WouterRouter } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -47,7 +46,6 @@ function Router() {
 function App() {
   const [, setLocation] = useLocation();
   const [isMyPageModalOpen, setIsMyPageModalOpen] = useState(false);
-  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
   const [mobilePanelType, setMobilePanelType] = useState<"account" | "menu" | null>(null);
 
@@ -62,7 +60,6 @@ function App() {
             <div className="app">
             <Header
               onOpenMyPageModal={() => setIsMyPageModalOpen(true)}
-              onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
               onToggleMobileMenu={(panelType) => {
                 setMobilePanelType(panelType || null);
               }}
@@ -71,7 +68,6 @@ function App() {
               panelType={mobilePanelType}
               onClose={() => setMobilePanelType(null)}
               onOpenMyPageModal={() => setIsMyPageModalOpen(true)}
-              onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
               onNavigate={() => setMobilePanelType(null)}
             />
 
@@ -82,15 +78,6 @@ function App() {
             </main>
 
             <MyPageModal isOpen={isMyPageModalOpen} onClose={() => setIsMyPageModalOpen(false)} />
-
-            {/* API Key Modal */}
-            {isApiKeyModalOpen && (
-              <YouTubeApiKeyModal
-                isOpen={isApiKeyModalOpen}
-                onClose={() => setIsApiKeyModalOpen(false)}
-                onSave={() => setIsApiKeyModalOpen(false)}
-              />
-            )}
             </div>
           </TooltipProvider>
         </ThemeProvider>
