@@ -22,7 +22,10 @@ export async function createContext(
   }
 
   if (!user) {
-    const authorizationHeader = opts.req.headers["authorization"];
+    const req = opts.req as unknown as {
+      headers?: Record<string, string | string[] | undefined>;
+    };
+    const authorizationHeader = req.headers?.["authorization"];
     const authorization = Array.isArray(authorizationHeader)
       ? authorizationHeader[0]
       : authorizationHeader;
