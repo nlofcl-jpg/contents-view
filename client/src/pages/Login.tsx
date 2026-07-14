@@ -28,6 +28,20 @@ export default function Login() {
     });
   }, []);
 
+  if (isStarting && isSupabaseConfigured && !error) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center px-4">
+        <div
+          role="status"
+          aria-live="polite"
+          className="rounded-lg border border-blue-500/25 bg-slate-950/90 px-5 py-4 text-sm font-medium text-slate-200 shadow-2xl shadow-blue-950/30"
+        >
+          Google 로그인으로 이동 중입니다.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="pageContainer">
       <div className="pageHeader">
