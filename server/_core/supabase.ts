@@ -10,7 +10,7 @@ type SupabaseUser = {
   user_metadata?: Record<string, unknown> | null;
 };
 
-const supabaseAuthKey = ENV.supabaseServiceRoleKey || ENV.supabaseAnonKey;
+const supabaseAuthKey = ENV.supabaseAnonKey || ENV.supabaseServiceRoleKey;
 
 const supabaseAuthClient =
   ENV.supabaseUrl && supabaseAuthKey
