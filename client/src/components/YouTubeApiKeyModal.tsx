@@ -259,7 +259,7 @@ export function YouTubeApiKeySettingsPanel({
               : "YouTube API key를 입력하세요.";
 
     return (
-      <div className="space-y-2">
+      <div className="mypageApiKeyPanel">
         {error && (
           <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
             {error}
