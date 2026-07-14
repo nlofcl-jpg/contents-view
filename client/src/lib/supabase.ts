@@ -1,4 +1,5 @@
 import { createClient, type User as SupabaseUser } from "@supabase/supabase-js";
+import { SUPABASE_ACCESS_TOKEN_COOKIE } from "@shared/const";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -14,6 +15,18 @@ export const supabase = isSupabaseConfigured
       },
     })
   : null;
+
+export function setSupabaseAccessTokenCookie(token: string | null) {
+  if (typeof document === "undefined") return;
+
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  if (!token) {
+    document.cookie = `${SUPABASE_ACCESS_TOKEN_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
+    return;
+  }
+
+  document.cookie = `${SUPABASE_ACCESS_TOKEN_COOKIE}=${encodeURIComponent(token)}; Path=/; Max-Age=3600; SameSite=Lax${secure}`;
+}
 
 export type AppAuthUser = {
   id: string;

@@ -1,4 +1,5 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
+import { SUPABASE_ACCESS_TOKEN_COOKIE } from "@shared/const";
 import type { User } from "../../drizzle/schema";
 import { sdk } from "./sdk";
 import { authenticateSupabaseBearer } from "./supabase";
@@ -33,8 +34,14 @@ export async function createContext(
     const supabaseToken = Array.isArray(supabaseTokenHeader)
       ? supabaseTokenHeader[0]
       : supabaseTokenHeader;
+    const cookieToken = getCookieValue(
+      req.headers?.cookie,
+      SUPABASE_ACCESS_TOKEN_COOKIE,
+    );
     user = await authenticateSupabaseBearer(
-      authorization || (supabaseToken ? `Bearer ${supabaseToken}` : undefined),
+      authorization ||
+        (supabaseToken ? `Bearer ${supabaseToken}` : undefined) ||
+        (cookieToken ? `Bearer ${cookieToken}` : undefined),
     );
   }
 
@@ -43,4 +50,20 @@ export async function createContext(
     res: opts.res,
     user,
   };
+}
+
+function getCookieValue(
+  cookieHeader: string | string[] | undefined,
+  name: string,
+) {
+  const cookie = Array.isArray(cookieHeader) ? cookieHeader.join("; ") : cookieHeader;
+  if (!cookie) return null;
+
+  const match = cookie
+    .split(";")
+    .map(part => part.trim())
+    .find(part => part.startsWith(`${name}=`));
+  if (!match) return null;
+
+  return decodeURIComponent(match.slice(name.length + 1));
 }

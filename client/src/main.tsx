@@ -5,7 +5,7 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import "./index.css";
-import { supabase } from "./lib/supabase";
+import { setSupabaseAccessTokenCookie, supabase } from "./lib/supabase";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +53,7 @@ const trpcClient = trpc.createClient({
 
         const { data } = await supabase.auth.getSession();
         const token = data.session?.access_token;
+        setSupabaseAccessTokenCookie(token ?? null);
         if (!token) return {};
 
         return {
@@ -65,6 +66,7 @@ const trpcClient = trpc.createClient({
         if (supabase) {
           const { data } = await supabase.auth.getSession();
           const token = data.session?.access_token;
+          setSupabaseAccessTokenCookie(token ?? null);
           if (token) {
             headers.set("Authorization", `Bearer ${token}`);
             headers.set("x-supabase-access-token", token);

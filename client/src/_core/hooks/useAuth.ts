@@ -2,6 +2,7 @@ import { getLoginUrl } from "@/const";
 import {
   isSupabaseConfigured,
   normalizeSupabaseUser,
+  setSupabaseAccessTokenCookie,
   supabase,
   type AppProfile,
   type AppAuthUser,
@@ -54,6 +55,7 @@ export function useAuth(options?: UseAuthOptions) {
 
     setLoading(true);
     const { data, error: sessionError } = await supabase.auth.getSession();
+    setSupabaseAccessTokenCookie(data.session?.access_token ?? null);
     setLoading(false);
 
     if (sessionError) {
@@ -83,10 +85,12 @@ export function useAuth(options?: UseAuthOptions) {
       .then(({ data, error: sessionError }) => {
         if (!isMounted) return;
         if (sessionError) {
+          setSupabaseAccessTokenCookie(null);
           setError(sessionError);
           setUser(null);
         } else {
           setError(null);
+          setSupabaseAccessTokenCookie(data.session?.access_token ?? null);
           if (data.session?.user) {
             loadUserWithProfile(data.session.user).then(nextUser => {
               if (isMounted) setUser(nextUser);
@@ -103,6 +107,7 @@ export function useAuth(options?: UseAuthOptions) {
     const { data: subscription } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setError(null);
+        setSupabaseAccessTokenCookie(session?.access_token ?? null);
         if (session?.user) {
           loadUserWithProfile(session.user).then(nextUser => {
             setUser(nextUser);

@@ -8,6 +8,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
+var SUPABASE_ACCESS_TOKEN_COOKIE = "contents_view_supabase_access_token";
 
 // shared/_core/errors.ts
 var HttpError = class extends Error {
@@ -742,8 +743,12 @@ async function createContext(opts) {
     const supabaseTokenHeader = req.headers?.["x-supabase-access-token"];
     const authorization = Array.isArray(authorizationHeader) ? authorizationHeader[0] : authorizationHeader;
     const supabaseToken = Array.isArray(supabaseTokenHeader) ? supabaseTokenHeader[0] : supabaseTokenHeader;
+    const cookieToken = getCookieValue(
+      req.headers?.cookie,
+      SUPABASE_ACCESS_TOKEN_COOKIE
+    );
     user = await authenticateSupabaseBearer(
-      authorization || (supabaseToken ? `Bearer ${supabaseToken}` : void 0)
+      authorization || (supabaseToken ? `Bearer ${supabaseToken}` : void 0) || (cookieToken ? `Bearer ${cookieToken}` : void 0)
     );
   }
   return {
@@ -751,6 +756,13 @@ async function createContext(opts) {
     res: opts.res,
     user
   };
+}
+function getCookieValue(cookieHeader, name) {
+  const cookie = Array.isArray(cookieHeader) ? cookieHeader.join("; ") : cookieHeader;
+  if (!cookie) return null;
+  const match = cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name}=`));
+  if (!match) return null;
+  return decodeURIComponent(match.slice(name.length + 1));
 }
 
 // server/_core/cookies.ts
