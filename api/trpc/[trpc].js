@@ -1,6 +1,5 @@
 // server/vercel-trpc.ts
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import express from "express";
 
 // shared/const.ts
 var COOKIE_NAME = "app_session_id";
@@ -9,6 +8,9 @@ var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
 var SUPABASE_ACCESS_TOKEN_COOKIE = "contents_view_supabase_access_token";
+
+// server/vercel-trpc.ts
+import express from "express";
 
 // shared/_core/errors.ts
 var HttpError = class extends Error {
@@ -4272,6 +4274,33 @@ app.use((req, _res, next) => {
   req.url = req.url.replace(/^\/api\/trpc\/?/, "/");
   next();
 });
+app.get("/auth-debug", async (req, res) => {
+  const authorization = getHeaderValue(req.headers.authorization);
+  const supabaseHeaderToken = getHeaderValue(req.headers["x-supabase-access-token"]);
+  const cookieToken = getCookieValue2(req.headers.cookie, SUPABASE_ACCESS_TOKEN_COOKIE);
+  const candidateAuthorization = authorization || (supabaseHeaderToken ? `Bearer ${supabaseHeaderToken}` : void 0) || (cookieToken ? `Bearer ${cookieToken}` : void 0);
+  const user = await authenticateSupabaseBearer(candidateAuthorization);
+  res.status(200).json({
+    ok: true,
+    received: {
+      authorizationHeader: Boolean(authorization),
+      supabaseHeader: Boolean(supabaseHeaderToken),
+      supabaseCookie: Boolean(cookieToken),
+      cookieHeader: Boolean(req.headers.cookie)
+    },
+    serverEnv: {
+      supabaseUrl: Boolean(ENV.supabaseUrl),
+      supabaseAnonKey: Boolean(ENV.supabaseAnonKey),
+      supabaseServiceRoleKey: Boolean(ENV.supabaseServiceRoleKey)
+    },
+    auth: {
+      authenticated: Boolean(user),
+      loginMethod: user?.loginMethod ?? null,
+      openIdPrefix: user?.openId ? user.openId.slice(0, 8) : null,
+      emailPresent: Boolean(user?.email)
+    }
+  });
+});
 app.use(
   createExpressMiddleware({
     router: appRouter,
@@ -4280,6 +4309,16 @@ app.use(
 );
 function handler(req, res) {
   return app(req, res);
+}
+function getHeaderValue(value) {
+  return Array.isArray(value) ? value[0] : value;
+}
+function getCookieValue2(cookieHeader, name) {
+  const cookie = Array.isArray(cookieHeader) ? cookieHeader.join("; ") : cookieHeader;
+  if (!cookie) return null;
+  const match = cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name}=`));
+  if (!match) return null;
+  return decodeURIComponent(match.slice(name.length + 1));
 }
 export {
   handler as default
