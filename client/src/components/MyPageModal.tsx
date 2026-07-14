@@ -19,6 +19,7 @@ export default function MyPageModal({ isOpen, onClose }: MyPageModalProps) {
 
   const utils = trpc.useUtils();
   const updateNameMutation = trpc.user.updateName.useMutation();
+  const hasNameChanged = nameInput !== originalName;
 
   // user 변경 시 초기값 업데이트
   useEffect(() => {
@@ -70,6 +71,17 @@ export default function MyPageModal({ isOpen, onClose }: MyPageModalProps) {
     setIsEditingName(false);
   };
 
+  const handleNameAction = () => {
+    if (!isEditingName) {
+      handleEditClick();
+      return;
+    }
+
+    if (hasNameChanged) {
+      handleSaveName();
+    }
+  };
+
   if (!isOpen) {
     return null;
   }
@@ -114,23 +126,27 @@ export default function MyPageModal({ isOpen, onClose }: MyPageModalProps) {
                 placeholder="닉네임을 입력해주세요"
               />
               <div className="mypageModalActionRow">
-                {isEditingName && (
-                  <button
-                    className="mypageModalEditButton mypageModalEditButtonSecondary"
-                    onClick={handleCancel}
-                    disabled={isSaving}
-                    type="button"
-                  >
-                    취소
-                  </button>
-                )}
                 <button
-                  className="mypageModalEditButton"
-                  onClick={isEditingName ? handleSaveName : handleEditClick}
-                  disabled={isEditingName && (isSaving || !nameInput.trim())}
+                  className="mypageModalEditButton mypageModalEditButtonSecondary"
+                  onClick={handleCancel}
+                  disabled={!isEditingName || isSaving}
                   type="button"
                 >
-                  {isEditingName ? (isSaving ? "저장 중" : "저장") : "수정"}
+                  취소
+                </button>
+                <button
+                  className="mypageModalEditButton"
+                  onClick={handleNameAction}
+                  disabled={isSaving}
+                  type="button"
+                >
+                  {isEditingName
+                    ? isSaving
+                      ? "저장 중"
+                      : hasNameChanged
+                        ? "저장"
+                        : "수정"
+                    : "수정"}
                 </button>
               </div>
             </div>

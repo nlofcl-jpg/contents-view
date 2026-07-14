@@ -209,8 +209,11 @@ export function YouTubeApiKeySettingsPanel({
     setInputValue("");
     setError(null);
     if (!maskedKey) {
-      // If no key exists, close the modal
-      onClose?.();
+      if (onClose) {
+        onClose();
+      } else {
+        setIsEditing(false);
+      }
     } else {
       // If key exists, exit edit mode
       setIsEditing(false);
@@ -235,6 +238,8 @@ export function YouTubeApiKeySettingsPanel({
 
   if (compact) {
     const apiKeyInputValue = isEditing ? inputValue : maskedKey || "";
+    const canCancelApiKeyEdit = isEditing && !isLoading && !isTesting;
+    const hasApiKeyChanged = !maskedKey || inputValue.trim().length > 0;
     const statusClass =
       testStatus === "success"
         ? "mypageApiStatus success"
@@ -279,26 +284,26 @@ export function YouTubeApiKeySettingsPanel({
         )}
         <p className={statusClass}>{statusText}</p>
         <div className="mypageModalActionRow">
-          {isEditing && (
-            <button
-              className="mypageModalEditButton mypageModalEditButtonSecondary"
-              onClick={handleCancel}
-              disabled={isLoading || isTesting}
-              type="button"
-            >
-              취소
-            </button>
-          )}
+          <button
+            className="mypageModalEditButton mypageModalEditButtonSecondary"
+            onClick={handleCancel}
+            disabled={!canCancelApiKeyEdit}
+            type="button"
+          >
+            취소
+          </button>
           <button
             className="mypageModalEditButton"
             onClick={isEditing ? handleSave : () => setIsEditing(true)}
-            disabled={isLoading || isTesting || isQueryLoading || (isEditing && !inputValue.trim())}
+            disabled={isLoading || isTesting || isQueryLoading || (isEditing && !hasApiKeyChanged)}
             type="button"
           >
             {isEditing
               ? isLoading || isTesting
                 ? "저장 중"
-                : "저장"
+                : hasApiKeyChanged
+                  ? "저장"
+                  : "수정"
               : "수정"}
           </button>
         </div>

@@ -1500,10 +1500,10 @@ a {
 }
 
 .mypageModalActionRow {
-  display: flex;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
 .mypageModalNameInput,
@@ -1545,8 +1545,8 @@ a {
 }
 
 .mypageModalEditButton {
-  flex-shrink: 0;
-  min-width: 64px;
+  width: 100%;
+  min-width: 0;
   padding: 8px 14px;
   background: rgba(21, 140, 255, 0.15);
   border: 1px solid rgba(21, 140, 255, 0.3);
@@ -1570,7 +1570,7 @@ a {
   color: #94a3b8;
 }
 
-.mypageModalEditButtonSecondary:hover {
+.mypageModalEditButtonSecondary:hover:not(:disabled) {
   background: rgba(148, 163, 184, 0.14);
   border-color: rgba(148, 163, 184, 0.34);
   color: #e2e8f0;
@@ -1594,13 +1594,13 @@ a {
   color: #94a3b8;
 }
 
-.mypageModalEditButton:hover {
+.mypageModalEditButton:hover:not(:disabled) {
   background: rgba(21, 140, 255, 0.25);
   border-color: rgba(21, 140, 255, 0.5);
   color: #ffffff;
 }
 
-.mypageModalEditButton:active {
+.mypageModalEditButton:active:not(:disabled) {
   transform: scale(0.97);
 }
 
@@ -1693,9 +1693,6 @@ a {
     flex-direction: column;
   }
 
-  .mypageModalEditButton {
-    width: 100%;
-  }
 }
 
 
