@@ -22,7 +22,11 @@ export async function createContext(
   }
 
   if (!user) {
-    user = await authenticateSupabaseBearer(opts.req.headers.authorization);
+    const authorizationHeader = opts.req.headers["authorization"];
+    const authorization = Array.isArray(authorizationHeader)
+      ? authorizationHeader[0]
+      : authorizationHeader;
+    user = await authenticateSupabaseBearer(authorization);
   }
 
   return {

@@ -1,5 +1,6 @@
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import express from "express";
+import type { NextFunction, Request, Response } from "express";
 import { appRouter } from "../../server/routers";
 import { createContext } from "../../server/_core/context";
 
@@ -8,7 +9,7 @@ const app = express();
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
-app.use((req, _res, next) => {
+app.use((req: Request, _res: Response, next: NextFunction) => {
   req.url = req.url.replace(/^\/api\/trpc\/?/, "/");
   next();
 });

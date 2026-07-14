@@ -1,6 +1,14 @@
-import { createClient, type User as SupabaseUser } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 import type { User } from "../../drizzle/schema";
 import { ENV } from "./env";
+
+type SupabaseUser = {
+  id: string;
+  email?: string | null;
+  created_at: string;
+  last_sign_in_at?: string | null;
+  user_metadata?: Record<string, unknown> | null;
+};
 
 const supabaseAuthClient =
   ENV.supabaseUrl && ENV.supabaseAnonKey
@@ -51,7 +59,9 @@ export async function authenticateSupabaseBearer(
   const token = getBearerToken(authorization);
   if (!token) return null;
 
-  const { data, error } = await supabaseAuthClient.auth.getUser(token);
+  const { data, error } = await (supabaseAuthClient.auth as {
+    getUser: (jwt: string) => Promise<{ data: { user: SupabaseUser | null }; error: unknown }>;
+  }).getUser(token);
   if (error || !data.user) return null;
 
   return mapSupabaseUser(data.user);
