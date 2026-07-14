@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1781058706448,
+      "tag": "0000_wooden_wallflower",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1781072831156,
+      "tag": "0001_funny_magdalene",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1781081987798,
+      "tag": "0002_lying_caretaker",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1781495666304,
+      "tag": "0003_strong_groot",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1781514079194,
+      "tag": "0004_slimy_viper",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1781514112417,
+      "tag": "0005_past_garia",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1781521453000,
+      "tag": "0006_fine_silver_samurai",
+      "breakpoints": true
+    }
+  ]
+}
