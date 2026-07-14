@@ -1499,6 +1499,13 @@ a {
   align-items: center;
 }
 
+.mypageModalActionRow {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
 .mypageModalNameInput,
 .mypageModalEmailInput {
   flex: 1;
@@ -1555,6 +1562,36 @@ a {
 .mypageModalEditButton:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.mypageModalEditButtonSecondary {
+  background: rgba(148, 163, 184, 0.08);
+  border-color: rgba(148, 163, 184, 0.22);
+  color: #94a3b8;
+}
+
+.mypageModalEditButtonSecondary:hover {
+  background: rgba(148, 163, 184, 0.14);
+  border-color: rgba(148, 163, 184, 0.34);
+  color: #e2e8f0;
+}
+
+.mypageApiStatus {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.mypageApiStatus.success {
+  color: #34d399;
+}
+
+.mypageApiStatus.failed {
+  color: #f87171;
+}
+
+.mypageApiStatus.neutral {
+  color: #94a3b8;
 }
 
 .mypageModalEditButton:hover {

@@ -235,6 +235,23 @@ export function YouTubeApiKeySettingsPanel({
 
   if (compact) {
     const apiKeyInputValue = isEditing ? inputValue : maskedKey || "";
+    const statusClass =
+      testStatus === "success"
+        ? "mypageApiStatus success"
+        : testStatus === "failed"
+          ? "mypageApiStatus failed"
+          : "mypageApiStatus neutral";
+    const statusText = isQueryLoading
+      ? "YouTube API key 상태 확인 중"
+      : isEditing
+        ? "저장하면 YouTube API 연결 확인이 진행됩니다."
+        : testStatus === "success"
+          ? "YouTube API 연결이 확인되었습니다."
+          : testStatus === "failed"
+            ? testError || "YouTube API key가 올바르지 않습니다."
+            : maskedKey
+              ? "YouTube API 연결 확인이 필요합니다."
+              : "YouTube API key를 입력하세요.";
 
     return (
       <div className="space-y-2">
@@ -244,58 +261,47 @@ export function YouTubeApiKeySettingsPanel({
           </div>
         )}
         {isQueryLoading ? (
-          <div className="mypageModalInputWrapper">
-            <input
-              className="mypageModalNameInput"
-              value="로딩 중..."
-              disabled
-              readOnly
-            />
-            <button className="mypageModalEditButton" disabled type="button">
-              확인
-            </button>
-          </div>
+          <input
+            className="mypageModalNameInput"
+            value="로딩 중..."
+            disabled
+            readOnly
+          />
         ) : (
-          <div className="mypageModalInputWrapper">
-            <input
-              type={isEditing ? "password" : "text"}
-              className="mypageModalNameInput"
-              value={apiKeyInputValue}
-              onChange={(event) => setInputValue(event.target.value)}
-              disabled={!isEditing}
-              placeholder="YouTube Data API Key"
-            />
+          <input
+            type={isEditing ? "password" : "text"}
+            className="mypageModalNameInput"
+            value={apiKeyInputValue}
+            onChange={(event) => setInputValue(event.target.value)}
+            disabled={!isEditing}
+            placeholder="YouTube Data API Key"
+          />
+        )}
+        <p className={statusClass}>{statusText}</p>
+        <div className="mypageModalActionRow">
+          {isEditing && (
             <button
-              className="mypageModalEditButton"
-              onClick={isEditing ? handleSave : () => setIsEditing(true)}
-              disabled={isLoading || isTesting || (isEditing && !inputValue.trim())}
+              className="mypageModalEditButton mypageModalEditButtonSecondary"
+              onClick={handleCancel}
+              disabled={isLoading || isTesting}
               type="button"
             >
-              {isEditing
-                ? isLoading || isTesting
-                  ? "저장 중"
-                  : "저장"
-                : "수정"}
+              취소
             </button>
-          </div>
-        )}
-        {testStatus && !isEditing && (
-          <p
-            className={`text-xs ${
-              testStatus === "success"
-                ? "text-emerald-300"
-                : testStatus === "failed"
-                  ? "text-red-300"
-                  : "text-blue-300"
-            }`}
+          )}
+          <button
+            className="mypageModalEditButton"
+            onClick={isEditing ? handleSave : () => setIsEditing(true)}
+            disabled={isLoading || isTesting || isQueryLoading || (isEditing && !inputValue.trim())}
+            type="button"
           >
-            {testStatus === "success"
-              ? "YouTube API 연결 완료"
-              : testStatus === "failed"
-                ? testError || "YouTube API 연결 실패"
-                : "연결 테스트 필요"}
-          </p>
-        )}
+            {isEditing
+              ? isLoading || isTesting
+                ? "저장 중"
+                : "저장"
+              : "수정"}
+          </button>
+        </div>
         <button
           onClick={() => setShowHelpBox(!showHelpBox)}
           className="apiHelpToggle apiHelpToggleCompact"

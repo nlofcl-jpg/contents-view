@@ -105,15 +105,25 @@ export default function MyPageModal({ isOpen, onClose }: MyPageModalProps) {
             {/* Nickname Field */}
             <div className="mypageModalField">
               <label className="mypageModalLabel">닉네임</label>
-              <div className="mypageModalInputWrapper">
-                <input
-                  type="text"
-                  className="mypageModalNameInput"
-                  value={nameInput}
-                  onChange={(e) => setNameInput(e.target.value)}
-                  disabled={!isEditingName}
-                  placeholder="닉네임을 입력해주세요"
-                />
+              <input
+                type="text"
+                className="mypageModalNameInput"
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                disabled={!isEditingName}
+                placeholder="닉네임을 입력해주세요"
+              />
+              <div className="mypageModalActionRow">
+                {isEditingName && (
+                  <button
+                    className="mypageModalEditButton mypageModalEditButtonSecondary"
+                    onClick={handleCancel}
+                    disabled={isSaving}
+                    type="button"
+                  >
+                    취소
+                  </button>
+                )}
                 <button
                   className="mypageModalEditButton"
                   onClick={isEditingName ? handleSaveName : handleEditClick}
