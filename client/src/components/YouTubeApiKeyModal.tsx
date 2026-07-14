@@ -220,6 +220,15 @@ export function YouTubeApiKeySettingsPanel({
     }
   };
 
+  const handleEdit = () => {
+    setError(null);
+    setInputValue(maskedKey ?? "");
+    setIsEditing(true);
+  };
+
+  const isMaskedValue = Boolean(maskedKey && inputValue === maskedKey);
+  const canSaveInputValue = inputValue.trim().length > 0 && !isMaskedValue;
+
   // Show login prompt if not authenticated
   if (!isAuthenticated) {
     return (
@@ -239,7 +248,7 @@ export function YouTubeApiKeySettingsPanel({
   if (compact) {
     const apiKeyInputValue = isEditing ? inputValue : maskedKey || "";
     const canCancelApiKeyEdit = isEditing && !isLoading && !isTesting;
-    const hasApiKeyChanged = !maskedKey || inputValue.trim().length > 0;
+    const hasApiKeyChanged = !maskedKey || canSaveInputValue;
     const statusClass =
       testStatus === "success"
         ? "mypageApiStatus success"
@@ -274,7 +283,7 @@ export function YouTubeApiKeySettingsPanel({
           />
         ) : (
           <input
-            type={isEditing ? "password" : "text"}
+            type={isEditing && !isMaskedValue ? "password" : "text"}
             className="mypageModalNameInput"
             value={apiKeyInputValue}
             onChange={(event) => setInputValue(event.target.value)}
@@ -294,7 +303,7 @@ export function YouTubeApiKeySettingsPanel({
           </button>
           <button
             className="mypageModalEditButton"
-            onClick={isEditing ? handleSave : () => setIsEditing(true)}
+            onClick={isEditing ? handleSave : handleEdit}
             disabled={isLoading || isTesting || isQueryLoading || (isEditing && !hasApiKeyChanged)}
             type="button"
           >
@@ -371,13 +380,13 @@ export function YouTubeApiKeySettingsPanel({
                 YouTube API Key
               </label>
               <Input
-                type="password"
+                type={isMaskedValue ? "text" : "password"}
                 placeholder={maskedKey ? "새 YouTube Data API Key를 입력하세요" : "YouTube Data API Key를 입력하세요"}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 className="bg-slate-800 border-slate-600 text-white placeholder-slate-500"
               />
-              {!inputValue.trim() && (
+              {(!inputValue.trim() || isMaskedValue) && (
                 <p className="text-slate-400 text-xs mt-2">
                   {maskedKey ? "새 API Key를 입력하면 저장할 수 있습니다." : "API Key를 입력하면 저장할 수 있습니다."}
                 </p>
@@ -386,7 +395,7 @@ export function YouTubeApiKeySettingsPanel({
             <div className="flex gap-3">
               <Button
                 onClick={handleSave}
-                disabled={isLoading || isTesting || !inputValue.trim()}
+                disabled={isLoading || isTesting || !canSaveInputValue}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
               >
                 {isLoading || isTesting ? "저장 및 연결 확인 중..." : maskedKey ? "새 키 저장" : "저장"}
@@ -524,7 +533,7 @@ export function YouTubeApiKeySettingsPanel({
                 {isTesting ? "테스트 중..." : testStatus === "success" ? "연결 완료" : "연결 테스트"}
               </Button>
               <Button
-                onClick={() => setIsEditing(true)}
+                onClick={handleEdit}
                 variant="outline"
                 className="flex-1"
               >
