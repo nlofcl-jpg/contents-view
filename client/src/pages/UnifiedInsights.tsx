@@ -3,6 +3,11 @@ import { trpc } from "@/lib/trpc";
 import { UnifiedChart } from "@/components/UnifiedChart";
 import { ChevronDown } from "lucide-react";
 
+type InsightPoint = {
+  period: string;
+  ratio: number;
+};
+
 export default function UnifiedInsights() {
   // State management
   const [selectedCategory, setSelectedCategory] = useState("패션의류");
@@ -25,6 +30,34 @@ export default function UnifiedInsights() {
   const [startDateForChart, setStartDateForChart] = useState("");
   const [endDateForChart, setEndDateForChart] = useState("");
   const [timeUnitForChart, setTimeUnitForChart] = useState("date");
+
+  const getSeriesSummary = (series?: InsightPoint[]) => {
+    if (!series || series.length === 0) {
+      return { latest: null as number | null, delta: null as number | null, peak: null as number | null };
+    }
+
+    const latest = series[series.length - 1]?.ratio ?? null;
+    const previous = series.length > 1 ? series[series.length - 2]?.ratio : null;
+    const delta = latest !== null && previous !== null ? latest - previous : null;
+    const peak = Math.max(...series.map((item) => item.ratio));
+    return { latest, delta, peak };
+  };
+
+  const formatRatio = (value: number | null) => {
+    if (value === null || Number.isNaN(value)) return "-";
+    return `${Math.round(value * 10) / 10}`;
+  };
+
+  const formatDelta = (value: number | null) => {
+    if (value === null || Number.isNaN(value)) return "비교 데이터 없음";
+    if (value === 0) return "변동 없음";
+    return `${value > 0 ? "+" : ""}${Math.round(value * 10) / 10}p`;
+  };
+
+  const primaryKeyword = chartData?.keywords?.[0] || keywords[0] || "";
+  const primaryTrendSummary = getSeriesSummary(primaryKeyword ? chartData?.trend?.[primaryKeyword] : undefined);
+  const primaryShoppingSummary = getSeriesSummary(primaryKeyword ? chartData?.shopping?.[primaryKeyword] : undefined);
+  const shoppingStatus = primaryKeyword ? chartData?.meta?.shoppingStatus?.[primaryKeyword] : undefined;
 
 
   // Category mapping (1차 카테고리만)
@@ -487,35 +520,76 @@ export default function UnifiedInsights() {
 
       {/* Chart Display */}
       {!isLoading && querySuccess && chartData && (
-        <div className="mt-8 bg-slate-900 bg-opacity-50 border border-cyan-700 border-opacity-30 rounded-lg px-6 pt-6 pb-8 md:p-6 md:pb-6 h-auto min-h-0">
-          {/* Chart Header */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-white mb-2">
-              검색 트렌드 · 쇼핑 클릭량 비교
-            </h3>
-            <div className="text-sm text-slate-400">
-              <p className="mb-1">{keywords.join(", ")}</p>
-              <p>{startDateForChart} – {endDateForChart}</p>
+        <div className="mt-8 space-y-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-4">
+              <p className="text-xs font-semibold text-slate-400">검색 관심도</p>
+              <p className="mt-2 text-2xl font-bold text-white">{formatRatio(primaryTrendSummary.latest)}</p>
+              <p className="mt-1 text-xs text-slate-500">직전 구간 대비 {formatDelta(primaryTrendSummary.delta)}</p>
+            </div>
+            <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-4">
+              <p className="text-xs font-semibold text-slate-400">쇼핑 클릭 반응</p>
+              <p className="mt-2 text-2xl font-bold text-white">{formatRatio(primaryShoppingSummary.latest)}</p>
+              <p className="mt-1 text-xs text-slate-500">
+                {shoppingStatus === "NO_DATA" ? "쇼핑 데이터 없음" : `직전 구간 대비 ${formatDelta(primaryShoppingSummary.delta)}`}
+              </p>
+            </div>
+            <div className="rounded-lg border border-slate-700 bg-slate-900/35 p-4">
+              <p className="text-xs font-semibold text-slate-400">월간 검색량</p>
+              <p className="mt-2 text-xl font-bold text-slate-300">연결 필요</p>
+              <p className="mt-1 text-xs text-slate-500">네이버 검색광고 API 연결 후 표시</p>
+            </div>
+            <div className="rounded-lg border border-slate-700 bg-slate-900/35 p-4">
+              <p className="text-xs font-semibold text-slate-400">연관 키워드</p>
+              <p className="mt-2 text-xl font-bold text-slate-300">연결 필요</p>
+              <p className="mt-1 text-xs text-slate-500">검색광고 API에서 확장 예정</p>
             </div>
           </div>
 
-          {/* Chart Container */}
-          <div className="md:h-[480px] h-[520px]">
-            <UnifiedChart
-              data={{
-                keywords: chartData.keywords || [],
-                trend: chartData.trend || {},
-                shopping: chartData.shopping || {},
-                shoppingStatus: chartData.meta?.shoppingStatus,
-              }}
-              visibleLayers={{
-                trend: showTrend,
-                shopping: showShopping,
-              }}
-              timeUnit={timeUnitForChart}
-              startDate={startDateForChart}
-              endDate={endDateForChart}
-            />
+          <div className="rounded-lg border border-slate-700 bg-slate-900/35 p-4">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-white">현재 구현 단계</h3>
+                <p className="mt-1 text-sm text-slate-400">
+                  지금은 네이버 데이터랩 기반의 검색 트렌드와 쇼핑 클릭량을 통합 표시합니다.
+                </p>
+              </div>
+              <span className="w-fit rounded-full border border-amber-500/30 px-3 py-1 text-xs font-semibold text-amber-300">
+                검색광고 API 연결 전
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-slate-900 bg-opacity-50 border border-cyan-700 border-opacity-30 rounded-lg px-6 pt-6 pb-8 md:p-6 md:pb-6 h-auto min-h-0">
+            {/* Chart Header */}
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-white mb-2">
+                검색 트렌드 · 쇼핑 클릭량 비교
+              </h3>
+              <div className="text-sm text-slate-400">
+                <p className="mb-1">{keywords.join(", ")}</p>
+                <p>{startDateForChart} – {endDateForChart}</p>
+              </div>
+            </div>
+
+            {/* Chart Container */}
+            <div className="md:h-[480px] h-[520px]">
+              <UnifiedChart
+                data={{
+                  keywords: chartData.keywords || [],
+                  trend: chartData.trend || {},
+                  shopping: chartData.shopping || {},
+                  shoppingStatus: chartData.meta?.shoppingStatus,
+                }}
+                visibleLayers={{
+                  trend: showTrend,
+                  shopping: showShopping,
+                }}
+                timeUnit={timeUnitForChart}
+                startDate={startDateForChart}
+                endDate={endDateForChart}
+              />
+            </div>
           </div>
         </div>
       )}

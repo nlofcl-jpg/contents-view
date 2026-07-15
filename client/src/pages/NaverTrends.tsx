@@ -24,7 +24,7 @@ export default function NaverTrends() {
   const isMobile = useIsMobile();
   
   // Tab state
-  const [activeTab, setActiveTab] = useState<"shopping" | "unified" | "experience">("shopping");
+  const [activeTab, setActiveTab] = useState<"shopping" | "unified" | "experience">("unified");
 
   const [selectedCategory, setSelectedCategory] = useState("패션의류");
   const [chartData, setChartData] = useState<Array<{ period: string; ratio: number }>>([]);
@@ -146,8 +146,8 @@ export default function NaverTrends() {
   const timeUnits = ["일간", "주간", "월간"];
 
   const tabs = [
+    { id: "unified", label: "키워드 통합 분석" },
     { id: "shopping", label: "쇼핑 클릭량" },
-    { id: "unified", label: "통합 인사이트" },
     { id: "experience", label: "체험단" },
   ] as const;
 
@@ -504,9 +504,9 @@ export default function NaverTrends() {
     <div className="youtubePageContainer">
       {/* Page Header */}
       <div className="pageHeader">
-        <h1 className="pageTitle">쇼핑 트렌드</h1>
+        <h1 className="pageTitle">쇼핑 인사이트</h1>
         <p className="pageDescription">
-          셀러들을 위한 쇼핑 트렌드 흐름을 한곳에서 확인하세요.
+          검색어 하나로 검색 수요와 쇼핑 반응을 한 페이지에서 확인하세요.
         </p>
       </div>
 
