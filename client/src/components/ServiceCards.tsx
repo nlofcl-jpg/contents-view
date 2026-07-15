@@ -10,6 +10,7 @@ type TrendRow = {
   meta?: string;
   rightValue?: string;
   detailHref?: string;
+  externalHref?: string;
   image?: string | null;
   tone?: "hot" | "normal";
   video?: any;
@@ -106,17 +107,19 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
           card.rows.map((row, index) => (
             <div
               key={`${card.id}-${index}-${row.label}`}
-              className={`flex min-h-[61px] items-center gap-3 rounded-md border border-slate-800/70 bg-slate-900/25 p-2.5 ${row.video ? "cursor-pointer transition-colors hover:border-blue-400/40 hover:bg-slate-900/55" : ""}`}
-              role={row.video ? "button" : undefined}
-              tabIndex={row.video ? 0 : undefined}
+              className={`flex min-h-[61px] items-center gap-3 rounded-md border border-slate-800/70 bg-slate-900/25 p-2.5 ${(row.video || row.externalHref) ? "cursor-pointer transition-colors hover:border-blue-400/40 hover:bg-slate-900/55" : ""}`}
+              role={(row.video || row.externalHref) ? "button" : undefined}
+              tabIndex={(row.video || row.externalHref) ? 0 : undefined}
               onClick={() => {
                 if (row.video) onVideoSelect?.(row.video);
+                if (row.externalHref) window.open(row.externalHref, "_blank", "noopener,noreferrer");
               }}
               onKeyDown={(event) => {
-                if (!row.video) return;
+                if (!row.video && !row.externalHref) return;
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
-                  onVideoSelect?.(row.video);
+                  if (row.video) onVideoSelect?.(row.video);
+                  if (row.externalHref) window.open(row.externalHref, "_blank", "noopener,noreferrer");
                 }
               }}
             >
@@ -233,6 +236,7 @@ export default function ServiceCards() {
     return posts.slice(0, 5).map((post: any) => ({
       label: stripHtml(post.title),
       meta: [post.community, formatCommunityDate(post.time), post.commentCount ? `댓글 ${post.commentCount}` : null].filter(Boolean).join(" · "),
+      externalHref: post.url && post.url !== "#" ? post.url : undefined,
     }));
   }, [communityQuery.data]);
 
@@ -243,6 +247,7 @@ export default function ServiceCards() {
       meta: [item.source, item.pubDate ? new Date(item.pubDate).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }) : null].filter(Boolean).join(" · "),
       image: item.thumbnail,
       tone: "normal" as const,
+      externalHref: item.link,
     }));
   }, [newsQuery.data]);
 
