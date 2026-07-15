@@ -20,7 +20,18 @@ interface TrendItem {
 }
 
 export default function GoogleTrends() {
-  const [selectedCountry, setSelectedCountry] = useState("KR");
+  const getInitialParams = () => {
+    if (typeof window === "undefined") return { country: "KR", trend: "" };
+    const params = new URLSearchParams(window.location.search);
+    return {
+      country: params.get("country") || "KR",
+      trend: params.get("trend") || "",
+    };
+  };
+
+  const initialParams = getInitialParams();
+  const [selectedCountry, setSelectedCountry] = useState(initialParams.country);
+  const [selectedKeywordFromUrl, setSelectedKeywordFromUrl] = useState(initialParams.trend);
   const [popularSearches, setPopularSearches] = useState<TrendItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +51,10 @@ export default function GoogleTrends() {
     if (trendsData?.success && trendsData.data && trendsData.data.length > 0) {
       setPopularSearches(trendsData.data);
       setError(null);
-      setSelectedTrend(null);
+      const matchedTrend = selectedKeywordFromUrl
+        ? trendsData.data.find((item: TrendItem) => item.keyword === selectedKeywordFromUrl)
+        : null;
+      setSelectedTrend(matchedTrend || null);
     } else if (trendsData?.success && (!trendsData.data || trendsData.data.length === 0)) {
       setError("실시간 인기 검색어 데이터를 불러올 수 없습니다.");
       setPopularSearches([]);
@@ -51,7 +65,7 @@ export default function GoogleTrends() {
       setSelectedTrend(null);
     }
     setIsLoading(isTrendsLoading);
-  }, [trendsData, isTrendsLoading]);
+  }, [trendsData, isTrendsLoading, selectedKeywordFromUrl]);
 
   // Handle error from tRPC
   useEffect(() => {
@@ -64,6 +78,12 @@ export default function GoogleTrends() {
 
   const handleCountryChange = (newCountry: string) => {
     setSelectedCountry(newCountry);
+    setSelectedKeywordFromUrl("");
+  };
+
+  const handleSelectTrend = (item: TrendItem | null) => {
+    setSelectedKeywordFromUrl("");
+    setSelectedTrend(item);
   };
 
   const countries = [
@@ -144,7 +164,7 @@ export default function GoogleTrends() {
                       className={`grid grid-cols-12 gap-4 p-4 items-center hover:bg-slate-900/20 transition cursor-pointer ${
                         selectedTrend?.rank === item.rank ? "bg-slate-900/40 border-l-2 border-blue-600" : ""
                       } ${idx < popularSearches.length - 1 ? "border-b border-slate-800" : ""}`}
-                      onClick={() => setSelectedTrend(item)}
+                      onClick={() => handleSelectTrend(item)}
                     >
                       <div className="col-span-1 text-xl font-bold text-slate-300">{item.rank}</div>
                       <div className="col-span-6 text-foreground font-medium truncate">{item.keyword}</div>
@@ -153,7 +173,7 @@ export default function GoogleTrends() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedTrend(item);
+                            handleSelectTrend(item);
                           }}
                           className="text-blue-500 hover:text-blue-400 text-sm font-medium transition"
                         >
@@ -174,7 +194,7 @@ export default function GoogleTrends() {
                           ? "border-blue-600 bg-slate-900/40"
                           : "border-slate-800 hover:bg-slate-900/40"
                       }`}
-                      onClick={() => setSelectedTrend(item)}
+                      onClick={() => handleSelectTrend(item)}
                     >
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div className="text-xl font-bold text-slate-300 w-8 flex-shrink-0">{item.rank}</div>
@@ -187,7 +207,7 @@ export default function GoogleTrends() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedTrend(item);
+                            handleSelectTrend(item);
                           }}
                           className="text-blue-500 hover:text-blue-400 text-sm font-medium transition flex-shrink-0"
                         >
@@ -212,7 +232,7 @@ export default function GoogleTrends() {
                     </p>
                   </div>
                   <button
-                    onClick={() => setSelectedTrend(null)}
+                    onClick={() => handleSelectTrend(null)}
                     className="text-slate-400 hover:text-foreground transition flex-shrink-0 ml-4"
                   >
                     <X className="w-6 h-6" />

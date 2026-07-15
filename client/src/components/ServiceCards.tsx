@@ -9,6 +9,7 @@ type TrendRow = {
   label: string;
   meta?: string;
   rightValue?: string;
+  detailHref?: string;
   image?: string | null;
   tone?: "hot" | "normal";
   video?: any;
@@ -134,7 +135,23 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
                 <p className="truncate text-sm font-semibold text-slate-100">{row.label}</p>
                 {row.meta && <p className="mt-1 truncate text-xs text-slate-400">{row.meta}</p>}
               </div>
-              {row.rightValue && <span className="shrink-0 text-xs font-bold text-blue-300">{row.rightValue}</span>}
+              {(row.rightValue || row.detailHref) && (
+                <div className="flex shrink-0 items-center gap-2">
+                  {row.rightValue && <span className="text-xs font-bold text-blue-300">{row.rightValue}</span>}
+                  {row.detailHref && (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setLocation(row.detailHref!);
+                      }}
+                      className="text-[11px] font-semibold text-slate-500 transition-colors hover:text-blue-200"
+                    >
+                      자세히
+                    </button>
+                  )}
+                </div>
+              )}
               {row.tone === "hot" && <span className="shrink-0 text-xs font-bold text-red-400">급상승</span>}
             </div>
           ))
@@ -207,6 +224,7 @@ export default function ServiceCards() {
     return trends.slice(0, 5).map((item: any) => ({
       label: stripHtml(item.keyword),
       rightValue: item.traffic || "-",
+      detailHref: `/trends/google?country=KR&trend=${encodeURIComponent(item.keyword)}`,
     }));
   }, [googleTrendsQuery.data]);
 
