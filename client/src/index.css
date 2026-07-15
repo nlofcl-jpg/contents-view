@@ -1184,9 +1184,9 @@ a {
 }
 
 .heroSearch {
-  width: min(100%, 980px);
-  height: 86px;
-  margin-top: 54px;
+  width: min(100%, 760px);
+  height: 58px;
+  margin-top: 34px;
   display: flex;
   align-items: center;
   gap: 0;
@@ -1202,11 +1202,11 @@ a {
 .heroSearchFilter {
   flex: 0 0 auto;
   height: 100%;
-  min-width: 184px;
+  min-width: 132px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 8px;
   border: 0;
   background: transparent;
   color: #10b981;
@@ -1215,8 +1215,8 @@ a {
 }
 
 .heroSearchFilterIcon {
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   color: #4b5563;
   pointer-events: none;
 }
@@ -1226,7 +1226,7 @@ a {
   outline: 0;
   background: transparent;
   color: #10b981;
-  font-size: 22px;
+  font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.01em;
   appearance: none;
@@ -1236,7 +1236,7 @@ a {
 
 .heroSearchDivider {
   width: 1px;
-  height: 34px;
+  height: 24px;
   background: #e5e7eb;
 }
 
@@ -1247,11 +1247,10 @@ a {
   border: 0;
   outline: 0;
   background: transparent;
-  padding: 0 28px;
+  padding: 0 18px;
   color: #111827;
-  font-size: 22px;
+  font-size: 16px;
   font-weight: 600;
-  cursor: default;
 }
 
 .heroSearchInput::placeholder {
@@ -1261,7 +1260,7 @@ a {
 
 .heroSearchButton {
   flex: 0 0 auto;
-  width: 92px;
+  width: 62px;
   height: 100%;
   display: inline-flex;
   align-items: center;
@@ -1269,12 +1268,12 @@ a {
   border: 0;
   background: transparent;
   color: #52565c;
-  cursor: default;
+  cursor: pointer;
 }
 
 .heroSearchIcon {
-  width: 34px;
-  height: 34px;
+  width: 24px;
+  height: 24px;
 }
 
 .heroDescription {
@@ -1504,18 +1503,18 @@ a {
   }
 
   .heroSearch {
-    height: 62px;
-    margin-top: 34px;
+    height: 50px;
+    margin-top: 28px;
     border-radius: 999px;
   }
 
   .heroSearchFilter {
-    min-width: 112px;
+    min-width: 92px;
     gap: 6px;
   }
 
   .heroSearchSelect {
-    font-size: 15px;
+    font-size: 13px;
   }
 
   .heroSearchFilterIcon {
@@ -1528,12 +1527,12 @@ a {
   }
 
   .heroSearchInput {
-    padding: 0 14px;
-    font-size: 15px;
+    padding: 0 12px;
+    font-size: 14px;
   }
 
   .heroSearchButton {
-    width: 58px;
+    width: 50px;
   }
 
   .heroSearchIcon {

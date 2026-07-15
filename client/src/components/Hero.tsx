@@ -27,7 +27,6 @@ export default function Hero() {
               className="heroSearchInput"
               placeholder="분석할 키워드를 입력하세요"
               aria-label="분석할 키워드"
-              readOnly
             />
             <button type="button" className="heroSearchButton" aria-label="검색">
               <Search className="heroSearchIcon" aria-hidden="true" />
