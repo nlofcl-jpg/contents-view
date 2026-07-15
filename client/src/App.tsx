@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 import NotFound from "@/pages/NotFound";
 import Home from "@/pages/Home";
@@ -74,6 +75,7 @@ function App() {
             <main className="mainContent">
               <WouterRouter>
                 <Router />
+                <Footer />
               </WouterRouter>
             </main>
 
