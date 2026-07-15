@@ -1099,11 +1099,13 @@ a {
 
 .hero {
   position: relative;
+  width: calc(100% + 144px);
+  margin: -48px -72px 0;
   min-height: clamp(430px, 58vh, 620px);
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  padding: 28px 0;
+  padding: 28px 72px;
   overflow: visible;
   background:
     radial-gradient(circle at 82% 34%, rgba(21, 140, 255, 0.13), transparent 42%),
@@ -1234,7 +1236,7 @@ a {
   .hero {
     grid-template-columns: 1fr;
     min-height: clamp(400px, 54vh, 560px);
-    padding: 24px 0;
+    padding: 24px 72px;
   }
 
   .hero::before {
@@ -1365,9 +1367,11 @@ a {
 
   .hero {
     grid-template-columns: 1fr;
+    width: calc(100% + 40px);
+    margin: -40px -20px 0;
     min-height: 380px;
     gap: 0;
-    padding: 24px 0;
+    padding: 24px 20px;
   }
 
   .hero::before {
