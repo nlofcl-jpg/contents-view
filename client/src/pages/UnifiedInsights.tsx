@@ -59,21 +59,43 @@ export default function UnifiedInsights() {
   const recommendedKeywords = primaryKeyword
     ? [
         `${primaryKeyword} 추천`,
-        `${primaryKeyword} 후기`,
-        `${primaryKeyword} 가격`,
-        `${primaryKeyword} 순위`,
         `${primaryKeyword} 비교`,
-        `${primaryKeyword} 브랜드`,
-        `${primaryKeyword} 신상`,
+        `${primaryKeyword} 순위`,
+        `${primaryKeyword} 후기`,
         `${primaryKeyword} 인기`,
+        `${primaryKeyword} 브랜드`,
+        `${primaryKeyword} 가격`,
+        `${primaryKeyword} 신상`,
         `${primaryKeyword} 할인`,
+        `${primaryKeyword} 베스트`,
+      ]
+    : [];
+  const relatedKeywords = primaryKeyword
+    ? [
         `${primaryKeyword} 구매`,
         `${primaryKeyword} 코디`,
         `${primaryKeyword} 선물`,
         `${primaryKeyword} 사이즈`,
         `${primaryKeyword} 고르는법`,
-        `${primaryKeyword} 베스트`,
         `${primaryKeyword} 트렌드`,
+        `${primaryKeyword} 종류`,
+        `${primaryKeyword} 추천템`,
+        `${primaryKeyword} 저렴한곳`,
+        `${primaryKeyword} 프리미엄`,
+        `${primaryKeyword} 브랜드 순위`,
+        `${primaryKeyword} 내돈내산`,
+        `${primaryKeyword} 장점`,
+        `${primaryKeyword} 단점`,
+        `${primaryKeyword} 사용법`,
+        `${primaryKeyword} 관리법`,
+        `${primaryKeyword} 비교표`,
+        `${primaryKeyword} 입문`,
+        `${primaryKeyword} 세일`,
+        `${primaryKeyword} 쿠폰`,
+        `${primaryKeyword} 리뷰`,
+        `${primaryKeyword} 랭킹`,
+        `${primaryKeyword} 모음`,
+        `${primaryKeyword} 최신`,
       ]
     : [];
 
@@ -323,7 +345,7 @@ export default function UnifiedInsights() {
               <div>
                 <h3 className="text-base font-semibold text-white">추천 키워드</h3>
                 <p className="mt-1 text-sm text-slate-400">
-                  검색어와 함께 확인할 연관 키워드를 가로로 모아 표시합니다.
+                  우선 확인하면 좋은 키워드를 10개 내외로 모아 표시합니다.
                 </p>
               </div>
               <span className="w-fit rounded-full border border-amber-500/30 px-3 py-1 text-xs font-semibold text-amber-300">
@@ -343,6 +365,34 @@ export default function UnifiedInsights() {
                     className="whitespace-nowrap rounded-full border border-blue-500/25 bg-blue-500/10 px-3 py-1.5 text-sm font-medium text-blue-100 transition-colors hover:border-blue-400/50 hover:bg-blue-500/20"
                   >
                     {keyword}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-5 border-t border-slate-700/70 pt-4">
+              <div className="mb-3 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <h3 className="text-base font-semibold text-white">연관 키워드</h3>
+                  <p className="mt-1 text-sm text-slate-400">
+                    검색어와 연결된 키워드를 최대한 많이 리스트로 표시합니다.
+                  </p>
+                </div>
+                <span className="text-xs text-slate-500">{relatedKeywords.length}개 표시</span>
+              </div>
+              <div className="grid max-h-72 gap-2 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {relatedKeywords.map((keyword) => (
+                  <button
+                    key={keyword}
+                    type="button"
+                    onClick={() => {
+                      setKeywordInput(keyword);
+                      runQuery([keyword]);
+                    }}
+                    className="flex min-h-10 items-center justify-between gap-3 rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-left text-sm text-slate-200 transition-colors hover:border-blue-500/50 hover:bg-slate-800"
+                  >
+                    <span className="min-w-0 truncate">{keyword}</span>
+                    <span className="shrink-0 text-xs text-blue-300">조회</span>
                   </button>
                 ))}
               </div>
