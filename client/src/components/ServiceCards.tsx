@@ -109,7 +109,7 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
                 <img
                   src={row.image}
                   alt=""
-                  className="h-12 w-16 shrink-0 rounded object-cover"
+                  className="h-10 w-14 shrink-0 rounded object-cover"
                   loading="lazy"
                 />
               )}
@@ -189,7 +189,6 @@ export default function ServiceCards() {
     return trends.slice(0, 5).map((item: any) => ({
       label: stripHtml(item.keyword),
       meta: item.traffic ? `검색량 ${item.traffic}` : "Google Trends",
-      tone: "hot" as const,
     }));
   }, [googleTrendsQuery.data]);
 
@@ -226,7 +225,7 @@ export default function ServiceCards() {
     {
       id: "search",
       title: "검색 트렌드",
-      badge: "급상승",
+      badge: "검색량",
       href: "/trends/google",
       icon: <Search className="h-5 w-5" />,
       rows: searchRows,
