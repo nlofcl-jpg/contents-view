@@ -239,15 +239,15 @@ export default function UnifiedInsights() {
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-lg bg-slate-800/70 p-3">
+                <div className="flex h-20 min-w-0 flex-col justify-between rounded-lg bg-slate-800/70 p-3">
                   <p className="text-xs text-slate-500">PC</p>
                   <p className="mt-2 text-xl font-bold text-slate-300">-</p>
                 </div>
-                <div className="rounded-lg bg-slate-800/70 p-3">
+                <div className="flex h-20 min-w-0 flex-col justify-between rounded-lg bg-slate-800/70 p-3">
                   <p className="text-xs text-slate-500">모바일</p>
                   <p className="mt-2 text-xl font-bold text-slate-300">-</p>
                 </div>
-                <div className="rounded-lg bg-blue-950/50 p-3">
+                <div className="flex h-20 min-w-0 flex-col justify-between rounded-lg bg-blue-950/50 p-3">
                   <p className="text-xs text-blue-300">전체</p>
                   <p className="mt-2 text-xl font-bold text-white">-</p>
                 </div>
@@ -266,15 +266,15 @@ export default function UnifiedInsights() {
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-lg bg-slate-800/70 p-3">
+                <div className="flex h-20 min-w-0 flex-col justify-between rounded-lg bg-slate-800/70 p-3">
                   <p className="text-xs text-slate-500">PC</p>
                   <p className="mt-2 text-xl font-bold text-slate-300">-</p>
                 </div>
-                <div className="rounded-lg bg-slate-800/70 p-3">
+                <div className="flex h-20 min-w-0 flex-col justify-between rounded-lg bg-slate-800/70 p-3">
                   <p className="text-xs text-slate-500">모바일</p>
                   <p className="mt-2 text-xl font-bold text-slate-300">-</p>
                 </div>
-                <div className="rounded-lg bg-blue-950/50 p-3">
+                <div className="flex h-20 min-w-0 flex-col justify-between rounded-lg bg-blue-950/50 p-3">
                   <p className="text-xs text-blue-300">전체</p>
                   <p className="mt-2 text-xl font-bold text-white">-</p>
                 </div>
