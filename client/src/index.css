@@ -1106,7 +1106,7 @@ a {
   align-items: center;
   justify-content: flex-start;
   padding: 28px 72px;
-  overflow: visible;
+  overflow: hidden;
   background:
     radial-gradient(circle at 82% 34%, rgba(21, 140, 255, 0.13), transparent 42%),
     linear-gradient(90deg, rgba(7, 10, 17, 0.94) 0%, rgba(7, 10, 17, 0.82) 45%, rgba(7, 10, 17, 0.42) 100%);
@@ -1115,10 +1115,10 @@ a {
 .hero::before {
   content: "";
   position: absolute;
-  inset: -80px -72px -120px;
+  inset: -44px -72px -24px;
   z-index: 0;
   pointer-events: none;
-  background: url("/hero-radar-background.png") center right / cover no-repeat;
+  background: url("/hero-radar-background.png") 68% 30% / cover no-repeat;
   opacity: 0.72;
   -webkit-mask-image: radial-gradient(ellipse at 68% 45%, #000 0%, #000 48%, rgba(0, 0, 0, 0.64) 66%, transparent 92%);
   mask-image: radial-gradient(ellipse at 68% 45%, #000 0%, #000 48%, rgba(0, 0, 0, 0.64) 66%, transparent 92%);
@@ -1127,13 +1127,13 @@ a {
 .hero::after {
   content: "";
   position: absolute;
-  inset: -40px 0 -80px;
+  inset: -24px 0 0;
   z-index: 0;
   pointer-events: none;
   background:
     radial-gradient(circle at 18% 48%, rgba(21, 140, 255, 0.14), transparent 28%),
     linear-gradient(90deg, rgba(7, 10, 17, 0.86) 0%, rgba(7, 10, 17, 0.54) 46%, rgba(7, 10, 17, 0.08) 100%),
-    linear-gradient(180deg, rgba(7, 10, 17, 0.72) 0%, rgba(7, 10, 17, 0.04) 34%, rgba(7, 10, 17, 0.82) 100%);
+    linear-gradient(180deg, rgba(7, 10, 17, 0.64) 0%, rgba(7, 10, 17, 0.04) 34%, rgba(7, 10, 17, 0.9) 100%);
 }
 
 .heroCopy {
@@ -1240,8 +1240,8 @@ a {
   }
 
   .hero::before {
-    inset: -72px -180px -112px -56px;
-    background-position: center right 42%;
+    inset: -40px -180px -24px -56px;
+    background-position: 72% 30%;
   }
 
   .radarStage {
@@ -1375,9 +1375,9 @@ a {
   }
 
   .hero::before {
-    inset: -64px -260px -104px -80px;
+    inset: -36px -260px -24px -80px;
     opacity: 0.62;
-    background-position: center right 32%;
+    background-position: 74% 28%;
   }
 
   .hero h2 {
