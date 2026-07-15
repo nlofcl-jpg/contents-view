@@ -1,98 +1,245 @@
+import { useMemo } from "react";
+import { ArrowRight, Newspaper, Play, Search, Users } from "lucide-react";
 import { useLocation } from "wouter";
-import { Play, TrendingUp, Users, Sparkles } from "lucide-react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
 
-interface ServiceCard {
+type TrendRow = {
+  label: string;
+  meta?: string;
+  image?: string | null;
+  tone?: "hot" | "normal";
+};
+
+type TrendCard = {
   id: string;
-  icon: React.ReactNode;
   title: string;
-  description: string;
-  subtitle: string;
+  badge: string;
   href: string;
+  icon: React.ReactNode;
+  rows: TrendRow[];
+  loading: boolean;
+  emptyText: string;
+};
+
+function compactCount(value?: number | string | null) {
+  const numberValue = typeof value === "string" ? Number(value) : value;
+  if (!numberValue || Number.isNaN(numberValue)) return null;
+  if (numberValue >= 100000000) return `${Math.round(numberValue / 10000000) / 10}억`;
+  if (numberValue >= 10000) return `${Math.round(numberValue / 1000) / 10}만`;
+  return numberValue.toLocaleString("ko-KR");
+}
+
+function stripHtml(value?: string | null) {
+  return (value || "").replace(/<[^>]*>/g, "").replace(/&quot;/g, "\"").replace(/&amp;/g, "&").trim();
+}
+
+function TrendDashboardCard({ card }: { card: TrendCard }) {
+  const [, setLocation] = useLocation();
+
+  return (
+    <article className="group relative rounded-lg border border-blue-500/20 bg-slate-950/50 p-5 shadow-[0_22px_70px_rgba(0,0,0,0.22)] transition-colors hover:border-blue-400/40 hover:bg-slate-950/70">
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-300">
+            {card.icon}
+          </div>
+          <h3 className="truncate text-lg font-semibold text-white">{card.title}</h3>
+        </div>
+        <span className="shrink-0 rounded-full border border-blue-500/30 px-3 py-1 text-xs font-semibold text-blue-300">
+          {card.badge}
+        </span>
+      </div>
+
+      <div className="space-y-2">
+        {card.loading ? (
+          Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="flex items-center gap-3 rounded-md border border-slate-800/70 bg-slate-900/35 p-3">
+              <div className="h-7 w-7 rounded-full bg-slate-800/80" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="h-3 w-4/5 rounded bg-slate-800/80" />
+                <div className="h-2 w-2/5 rounded bg-slate-800/70" />
+              </div>
+            </div>
+          ))
+        ) : card.rows.length > 0 ? (
+          card.rows.map((row, index) => (
+            <div key={`${card.id}-${index}-${row.label}`} className="flex items-center gap-3 rounded-md border border-slate-800/70 bg-slate-900/25 p-3">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-sm font-bold text-blue-200">
+                {index + 1}
+              </div>
+              {row.image && (
+                <img
+                  src={row.image}
+                  alt=""
+                  className="h-10 w-14 shrink-0 rounded object-cover"
+                  loading="lazy"
+                />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-slate-100">{row.label}</p>
+                {row.meta && <p className="mt-1 truncate text-xs text-slate-400">{row.meta}</p>}
+              </div>
+              {row.tone === "hot" && <span className="shrink-0 text-xs font-bold text-red-400">급상승</span>}
+            </div>
+          ))
+        ) : (
+          <div className="rounded-md border border-slate-800/70 bg-slate-900/25 p-4 text-sm text-slate-400">
+            {card.emptyText}
+          </div>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setLocation(card.href)}
+        className="mt-5 flex w-full items-center justify-center gap-2 rounded-md border border-slate-700/70 bg-slate-900/35 px-4 py-3 text-sm font-semibold text-slate-300 transition-colors hover:border-blue-400/50 hover:text-blue-200"
+      >
+        더보기
+        <ArrowRight className="h-4 w-4" />
+      </button>
+    </article>
+  );
 }
 
 export default function ServiceCards() {
   const [, setLocation] = useLocation();
+  const { isAuthenticated } = useAuth();
 
-  const cards: ServiceCard[] = [
+  const { data: apiKeyData } = trpc.user.apiKey.getWithStatus.useQuery(
+    { provider: "youtube" },
+    { enabled: isAuthenticated, retry: false, refetchOnWindowFocus: false }
+  );
+
+  const canLoadYouTube = Boolean(apiKeyData?.exists && apiKeyData.testStatus === "success");
+
+  const youtubeQuery = trpc.youtube.getTrendingVideos.useQuery(
+    { regionCode: "KR", sortBy: "trending", maxResults: 3 },
+    { enabled: canLoadYouTube, retry: false, refetchOnWindowFocus: false }
+  );
+
+  const googleTrendsQuery = trpc.googleTrends.realtimeTrending.useQuery(
+    { country: "KR" },
+    { retry: 1, refetchOnWindowFocus: false }
+  );
+
+  const communityQuery = trpc.community.getDcinside.useQuery(
+    { sort: "popular" },
+    { retry: 1, refetchOnWindowFocus: false }
+  );
+
+  const newsQuery = trpc.news.getLatestNews.useQuery(
+    { category: "all", limit: 3 },
+    { retry: 1, refetchOnWindowFocus: false }
+  );
+
+  const youtubeRows = useMemo<TrendRow[]>(() => {
+    const videos = (youtubeQuery.data as any)?.videos || [];
+    return videos.slice(0, 3).map((video: any) => ({
+      label: stripHtml(video.title),
+      meta: [video.channelTitle, compactCount(video.viewCount) ? `조회수 ${compactCount(video.viewCount)}` : null].filter(Boolean).join(" · "),
+      image: video.thumbnail,
+      tone: "hot" as const,
+    }));
+  }, [youtubeQuery.data]);
+
+  const searchRows = useMemo<TrendRow[]>(() => {
+    const trends = (googleTrendsQuery.data as any)?.data || [];
+    return trends.slice(0, 5).map((item: any) => ({
+      label: stripHtml(item.keyword),
+      meta: item.traffic ? `검색량 ${item.traffic}` : "Google Trends",
+      tone: "hot" as const,
+    }));
+  }, [googleTrendsQuery.data]);
+
+  const communityRows = useMemo<TrendRow[]>(() => {
+    const posts = (communityQuery.data as any)?.data || [];
+    return posts.slice(0, 3).map((post: any) => ({
+      label: stripHtml(post.title),
+      meta: [post.community, post.time, post.commentCount ? `댓글 ${post.commentCount}` : null].filter(Boolean).join(" · "),
+      tone: Number(post.commentCount || 0) > 50 ? "hot" as const : "normal" as const,
+    }));
+  }, [communityQuery.data]);
+
+  const newsRows = useMemo<TrendRow[]>(() => {
+    const news = Array.isArray(newsQuery.data) ? newsQuery.data : [];
+    return news.slice(0, 3).map((item: any) => ({
+      label: stripHtml(item.title),
+      meta: [item.source, item.pubDate ? new Date(item.pubDate).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }) : null].filter(Boolean).join(" · "),
+      image: item.thumbnail,
+      tone: "normal" as const,
+    }));
+  }, [newsQuery.data]);
+
+  const cards: TrendCard[] = [
     {
       id: "youtube",
-      icon: <Play className="w-8 h-8" />,
-      title: "YouTube 트렌드",
-      description: "국가별, 카테고리별 YouTube 콘텐츠 트렌드를 확인하세요.",
-      subtitle: "인기 영상, 채널, 쇼츠 흐름을 한눈에 볼 수 있습니다.",
+      title: "YouTube",
+      badge: "실시간 인기",
       href: "/trends/youtube",
+      icon: <Play className="h-5 w-5" />,
+      rows: youtubeRows,
+      loading: canLoadYouTube && youtubeQuery.isLoading,
+      emptyText: isAuthenticated ? "YouTube API key 연결 후 인기 영상을 표시합니다." : "로그인 후 YouTube API key를 연결하면 인기 영상을 표시합니다.",
     },
     {
-      id: "naver",
-      icon: <TrendingUp className="w-8 h-8" />,
-      title: "쇼핑 트렌드",
-      description: "검색 트렌드와 쇼틱 클릭률 흐름을 비교해보세요.",
-      subtitle: "키워드별 관심도 변화를 기간별로 확인할 수 있습니다.",
-      href: "/trends/naver",
+      id: "search",
+      title: "검색 트렌드",
+      badge: "급상승",
+      href: "/trends/google",
+      icon: <Search className="h-5 w-5" />,
+      rows: searchRows,
+      loading: googleTrendsQuery.isLoading,
+      emptyText: "실시간 검색 트렌드를 불러오지 못했습니다.",
     },
     {
       id: "community",
-      icon: <Users className="w-8 h-8" />,
-      title: "커뮤니티 트렌드",
-      description: "주요 커뮤니티 인기글 흐름을 한눈에 확인하세요.",
-      subtitle: "디시인사이드, 뽐뿌, 네이트판, 루리웹, 인벤 인기글을 모아볼 수 있습니다.",
+      title: "커뮤니티 반응",
+      badge: "실시간 버즈",
       href: "/community",
+      icon: <Users className="h-5 w-5" />,
+      rows: communityRows,
+      loading: communityQuery.isLoading,
+      emptyText: "커뮤니티 인기글을 불러오지 못했습니다.",
     },
     {
-      id: "ai-studio",
-      icon: <Sparkles className="w-8 h-8" />,
-      title: "AI 스튜디오",
-      description: "콘텐츠 제작에 필요한 AI 도구를 한곳에서 제작해보세요.",
-      subtitle: "AI 글쓰기, 썸네일, 영상 제작 기능을 한곳에서 제작할 수 있습니다.",
-      href: "/ai-studio",
+      id: "news",
+      title: "뉴스 & 이슈",
+      badge: "주요 이슈",
+      href: "/news",
+      icon: <Newspaper className="h-5 w-5" />,
+      rows: newsRows,
+      loading: newsQuery.isLoading,
+      emptyText: "최신 뉴스를 불러오지 못했습니다.",
     },
   ];
 
   return (
-    <section className="py-16 px-4 sm:px-6 lg:px-8 bg-transparent">
-      <div className="max-w-7xl mx-auto">
-        {/* Section Title and Subtitle */}
-        <div className="mb-12">
-          <h2 className="text-3xl font-bold text-white mb-3">
-            크리에이터 트렌드 레이더
-          </h2>
-          <p className="text-gray-400 text-base">
-            유튜브·네이버·커뮤니티 데이터로 콘텐츠 아이디어를 빠르게 찾아보세요.
-          </p>
+    <section className="px-4 py-14 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="mb-2 flex items-center gap-3">
+              <span className="h-3 w-3 rounded-full bg-blue-500 shadow-[0_0_18px_rgba(59,130,246,0.9)]" />
+              <h2 className="text-3xl font-bold text-white">실시간 트렌드 현황</h2>
+            </div>
+            <p className="text-sm text-slate-400">
+              주요 플랫폼과 커뮤니티의 실시간 흐름을 빠르게 확인하세요.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setLocation("/trends/youtube")}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-slate-700/70 bg-slate-950/40 px-5 text-sm font-semibold text-slate-300 transition-colors hover:border-blue-400/50 hover:text-blue-200"
+          >
+            모든 지표 보기
+            <ArrowRight className="h-4 w-4" />
+          </button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
           {cards.map((card) => (
-            <button
-              key={card.id}
-              onClick={() => setLocation(card.href)}
-              className="group relative p-6 rounded-lg border border-blue-500/20 bg-slate-900/50 hover:border-blue-400/40 hover:bg-slate-900/70 transition-all duration-200 text-left cursor-pointer"
-            >
-              {/* Icon */}
-              <div className="mb-4 inline-flex p-3 rounded-lg bg-blue-500/15 text-blue-400 group-hover:bg-blue-500/25 transition-colors">
-                {card.icon}
-              </div>
-
-              {/* Title */}
-              <h3 className="text-lg font-semibold text-white mb-2">
-                {card.title}
-              </h3>
-
-              {/* Description */}
-              <p className="text-sm text-gray-300 mb-3">
-                {card.description}
-              </p>
-
-              {/* Subtitle */}
-              <p className="text-xs text-gray-400 mb-4">
-                {card.subtitle}
-              </p>
-
-              {/* Arrow */}
-              <div className="inline-flex items-center text-blue-400 text-sm font-medium group-hover:translate-x-1 transition-transform">
-                바로가기
-                <span className="ml-2">→</span>
-              </div>
-            </button>
+            <TrendDashboardCard key={card.id} card={card} />
           ))}
         </div>
       </div>
