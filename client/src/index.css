@@ -4289,6 +4289,60 @@ input[type="date"].youtubeSelect {
   align-items: center;
 }
 
+.youtubeVideoInsightGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.youtubeVideoInsightItem {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(96, 165, 250, 0.16);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.44);
+}
+
+.youtubeVideoInsightLabel {
+  display: block;
+  margin-bottom: 6px;
+  color: #7f8ea6;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.youtubeVideoInsightItem strong {
+  display: block;
+  color: #e5f0ff;
+  font-size: 14px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.youtubeVideoTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.youtubeVideoTags span {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 5px 8px;
+  border: 1px solid rgba(96, 165, 250, 0.14);
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.08);
+  color: #9fb7d6;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .youtubeVideoModalButton {
   display: inline-flex;
   align-items: center;
@@ -4342,6 +4396,10 @@ input[type="date"].youtubeSelect {
     gap: 12px;
   }
 
+  .youtubeVideoInsightGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .youtubeVideoModalButton {
     padding: 10px 20px;
     font-size: 13px;
@@ -4382,6 +4440,14 @@ input[type="date"].youtubeSelect {
   .youtubeVideoModalMeta {
     font-size: 12px;
     gap: 10px;
+  }
+
+  .youtubeVideoInsightGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .youtubeVideoInsightItem {
+    padding: 10px;
   }
 
   .youtubeVideoModalButton {

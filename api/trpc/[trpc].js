@@ -2277,6 +2277,9 @@ var appRouter = router({
           channelId: item.snippet.channelId,
           publishedAt: item.snippet.publishedAt,
           viewCount: parseInt(item.statistics.viewCount || "0"),
+          commentCount: parseInt(item.statistics.commentCount || "0"),
+          categoryId: item.snippet.categoryId,
+          tags: Array.isArray(item.snippet.tags) ? item.snippet.tags.slice(0, 12) : [],
           duration: item.contentDetails.duration
         }));
         const uniqueChannelIds = Array.from(new Set(videos.map((v) => v.channelId))).slice(0, 50);
@@ -2469,6 +2472,9 @@ var appRouter = router({
           channelId: item.snippet.channelId,
           publishedAt: item.snippet.publishedAt,
           viewCount: parseInt(item.statistics.viewCount || "0"),
+          commentCount: parseInt(item.statistics.commentCount || "0"),
+          categoryId: item.snippet.categoryId,
+          tags: Array.isArray(item.snippet.tags) ? item.snippet.tags.slice(0, 12) : [],
           duration: item.contentDetails.duration,
           durationSeconds: parseDurationToSeconds(item.contentDetails.duration)
         })).filter((video) => video.durationSeconds <= 60);
