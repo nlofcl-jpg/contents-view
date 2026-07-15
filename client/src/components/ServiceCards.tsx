@@ -57,6 +57,22 @@ function formatRelativeTime(value?: string | null) {
   return date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" });
 }
 
+function formatCommunityDate(value?: string | null) {
+  if (!value) return null;
+  const normalized = String(value).trim();
+  const dateMatch = normalized.match(/(\d{4}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}[./-]\d{1,2})/);
+  if (dateMatch) return dateMatch[1].replaceAll("-", ".");
+  if (/^\d+\s*분/.test(normalized) || /^\d+\s*시간/.test(normalized) || normalized.includes("방금")) return "오늘";
+  if (normalized.includes("어제")) return "어제";
+
+  const parsed = new Date(normalized);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" });
+  }
+
+  return normalized.split(/\s+/)[0] || null;
+}
+
 function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoSelect?: (video: any) => void }) {
   const [, setLocation] = useLocation();
 
@@ -198,7 +214,7 @@ export default function ServiceCards() {
     const posts = (communityQuery.data as any)?.data || [];
     return posts.slice(0, 5).map((post: any) => ({
       label: stripHtml(post.title),
-      meta: [post.community, post.time, post.commentCount ? `댓글 ${post.commentCount}` : null].filter(Boolean).join(" · "),
+      meta: [post.community, formatCommunityDate(post.time), post.commentCount ? `댓글 ${post.commentCount}` : null].filter(Boolean).join(" · "),
     }));
   }, [communityQuery.data]);
 
