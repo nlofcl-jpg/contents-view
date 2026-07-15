@@ -199,7 +199,6 @@ export default function ServiceCards() {
     return posts.slice(0, 5).map((post: any) => ({
       label: stripHtml(post.title),
       meta: [post.community, post.time, post.commentCount ? `댓글 ${post.commentCount}` : null].filter(Boolean).join(" · "),
-      tone: Number(post.commentCount || 0) > 50 ? "hot" as const : "normal" as const,
     }));
   }, [communityQuery.data]);
 
