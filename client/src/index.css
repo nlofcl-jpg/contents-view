@@ -1117,7 +1117,7 @@ a {
   min-height: clamp(430px, 58vh, 620px);
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   padding: 28px 72px;
   overflow: hidden;
   background:
@@ -1152,7 +1152,13 @@ a {
 .heroCopy {
   position: relative;
   z-index: 1;
-  max-width: 600px;
+  width: min(100%, 1080px);
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
 .heroKicker {
@@ -1175,6 +1181,100 @@ a {
 .hero h2 span {
   color: var(--blue);
   text-shadow: 0 0 28px rgba(0, 119, 255, 0.58);
+}
+
+.heroSearch {
+  width: min(100%, 980px);
+  height: 86px;
+  margin-top: 54px;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.38),
+    0 18px 48px rgba(21, 140, 255, 0.34),
+    0 0 70px rgba(21, 140, 255, 0.22);
+  overflow: hidden;
+}
+
+.heroSearchFilter {
+  flex: 0 0 auto;
+  height: 100%;
+  min-width: 184px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 0;
+  background: transparent;
+  color: #10b981;
+  cursor: default;
+  position: relative;
+}
+
+.heroSearchFilterIcon {
+  width: 24px;
+  height: 24px;
+  color: #4b5563;
+  pointer-events: none;
+}
+
+.heroSearchSelect {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #10b981;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  appearance: none;
+  cursor: pointer;
+  padding-right: 2px;
+}
+
+.heroSearchDivider {
+  width: 1px;
+  height: 34px;
+  background: #e5e7eb;
+}
+
+.heroSearchInput {
+  min-width: 0;
+  flex: 1;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  padding: 0 28px;
+  color: #111827;
+  font-size: 22px;
+  font-weight: 600;
+  cursor: default;
+}
+
+.heroSearchInput::placeholder {
+  color: #8b8b8b;
+  opacity: 1;
+}
+
+.heroSearchButton {
+  flex: 0 0 auto;
+  width: 92px;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: #52565c;
+  cursor: default;
+}
+
+.heroSearchIcon {
+  width: 34px;
+  height: 34px;
 }
 
 .heroDescription {
@@ -1396,6 +1496,49 @@ a {
   .hero h2 {
     font-size: 38px;
     line-height: 1.35;
+  }
+
+  .heroKicker {
+    font-size: 11px;
+    letter-spacing: 0.22em;
+  }
+
+  .heroSearch {
+    height: 62px;
+    margin-top: 34px;
+    border-radius: 999px;
+  }
+
+  .heroSearchFilter {
+    min-width: 112px;
+    gap: 6px;
+  }
+
+  .heroSearchSelect {
+    font-size: 15px;
+  }
+
+  .heroSearchFilterIcon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .heroSearchDivider {
+    height: 24px;
+  }
+
+  .heroSearchInput {
+    padding: 0 14px;
+    font-size: 15px;
+  }
+
+  .heroSearchButton {
+    width: 58px;
+  }
+
+  .heroSearchIcon {
+    width: 24px;
+    height: 24px;
   }
 
   .heroActions {
