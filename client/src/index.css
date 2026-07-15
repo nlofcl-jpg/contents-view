@@ -1104,21 +1104,34 @@ a {
   align-items: center;
   justify-content: flex-start;
   padding: 28px 0;
-  overflow: hidden;
+  overflow: visible;
   background:
-    linear-gradient(90deg, rgba(5, 9, 17, 0.88) 0%, rgba(5, 9, 17, 0.74) 38%, rgba(5, 9, 17, 0.18) 100%),
-    url("/hero-radar-background.png") center right / cover no-repeat;
-  border-bottom: 1px solid rgba(21, 140, 255, 0.16);
+    radial-gradient(circle at 82% 34%, rgba(21, 140, 255, 0.13), transparent 42%),
+    linear-gradient(90deg, rgba(7, 10, 17, 0.94) 0%, rgba(7, 10, 17, 0.82) 45%, rgba(7, 10, 17, 0.42) 100%);
 }
 
 .hero::before {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: -80px -72px -120px;
+  z-index: 0;
+  pointer-events: none;
+  background: url("/hero-radar-background.png") center right / cover no-repeat;
+  opacity: 0.72;
+  -webkit-mask-image: radial-gradient(ellipse at 68% 45%, #000 0%, #000 48%, rgba(0, 0, 0, 0.64) 66%, transparent 92%);
+  mask-image: radial-gradient(ellipse at 68% 45%, #000 0%, #000 48%, rgba(0, 0, 0, 0.64) 66%, transparent 92%);
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: -40px 0 -80px;
+  z-index: 0;
   pointer-events: none;
   background:
     radial-gradient(circle at 18% 48%, rgba(21, 140, 255, 0.14), transparent 28%),
-    linear-gradient(180deg, rgba(7, 10, 17, 0.08) 0%, rgba(7, 10, 17, 0.62) 100%);
+    linear-gradient(90deg, rgba(7, 10, 17, 0.86) 0%, rgba(7, 10, 17, 0.54) 46%, rgba(7, 10, 17, 0.08) 100%),
+    linear-gradient(180deg, rgba(7, 10, 17, 0.72) 0%, rgba(7, 10, 17, 0.04) 34%, rgba(7, 10, 17, 0.82) 100%);
 }
 
 .heroCopy {
@@ -1222,7 +1235,11 @@ a {
     grid-template-columns: 1fr;
     min-height: clamp(400px, 54vh, 560px);
     padding: 24px 0;
-    background-position: center right 38%;
+  }
+
+  .hero::before {
+    inset: -72px -180px -112px -56px;
+    background-position: center right 42%;
   }
 
   .radarStage {
@@ -1351,7 +1368,12 @@ a {
     min-height: 380px;
     gap: 0;
     padding: 24px 0;
-    background-position: center right 28%;
+  }
+
+  .hero::before {
+    inset: -64px -260px -104px -80px;
+    opacity: 0.62;
+    background-position: center right 32%;
   }
 
   .hero h2 {
