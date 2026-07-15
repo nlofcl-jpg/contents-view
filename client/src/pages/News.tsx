@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ExternalLink, X } from "lucide-react";
 
 interface NewsItem {
   title: string;
@@ -23,6 +24,7 @@ export default function News() {
   const [searchQuery, setSearchQuery] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedArticle, setSelectedArticle] = useState<NewsItem | null>(null);
 
   // Category definitions
   const categories = [
@@ -177,6 +179,24 @@ export default function News() {
     }
   };
 
+  const openArticlePreview = (news: NewsItem) => {
+    setSelectedArticle(news);
+  };
+
+  const closeArticlePreview = () => {
+    setSelectedArticle(null);
+  };
+
+  const renderArticlePreviewButton = (news: NewsItem) => (
+    <button
+      type="button"
+      onClick={() => openArticlePreview(news)}
+      className="text-blue-400 hover:text-blue-300 text-sm font-medium"
+    >
+      원문 보기 →
+    </button>
+  );
+
   return (
     <div className="pageContainer">
       {/* Page Header */}
@@ -227,14 +247,7 @@ export default function News() {
                       <h3 className="text-base font-semibold text-white mb-2 line-clamp-2">
                         {news.title}
                       </h3>
-                      <a
-                        href={news.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-400 hover:text-blue-300 text-sm font-medium"
-                      >
-                        원문 보기 →
-                      </a>
+                      {renderArticlePreviewButton(news)}
                     </div>
                   </div>
                 ))}
@@ -303,14 +316,7 @@ export default function News() {
                     <h3 className="text-base font-semibold text-white mb-2 line-clamp-2">
                       {news.title}
                     </h3>
-                    <a
-                      href={news.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-400 hover:text-blue-300 text-sm font-medium"
-                    >
-                      원문 보기 →
-                    </a>
+                    {renderArticlePreviewButton(news)}
                   </div>
                 </div>
               ))}
@@ -367,14 +373,7 @@ export default function News() {
                   <h3 className="text-base font-semibold text-white mb-2 line-clamp-2">
                     {news.title}
                   </h3>
-                  <a
-                    href={news.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-400 hover:text-blue-300 text-sm font-medium"
-                  >
-                    원문 보기 →
-                  </a>
+                  {renderArticlePreviewButton(news)}
                 </div>
               </div>
             ))}
@@ -383,6 +382,60 @@ export default function News() {
           <div className="text-center text-gray-400">뉴스를 불러올 수 없습니다.</div>
         )}
       </div>
+
+      {selectedArticle && (
+        <div
+          className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/75 px-4 py-6 backdrop-blur-sm"
+          onClick={closeArticlePreview}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="flex h-[88vh] w-full max-w-6xl flex-col overflow-hidden rounded-lg border border-slate-700 bg-slate-950 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 px-5 py-4">
+              <div className="min-w-0">
+                <div className="mb-2 flex items-center gap-2 text-xs text-slate-500">
+                  <span>{selectedArticle.source}</span>
+                  <span>{formatDate(selectedArticle.publishedAt || selectedArticle.pubDate)}</span>
+                </div>
+                <h2 className="line-clamp-2 text-base font-semibold text-white md:text-lg">
+                  {selectedArticle.title}
+                </h2>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <a
+                  href={selectedArticle.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-700 px-3 text-sm font-medium text-slate-200 hover:bg-slate-800"
+                >
+                  <ExternalLink size={15} />
+                  새 탭
+                </a>
+                <button
+                  type="button"
+                  onClick={closeArticlePreview}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+                  aria-label="원문 팝업 닫기"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+            <div className="border-b border-slate-800 bg-slate-900/70 px-5 py-2 text-xs text-slate-400">
+              일부 언론사는 보안 정책으로 내부 팝업 표시를 막을 수 있습니다. 화면이 비어 있으면 새 탭으로 열어주세요.
+            </div>
+            <iframe
+              src={selectedArticle.link}
+              title={selectedArticle.title}
+              className="h-full w-full flex-1 border-0 bg-white"
+              sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
