@@ -10,7 +10,6 @@ type InsightPoint = {
 
 export default function UnifiedInsights() {
   // State management
-  const [selectedCategory, setSelectedCategory] = useState("패션의류");
   const [keywords, setKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState("");
   const [chartPeriodDays, setChartPeriodDays] = useState(30);
@@ -58,22 +57,6 @@ export default function UnifiedInsights() {
   const primaryShoppingSummary = getSeriesSummary(primaryKeyword ? chartData?.shopping?.[primaryKeyword] : undefined);
   const shoppingStatus = primaryKeyword ? chartData?.meta?.shoppingStatus?.[primaryKeyword] : undefined;
 
-
-  // Category mapping (1차 카테고리만)
-  const categoryMap: Record<string, string> = {
-    "패션의류": "50000000",
-    "패션잡화": "50000001",
-    "화장품/미용": "50000002",
-    "디지털/가전": "50000003",
-    "가구/인테리어": "50000004",
-    "식품": "50000005",
-    "스포츠/레저": "50000006",
-    "생활/건강": "50000007",
-    "출산/육아": "50000008",
-    "도서/음반/DVD": "50000009",
-  };
-
-  const categories = Object.keys(categoryMap);
   const devices = ["전체", "PC", "모바일"];
   const genders = ["전체", "남성", "여성"];
   const ages = ["전체", "10대", "20대", "30대", "40대", "50대", "60대 이상"];
@@ -175,7 +158,6 @@ export default function UnifiedInsights() {
 
     queryUnifiedInsight({
       keywords: nextKeywords,
-      category: categoryMap[selectedCategory],
       startDate: startDateStr,
       endDate: endDateStr,
       timeUnit: timeUnit as any,
@@ -335,7 +317,7 @@ export default function UnifiedInsights() {
               <div>
                 <h3 className="text-lg font-semibold text-white">쇼핑 클릭량 분석</h3>
                 <p className="mt-1 text-sm text-slate-400">
-                  기간, 카테고리, 성별, 연령, 디바이스 조건을 조정해 쇼핑 반응을 확인하세요.
+                  카테고리는 자동 매칭하고, 기간·성별·연령·디바이스 조건으로 쇼핑 반응을 확인하세요.
                 </p>
               </div>
               <button
@@ -347,28 +329,7 @@ export default function UnifiedInsights() {
               </button>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-              <div className="flex flex-col gap-2">
-                <label htmlFor="category" className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  카테고리
-                </label>
-                <div className="relative">
-                  <select
-                    id="category"
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="h-10 w-full appearance-none rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm text-white"
-                  >
-                    {categories.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                </div>
-              </div>
-
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div className="flex flex-col gap-2">
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">기간</span>
                 <div className="grid grid-cols-3 gap-2">

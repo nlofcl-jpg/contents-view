@@ -1047,6 +1047,28 @@ function setInCache(key, data) {
 
 // server/naver.unifiedInsight.ts
 var REQUEST_TIMEOUT_MS = 8e3;
+var AUTO_SHOPPING_CATEGORIES = [
+  "50000000",
+  // 패션의류
+  "50000001",
+  // 패션잡화
+  "50000002",
+  // 화장품/미용
+  "50000003",
+  // 디지털/가전
+  "50000004",
+  // 가구/인테리어
+  "50000005",
+  // 식품
+  "50000006",
+  // 스포츠/레저
+  "50000007",
+  // 생활/건강
+  "50000008",
+  // 출산/육아
+  "50000009"
+  // 도서/음반/DVD
+];
 async function fetchWithTimeout(url, options, timeoutMs = REQUEST_TIMEOUT_MS) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -1064,7 +1086,7 @@ async function fetchWithTimeout(url, options, timeoutMs = REQUEST_TIMEOUT_MS) {
 }
 var unifiedInsightProcedure = publicProcedure.input(z2.object({
   keywords: z2.array(z2.string()).min(0).max(5),
-  category: z2.string(),
+  category: z2.string().optional(),
   startDate: z2.string(),
   endDate: z2.string(),
   timeUnit: z2.enum(["date", "week", "month"]),
@@ -1072,10 +1094,11 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
   gender: z2.string().optional(),
   ages: z2.array(z2.string()).optional()
 })).mutation(async ({ input }) => {
+  const requestedCategory = input.category || "auto";
   const cacheKey = generateCacheKey(
     "unified",
     input.keywords,
-    input.category,
+    requestedCategory,
     input.startDate,
     input.endDate,
     input.timeUnit,
@@ -1088,7 +1111,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
     console.log("[Naver API] Cache hit for unified insight", {
       cacheKey,
       keywords: input.keywords.length,
-      category: input.category
+      category: requestedCategory
     });
     return cachedData;
   }
@@ -1130,29 +1153,52 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
     if (input.ages && input.ages.length > 0) {
       trendRequestBody.ages = input.ages;
     }
-    const shoppingRequestBody = {
-      startDate: input.startDate,
-      endDate: input.endDate,
-      timeUnit: input.timeUnit,
-      category: input.category,
-      keyword: input.keywords.map((kw) => ({
-        name: kw,
-        param: [kw]
-      }))
-    };
-    if (input.device && input.device !== "") {
-      shoppingRequestBody.device = input.device === "PC" ? "pc" : input.device === "\uBAA8\uBC14\uC77C" ? "mo" : "";
-      if (!shoppingRequestBody.device) delete shoppingRequestBody.device;
-    }
-    if (input.gender && input.gender !== "") {
-      shoppingRequestBody.gender = input.gender === "\uB0A8\uC131" ? "m" : input.gender === "\uC5EC\uC131" ? "f" : "";
-      if (!shoppingRequestBody.gender) delete shoppingRequestBody.gender;
-    }
-    if (input.ages && input.ages.length > 0) {
-      shoppingRequestBody.ages = input.ages;
-    }
     const trendStartTime = Date.now();
     const shoppingStartTime = Date.now();
+    const fetchShoppingTrend = async (category) => {
+      const shoppingRequestBody = {
+        startDate: input.startDate,
+        endDate: input.endDate,
+        timeUnit: input.timeUnit,
+        category,
+        keyword: input.keywords.map((kw) => ({
+          name: kw,
+          param: [kw]
+        }))
+      };
+      if (input.device && input.device !== "") {
+        shoppingRequestBody.device = input.device === "PC" ? "pc" : input.device === "\uBAA8\uBC14\uC77C" ? "mo" : "";
+        if (!shoppingRequestBody.device) delete shoppingRequestBody.device;
+      }
+      if (input.gender && input.gender !== "") {
+        shoppingRequestBody.gender = input.gender === "\uB0A8\uC131" ? "m" : input.gender === "\uC5EC\uC131" ? "f" : "";
+        if (!shoppingRequestBody.gender) delete shoppingRequestBody.gender;
+      }
+      if (input.ages && input.ages.length > 0) {
+        shoppingRequestBody.ages = input.ages;
+      }
+      const response = await fetchWithTimeout(
+        "https://openapi.naver.com/v1/datalab/shopping/category/keywords",
+        {
+          method: "POST",
+          headers: {
+            "X-Naver-Client-Id": clientId,
+            "X-Naver-Client-Secret": clientSecret,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(shoppingRequestBody)
+        },
+        REQUEST_TIMEOUT_MS
+      );
+      const shoppingData2 = await response.json();
+      if (!response.ok) {
+        throw new Error(`Shopping Trend API failed: ${response.status} - ${shoppingData2.errorMessage}`);
+      }
+      return { category, data: shoppingData2 };
+    };
+    const hasShoppingData = (shoppingData2) => {
+      return (shoppingData2.results || []).some((item) => Array.isArray(item.data) && item.data.length > 0);
+    };
     const [trendSettled, shoppingSettled] = await Promise.allSettled([
       (async () => {
         console.log("[Naver API] Search Trend API - Request started", {
@@ -1215,45 +1261,41 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
         console.log("[Naver API] Shopping Trend API - Request started", {
           timestamp: (/* @__PURE__ */ new Date()).toISOString(),
           keywords: input.keywords.length,
-          category: input.category,
+          category: requestedCategory,
           startDate: input.startDate,
           endDate: input.endDate,
           timeUnit: input.timeUnit
         });
-        const response = await fetchWithTimeout(
-          "https://openapi.naver.com/v1/datalab/shopping/category/keywords",
-          {
-            method: "POST",
-            headers: {
-              "X-Naver-Client-Id": clientId,
-              "X-Naver-Client-Secret": clientSecret,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify(shoppingRequestBody)
-          },
-          REQUEST_TIMEOUT_MS
-        );
+        const categoriesToTry = requestedCategory === "auto" ? AUTO_SHOPPING_CATEGORIES : [requestedCategory];
+        let lastResult = null;
+        for (const category of categoriesToTry) {
+          try {
+            const result2 = await fetchShoppingTrend(category);
+            lastResult = result2;
+            if (hasShoppingData(result2.data)) {
+              break;
+            }
+          } catch (error) {
+            console.error("[Naver API] Shopping Trend API - Category failed", {
+              category,
+              error: error instanceof Error ? error.message : "Unknown error"
+            });
+          }
+        }
+        if (!lastResult) {
+          throw new Error("Shopping Trend API failed for all categories");
+        }
         const shoppingEndTime = Date.now();
         const shoppingResponseTime = shoppingEndTime - shoppingStartTime;
-        const shoppingData2 = await response.json();
-        if (!response.ok) {
-          console.error("[Naver API] Shopping Trend API - Failed", {
-            timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-            statusCode: response.status,
-            responseTime: shoppingResponseTime,
-            errorCode: shoppingData2.errorCode,
-            errorMessage: shoppingData2.errorMessage
-          });
-          throw new Error(`Shopping Trend API failed: ${response.status} - ${shoppingData2.errorMessage}`);
-        }
         console.log("[Naver API] Shopping Trend API - Success", {
           timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-          statusCode: response.status,
+          category: lastResult.category,
+          autoMatched: requestedCategory === "auto",
           responseTime: shoppingResponseTime,
-          resultCount: shoppingData2.results?.length || 0,
-          dataPointCount: (shoppingData2.results || []).reduce((sum, item) => sum + (item.data?.length || 0), 0)
+          resultCount: lastResult.data.results?.length || 0,
+          dataPointCount: (lastResult.data.results || []).reduce((sum, item) => sum + (item.data?.length || 0), 0)
         });
-        return shoppingData2;
+        return lastResult;
       })()
     ]);
     const trendSuccess = trendSettled.status === "fulfilled";
@@ -1287,13 +1329,6 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
       console.error("[Naver API] Shopping Trend API failed", {
         error: shoppingSettled.reason?.message
       });
-      return {
-        success: false,
-        error: "\uC1FC\uD551 \uD074\uB9AD \uB370\uC774\uD130\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.",
-        keywords: input.keywords,
-        trend: {},
-        shopping: {}
-      };
     }
     const trendData = trendSettled.value;
     const trendResult = {};
@@ -1319,7 +1354,8 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
         last3Periods: data.slice(-3).map((d) => d.period)
       }))
     });
-    const shoppingData = shoppingSettled.value;
+    const shoppingData = shoppingSuccess ? shoppingSettled.value.data : { results: [] };
+    const matchedShoppingCategory = shoppingSuccess ? shoppingSettled.value.category : null;
     const shoppingResult = {};
     if (shoppingData.results && Array.isArray(shoppingData.results)) {
       shoppingData.results.forEach((item) => {
@@ -1333,7 +1369,8 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
     }
     console.log("[Naver API] Unified Insight success", {
       keywords: input.keywords.length,
-      category: input.category,
+      category: requestedCategory,
+      matchedShoppingCategory,
       trendKeywords: Object.keys(trendResult).length,
       shoppingKeywords: Object.keys(shoppingResult).length,
       trendDataPoints: Object.values(trendResult).reduce((sum, arr) => sum + arr.length, 0),
@@ -1358,7 +1395,8 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
       trend: trendResult,
       shopping: shoppingResult,
       meta: {
-        shoppingStatus
+        shoppingStatus,
+        matchedShoppingCategory
       }
     };
     setInCache(cacheKey, result);
@@ -1368,7 +1406,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
     console.error("[Naver API] Unified Insight Exception", {
       error: errorMsg,
       keywords: input.keywords.length,
-      category: input.category
+      category: requestedCategory
     });
     return {
       success: false,
