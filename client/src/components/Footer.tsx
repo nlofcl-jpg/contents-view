@@ -2,7 +2,7 @@ import { Link } from "wouter";
 
 const trendLinks = [
   { label: "YouTube", href: "/trends/youtube" },
-  { label: "쇼핑 인사이트", href: "/trends/naver" },
+  { label: "네이버 트렌드", href: "/trends/naver" },
   { label: "Google Trends", href: "/trends/google" },
 ];
 

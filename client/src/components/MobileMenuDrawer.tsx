@@ -177,7 +177,7 @@ export function MobileMenuDrawer({
                     onClick={() => handleNavigation("/trends/naver")}
                     type="button"
                   >
-                    <span>쇼핑 인사이트</span>
+                    <span>네이버 트렌드</span>
                   </button>
 
                   <button
