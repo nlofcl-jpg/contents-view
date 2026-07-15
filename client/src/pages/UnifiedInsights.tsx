@@ -56,6 +56,26 @@ export default function UnifiedInsights() {
   const primaryTrendSummary = getSeriesSummary(primaryKeyword ? chartData?.trend?.[primaryKeyword] : undefined);
   const primaryShoppingSummary = getSeriesSummary(primaryKeyword ? chartData?.shopping?.[primaryKeyword] : undefined);
   const shoppingStatus = primaryKeyword ? chartData?.meta?.shoppingStatus?.[primaryKeyword] : undefined;
+  const recommendedKeywords = primaryKeyword
+    ? [
+        `${primaryKeyword} 추천`,
+        `${primaryKeyword} 후기`,
+        `${primaryKeyword} 가격`,
+        `${primaryKeyword} 순위`,
+        `${primaryKeyword} 비교`,
+        `${primaryKeyword} 브랜드`,
+        `${primaryKeyword} 신상`,
+        `${primaryKeyword} 인기`,
+        `${primaryKeyword} 할인`,
+        `${primaryKeyword} 구매`,
+        `${primaryKeyword} 코디`,
+        `${primaryKeyword} 선물`,
+        `${primaryKeyword} 사이즈`,
+        `${primaryKeyword} 고르는법`,
+        `${primaryKeyword} 베스트`,
+        `${primaryKeyword} 트렌드`,
+      ]
+    : [];
 
   const devices = ["전체", "PC", "모바일"];
   const genders = ["전체", "남성", "여성"];
@@ -299,16 +319,33 @@ export default function UnifiedInsights() {
           </div>
 
           <div className="rounded-lg border border-slate-700 bg-slate-900/35 p-4">
-            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div>
-                <h3 className="text-base font-semibold text-white">현재 구현 단계</h3>
+                <h3 className="text-base font-semibold text-white">추천 키워드</h3>
                 <p className="mt-1 text-sm text-slate-400">
-                  지금은 네이버 데이터랩 기반의 검색 트렌드와 쇼핑 클릭량을 통합 표시합니다.
+                  검색어와 함께 확인할 연관 키워드를 가로로 모아 표시합니다.
                 </p>
               </div>
               <span className="w-fit rounded-full border border-amber-500/30 px-3 py-1 text-xs font-semibold text-amber-300">
                 검색광고 API 연결 전
               </span>
+            </div>
+            <div className="-mx-1 overflow-x-auto pb-1">
+              <div className="flex w-max max-w-none gap-2 px-1">
+                {recommendedKeywords.map((keyword) => (
+                  <button
+                    key={keyword}
+                    type="button"
+                    onClick={() => {
+                      setKeywordInput(keyword);
+                      runQuery([keyword]);
+                    }}
+                    className="whitespace-nowrap rounded-full border border-blue-500/25 bg-blue-500/10 px-3 py-1.5 text-sm font-medium text-blue-100 transition-colors hover:border-blue-400/50 hover:bg-blue-500/20"
+                  >
+                    {keyword}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
