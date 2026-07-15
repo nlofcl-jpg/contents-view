@@ -1069,6 +1069,62 @@ var AUTO_SHOPPING_CATEGORIES = [
   "50000009"
   // 도서/음반/DVD
 ];
+function uniqueValues(values) {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+}
+function generateShoppingKeywordVariants(keyword) {
+  const normalized = keyword.trim();
+  const noSpace = normalized.replace(/\s+/g, "");
+  const spaced = normalized.replace(/\s+/g, " ");
+  const variants = [normalized, noSpace, spaced];
+  if (/여성|여자/.test(noSpace)) {
+    variants.push(
+      noSpace.replace(/여성/g, "\uC5EC\uC790"),
+      noSpace.replace(/여자/g, "\uC5EC\uC131"),
+      noSpace.replace(/여성|여자/g, ""),
+      noSpace.replace(/^(여성|여자)/, "$1 "),
+      spaced.replace(/여성/g, "\uC5EC\uC790"),
+      spaced.replace(/여자/g, "\uC5EC\uC131")
+    );
+  }
+  if (/남성|남자/.test(noSpace)) {
+    variants.push(
+      noSpace.replace(/남성/g, "\uB0A8\uC790"),
+      noSpace.replace(/남자/g, "\uB0A8\uC131"),
+      noSpace.replace(/남성|남자/g, ""),
+      noSpace.replace(/^(남성|남자)/, "$1 "),
+      spaced.replace(/남성/g, "\uB0A8\uC790"),
+      spaced.replace(/남자/g, "\uB0A8\uC131")
+    );
+  }
+  if (/아이폰|iphone/i.test(noSpace) && /케이스/.test(noSpace)) {
+    variants.push(
+      "\uC544\uC774\uD3F0\uCF00\uC774\uC2A4",
+      "\uC544\uC774\uD3F0 \uCF00\uC774\uC2A4",
+      "\uD3F0\uCF00\uC774\uC2A4",
+      "\uD3F0 \uCF00\uC774\uC2A4",
+      "\uD734\uB300\uD3F0\uCF00\uC774\uC2A4",
+      "\uD734\uB300\uD3F0 \uCF00\uC774\uC2A4",
+      "\uD578\uB4DC\uD3F0\uCF00\uC774\uC2A4",
+      "\uD578\uB4DC\uD3F0 \uCF00\uC774\uC2A4",
+      "\uC2A4\uB9C8\uD2B8\uD3F0\uCF00\uC774\uC2A4",
+      "\uC2A4\uB9C8\uD2B8\uD3F0 \uCF00\uC774\uC2A4"
+    );
+  }
+  return uniqueValues(variants).slice(0, 20);
+}
+function getShoppingDataPointCount(shoppingData) {
+  return (shoppingData.results || []).reduce(
+    (sum, item) => sum + (Array.isArray(item.data) ? item.data.length : 0),
+    0
+  );
+}
+function getMatchedShoppingKeyword(shoppingData, fallbackKeyword) {
+  const matched = (shoppingData.results || []).find(
+    (item) => Array.isArray(item.data) && item.data.length > 0
+  );
+  return matched?.keyword || matched?.title || fallbackKeyword;
+}
 async function fetchWithTimeout(url, options, timeoutMs = REQUEST_TIMEOUT_MS) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -1155,13 +1211,15 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
     }
     const trendStartTime = Date.now();
     const shoppingStartTime = Date.now();
-    const fetchShoppingTrend = async (category) => {
+    const primaryShoppingKeyword = input.keywords[0] || "";
+    const shoppingKeywordsToTry = input.keywords.length === 1 ? generateShoppingKeywordVariants(primaryShoppingKeyword) : input.keywords;
+    const fetchShoppingTrend = async (category, shoppingKeywords) => {
       const shoppingRequestBody = {
         startDate: input.startDate,
         endDate: input.endDate,
         timeUnit: input.timeUnit,
         category,
-        keyword: input.keywords.map((kw) => ({
+        keyword: shoppingKeywords.map((kw) => ({
           name: kw,
           param: [kw]
         }))
@@ -1197,7 +1255,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
       return { category, data: shoppingData2 };
     };
     const hasShoppingData = (shoppingData2) => {
-      return (shoppingData2.results || []).some((item) => Array.isArray(item.data) && item.data.length > 0);
+      return getShoppingDataPointCount(shoppingData2) > 0;
     };
     const [trendSettled, shoppingSettled] = await Promise.allSettled([
       (async () => {
@@ -1264,15 +1322,20 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
           category: requestedCategory,
           startDate: input.startDate,
           endDate: input.endDate,
-          timeUnit: input.timeUnit
+          timeUnit: input.timeUnit,
+          keywordVariants: shoppingKeywordsToTry
         });
         const categoriesToTry = requestedCategory === "auto" ? AUTO_SHOPPING_CATEGORIES : [requestedCategory];
+        let bestResult = null;
         let lastResult = null;
         for (const category of categoriesToTry) {
           try {
-            const result2 = await fetchShoppingTrend(category);
-            lastResult = result2;
+            const result2 = await fetchShoppingTrend(category, shoppingKeywordsToTry);
+            const pointCount = getShoppingDataPointCount(result2.data);
+            const matchedKeyword = getMatchedShoppingKeyword(result2.data, primaryShoppingKeyword);
+            lastResult = { ...result2, matchedKeyword, pointCount };
             if (hasShoppingData(result2.data)) {
+              bestResult = { ...result2, matchedKeyword, pointCount };
               break;
             }
           } catch (error) {
@@ -1282,20 +1345,22 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
             });
           }
         }
-        if (!lastResult) {
+        const resolvedResult = bestResult || lastResult;
+        if (!resolvedResult) {
           throw new Error("Shopping Trend API failed for all categories");
         }
         const shoppingEndTime = Date.now();
         const shoppingResponseTime = shoppingEndTime - shoppingStartTime;
         console.log("[Naver API] Shopping Trend API - Success", {
           timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-          category: lastResult.category,
+          category: resolvedResult.category,
+          matchedKeyword: resolvedResult.matchedKeyword,
           autoMatched: requestedCategory === "auto",
           responseTime: shoppingResponseTime,
-          resultCount: lastResult.data.results?.length || 0,
-          dataPointCount: (lastResult.data.results || []).reduce((sum, item) => sum + (item.data?.length || 0), 0)
+          resultCount: resolvedResult.data.results?.length || 0,
+          dataPointCount: resolvedResult.pointCount
         });
-        return lastResult;
+        return resolvedResult;
       })()
     ]);
     const trendSuccess = trendSettled.status === "fulfilled";
@@ -1356,11 +1421,13 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
     });
     const shoppingData = shoppingSuccess ? shoppingSettled.value.data : { results: [] };
     const matchedShoppingCategory = shoppingSuccess ? shoppingSettled.value.category : null;
+    const matchedShoppingKeyword = shoppingSuccess ? shoppingSettled.value.matchedKeyword : null;
     const shoppingResult = {};
     if (shoppingData.results && Array.isArray(shoppingData.results)) {
       shoppingData.results.forEach((item) => {
         if (item.keyword && item.data) {
-          shoppingResult[item.keyword] = item.data.map((d) => ({
+          const resultKey = input.keywords.length === 1 && item.keyword === matchedShoppingKeyword ? input.keywords[0] : item.keyword;
+          shoppingResult[resultKey] = item.data.map((d) => ({
             period: d.period,
             ratio: d.ratio
           }));
@@ -1371,6 +1438,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
       keywords: input.keywords.length,
       category: requestedCategory,
       matchedShoppingCategory,
+      matchedShoppingKeyword,
       trendKeywords: Object.keys(trendResult).length,
       shoppingKeywords: Object.keys(shoppingResult).length,
       trendDataPoints: Object.values(trendResult).reduce((sum, arr) => sum + arr.length, 0),
@@ -1396,7 +1464,8 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
       shopping: shoppingResult,
       meta: {
         shoppingStatus,
-        matchedShoppingCategory
+        matchedShoppingCategory,
+        matchedShoppingKeyword
       }
     };
     setInCache(cacheKey, result);

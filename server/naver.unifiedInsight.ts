@@ -17,6 +17,71 @@ const AUTO_SHOPPING_CATEGORIES = [
   "50000009", // 도서/음반/DVD
 ];
 
+function uniqueValues(values: string[]) {
+  return Array.from(new Set(values.map(value => value.trim()).filter(Boolean)));
+}
+
+function generateShoppingKeywordVariants(keyword: string) {
+  const normalized = keyword.trim();
+  const noSpace = normalized.replace(/\s+/g, "");
+  const spaced = normalized.replace(/\s+/g, " ");
+  const variants = [normalized, noSpace, spaced];
+
+  if (/여성|여자/.test(noSpace)) {
+    variants.push(
+      noSpace.replace(/여성/g, "여자"),
+      noSpace.replace(/여자/g, "여성"),
+      noSpace.replace(/여성|여자/g, ""),
+      noSpace.replace(/^(여성|여자)/, "$1 "),
+      spaced.replace(/여성/g, "여자"),
+      spaced.replace(/여자/g, "여성")
+    );
+  }
+
+  if (/남성|남자/.test(noSpace)) {
+    variants.push(
+      noSpace.replace(/남성/g, "남자"),
+      noSpace.replace(/남자/g, "남성"),
+      noSpace.replace(/남성|남자/g, ""),
+      noSpace.replace(/^(남성|남자)/, "$1 "),
+      spaced.replace(/남성/g, "남자"),
+      spaced.replace(/남자/g, "남성")
+    );
+  }
+
+  if (/아이폰|iphone/i.test(noSpace) && /케이스/.test(noSpace)) {
+    variants.push(
+      "아이폰케이스",
+      "아이폰 케이스",
+      "폰케이스",
+      "폰 케이스",
+      "휴대폰케이스",
+      "휴대폰 케이스",
+      "핸드폰케이스",
+      "핸드폰 케이스",
+      "스마트폰케이스",
+      "스마트폰 케이스"
+    );
+  }
+
+  return uniqueValues(variants).slice(0, 20);
+}
+
+function getShoppingDataPointCount(shoppingData: any) {
+  return (shoppingData.results || []).reduce(
+    (sum: number, item: any) => sum + (Array.isArray(item.data) ? item.data.length : 0),
+    0
+  );
+}
+
+function getMatchedShoppingKeyword(shoppingData: any, fallbackKeyword: string) {
+  const matched = (shoppingData.results || []).find(
+    (item: any) => Array.isArray(item.data) && item.data.length > 0
+  );
+
+  return matched?.keyword || matched?.title || fallbackKeyword;
+}
+
 /**
  * Fetch with timeout using AbortController
  */
@@ -131,14 +196,18 @@ export const unifiedInsightProcedure = publicProcedure
       // Parallel API calls with allSettled to handle individual failures
       const trendStartTime = Date.now();
       const shoppingStartTime = Date.now();
+      const primaryShoppingKeyword = input.keywords[0] || "";
+      const shoppingKeywordsToTry = input.keywords.length === 1
+        ? generateShoppingKeywordVariants(primaryShoppingKeyword)
+        : input.keywords;
 
-      const fetchShoppingTrend = async (category: string) => {
+      const fetchShoppingTrend = async (category: string, shoppingKeywords: string[]) => {
         const shoppingRequestBody: any = {
           startDate: input.startDate,
           endDate: input.endDate,
           timeUnit: input.timeUnit,
           category,
-          keyword: input.keywords.map(kw => ({
+          keyword: shoppingKeywords.map(kw => ({
             name: kw,
             param: [kw],
           })),
@@ -182,7 +251,7 @@ export const unifiedInsightProcedure = publicProcedure
       };
 
       const hasShoppingData = (shoppingData: any) => {
-        return (shoppingData.results || []).some((item: any) => Array.isArray(item.data) && item.data.length > 0);
+        return getShoppingDataPointCount(shoppingData) > 0;
       };
 
       const [trendSettled, shoppingSettled] = await Promise.allSettled([
@@ -259,16 +328,22 @@ export const unifiedInsightProcedure = publicProcedure
             startDate: input.startDate,
             endDate: input.endDate,
             timeUnit: input.timeUnit,
+            keywordVariants: shoppingKeywordsToTry,
           });
 
           const categoriesToTry = requestedCategory === "auto" ? AUTO_SHOPPING_CATEGORIES : [requestedCategory];
-          let lastResult: { category: string; data: any } | null = null;
+          let bestResult: { category: string; data: any; matchedKeyword: string; pointCount: number } | null = null;
+          let lastResult: { category: string; data: any; matchedKeyword: string; pointCount: number } | null = null;
 
           for (const category of categoriesToTry) {
             try {
-              const result = await fetchShoppingTrend(category);
-              lastResult = result;
+              const result = await fetchShoppingTrend(category, shoppingKeywordsToTry);
+              const pointCount = getShoppingDataPointCount(result.data);
+              const matchedKeyword = getMatchedShoppingKeyword(result.data, primaryShoppingKeyword);
+              lastResult = { ...result, matchedKeyword, pointCount };
+
               if (hasShoppingData(result.data)) {
+                bestResult = { ...result, matchedKeyword, pointCount };
                 break;
               }
             } catch (error) {
@@ -279,7 +354,9 @@ export const unifiedInsightProcedure = publicProcedure
             }
           }
 
-          if (!lastResult) {
+          const resolvedResult = bestResult || lastResult;
+
+          if (!resolvedResult) {
             throw new Error("Shopping Trend API failed for all categories");
           }
 
@@ -288,14 +365,15 @@ export const unifiedInsightProcedure = publicProcedure
 
           console.log('[Naver API] Shopping Trend API - Success', {
             timestamp: new Date().toISOString(),
-            category: lastResult.category,
+            category: resolvedResult.category,
+            matchedKeyword: resolvedResult.matchedKeyword,
             autoMatched: requestedCategory === "auto",
             responseTime: shoppingResponseTime,
-            resultCount: lastResult.data.results?.length || 0,
-            dataPointCount: (lastResult.data.results || []).reduce((sum: number, item: any) => sum + (item.data?.length || 0), 0),
+            resultCount: resolvedResult.data.results?.length || 0,
+            dataPointCount: resolvedResult.pointCount,
           });
 
-          return lastResult;
+          return resolvedResult;
         })(),
       ]);
 
@@ -367,11 +445,15 @@ export const unifiedInsightProcedure = publicProcedure
       // Transform shopping data
       const shoppingData = shoppingSuccess ? shoppingSettled.value.data : { results: [] };
       const matchedShoppingCategory = shoppingSuccess ? shoppingSettled.value.category : null;
+      const matchedShoppingKeyword = shoppingSuccess ? shoppingSettled.value.matchedKeyword : null;
       const shoppingResult: Record<string, Array<{ period: string; ratio: number }>> = {};
       if (shoppingData.results && Array.isArray(shoppingData.results)) {
         shoppingData.results.forEach((item: any) => {
           if (item.keyword && item.data) {
-            shoppingResult[item.keyword] = item.data.map((d: any) => ({
+            const resultKey = input.keywords.length === 1 && item.keyword === matchedShoppingKeyword
+              ? input.keywords[0]
+              : item.keyword;
+            shoppingResult[resultKey] = item.data.map((d: any) => ({
               period: d.period,
               ratio: d.ratio,
             }));
@@ -383,6 +465,7 @@ export const unifiedInsightProcedure = publicProcedure
         keywords: input.keywords.length,
         category: requestedCategory,
         matchedShoppingCategory,
+        matchedShoppingKeyword,
         trendKeywords: Object.keys(trendResult).length,
         shoppingKeywords: Object.keys(shoppingResult).length,
         trendDataPoints: Object.values(trendResult).reduce((sum, arr) => sum + arr.length, 0),
@@ -414,6 +497,7 @@ export const unifiedInsightProcedure = publicProcedure
         meta: {
           shoppingStatus,
           matchedShoppingCategory,
+          matchedShoppingKeyword,
         },
       };
 
