@@ -13,6 +13,12 @@ interface NewsItem {
   thumbnail: string | null;
 }
 
+interface FeaturedNewsGroup {
+  categoryId: string;
+  categoryLabel: string;
+  items: NewsItem[];
+}
+
 export default function News() {
   const [searchQuery, setSearchQuery] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
@@ -49,22 +55,22 @@ export default function News() {
 
   // Fetch featured news for 4 categories
   const { data: nationNewsData } = trpc.news.getLatestNews.useQuery(
-    { limit: 1, category: 'nation' },
+    { limit: 2, category: 'nation' },
     { retry: 1, refetchOnWindowFocus: false }
   );
 
   const { data: businessNewsData } = trpc.news.getLatestNews.useQuery(
-    { limit: 1, category: 'business' },
+    { limit: 2, category: 'business' },
     { retry: 1, refetchOnWindowFocus: false }
   );
 
   const { data: technologyNewsData } = trpc.news.getLatestNews.useQuery(
-    { limit: 1, category: 'technology' },
+    { limit: 2, category: 'technology' },
     { retry: 1, refetchOnWindowFocus: false }
   );
 
   const { data: entertainmentNewsData } = trpc.news.getLatestNews.useQuery(
-    { limit: 1, category: 'entertainment' },
+    { limit: 2, category: 'entertainment' },
     { retry: 1, refetchOnWindowFocus: false }
   );
 
@@ -78,21 +84,22 @@ export default function News() {
     }
   );
 
-  // Combine featured news from 4 categories
-  const featuredNews = useMemo(() => {
-    const featured: NewsItem[] = [];
-    
-    const nationNews = Array.isArray(nationNewsData) ? nationNewsData[0] : null;
-    const businessNews = Array.isArray(businessNewsData) ? businessNewsData[0] : null;
-    const technologyNews = Array.isArray(technologyNewsData) ? technologyNewsData[0] : null;
-    const entertainmentNews = Array.isArray(entertainmentNewsData) ? entertainmentNewsData[0] : null;
+  // Combine featured news into category columns.
+  const featuredNewsGroups = useMemo<FeaturedNewsGroup[]>(() => {
+    const dataByCategory: Record<string, unknown> = {
+      nation: nationNewsData,
+      business: businessNewsData,
+      technology: technologyNewsData,
+      entertainment: entertainmentNewsData,
+    };
 
-    if (nationNews) featured.push(nationNews);
-    if (businessNews) featured.push(businessNews);
-    if (technologyNews) featured.push(technologyNews);
-    if (entertainmentNews) featured.push(entertainmentNews);
-
-    return featured;
+    return featuredCategories.map(category => ({
+      categoryId: category.id,
+      categoryLabel: category.label,
+      items: Array.isArray(dataByCategory[category.id])
+        ? (dataByCategory[category.id] as NewsItem[]).slice(0, 2)
+        : [],
+    }));
   }, [nationNewsData, businessNewsData, technologyNewsData, entertainmentNewsData]);
 
   // Extract remaining news (excluding featured)
@@ -187,39 +194,58 @@ export default function News() {
       ) : (
         <div className="mb-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            {featuredNews.map((news: NewsItem, index: number) => (
-              <div
-                key={index}
-                className="bg-gray-900 rounded-lg overflow-hidden hover:bg-gray-800 transition-colors"
-              >
-                {news.thumbnail && (
-                  <div className="w-full h-40 bg-gray-800 overflow-hidden">
-                    <img
-                      src={news.thumbnail}
-                      alt={news.title}
-                      className="w-full h-full object-cover"
-                    />
+            {featuredNewsGroups.map(group => (
+              <div key={group.categoryId} className="flex flex-col gap-4">
+                {group.items.map((news: NewsItem, index: number) => (
+                  <div
+                    key={`${group.categoryId}-${index}-${news.link}`}
+                    className="bg-gray-900 rounded-lg overflow-hidden hover:bg-gray-800 transition-colors"
+                  >
+                    {news.thumbnail && (
+                      <div className="w-full h-36 bg-gray-800 overflow-hidden">
+                        <img
+                          src={news.thumbnail}
+                          alt={news.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <div className="p-4">
+                      <div className="mb-2">
+                        <span className="text-[11px] font-medium text-slate-400">
+                          {group.categoryLabel}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">
+                          {news.source}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {formatDate(news.pubDate || news.publishedAt)}
+                        </span>
+                      </div>
+                      <h3 className="text-base font-semibold text-white mb-2 line-clamp-2">
+                        {news.title}
+                      </h3>
+                      <a
+                        href={news.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:text-blue-300 text-sm font-medium"
+                      >
+                        원문 보기 →
+                      </a>
+                    </div>
+                  </div>
+                ))}
+                {group.items.length === 0 && (
+                  <div className="bg-gray-900 rounded-lg p-4 text-sm text-slate-500">
+                    <span className="text-[11px] font-medium text-slate-400">
+                      {group.categoryLabel}
+                    </span>
+                    <p className="mt-3">뉴스를 불러오지 못했습니다.</p>
                   </div>
                 )}
-                <div className="p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">
-                      {news.source}
-                    </span>
-                    <span className="text-xs text-gray-500">{formatDate(news.pubDate)}</span>
-                  </div>
-                  <h3 className="text-lg font-semibold text-white mb-2 line-clamp-2">
-                    {news.title}
-                  </h3>
-                  <a
-                    href={news.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-400 hover:text-blue-300 text-sm font-medium"
-                  >
-                    원문 보기 →
-                  </a>
-                </div>
               </div>
             ))}
           </div>
