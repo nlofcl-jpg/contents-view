@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { UnifiedChart } from "@/components/UnifiedChart";
 import { ChevronDown } from "lucide-react";
@@ -17,7 +17,6 @@ export default function UnifiedInsights() {
   const [chartUnit, setChartUnit] = useState("일간");
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
-  const [isPeriodExpanded, setIsPeriodExpanded] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState("전체");
   const [selectedGender, setSelectedGender] = useState("전체");
   const [selectedAge, setSelectedAge] = useState("전체");
@@ -120,42 +119,29 @@ export default function UnifiedInsights() {
     },
   });
 
-  // Add keyword
-  const handleAddKeyword = () => {
-    const trimmed = keywordInput.trim();
-    if (!trimmed) return;
-    if (keywords.includes(trimmed)) {
-      alert("중복된 키워드입니다.");
+  const runQuery = (requestedKeywords?: string[]) => {
+    const nextKeywords = requestedKeywords ?? (keywords.length > 0 ? keywords : [keywordInput.trim()].filter(Boolean));
+
+    if (nextKeywords.length === 0) {
+      setQueryError("검색어를 입력해주세요.");
+      setQuerySuccess(false);
       return;
     }
-    if (keywords.length >= 5) {
-      alert("최대 5개까지만 추가할 수 있습니다.");
-      return;
-    }
-    setKeywords([...keywords, trimmed]);
-    setKeywordInput("");
-  };
-
-  // Remove keyword
-  const handleRemoveKeyword = (index: number) => {
-    setKeywords(keywords.filter((_, i) => i !== index));
-  };
-
-  // Handle query button click
-  const handleQuery = () => {
-    // Allow category-only searches (keywords optional)
-    // No validation needed - category is always set, keywords can be empty
 
     setIsLoading(true);
     setQueryError("");
     setQuerySuccess(false);
+    setKeywords(nextKeywords);
 
     const now = new Date();
     let startDate = new Date();
     let timeUnit = "date";
 
-    if (isPeriodExpanded && customStartDate && customEndDate) {
+    let endDate = now;
+
+    if (chartPeriodDays === 0 && customStartDate && customEndDate) {
       startDate = new Date(customStartDate);
+      endDate = new Date(customEndDate);
       timeUnit = chartUnit === "일간" ? "date" : chartUnit === "주간" ? "week" : "month";
     } else {
       startDate.setDate(now.getDate() - chartPeriodDays);
@@ -171,7 +157,7 @@ export default function UnifiedInsights() {
     };
 
     const startDateStr = formatLocalDate(startDate);
-    const endDateStr = formatLocalDate(now);
+    const endDateStr = formatLocalDate(endDate);
 
     // Logging for diagnosis
     console.log('[Frontend] Date Calculation:', {
@@ -188,7 +174,7 @@ export default function UnifiedInsights() {
     setTimeUnitForChart(timeUnit);
 
     queryUnifiedInsight({
-      keywords,
+      keywords: nextKeywords,
       category: categoryMap[selectedCategory],
       startDate: startDateStr,
       endDate: endDateStr,
@@ -199,314 +185,52 @@ export default function UnifiedInsights() {
     });
   };
 
+  const handleSearch = () => {
+    const trimmed = keywordInput.trim();
+    if (!trimmed) {
+      setQueryError("검색어를 입력해주세요.");
+      setQuerySuccess(false);
+      return;
+    }
+    runQuery([trimmed]);
+  };
+
   return (
     <div className="w-full">
 
-      {/* Filter Card */}
+      {/* Search Card */}
       <div className="w-full max-w-full min-w-0 bg-slate-900 bg-opacity-50 border border-slate-700 rounded-lg p-4 md:p-6 mb-8 overflow-hidden">
-        {/* Row 1: Category + Keyword Input + Add Button + Query Button */}
-        <div className="mb-6">
-          <div className="grid gap-4 items-end" style={{
-            gridTemplateColumns: typeof window !== 'undefined' && window.innerWidth < 768 ? "1fr" : "220px 1fr 100px 100px"
-          }}>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="category" className="text-sm font-medium text-slate-300">
-                쇼핑 카테고리
-              </label>
-              <div className="relative">
-                <select
-                  id="category"
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full h-10 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white appearance-none cursor-pointer"
-                >
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label htmlFor="keyword" className="text-sm font-medium text-slate-300">
-                검색어 입력 <span className="text-xs text-slate-400">(선택)</span>
-              </label>
-              <input
-                id="keyword"
-                type="text"
-                value={keywordInput}
-                onChange={(e) => setKeywordInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleAddKeyword();
-                }}
-                placeholder="예: 원피스, 블라우스"
-                autoComplete="off"
-                className="w-full h-10 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-500"
-              />
-            </div>
-
-            <button
-              onClick={handleAddKeyword}
-              className="h-10 px-4 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors"
-            >
-              추가
-            </button>
-
-            <button
-              onClick={handleQuery}
-              disabled={isLoading}
-              className="h-10 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 text-white rounded-lg font-medium transition-colors"
-            >
-              조회
-            </button>
-          </div>
-        </div>
-
-        {/* Row 2: Keyword Chips */}
-        {keywords.length > 0 && (
-          <div className="mb-6">
-            <label className="text-sm font-medium text-slate-300 block mb-2">
-              선택된 키워드
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {keywords.map((keyword, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 px-3 py-1 bg-blue-600 bg-opacity-20 border border-blue-500 border-opacity-30 rounded-full"
-                >
-                  <span className="text-sm text-blue-300">{keyword}</span>
-                  <button
-                    onClick={() => handleRemoveKeyword(index)}
-                    className="text-blue-300 hover:text-blue-200"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Row 3: Period Header with Toggle */}
-
-        {/* Row 4: Period Header with Toggle */}
-        <div className="mb-6">
+        <div className="flex flex-col gap-3 md:flex-row">
+          <input
+            id="keyword"
+            type="text"
+            value={keywordInput}
+            onChange={(e) => setKeywordInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleSearch();
+            }}
+            placeholder="검색어를 입력하세요. 예: 원피스"
+            autoComplete="off"
+            className="h-12 min-w-0 flex-1 rounded-lg border border-slate-600 bg-slate-800 px-4 text-base text-white placeholder-slate-500 outline-none transition-colors focus:border-blue-500"
+          />
           <button
-            onClick={() => setIsPeriodExpanded(!isPeriodExpanded)}
-            className="flex items-center gap-2 w-full mb-2"
+            onClick={handleSearch}
+            disabled={isLoading}
+            className="h-12 rounded-lg bg-blue-600 px-8 font-semibold text-white transition-colors hover:bg-blue-700 disabled:bg-slate-700 md:w-32"
           >
-            <label className="text-sm font-medium text-slate-300 cursor-pointer">
-              기간
-            </label>
-            <ChevronDown
-              className={`w-4 h-4 text-slate-400 transition-transform ${
-                isPeriodExpanded ? "rotate-180" : ""
-              }`}
-            />
+            검색
           </button>
-
-          {/* Collapsible Section: Period Buttons + Device + Gender + Age */}
-          {isPeriodExpanded && (
-            <>
-              {/* Period Buttons */}
-              <div className={typeof window !== 'undefined' && window.innerWidth < 768 ? "grid grid-cols-2 gap-3 mb-6" : "flex gap-2 mb-6"}>
-                {[
-                  { label: "1개월", days: 30 },
-                  { label: "3개월", days: 90 },
-                  { label: "6개월", days: 180 },
-                  { label: "1년", days: 365 },
-                ].map((option) => (
-                  <button
-                    key={option.days}
-                    onClick={() => {
-                      setChartPeriodDays(option.days);
-                    }}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
-                      chartPeriodDays === option.days
-                        ? "bg-blue-600 text-white"
-                        : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-                <button
-                  onClick={() => setIsPeriodExpanded(true)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${typeof window !== 'undefined' && window.innerWidth < 768 ? "col-span-2" : ""} ${
-                    chartPeriodDays === 0
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                  }`}
-                >
-                  사용자 정의
-                </button>
-              </div>
-
-              {/* Custom Date + Time Unit */}
-              {chartPeriodDays === 0 && (
-                <div className="mb-6">
-                  <div className="grid gap-4 items-end" style={{
-                    gridTemplateColumns: typeof window !== 'undefined' && window.innerWidth < 768 ? "1fr" : "1fr 1fr 1fr"
-                  }}>
-                    <div className="flex flex-col gap-2">
-                      <label htmlFor="start-date" className="text-sm font-medium text-slate-300">
-                        시작일
-                      </label>
-                      <input
-                        id="start-date"
-                        type="date"
-                        value={customStartDate}
-                        onChange={(e) => setCustomStartDate(e.target.value)}
-                        className="w-full h-10 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <label htmlFor="end-date" className="text-sm font-medium text-slate-300">
-                        종료일
-                      </label>
-                      <input
-                        id="end-date"
-                        type="date"
-                        value={customEndDate}
-                        onChange={(e) => setCustomEndDate(e.target.value)}
-                        className="w-full h-10 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <label htmlFor="time-unit" className="text-sm font-medium text-slate-300">
-                        시간 단위
-                      </label>
-                      <div className="relative">
-                        <select
-                          id="time-unit"
-                          value={chartUnit}
-                          onChange={(e) => setChartUnit(e.target.value)}
-                          className="w-full h-10 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white appearance-none cursor-pointer"
-                        >
-                          {timeUnits.map((unit) => (
-                            <option key={unit} value={unit}>
-                              {unit}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Device / Gender / Age Filters */}
-              <div className="mb-6">
-                <div className="grid gap-4 items-end" style={{
-                  gridTemplateColumns: typeof window !== 'undefined' && window.innerWidth < 768 ? "1fr 1fr" : "1fr 1fr 1fr"
-                }}>
-                  <div className="flex flex-col gap-2">
-                    <label htmlFor="device" className="text-sm font-medium text-slate-300">
-                      기기
-                    </label>
-                    <div className="relative">
-                      <select
-                        id="device"
-                        value={selectedDevice}
-                        onChange={(e) => setSelectedDevice(e.target.value)}
-                        className="w-full h-10 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white appearance-none cursor-pointer"
-                      >
-                        {devices.map((device) => (
-                          <option key={device} value={device}>
-                            {device}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <label htmlFor="gender" className="text-sm font-medium text-slate-300">
-                      성별
-                    </label>
-                    <div className="relative">
-                      <select
-                        id="gender"
-                        value={selectedGender}
-                        onChange={(e) => setSelectedGender(e.target.value)}
-                        className="w-full h-10 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white appearance-none cursor-pointer"
-                      >
-                        {genders.map((gender) => (
-                          <option key={gender} value={gender}>
-                            {gender}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <label htmlFor="age" className="text-sm font-medium text-slate-300">
-                      연령대
-                    </label>
-                    <div className="relative">
-                      <select
-                        id="age"
-                        value={selectedAge}
-                        onChange={(e) => setSelectedAge(e.target.value)}
-                        className="w-full h-10 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white appearance-none cursor-pointer"
-                      >
-                        {ages.map((age) => (
-                          <option key={age} value={age}>
-                            {age}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
         </div>
-
-        {/* Row 3: Data Layer Toggles */}
-        <div className="mb-0">
-          <label className="text-sm font-medium text-slate-300 block mb-3">
-            데이터 레이어
-          </label>
-          <div className="grid w-full grid-cols-2 gap-3 md:flex md:flex-wrap">
-            <button
-              onClick={handleToggleTrend}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors min-w-0 md:min-w-auto ${
-                showTrend
-                  ? "bg-blue-600 text-white"
-                  : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-              }`}
-            >
-              검색어 트렌드
-            </button>
-            <button
-              onClick={handleToggleShopping}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors min-w-0 md:min-w-auto ${
-                showShopping
-                  ? "bg-blue-600 text-white"
-                  : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-              }`}
-            >
-              쇼핑 클릭량
-            </button>
-          </div>
-        </div>
+        {queryError && !isLoading && !querySuccess && !chartData && (
+          <p className="mt-3 text-sm text-red-300">{queryError}</p>
+        )}
       </div>
 
       {/* Empty State */}
       {keywords.length === 0 && !isLoading && !querySuccess && (
         <div className="mt-8 p-8 text-center bg-slate-900 bg-opacity-30 border border-slate-700 rounded-lg min-h-[260px] sm:min-h-[320px] lg:min-h-[380px] flex items-center justify-center">
           <p className="text-slate-400">
-            키워드를 추가한 후 조회해주세요.
+            검색어를 입력하고 검색 버튼을 눌러주세요.
           </p>
         </div>
       )}
@@ -557,6 +281,207 @@ export default function UnifiedInsights() {
               <span className="w-fit rounded-full border border-amber-500/30 px-3 py-1 text-xs font-semibold text-amber-300">
                 검색광고 API 연결 전
               </span>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-cyan-700/30 bg-slate-900/50 p-4 md:p-5">
+            <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-white">쇼핑 클릭량 분석</h3>
+                <p className="mt-1 text-sm text-slate-400">
+                  기간, 카테고리, 성별, 연령, 디바이스 조건을 조정해 쇼핑 반응을 확인하세요.
+                </p>
+              </div>
+              <button
+                onClick={() => runQuery()}
+                disabled={isLoading}
+                className="h-10 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:bg-slate-700"
+              >
+                필터 적용
+              </button>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+              <div className="flex flex-col gap-2">
+                <label htmlFor="category" className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  카테고리
+                </label>
+                <div className="relative">
+                  <select
+                    id="category"
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="h-10 w-full appearance-none rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm text-white"
+                  >
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">기간</span>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { label: "1개월", days: 30 },
+                    { label: "3개월", days: 90 },
+                    { label: "6개월", days: 180 },
+                    { label: "1년", days: 365 },
+                    { label: "직접", days: 0 },
+                  ].map((option) => (
+                    <button
+                      key={option.days}
+                      onClick={() => setChartPeriodDays(option.days)}
+                      className={`h-10 rounded-lg px-2 text-xs font-semibold transition-colors ${
+                        chartPeriodDays === option.days
+                          ? "bg-blue-600 text-white"
+                          : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                      } ${option.days === 0 ? "col-span-2" : ""}`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label htmlFor="device" className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  디바이스
+                </label>
+                <div className="relative">
+                  <select
+                    id="device"
+                    value={selectedDevice}
+                    onChange={(e) => setSelectedDevice(e.target.value)}
+                    className="h-10 w-full appearance-none rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm text-white"
+                  >
+                    {devices.map((device) => (
+                      <option key={device} value={device}>
+                        {device}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label htmlFor="gender" className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  성별
+                </label>
+                <div className="relative">
+                  <select
+                    id="gender"
+                    value={selectedGender}
+                    onChange={(e) => setSelectedGender(e.target.value)}
+                    className="h-10 w-full appearance-none rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm text-white"
+                  >
+                    {genders.map((gender) => (
+                      <option key={gender} value={gender}>
+                        {gender}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label htmlFor="age" className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  연령
+                </label>
+                <div className="relative">
+                  <select
+                    id="age"
+                    value={selectedAge}
+                    onChange={(e) => setSelectedAge(e.target.value)}
+                    className="h-10 w-full appearance-none rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm text-white"
+                  >
+                    {ages.map((age) => (
+                      <option key={age} value={age}>
+                        {age}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                </div>
+              </div>
+            </div>
+
+            {chartPeriodDays === 0 && (
+              <div className="mt-4 grid gap-4 md:grid-cols-3">
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="start-date" className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    시작일
+                  </label>
+                  <input
+                    id="start-date"
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    className="h-10 rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm text-white"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="end-date" className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    종료일
+                  </label>
+                  <input
+                    id="end-date"
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    className="h-10 rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm text-white"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="time-unit" className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    시간 단위
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="time-unit"
+                      value={chartUnit}
+                      onChange={(e) => setChartUnit(e.target.value)}
+                      className="h-10 w-full appearance-none rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm text-white"
+                    >
+                      {timeUnits.map((unit) => (
+                        <option key={unit} value={unit}>
+                          {unit}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                onClick={handleToggleTrend}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                  showTrend
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                }`}
+              >
+                검색 트렌드
+              </button>
+              <button
+                onClick={handleToggleShopping}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                  showShopping
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                }`}
+              >
+                쇼핑 클릭량
+              </button>
             </div>
           </div>
 
