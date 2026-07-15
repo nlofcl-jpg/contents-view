@@ -93,10 +93,10 @@ function TrendDashboardCard({ card }: { card: TrendCard }) {
       <button
         type="button"
         onClick={() => setLocation(card.href)}
-        className="mt-4 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-400 transition-colors hover:text-blue-200"
+        className="mx-auto mt-3 flex items-center justify-center gap-1 text-[11px] font-medium text-slate-500 transition-colors hover:text-blue-200"
       >
         더보기
-        <ArrowRight className="h-3.5 w-3.5" />
+        <ArrowRight className="h-3 w-3" />
       </button>
     </article>
   );
