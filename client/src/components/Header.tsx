@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { supabase } from "@/lib/supabase";
 import { useState, useRef, useEffect } from "react";
 import { useLocation, Link } from "wouter";
-import { Menu } from "lucide-react";
+import { ChevronDown, Menu } from "lucide-react";
 
 interface HeaderProps {
   onOpenMyPageModal?: () => void;
@@ -228,6 +228,10 @@ export default function Header({
             onClick={() => setOpenTrendMenu(!openTrendMenu)}
           >
             실시간 트렌드
+            <ChevronDown
+              className={`headerNavChevron ${openTrendMenu ? "open" : ""}`}
+              aria-hidden="true"
+            />
           </button>
           {openTrendMenu && (
             <div className="headerNavDropdown" onMouseEnter={() => handleTrendMenuHover(true)} onMouseLeave={() => handleTrendMenuHover(false)}>

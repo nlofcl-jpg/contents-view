@@ -799,6 +799,9 @@ a {
 }
 
 .headerNavButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   background: none;
   border: none;
   color: #b7c5de;
@@ -812,6 +815,16 @@ a {
 
 .headerNavButton:hover {
   color: #ffffff;
+}
+
+.headerNavChevron {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s ease;
+}
+
+.headerNavChevron.open {
+  transform: rotate(180deg);
 }
 
 .headerNavLink {
