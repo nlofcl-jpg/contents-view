@@ -34,6 +34,26 @@ function stripHtml(value?: string | null) {
   return (value || "").replace(/<[^>]*>/g, "").replace(/&quot;/g, "\"").replace(/&amp;/g, "&").trim();
 }
 
+function formatRelativeTime(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  const time = date.getTime();
+  if (Number.isNaN(time)) return null;
+
+  const diffMs = Date.now() - time;
+  const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
+  if (diffMinutes < 1) return "방금 전";
+  if (diffMinutes < 60) return `${diffMinutes}분 전`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}시간 전`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}일 전`;
+
+  return date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" });
+}
+
 function TrendDashboardCard({ card }: { card: TrendCard }) {
   const [, setLocation] = useLocation();
 
@@ -72,7 +92,7 @@ function TrendDashboardCard({ card }: { card: TrendCard }) {
                 <img
                   src={row.image}
                   alt=""
-                  className="h-10 w-14 shrink-0 rounded object-cover"
+                  className="h-12 w-16 shrink-0 rounded object-cover"
                   loading="lazy"
                 />
               )}
@@ -137,9 +157,12 @@ export default function ServiceCards() {
     const videos = (youtubeQuery.data as any)?.videos || [];
     return videos.slice(0, 5).map((video: any) => ({
       label: stripHtml(video.title),
-      meta: [video.channelTitle, compactCount(video.viewCount) ? `조회수 ${compactCount(video.viewCount)}` : null].filter(Boolean).join(" · "),
+      meta: [
+        video.channelTitle,
+        compactCount(video.viewCount) ? `조회수 ${compactCount(video.viewCount)}` : null,
+        formatRelativeTime(video.publishedAt),
+      ].filter(Boolean).join(" · "),
       image: video.thumbnail,
-      tone: "hot" as const,
     }));
   }, [youtubeQuery.data]);
 
