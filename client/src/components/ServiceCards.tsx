@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ArrowRight, Newspaper, Play, Search, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
 import { trpc } from "@/lib/trpc";
 
 type TrendRow = {
@@ -9,6 +10,7 @@ type TrendRow = {
   meta?: string;
   image?: string | null;
   tone?: "hot" | "normal";
+  video?: any;
 };
 
 type TrendCard = {
@@ -54,7 +56,7 @@ function formatRelativeTime(value?: string | null) {
   return date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" });
 }
 
-function TrendDashboardCard({ card }: { card: TrendCard }) {
+function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoSelect?: (video: any) => void }) {
   const [, setLocation] = useLocation();
 
   return (
@@ -84,7 +86,22 @@ function TrendDashboardCard({ card }: { card: TrendCard }) {
           ))
         ) : card.rows.length > 0 ? (
           card.rows.map((row, index) => (
-            <div key={`${card.id}-${index}-${row.label}`} className="flex items-center gap-3 rounded-md border border-slate-800/70 bg-slate-900/25 p-2.5">
+            <div
+              key={`${card.id}-${index}-${row.label}`}
+              className={`flex items-center gap-3 rounded-md border border-slate-800/70 bg-slate-900/25 p-2.5 ${row.video ? "cursor-pointer transition-colors hover:border-blue-400/40 hover:bg-slate-900/55" : ""}`}
+              role={row.video ? "button" : undefined}
+              tabIndex={row.video ? 0 : undefined}
+              onClick={() => {
+                if (row.video) onVideoSelect?.(row.video);
+              }}
+              onKeyDown={(event) => {
+                if (!row.video) return;
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onVideoSelect?.(row.video);
+                }
+              }}
+            >
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-xs font-bold text-blue-200">
                 {index + 1}
               </div>
@@ -125,6 +142,7 @@ function TrendDashboardCard({ card }: { card: TrendCard }) {
 export default function ServiceCards() {
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
+  const [selectedVideo, setSelectedVideo] = useState<any>(null);
 
   const { data: apiKeyData } = trpc.user.apiKey.getWithStatus.useQuery(
     { provider: "youtube" },
@@ -158,11 +176,11 @@ export default function ServiceCards() {
     return videos.slice(0, 5).map((video: any) => ({
       label: stripHtml(video.title),
       meta: [
-        video.channelTitle,
         compactCount(video.viewCount) ? `조회수 ${compactCount(video.viewCount)}` : null,
         formatRelativeTime(video.publishedAt),
       ].filter(Boolean).join(" · "),
       image: video.thumbnail,
+      video,
     }));
   }, [youtubeQuery.data]);
 
@@ -262,10 +280,15 @@ export default function ServiceCards() {
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
           {cards.map((card) => (
-            <TrendDashboardCard key={card.id} card={card} />
+            <TrendDashboardCard key={card.id} card={card} onVideoSelect={setSelectedVideo} />
           ))}
         </div>
       </div>
+      <YouTubeVideoDetailModal
+        video={selectedVideo}
+        isOpen={Boolean(selectedVideo)}
+        onClose={() => setSelectedVideo(null)}
+      />
     </section>
   );
 }
