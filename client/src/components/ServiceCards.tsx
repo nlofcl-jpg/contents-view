@@ -8,6 +8,7 @@ import { trpc } from "@/lib/trpc";
 type TrendRow = {
   label: string;
   meta?: string;
+  rightValue?: string;
   image?: string | null;
   tone?: "hot" | "normal";
   video?: any;
@@ -117,6 +118,7 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
                 <p className="truncate text-sm font-semibold text-slate-100">{row.label}</p>
                 {row.meta && <p className="mt-1 truncate text-xs text-slate-400">{row.meta}</p>}
               </div>
+              {row.rightValue && <span className="shrink-0 text-xs font-bold text-blue-300">{row.rightValue}</span>}
               {row.tone === "hot" && <span className="shrink-0 text-xs font-bold text-red-400">급상승</span>}
             </div>
           ))
@@ -188,7 +190,7 @@ export default function ServiceCards() {
     const trends = (googleTrendsQuery.data as any)?.data || [];
     return trends.slice(0, 5).map((item: any) => ({
       label: stripHtml(item.keyword),
-      meta: item.traffic ? `검색량 ${item.traffic}` : "Google Trends",
+      rightValue: item.traffic || "-",
     }));
   }, [googleTrendsQuery.data]);
 
