@@ -245,7 +245,63 @@ export default function UnifiedInsights() {
       {/* Chart Display */}
       {!isLoading && querySuccess && chartData && (
         <div className="mt-8 space-y-6">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-5">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Monthly Search Volume</p>
+                  <h3 className="mt-1 text-lg font-semibold text-white">월간 검색량</h3>
+                </div>
+                <span className="rounded-full border border-amber-500/30 px-3 py-1 text-xs font-semibold text-amber-300">
+                  연결 필요
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-lg bg-slate-800/70 p-3">
+                  <p className="text-xs text-slate-500">PC</p>
+                  <p className="mt-2 text-xl font-bold text-slate-300">-</p>
+                </div>
+                <div className="rounded-lg bg-slate-800/70 p-3">
+                  <p className="text-xs text-slate-500">모바일</p>
+                  <p className="mt-2 text-xl font-bold text-slate-300">-</p>
+                </div>
+                <div className="rounded-lg bg-blue-950/50 p-3">
+                  <p className="text-xs text-blue-300">전체</p>
+                  <p className="mt-2 text-xl font-bold text-white">-</p>
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-slate-500">네이버 검색광고 API 연결 후 실제 검색량을 표시합니다.</p>
+            </div>
+
+            <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-5">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Monthly Content Volume</p>
+                  <h3 className="mt-1 text-lg font-semibold text-white">월간 콘텐츠 발행량</h3>
+                </div>
+                <span className="rounded-full border border-amber-500/30 px-3 py-1 text-xs font-semibold text-amber-300">
+                  연결 필요
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-lg bg-slate-800/70 p-3">
+                  <p className="text-xs text-slate-500">PC</p>
+                  <p className="mt-2 text-xl font-bold text-slate-300">-</p>
+                </div>
+                <div className="rounded-lg bg-slate-800/70 p-3">
+                  <p className="text-xs text-slate-500">모바일</p>
+                  <p className="mt-2 text-xl font-bold text-slate-300">-</p>
+                </div>
+                <div className="rounded-lg bg-blue-950/50 p-3">
+                  <p className="text-xs text-blue-300">전체</p>
+                  <p className="mt-2 text-xl font-bold text-white">-</p>
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-slate-500">블로그·뉴스·카페 수집 연결 후 발행량을 표시합니다.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-4">
               <p className="text-xs font-semibold text-slate-400">검색 관심도</p>
               <p className="mt-2 text-2xl font-bold text-white">{formatRatio(primaryTrendSummary.latest)}</p>
@@ -257,16 +313,6 @@ export default function UnifiedInsights() {
               <p className="mt-1 text-xs text-slate-500">
                 {shoppingStatus === "NO_DATA" ? "쇼핑 데이터 없음" : `직전 구간 대비 ${formatDelta(primaryShoppingSummary.delta)}`}
               </p>
-            </div>
-            <div className="rounded-lg border border-slate-700 bg-slate-900/35 p-4">
-              <p className="text-xs font-semibold text-slate-400">월간 검색량</p>
-              <p className="mt-2 text-xl font-bold text-slate-300">연결 필요</p>
-              <p className="mt-1 text-xs text-slate-500">네이버 검색광고 API 연결 후 표시</p>
-            </div>
-            <div className="rounded-lg border border-slate-700 bg-slate-900/35 p-4">
-              <p className="text-xs font-semibold text-slate-400">연관 키워드</p>
-              <p className="mt-2 text-xl font-bold text-slate-300">연결 필요</p>
-              <p className="mt-1 text-xs text-slate-500">검색광고 API에서 확장 예정</p>
             </div>
           </div>
 
