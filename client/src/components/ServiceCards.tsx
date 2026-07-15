@@ -53,9 +53,9 @@ function TrendDashboardCard({ card }: { card: TrendCard }) {
 
       <div className="space-y-2">
         {card.loading ? (
-          Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="flex items-center gap-3 rounded-md border border-slate-800/70 bg-slate-900/35 p-3">
-              <div className="h-7 w-7 rounded-full bg-slate-800/80" />
+          Array.from({ length: 5 }).map((_, index) => (
+            <div key={index} className="flex items-center gap-3 rounded-md border border-slate-800/70 bg-slate-900/35 p-2.5">
+              <div className="h-6 w-6 rounded-full bg-slate-800/80" />
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="h-3 w-4/5 rounded bg-slate-800/80" />
                 <div className="h-2 w-2/5 rounded bg-slate-800/70" />
@@ -64,8 +64,8 @@ function TrendDashboardCard({ card }: { card: TrendCard }) {
           ))
         ) : card.rows.length > 0 ? (
           card.rows.map((row, index) => (
-            <div key={`${card.id}-${index}-${row.label}`} className="flex items-center gap-3 rounded-md border border-slate-800/70 bg-slate-900/25 p-3">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-sm font-bold text-blue-200">
+            <div key={`${card.id}-${index}-${row.label}`} className="flex items-center gap-3 rounded-md border border-slate-800/70 bg-slate-900/25 p-2.5">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-xs font-bold text-blue-200">
                 {index + 1}
               </div>
               {row.image && (
@@ -93,10 +93,10 @@ function TrendDashboardCard({ card }: { card: TrendCard }) {
       <button
         type="button"
         onClick={() => setLocation(card.href)}
-        className="mt-5 flex w-full items-center justify-center gap-2 rounded-md border border-slate-700/70 bg-slate-900/35 px-4 py-3 text-sm font-semibold text-slate-300 transition-colors hover:border-blue-400/50 hover:text-blue-200"
+        className="mt-4 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-400 transition-colors hover:text-blue-200"
       >
         더보기
-        <ArrowRight className="h-4 w-4" />
+        <ArrowRight className="h-3.5 w-3.5" />
       </button>
     </article>
   );
@@ -114,7 +114,7 @@ export default function ServiceCards() {
   const canLoadYouTube = Boolean(apiKeyData?.exists && apiKeyData.testStatus === "success");
 
   const youtubeQuery = trpc.youtube.getTrendingVideos.useQuery(
-    { regionCode: "KR", sortBy: "trending", maxResults: 3 },
+    { regionCode: "KR", sortBy: "trending", maxResults: 5 },
     { enabled: canLoadYouTube, retry: false, refetchOnWindowFocus: false }
   );
 
@@ -129,13 +129,13 @@ export default function ServiceCards() {
   );
 
   const newsQuery = trpc.news.getLatestNews.useQuery(
-    { category: "all", limit: 3 },
+    { category: "all", limit: 5 },
     { retry: 1, refetchOnWindowFocus: false }
   );
 
   const youtubeRows = useMemo<TrendRow[]>(() => {
     const videos = (youtubeQuery.data as any)?.videos || [];
-    return videos.slice(0, 3).map((video: any) => ({
+    return videos.slice(0, 5).map((video: any) => ({
       label: stripHtml(video.title),
       meta: [video.channelTitle, compactCount(video.viewCount) ? `조회수 ${compactCount(video.viewCount)}` : null].filter(Boolean).join(" · "),
       image: video.thumbnail,
@@ -154,7 +154,7 @@ export default function ServiceCards() {
 
   const communityRows = useMemo<TrendRow[]>(() => {
     const posts = (communityQuery.data as any)?.data || [];
-    return posts.slice(0, 3).map((post: any) => ({
+    return posts.slice(0, 5).map((post: any) => ({
       label: stripHtml(post.title),
       meta: [post.community, post.time, post.commentCount ? `댓글 ${post.commentCount}` : null].filter(Boolean).join(" · "),
       tone: Number(post.commentCount || 0) > 50 ? "hot" as const : "normal" as const,
@@ -163,7 +163,7 @@ export default function ServiceCards() {
 
   const newsRows = useMemo<TrendRow[]>(() => {
     const news = Array.isArray(newsQuery.data) ? newsQuery.data : [];
-    return news.slice(0, 3).map((item: any) => ({
+    return news.slice(0, 5).map((item: any) => ({
       label: stripHtml(item.title),
       meta: [item.source, item.pubDate ? new Date(item.pubDate).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }) : null].filter(Boolean).join(" · "),
       image: item.thumbnail,
