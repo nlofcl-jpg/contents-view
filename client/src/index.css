@@ -1118,7 +1118,7 @@ a {
   inset: -44px -72px -24px;
   z-index: 0;
   pointer-events: none;
-  background: url("/hero-radar-background.png") 68% 30% / cover no-repeat;
+  background: url("/hero-radar-background.png") 68% 20% / cover no-repeat;
   opacity: 0.72;
   -webkit-mask-image: radial-gradient(ellipse at 68% 45%, #000 0%, #000 48%, rgba(0, 0, 0, 0.64) 66%, transparent 92%);
   mask-image: radial-gradient(ellipse at 68% 45%, #000 0%, #000 48%, rgba(0, 0, 0, 0.64) 66%, transparent 92%);
@@ -1241,7 +1241,7 @@ a {
 
   .hero::before {
     inset: -40px -180px -24px -56px;
-    background-position: 72% 30%;
+    background-position: 72% 20%;
   }
 
   .radarStage {
@@ -1377,7 +1377,7 @@ a {
   .hero::before {
     inset: -36px -260px -24px -80px;
     opacity: 0.62;
-    background-position: 74% 28%;
+    background-position: 74% 18%;
   }
 
   .hero h2 {
