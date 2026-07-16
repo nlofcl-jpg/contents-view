@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { UnifiedChart } from "@/components/UnifiedChart";
+import { ArrowRight, Lock } from "lucide-react";
 
 type InsightPoint = {
   period: string;
@@ -60,6 +61,8 @@ export default function UnifiedInsights() {
   const primaryMetric: KeywordMetric | null = keywordTool?.primary || null;
   const recommendedKeywords: KeywordMetric[] = keywordTool?.recommended || [];
   const relatedKeywords: KeywordMetric[] = keywordTool?.related || [];
+  const visibleRelatedKeywords = relatedKeywords.slice(0, 10);
+  const hasLockedRelatedKeywords = relatedKeywords.length > visibleRelatedKeywords.length;
   const contentVolume = chartData?.meta?.contentVolume;
 
   const formatNumber = (value: number | null | undefined, suffix = "") => {
@@ -231,13 +234,6 @@ export default function UnifiedInsights() {
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Monthly Search Volume</p>
                   <h3 className="mt-1 text-lg font-semibold text-white">월간 검색량</h3>
                 </div>
-                <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                  keywordTool?.success
-                    ? "border-emerald-500/30 text-emerald-300"
-                    : "border-amber-500/30 text-amber-300"
-                }`}>
-                  {keywordTool?.success ? "검색광고 연결" : "연결 확인 필요"}
-                </span>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="flex h-20 min-w-0 flex-col justify-between rounded-lg bg-slate-800/70 p-3">
@@ -253,9 +249,7 @@ export default function UnifiedInsights() {
                   <p className="mt-2 text-xl font-bold text-white">{formatNumber(primaryMetric?.monthlyTotalSearches)}</p>
                 </div>
               </div>
-              <p className="mt-3 text-xs text-slate-500">
-                {keywordTool?.error || "네이버 검색광고 키워드 도구 기준 월간 검색량입니다."}
-              </p>
+              {keywordTool?.error && <p className="mt-3 text-xs text-slate-500">{keywordTool.error}</p>}
             </div>
 
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-5">
@@ -264,9 +258,6 @@ export default function UnifiedInsights() {
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Content Volume</p>
                   <h3 className="mt-1 text-lg font-semibold text-white">콘텐츠 발행량</h3>
                 </div>
-                <span className="rounded-full border border-blue-500/30 px-3 py-1 text-xs font-semibold text-blue-300">
-                  네이버 검색
-                </span>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="flex h-20 min-w-0 flex-col justify-between rounded-lg bg-slate-800/70 p-3">
@@ -286,7 +277,6 @@ export default function UnifiedInsights() {
                   <p className="mt-2 text-xl font-bold text-white">{formatNumber(contentVolume?.total)}</p>
                 </div>
               </div>
-              <p className="mt-3 text-xs text-slate-500">네이버 검색 API의 블로그·뉴스·카페 검색 결과 수를 합산합니다.</p>
             </div>
           </div>
 
@@ -316,13 +306,6 @@ export default function UnifiedInsights() {
                   우선 확인하면 좋은 키워드를 10개 내외로 모아 표시합니다.
                 </p>
               </div>
-              <span className={`w-fit rounded-full border px-3 py-1 text-xs font-semibold ${
-                keywordTool?.success
-                  ? "border-emerald-500/30 text-emerald-300"
-                  : "border-amber-500/30 text-amber-300"
-              }`}>
-                {keywordTool?.success ? "검색광고 데이터" : "검색광고 API 연결 전"}
-              </span>
             </div>
             <div className="-mx-1 overflow-x-auto pb-1">
               <div className="flex w-max max-w-none gap-2 px-1">
@@ -350,7 +333,6 @@ export default function UnifiedInsights() {
                     검색어와 연결된 키워드를 최대한 많이 리스트로 표시합니다.
                   </p>
                 </div>
-                <span className="text-xs text-slate-500">{relatedKeywords.length}개 표시</span>
               </div>
               <div className="max-h-96 overflow-y-auto rounded-lg border border-slate-700/70">
                 <div className="grid grid-cols-[minmax(120px,1fr)_92px_92px_72px] gap-0 border-b border-slate-700/70 bg-slate-950/50 px-3 py-2 text-xs font-semibold text-slate-400">
@@ -359,7 +341,7 @@ export default function UnifiedInsights() {
                   <span className="text-right">클릭량</span>
                   <span className="text-right">등급</span>
                 </div>
-                {relatedKeywords.map((item) => (
+                {visibleRelatedKeywords.map((item) => (
                   <button
                     key={item.keyword}
                     type="button"
@@ -376,6 +358,22 @@ export default function UnifiedInsights() {
                   </button>
                 ))}
               </div>
+              {hasLockedRelatedKeywords && (
+                <div className="mt-3 flex justify-center">
+                  <div className="flex w-full max-w-xs items-center justify-center gap-4 rounded-xl border border-blue-500/20 bg-slate-950/80 p-4 shadow-2xl shadow-blue-950/30">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full border border-blue-400/25 bg-blue-500/10">
+                      <Lock className="h-5 w-5 text-blue-300" aria-hidden="true" />
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="locked related keywords"
+                      className="flex h-11 w-24 items-center justify-center rounded-lg bg-blue-600 text-white transition-colors hover:bg-blue-500"
+                    >
+                      <ArrowRight className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
