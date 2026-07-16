@@ -340,19 +340,19 @@ export default function UnifiedInsights() {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-4">
-              <p className="text-xs font-semibold text-slate-400">검색 관심도</p>
+              <p className="text-xs font-semibold text-slate-200">검색 관심도</p>
               <p className="mt-2 text-2xl font-bold text-white">{formatRatio(primaryTrendSummary.latest)}</p>
-              <p className="mt-1 text-xs text-slate-500">직전 구간 대비 {formatDelta(primaryTrendSummary.delta)}</p>
+              <p className="mt-1 text-xs text-slate-300">직전 구간 대비 {formatDelta(primaryTrendSummary.delta)}</p>
             </div>
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-4">
-              <p className="text-xs font-semibold text-slate-400">월간 클릭량</p>
+              <p className="text-xs font-semibold text-slate-200">월간 클릭량</p>
               <p className="mt-2 text-2xl font-bold text-white">{formatDecimal(primaryMetric?.monthlyTotalClicks)}</p>
-              <p className="mt-1 text-xs text-slate-500">PC {formatDecimal(primaryMetric?.monthlyPcClicks)} · 모바일 {formatDecimal(primaryMetric?.monthlyMobileClicks)}</p>
+              <p className="mt-1 text-xs text-slate-300">PC {formatDecimal(primaryMetric?.monthlyPcClicks)} · 모바일 {formatDecimal(primaryMetric?.monthlyMobileClicks)}</p>
             </div>
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-4">
-              <p className="text-xs font-semibold text-slate-400">키워드 등급</p>
+              <p className="text-xs font-semibold text-slate-200">키워드 등급</p>
               <p className="mt-2 text-2xl font-bold text-white">{getCompetitionLabel(primaryMetric?.competition)}</p>
-              <p className="mt-1 text-xs text-slate-500">광고 노출 깊이 {formatDecimal(primaryMetric?.averageAdDepth)}</p>
+              <p className="mt-1 text-xs text-slate-300">광고 노출 깊이 {formatDecimal(primaryMetric?.averageAdDepth)}</p>
             </div>
           </div>
 
