@@ -60,7 +60,7 @@ function getNaverSearchAdHeaders(credentials: NaverSearchAdCredentials, method: 
     "Content-Type": "application/json; charset=UTF-8",
     "X-Timestamp": timestamp,
     "X-API-KEY": credentials.accessLicense,
-    "X-CUSTOMER": credentials.customerId,
+    "X-Customer": credentials.customerId,
     "X-Signature": getNaverSearchAdSignature(timestamp, method, uri, credentials.secretKey),
   };
 }
@@ -555,8 +555,8 @@ export const appRouter = router({
             if (!keywordCheck.response.ok) {
               const rawErrorMessage = getNaverSearchAdErrorMessage(keywordCheck.data, keywordCheck.response.status);
               const errorMessage = rawErrorMessage.includes("10002") || rawErrorMessage.includes("required permission")
-                ? "GET /keywordstool 호출 권한이 없습니다. CUSTOMER_ID와 키 발급 계정의 검색광고 API/키워드 도구 권한을 확인해주세요. (10002)"
-                : rawErrorMessage;
+                ? `GET /keywordstool 호출이 10002로 실패했습니다. HTTP ${keywordCheck.response.status}. 네이버 응답: ${rawErrorMessage}`
+                : `GET /keywordstool 호출 실패. HTTP ${keywordCheck.response.status}. 네이버 응답: ${rawErrorMessage}`;
               await userApiKeys.updateApiKeyTestStatus(ctx.user, NAVER_SEARCH_AD_PROVIDER, "failed", errorMessage);
               return {
                 success: false,

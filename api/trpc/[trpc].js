@@ -1878,7 +1878,7 @@ function getNaverSearchAdHeaders(credentials, method, uri) {
     "Content-Type": "application/json; charset=UTF-8",
     "X-Timestamp": timestamp2,
     "X-API-KEY": credentials.accessLicense,
-    "X-CUSTOMER": credentials.customerId,
+    "X-Customer": credentials.customerId,
     "X-Signature": getNaverSearchAdSignature(timestamp2, method, uri, credentials.secretKey)
   };
 }
@@ -2245,7 +2245,7 @@ var appRouter = router({
           }));
           if (!keywordCheck.response.ok) {
             const rawErrorMessage = getNaverSearchAdErrorMessage(keywordCheck.data, keywordCheck.response.status);
-            const errorMessage = rawErrorMessage.includes("10002") || rawErrorMessage.includes("required permission") ? "GET /keywordstool \uD638\uCD9C \uAD8C\uD55C\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. CUSTOMER_ID\uC640 \uD0A4 \uBC1C\uAE09 \uACC4\uC815\uC758 \uAC80\uC0C9\uAD11\uACE0 API/\uD0A4\uC6CC\uB4DC \uB3C4\uAD6C \uAD8C\uD55C\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694. (10002)" : rawErrorMessage;
+            const errorMessage = rawErrorMessage.includes("10002") || rawErrorMessage.includes("required permission") ? `GET /keywordstool \uD638\uCD9C\uC774 10002\uB85C \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4. HTTP ${keywordCheck.response.status}. \uB124\uC774\uBC84 \uC751\uB2F5: ${rawErrorMessage}` : `GET /keywordstool \uD638\uCD9C \uC2E4\uD328. HTTP ${keywordCheck.response.status}. \uB124\uC774\uBC84 \uC751\uB2F5: ${rawErrorMessage}`;
             await updateApiKeyTestStatus2(ctx.user, NAVER_SEARCH_AD_PROVIDER, "failed", errorMessage);
             return {
               success: false,
