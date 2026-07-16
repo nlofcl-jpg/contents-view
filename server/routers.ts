@@ -8,10 +8,62 @@ import { unifiedInsightProcedure } from "./naver.unifiedInsight";
 import { runDiagnostics } from "./naver.diagnostic";
 import * as userApiKeys from "./_core/userApiKeys";
 import { createRequire } from "module";
+import { createHmac } from "crypto";
 import { eq } from "drizzle-orm";
 import { users } from "../drizzle/schema";
 
 const require = createRequire(import.meta.url);
+
+const NAVER_SEARCH_AD_PROVIDER = "naver-search-ad";
+
+type NaverSearchAdCredentials = {
+  customerId: string;
+  accessLicense: string;
+  secretKey: string;
+};
+
+function parseNaverSearchAdCredentials(value: string): NaverSearchAdCredentials | null {
+  try {
+    const parsed = JSON.parse(value) as Partial<NaverSearchAdCredentials>;
+    if (!parsed.customerId || !parsed.accessLicense || !parsed.secretKey) {
+      return null;
+    }
+
+    return {
+      customerId: String(parsed.customerId),
+      accessLicense: String(parsed.accessLicense),
+      secretKey: String(parsed.secretKey),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function maskNaverSearchAdCredentials(credentials: NaverSearchAdCredentials) {
+  return {
+    customerId: userApiKeys.maskApiKey(credentials.customerId),
+    accessLicense: userApiKeys.maskApiKey(credentials.accessLicense),
+    secretKey: userApiKeys.maskApiKey(credentials.secretKey),
+  };
+}
+
+function getNaverSearchAdSignature(timestamp: string, method: string, uri: string, secretKey: string) {
+  return createHmac("sha256", secretKey)
+    .update(`${timestamp}.${method}.${uri}`)
+    .digest("base64");
+}
+
+function normalizeNaverSearchAdInput(input: {
+  customerId: string;
+  accessLicense: string;
+  secretKey: string;
+}) {
+  return {
+    customerId: input.customerId.trim(),
+    accessLicense: input.accessLicense.trim(),
+    secretKey: input.secretKey.trim(),
+  };
+}
 
 // Google Trends RSS 캐시
 const googleTrendsCache: Record<string, { data: Array<{ rank: number; keyword: string }>; timestamp: number }> = {};
@@ -354,6 +406,152 @@ export const appRouter = router({
             createdAt: apiKey.createdAt,
             updatedAt: apiKey.updatedAt,
           };
+        }),
+
+      saveNaverSearchAd: protectedProcedure
+        .input(z.object({
+          customerId: z.string().min(1),
+          accessLicense: z.string().min(1),
+          secretKey: z.string().min(1),
+        }))
+        .mutation(async ({ ctx, input }) => {
+          if (!ctx.user) {
+            throw new Error("User not authenticated");
+          }
+
+          const existingApiKey = await userApiKeys.getUserApiKey(ctx.user, NAVER_SEARCH_AD_PROVIDER);
+          const existingCredentials = existingApiKey
+            ? parseNaverSearchAdCredentials(existingApiKey.apiKey)
+            : null;
+          const existingMaskedCredentials = existingCredentials
+            ? maskNaverSearchAdCredentials(existingCredentials)
+            : null;
+          const nextInput = normalizeNaverSearchAdInput(input);
+          const credentials = {
+            customerId:
+              existingCredentials && nextInput.customerId === existingMaskedCredentials?.customerId
+                ? existingCredentials.customerId
+                : nextInput.customerId,
+            accessLicense:
+              existingCredentials && nextInput.accessLicense === existingMaskedCredentials?.accessLicense
+                ? existingCredentials.accessLicense
+                : nextInput.accessLicense,
+            secretKey:
+              existingCredentials && nextInput.secretKey === existingMaskedCredentials?.secretKey
+                ? existingCredentials.secretKey
+                : nextInput.secretKey,
+          };
+
+          if (!credentials.customerId || !credentials.accessLicense || !credentials.secretKey) {
+            throw new Error("네이버 검색광고 API 키 정보를 모두 입력해주세요.");
+          }
+
+          await userApiKeys.saveUserApiKey(
+            ctx.user,
+            NAVER_SEARCH_AD_PROVIDER,
+            JSON.stringify(credentials),
+          );
+
+          return { success: true };
+        }),
+
+      getNaverSearchAdWithStatus: protectedProcedure
+        .query(async ({ ctx }) => {
+          if (!ctx.user) {
+            throw new Error("User not authenticated");
+          }
+
+          const apiKey = await userApiKeys.getUserApiKey(ctx.user, NAVER_SEARCH_AD_PROVIDER);
+          if (!apiKey) {
+            return {
+              exists: false,
+              maskedCredentials: null,
+              testStatus: null,
+              testError: null,
+              lastTestedAt: null,
+            };
+          }
+
+          const credentials = parseNaverSearchAdCredentials(apiKey.apiKey);
+          if (!credentials) {
+            return {
+              exists: true,
+              maskedCredentials: null,
+              testStatus: "failed" as const,
+              testError: "저장된 네이버 검색광고 키 형식이 올바르지 않습니다.",
+              lastTestedAt: apiKey.lastTestedAt,
+            };
+          }
+
+          return {
+            exists: true,
+            maskedCredentials: maskNaverSearchAdCredentials(credentials),
+            testStatus: apiKey.testStatus,
+            testError: apiKey.testError,
+            lastTestedAt: apiKey.lastTestedAt,
+            createdAt: apiKey.createdAt,
+            updatedAt: apiKey.updatedAt,
+          };
+        }),
+
+      testNaverSearchAd: protectedProcedure
+        .mutation(async ({ ctx }) => {
+          if (!ctx.user) {
+            throw new Error("User not authenticated");
+          }
+
+          const apiKey = await userApiKeys.getUserApiKey(ctx.user, NAVER_SEARCH_AD_PROVIDER);
+          const credentials = apiKey ? parseNaverSearchAdCredentials(apiKey.apiKey) : null;
+          if (!credentials) {
+            return {
+              success: false,
+              error: "네이버 검색광고 API 키 정보를 먼저 저장해주세요.",
+            };
+          }
+
+          try {
+            const method = "GET";
+            const uri = "/keywordstool";
+            const timestamp = Date.now().toString();
+            const signature = getNaverSearchAdSignature(timestamp, method, uri, credentials.secretKey);
+            const params = new URLSearchParams({
+              hintKeywords: "반바지",
+              showDetail: "1",
+            });
+            const response = await fetch(`https://api.searchad.naver.com${uri}?${params.toString()}`, {
+              method,
+              headers: {
+                "X-Timestamp": timestamp,
+                "X-API-KEY": credentials.accessLicense,
+                "X-Customer": credentials.customerId,
+                "X-Signature": signature,
+              },
+            });
+            const data = await response.json().catch(() => null);
+
+            if (!response.ok) {
+              const errorMessage =
+                data?.title ||
+                data?.detail ||
+                data?.message ||
+                `네이버 검색광고 API 연결 실패 (${response.status})`;
+              await userApiKeys.updateApiKeyTestStatus(ctx.user, NAVER_SEARCH_AD_PROVIDER, "failed", errorMessage);
+              return {
+                success: false,
+                error: errorMessage,
+              };
+            }
+
+            await userApiKeys.updateApiKeyTestStatus(ctx.user, NAVER_SEARCH_AD_PROVIDER, "success");
+            return { success: true };
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "네이버 검색광고 API 연결에 실패했습니다.";
+            await userApiKeys.updateApiKeyTestStatus(ctx.user, NAVER_SEARCH_AD_PROVIDER, "failed", errorMessage);
+            return {
+              success: false,
+              error: errorMessage,
+            };
+          }
         }),
     }),
 

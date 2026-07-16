@@ -1897,6 +1897,12 @@ a {
   gap: 8px;
 }
 
+.naverSearchAdKeyGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
 .mypageModalNameInput:disabled {
   background: rgba(255, 255, 255, 0.02);
   color: #8b96b5;
@@ -1980,6 +1986,26 @@ a {
 
 .mypageModalEditButton:active:not(:disabled) {
   transform: scale(0.97);
+}
+
+.apiDeleteButton {
+  align-self: center;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.apiDeleteButton:hover:not(:disabled) {
+  color: #f87171;
+}
+
+.apiDeleteButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .mypageModalFooter {
