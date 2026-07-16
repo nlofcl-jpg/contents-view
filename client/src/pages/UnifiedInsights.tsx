@@ -255,6 +255,86 @@ export default function UnifiedInsights() {
     runQuery([trimmed]);
   };
 
+  const renderTrendFilters = () => (
+    <div className="mt-4 rounded-lg border border-slate-700/70 bg-slate-950/35 p-3">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-[repeat(5,minmax(0,1fr))_auto]">
+        <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
+          기간
+          <select
+            value={selectedPeriod}
+            onChange={(event) => {
+              const nextPeriod = event.target.value as (typeof PERIOD_OPTIONS)[number]["value"];
+              const periodOption = PERIOD_OPTIONS.find(option => option.value === nextPeriod) || PERIOD_OPTIONS[0];
+              setSelectedPeriod(nextPeriod);
+              setSelectedTimeUnit(periodOption.unit);
+            }}
+            className="h-10 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition-colors focus:border-blue-500"
+          >
+            {PERIOD_OPTIONS.map(option => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
+          단위
+          <select
+            value={selectedTimeUnit}
+            onChange={(event) => setSelectedTimeUnit(event.target.value as (typeof TIME_UNIT_OPTIONS)[number]["value"])}
+            className="h-10 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition-colors focus:border-blue-500"
+          >
+            {TIME_UNIT_OPTIONS.map(option => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
+          기기
+          <select
+            value={selectedDevice}
+            onChange={(event) => setSelectedDevice(event.target.value as (typeof DEVICE_OPTIONS)[number])}
+            className="h-10 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition-colors focus:border-blue-500"
+          >
+            {DEVICE_OPTIONS.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
+          성별
+          <select
+            value={selectedGender}
+            onChange={(event) => setSelectedGender(event.target.value as (typeof GENDER_OPTIONS)[number])}
+            className="h-10 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition-colors focus:border-blue-500"
+          >
+            {GENDER_OPTIONS.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
+          연령
+          <select
+            value={selectedAge}
+            onChange={(event) => setSelectedAge(event.target.value)}
+            className="h-10 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition-colors focus:border-blue-500"
+          >
+            {AGE_OPTIONS.map(option => (
+              <option key={option.value || "all"} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          onClick={() => runQuery(keywords)}
+          disabled={isLoading || keywords.length === 0}
+          className="col-span-2 h-10 self-end rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-400 md:col-span-1"
+        >
+          필터 적용
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="w-full">
       {infoPopup && (
@@ -301,73 +381,6 @@ export default function UnifiedInsights() {
           >
             검색
           </button>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-5">
-          <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
-            기간
-            <select
-              value={selectedPeriod}
-              onChange={(event) => {
-                const nextPeriod = event.target.value as (typeof PERIOD_OPTIONS)[number]["value"];
-                const periodOption = PERIOD_OPTIONS.find(option => option.value === nextPeriod) || PERIOD_OPTIONS[0];
-                setSelectedPeriod(nextPeriod);
-                setSelectedTimeUnit(periodOption.unit);
-              }}
-              className="h-10 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition-colors focus:border-blue-500"
-            >
-              {PERIOD_OPTIONS.map(option => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
-            단위
-            <select
-              value={selectedTimeUnit}
-              onChange={(event) => setSelectedTimeUnit(event.target.value as (typeof TIME_UNIT_OPTIONS)[number]["value"])}
-              className="h-10 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition-colors focus:border-blue-500"
-            >
-              {TIME_UNIT_OPTIONS.map(option => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
-            기기
-            <select
-              value={selectedDevice}
-              onChange={(event) => setSelectedDevice(event.target.value as (typeof DEVICE_OPTIONS)[number])}
-              className="h-10 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition-colors focus:border-blue-500"
-            >
-              {DEVICE_OPTIONS.map(option => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
-            성별
-            <select
-              value={selectedGender}
-              onChange={(event) => setSelectedGender(event.target.value as (typeof GENDER_OPTIONS)[number])}
-              className="h-10 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition-colors focus:border-blue-500"
-            >
-              {GENDER_OPTIONS.map(option => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
-            연령
-            <select
-              value={selectedAge}
-              onChange={(event) => setSelectedAge(event.target.value)}
-              className="h-10 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition-colors focus:border-blue-500"
-            >
-              {AGE_OPTIONS.map(option => (
-                <option key={option.value || "all"} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
         </div>
         {queryError && !isLoading && !querySuccess && !chartData && (
           <p className="mt-3 text-sm text-red-300">{queryError}</p>
@@ -615,6 +628,7 @@ export default function UnifiedInsights() {
                 <p>{startDateForChart} – {endDateForChart}</p>
                 <p className="mt-1 text-xs text-slate-500">{filterLabelForChart}</p>
               </div>
+              {renderTrendFilters()}
             </div>
 
             {/* Chart Container */}
@@ -656,6 +670,7 @@ export default function UnifiedInsights() {
                 <p>{startDateForChart} – {endDateForChart}</p>
                 <p className="mt-1 text-xs text-slate-500">{filterLabelForChart}</p>
               </div>
+              {renderTrendFilters()}
             </div>
             <div className="md:h-[480px] h-[520px]">
               <UnifiedChart
