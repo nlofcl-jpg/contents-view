@@ -1,5 +1,6 @@
 import { ChevronDown, Search } from "lucide-react";
 import { useState } from "react";
+import { useLocation } from "wouter";
 
 const searchPlatforms = [
   { value: "naver", label: "NAVER", className: "isNaver" },
@@ -8,8 +9,27 @@ const searchPlatforms = [
 ];
 
 export default function Hero() {
+  const [, setLocation] = useLocation();
   const [selectedPlatform, setSelectedPlatform] = useState(searchPlatforms[0]);
   const [isPlatformMenuOpen, setIsPlatformMenuOpen] = useState(false);
+  const [keyword, setKeyword] = useState("");
+
+  const handleHeroSearch = () => {
+    const trimmedKeyword = keyword.trim();
+    if (!trimmedKeyword) return;
+
+    if (selectedPlatform.value === "naver") {
+      setLocation(`/trends/naver?keyword=${encodeURIComponent(trimmedKeyword)}`);
+      return;
+    }
+
+    if (selectedPlatform.value === "youtube") {
+      setLocation("/trends/youtube");
+      return;
+    }
+
+    setLocation(`/trends/google?trend=${encodeURIComponent(trimmedKeyword)}`);
+  };
 
   return (
     <section className="hero">
@@ -67,10 +87,17 @@ export default function Hero() {
             <input
               type="text"
               className="heroSearchInput"
+              value={keyword}
+              onChange={(event) => setKeyword(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  handleHeroSearch();
+                }
+              }}
               placeholder="분석할 키워드를 입력하세요"
               aria-label="분석할 키워드"
             />
-            <button type="button" className="heroSearchButton" aria-label="검색">
+            <button type="button" className="heroSearchButton" aria-label="검색" onClick={handleHeroSearch}>
               <Search className="heroSearchIcon" aria-hidden="true" />
             </button>
           </div>

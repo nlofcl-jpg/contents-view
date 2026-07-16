@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { UnifiedChart } from "@/components/UnifiedChart";
 import { ChevronDown, CircleAlert, ListFilter } from "lucide-react";
@@ -74,6 +74,11 @@ export default function UnifiedInsights() {
   const [endDateForChart, setEndDateForChart] = useState("");
   const [timeUnitForChart, setTimeUnitForChart] = useState("date");
   const [filterLabelForChart, setFilterLabelForChart] = useState("1개월 · 일간 · 전체");
+
+  const getInitialKeywordFromUrl = () => {
+    if (typeof window === "undefined") return "";
+    return new URLSearchParams(window.location.search).get("keyword")?.trim() || "";
+  };
 
   const getSeriesSummary = (series?: InsightPoint[]) => {
     if (!series || series.length === 0) {
@@ -336,6 +341,16 @@ export default function UnifiedInsights() {
     }
     runQuery([trimmed]);
   };
+
+  useEffect(() => {
+    const initialKeyword = getInitialKeywordFromUrl();
+    if (!initialKeyword) return;
+
+    setKeywordInput(initialKeyword);
+    runQuery([initialKeyword]);
+    // URL로 들어온 최초 키워드만 자동 조회합니다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleApplyTrendFilters = async () => {
     const nextKeywords = keywords.length > 0 ? keywords : [keywordInput.trim()].filter(Boolean);
