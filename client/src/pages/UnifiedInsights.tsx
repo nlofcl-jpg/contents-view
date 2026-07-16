@@ -465,11 +465,20 @@ export default function UnifiedInsights() {
               ))}
             </div>
             {hasLockedRelatedKeywords && (
-              <div className="mt-3 flex flex-col items-center gap-2">
-                <ChevronDown className="h-5 w-5 text-blue-400" aria-hidden="true" />
+              <div className="mt-4 flex flex-col items-center gap-3">
+                <div className="flex flex-col items-center gap-0.5 py-1">
+                  {[0, 1, 2].map((index) => (
+                    <ChevronDown
+                      key={index}
+                      className="h-4 w-4 animate-bounce text-blue-400"
+                      style={{ animationDelay: `${index * 120}ms` }}
+                      aria-hidden="true"
+                    />
+                  ))}
+                </div>
                 <button
                   type="button"
-                  className="h-9 rounded-lg border border-blue-500/40 bg-blue-600/20 px-5 text-sm font-semibold text-blue-200 transition-colors hover:bg-blue-600/30 hover:text-blue-100"
+                  className="min-h-11 rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold leading-none text-white transition-colors hover:bg-blue-500"
                 >
                   더 많은 연관 키워드 확인
                 </button>
