@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { UnifiedChart } from "@/components/UnifiedChart";
-import { Lock } from "lucide-react";
+import { CircleAlert, Lock } from "lucide-react";
 
 type InsightPoint = {
   period: string;
@@ -24,6 +24,7 @@ export default function UnifiedInsights() {
   // State management
   const [keywords, setKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState("");
+  const [infoPopup, setInfoPopup] = useState<{ title: string; body: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [queryError, setQueryError] = useState("");
   const [querySuccess, setQuerySuccess] = useState(false);
@@ -179,6 +180,27 @@ export default function UnifiedInsights() {
 
   return (
     <div className="w-full">
+      {infoPopup && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-4"
+          onClick={() => setInfoPopup(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl border border-blue-500/20 bg-slate-950 p-5 text-center shadow-2xl shadow-blue-950/40"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 className="text-base font-semibold text-white">{infoPopup.title}</h3>
+            <p className="mt-3 text-sm leading-6 text-slate-300">{infoPopup.body}</p>
+            <button
+              type="button"
+              onClick={() => setInfoPopup(null)}
+              className="mt-5 h-9 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-blue-500"
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Search Card */}
       <div className="w-full max-w-full min-w-0 bg-slate-900 bg-opacity-50 border border-slate-700 rounded-lg p-4 md:p-6 mb-8 overflow-hidden">
@@ -232,7 +254,20 @@ export default function UnifiedInsights() {
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Monthly Search Volume</p>
-                  <h3 className="mt-1 text-lg font-semibold text-white">월간 검색량</h3>
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <h3 className="text-lg font-semibold text-white">월간 검색량</h3>
+                    <button
+                      type="button"
+                      aria-label="월간 검색량 안내"
+                      onClick={() => setInfoPopup({
+                        title: "월간 검색량",
+                        body: "최근 한달간 네이버 통합 검색에서 키워드가 검색된 수가 표시됩니다.",
+                      })}
+                      className="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-500 transition-colors hover:text-blue-300"
+                    >
+                      <CircleAlert className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-3">
@@ -256,7 +291,20 @@ export default function UnifiedInsights() {
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Content Volume</p>
-                  <h3 className="mt-1 text-lg font-semibold text-white">최근 30일 콘텐츠 발행량</h3>
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <h3 className="text-lg font-semibold text-white">월간 컨텐츠 발행량</h3>
+                    <button
+                      type="button"
+                      aria-label="월간 컨텐츠 발행량 안내"
+                      onClick={() => setInfoPopup({
+                        title: "월간 컨텐츠 발행량",
+                        body: "최근 한달간 발행된 키워드와 관련된 콘텐츠 수가 표시됩니다.",
+                      })}
+                      className="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-500 transition-colors hover:text-blue-300"
+                    >
+                      <CircleAlert className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-3">
