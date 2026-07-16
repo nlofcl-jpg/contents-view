@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { UnifiedChart } from "@/components/UnifiedChart";
-import { ArrowRight, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 
 type InsightPoint = {
   period: string;
@@ -334,7 +334,7 @@ export default function UnifiedInsights() {
                   </p>
                 </div>
               </div>
-              <div className="max-h-96 overflow-y-auto rounded-lg border border-slate-700/70">
+              <div className="rounded-lg border border-slate-700/70">
                 <div className="grid grid-cols-[minmax(120px,1fr)_92px_92px_72px] gap-0 border-b border-slate-700/70 bg-slate-950/50 px-3 py-2 text-xs font-semibold text-slate-400">
                   <span>키워드</span>
                   <span className="text-right">검색량</span>
@@ -360,16 +360,18 @@ export default function UnifiedInsights() {
               </div>
               {hasLockedRelatedKeywords && (
                 <div className="mt-3 flex justify-center">
-                  <div className="flex w-full max-w-xs items-center justify-center gap-4 rounded-xl border border-blue-500/20 bg-slate-950/80 p-4 shadow-2xl shadow-blue-950/30">
+                  <div className="flex w-full max-w-sm flex-col items-center rounded-xl border border-blue-500/20 bg-slate-950/80 px-5 py-5 text-center shadow-2xl shadow-blue-950/30">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full border border-blue-400/25 bg-blue-500/10">
                       <Lock className="h-5 w-5 text-blue-300" aria-hidden="true" />
                     </div>
+                    <p className="mt-3 text-sm font-medium text-slate-200">
+                      더 많은 연관 키워드를 확인하려면 가입하세요.
+                    </p>
                     <button
                       type="button"
-                      aria-label="locked related keywords"
-                      className="flex h-11 w-24 items-center justify-center rounded-lg bg-blue-600 text-white transition-colors hover:bg-blue-500"
+                      className="mt-4 h-10 w-full rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-500"
                     >
-                      <ArrowRight className="h-5 w-5" aria-hidden="true" />
+                      무료 체험하기
                     </button>
                   </div>
                 </div>
