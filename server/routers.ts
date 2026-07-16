@@ -57,6 +57,7 @@ function getNaverSearchAdHeaders(credentials: NaverSearchAdCredentials, method: 
   const timestamp = Date.now().toString();
 
   return {
+    "Content-Type": "application/json; charset=UTF-8",
     "X-Timestamp": timestamp,
     "X-API-KEY": credentials.accessLicense,
     "X-Customer": credentials.customerId,
@@ -548,8 +549,7 @@ export const appRouter = router({
           try {
             const authCheck = await requestNaverSearchAdApi(
               credentials,
-              "/customer-links",
-              new URLSearchParams({ type: "MYCLIENTS" }),
+              "/ncc/channels",
             );
 
             if (!authCheck.response.ok) {

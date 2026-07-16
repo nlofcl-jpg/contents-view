@@ -1875,6 +1875,7 @@ function getNaverSearchAdSignature(timestamp2, method, uri, secretKey) {
 function getNaverSearchAdHeaders(credentials, method, uri) {
   const timestamp2 = Date.now().toString();
   return {
+    "Content-Type": "application/json; charset=UTF-8",
     "X-Timestamp": timestamp2,
     "X-API-KEY": credentials.accessLicense,
     "X-Customer": credentials.customerId,
@@ -2240,8 +2241,7 @@ var appRouter = router({
         try {
           const authCheck = await requestNaverSearchAdApi(
             credentials,
-            "/customer-links",
-            new URLSearchParams({ type: "MYCLIENTS" })
+            "/ncc/channels"
           );
           if (!authCheck.response.ok) {
             const errorMessage = getNaverSearchAdErrorMessage(authCheck.data, authCheck.response.status);
