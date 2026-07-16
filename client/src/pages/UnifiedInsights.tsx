@@ -256,7 +256,7 @@ export default function UnifiedInsights() {
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Content Volume</p>
-                  <h3 className="mt-1 text-lg font-semibold text-white">콘텐츠 발행량</h3>
+                  <h3 className="mt-1 text-lg font-semibold text-white">최근 30일 콘텐츠 발행량</h3>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-3">

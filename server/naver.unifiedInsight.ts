@@ -7,6 +7,7 @@ import { createHmac } from "crypto";
 
 const REQUEST_TIMEOUT_MS = 8000; // 8 seconds
 const NAVER_SEARCH_AD_PROVIDER = "naver-search-ad";
+const NAVER_SEARCH_MAX_START = 901;
 
 const AUTO_SHOPPING_CATEGORIES = [
   "50000000", // 패션의류
@@ -279,6 +280,84 @@ function buildKeywordToolSummary(keyword: string, keywordList: any[]): {
     recommended: bySearchVolume.slice(0, 10),
     related: metrics.slice(0, 80),
   };
+}
+
+function parseNaverDateValue(value: unknown) {
+  if (typeof value !== "string" || !value.trim()) return null;
+
+  if (/^\d{8}$/.test(value)) {
+    const year = Number(value.slice(0, 4));
+    const month = Number(value.slice(4, 6));
+    const day = Number(value.slice(6, 8));
+    const date = new Date(year, month - 1, day);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+async function fetchRecentNaverContentCount(input: {
+  keyword: string;
+  endpoint: string;
+  dateField: "postdate" | "pubDate";
+  clientId: string;
+  clientSecret: string;
+  since: Date;
+}) {
+  let count = 0;
+  let checked = 0;
+  let capped = false;
+
+  for (let start = 1; start <= NAVER_SEARCH_MAX_START; start += 100) {
+    const params = new URLSearchParams({
+      query: input.keyword,
+      display: "100",
+      start: String(start),
+      sort: "date",
+    });
+    const response = await fetchWithTimeout(
+      `${input.endpoint}?${params.toString()}`,
+      {
+        method: "GET",
+        headers: {
+          "X-Naver-Client-Id": input.clientId,
+          "X-Naver-Client-Secret": input.clientSecret,
+        },
+      },
+      REQUEST_TIMEOUT_MS
+    );
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(`${input.endpoint}: ${data?.errorMessage || response.status}`);
+    }
+
+    const items = Array.isArray(data?.items) ? data.items : [];
+    if (items.length === 0) break;
+
+    let reachedOlderItem = false;
+    for (const item of items) {
+      const publishedAt = parseNaverDateValue(item?.[input.dateField]);
+      if (!publishedAt) continue;
+      checked += 1;
+
+      if (publishedAt >= input.since) {
+        count += 1;
+      } else {
+        reachedOlderItem = true;
+      }
+    }
+
+    if (reachedOlderItem || items.length < 100) {
+      break;
+    }
+
+    if (start === NAVER_SEARCH_MAX_START) {
+      capped = true;
+    }
+  }
+
+  return { count, checked, capped };
 }
 
 /**
@@ -609,38 +688,41 @@ export const unifiedInsightProcedure = publicProcedure
             return null;
           }
 
+          const since = new Date();
+          since.setDate(since.getDate() - 30);
+
           const endpoints = [
-            { key: "blog", label: "블로그", url: "https://openapi.naver.com/v1/search/blog.json" },
-            { key: "news", label: "뉴스", url: "https://openapi.naver.com/v1/search/news.json" },
-            { key: "cafe", label: "카페", url: "https://openapi.naver.com/v1/search/cafearticle.json" },
+            {
+              key: "blog",
+              label: "블로그",
+              url: "https://openapi.naver.com/v1/search/blog.json",
+              dateField: "postdate" as const,
+            },
+            {
+              key: "news",
+              label: "뉴스",
+              url: "https://openapi.naver.com/v1/search/news.json",
+              dateField: "pubDate" as const,
+            },
           ];
 
           const settled = await Promise.allSettled(
             endpoints.map(async endpoint => {
-              const params = new URLSearchParams({
-                query: primaryKeyword,
-                display: "1",
-                start: "1",
+              const recent = await fetchRecentNaverContentCount({
+                keyword: primaryKeyword,
+                endpoint: endpoint.url,
+                dateField: endpoint.dateField,
+                clientId,
+                clientSecret,
+                since,
               });
-              const response = await fetchWithTimeout(
-                `${endpoint.url}?${params.toString()}`,
-                {
-                  method: "GET",
-                  headers: {
-                    "X-Naver-Client-Id": clientId,
-                    "X-Naver-Client-Secret": clientSecret,
-                  },
-                },
-                REQUEST_TIMEOUT_MS
-              );
-              const data = await response.json().catch(() => null);
-              if (!response.ok) {
-                throw new Error(`${endpoint.key}: ${data?.errorMessage || response.status}`);
-              }
+
               return {
                 key: endpoint.key,
                 label: endpoint.label,
-                total: typeof data?.total === "number" ? data.total : null,
+                total: recent.count,
+                checked: recent.checked,
+                capped: recent.capped,
               };
             })
           );
@@ -651,6 +733,8 @@ export const unifiedInsightProcedure = publicProcedure
               key: endpoints[index].key,
               label: endpoints[index].label,
               total: null,
+              checked: 0,
+              capped: false,
             };
           });
           const total = sources.reduce((sum, source) => sum + (source.total || 0), 0);
@@ -658,6 +742,8 @@ export const unifiedInsightProcedure = publicProcedure
           return {
             sources,
             total,
+            periodDays: 30,
+            isEstimated: sources.some(source => source.capped),
           };
         })(),
       ]);
