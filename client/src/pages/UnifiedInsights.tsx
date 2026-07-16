@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { UnifiedChart } from "@/components/UnifiedChart";
-import { CircleAlert, ListFilter, Lock } from "lucide-react";
+import { CircleAlert, ListFilter, MoreHorizontal } from "lucide-react";
 
 type InsightPoint = {
   period: string;
@@ -465,21 +465,16 @@ export default function UnifiedInsights() {
               ))}
             </div>
             {hasLockedRelatedKeywords && (
-              <div className="mt-3 flex justify-center">
-                <div className="flex w-full max-w-sm flex-col items-center rounded-xl border border-blue-500/20 bg-slate-950/80 px-5 py-5 text-center shadow-2xl shadow-blue-950/30">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full border border-blue-400/25 bg-blue-500/10">
-                    <Lock className="h-5 w-5 text-blue-300" aria-hidden="true" />
-                  </div>
-                  <p className="mt-3 text-sm font-medium text-slate-200">
-                    더 많은 연관 키워드를 확인하려면 가입하세요.
-                  </p>
-                  <button
-                    type="button"
-                    className="mt-4 h-10 w-full rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-500"
-                  >
-                    무료 체험하기
-                  </button>
+              <div className="mt-3 flex flex-col items-center gap-3">
+                <div className="flex w-full max-w-sm items-center justify-center rounded-xl border border-blue-500/20 bg-slate-950/70 px-5 py-4 text-center shadow-xl shadow-blue-950/20">
+                  <MoreHorizontal className="h-7 w-7 text-blue-300" aria-hidden="true" />
                 </div>
+                <button
+                  type="button"
+                  className="h-10 w-full max-w-sm rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 text-sm font-semibold text-blue-100 transition-colors hover:bg-blue-500/20"
+                >
+                  더 많은 연관 키워드 확인
+                </button>
               </div>
             )}
           </div>
