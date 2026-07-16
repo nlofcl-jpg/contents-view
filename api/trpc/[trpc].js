@@ -1254,20 +1254,57 @@ function normalizeKeywordMetric(item) {
     averageAdDepth
   };
 }
+function normalizeKeywordText(value) {
+  return value.replace(/\s+/g, "").toLowerCase();
+}
+function getLevenshteinDistance(a, b) {
+  if (a === b) return 0;
+  if (!a) return b.length;
+  if (!b) return a.length;
+  const previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+  const current = Array.from({ length: b.length + 1 }, () => 0);
+  for (let i = 1; i <= a.length; i += 1) {
+    current[0] = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      current[j] = Math.min(
+        previous[j] + 1,
+        current[j - 1] + 1,
+        previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+    previous.splice(0, previous.length, ...current);
+  }
+  return previous[b.length];
+}
+function getKeywordSimilarityScore(baseKeyword, candidateKeyword) {
+  const base = normalizeKeywordText(baseKeyword);
+  const candidate = normalizeKeywordText(candidateKeyword);
+  if (!base || !candidate) return Number.MAX_SAFE_INTEGER;
+  if (candidate === base) return 0;
+  if (candidate.startsWith(base)) return 1 + Math.abs(candidate.length - base.length) / 100;
+  if (base.startsWith(candidate)) return 2 + Math.abs(candidate.length - base.length) / 100;
+  if (candidate.includes(base)) return 3 + Math.abs(candidate.length - base.length) / 100;
+  if (base.includes(candidate)) return 4 + Math.abs(candidate.length - base.length) / 100;
+  const distance = getLevenshteinDistance(base, candidate);
+  const lengthPenalty = Math.abs(candidate.length - base.length) / Math.max(base.length, 1);
+  return 5 + distance + lengthPenalty;
+}
 function buildKeywordToolSummary(keyword, keywordList) {
   const metrics = keywordList.map(normalizeKeywordMetric).filter((item) => Boolean(item));
-  const normalizedKeyword = keyword.replace(/\s+/g, "").toLowerCase();
+  const normalizedKeyword = normalizeKeywordText(keyword);
   const exact = metrics.find(
-    (item) => item.keyword.replace(/\s+/g, "").toLowerCase() === normalizedKeyword
+    (item) => normalizeKeywordText(item.keyword) === normalizedKeyword
   );
   const primary = exact || metrics[0] || null;
-  const bySearchVolume = [...metrics].sort(
-    (a, b) => (b.monthlyTotalSearches || 0) - (a.monthlyTotalSearches || 0)
-  );
+  const bySimilarity = [...metrics].sort((a, b) => {
+    const similarityDelta = getKeywordSimilarityScore(keyword, a.keyword) - getKeywordSimilarityScore(keyword, b.keyword);
+    if (similarityDelta !== 0) return similarityDelta;
+    return (b.monthlyTotalSearches || 0) - (a.monthlyTotalSearches || 0);
+  });
   return {
     primary,
-    recommended: bySearchVolume.slice(0, 10),
-    related: metrics.slice(0, 80)
+    recommended: bySimilarity.slice(0, 10),
+    related: bySimilarity.slice(0, 80)
   };
 }
 function parseNaverDateValue(value) {
