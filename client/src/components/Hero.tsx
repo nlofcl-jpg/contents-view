@@ -1,6 +1,16 @@
 import { ChevronDown, Search } from "lucide-react";
+import { useState } from "react";
+
+const searchPlatforms = [
+  { value: "naver", label: "NAVER", className: "isNaver" },
+  { value: "youtube", label: "YOUTUBE", className: "isYoutube" },
+  { value: "google", label: "GOOGLE", className: "isGoogle" },
+];
 
 export default function Hero() {
+  const [selectedPlatform, setSelectedPlatform] = useState(searchPlatforms[0]);
+  const [isPlatformMenuOpen, setIsPlatformMenuOpen] = useState(false);
+
   return (
     <section className="hero">
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
@@ -14,13 +24,45 @@ export default function Hero() {
           </h2>
 
           <div className="heroSearch" role="search" aria-label="트렌드 키워드 검색">
-            <label className="heroSearchFilter" aria-label="검색 플랫폼 선택">
-              <select className="heroSearchSelect" defaultValue="naver">
-                <option value="naver">NAVER</option>
-                <option value="youtube">YOUTUBE</option>
-              </select>
-              <ChevronDown className="heroSearchFilterIcon" aria-hidden="true" />
-            </label>
+            <div
+              className="heroSearchFilter"
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                  setIsPlatformMenuOpen(false);
+                }
+              }}
+            >
+              <button
+                type="button"
+                className={`heroSearchFilterButton ${selectedPlatform.className}`}
+                aria-haspopup="listbox"
+                aria-expanded={isPlatformMenuOpen}
+                onClick={() => setIsPlatformMenuOpen((current) => !current)}
+              >
+                <span>{selectedPlatform.label}</span>
+                <ChevronDown className="heroSearchFilterIcon" aria-hidden="true" />
+              </button>
+              {isPlatformMenuOpen ? (
+                <div className="heroSearchMenu" role="listbox" aria-label="검색 플랫폼 선택">
+                  {searchPlatforms.map((platform) => (
+                    <button
+                      key={platform.value}
+                      type="button"
+                      className={`heroSearchMenuItem ${platform.className}`}
+                      role="option"
+                      aria-selected={selectedPlatform.value === platform.value}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        setSelectedPlatform(platform);
+                        setIsPlatformMenuOpen(false);
+                      }}
+                    >
+                      {platform.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
             <div className="heroSearchDivider" aria-hidden="true" />
             <input
               type="text"
