@@ -466,12 +466,12 @@ export default function UnifiedInsights() {
             </div>
             {hasLockedRelatedKeywords && (
               <div className="mt-4 flex flex-col items-center gap-3">
-                <div className="flex flex-col items-center gap-0.5 py-1">
+                <div className="flex flex-col items-center py-1">
                   {[0, 1, 2].map((index) => (
                     <ChevronDown
                       key={index}
                       className="relatedMoreArrow h-4 w-4 text-blue-400"
-                      style={{ animationDelay: `${index * 180}ms` }}
+                      style={{ animationDelay: `${index * 220}ms` }}
                       aria-hidden="true"
                     />
                   ))}
