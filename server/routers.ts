@@ -547,20 +547,6 @@ export const appRouter = router({
           }
 
           try {
-            const authCheck = await requestNaverSearchAdApi(
-              credentials,
-              "/ncc/channels",
-            );
-
-            if (!authCheck.response.ok) {
-              const errorMessage = getNaverSearchAdErrorMessage(authCheck.data, authCheck.response.status);
-              await userApiKeys.updateApiKeyTestStatus(ctx.user, NAVER_SEARCH_AD_PROVIDER, "failed", errorMessage);
-              return {
-                success: false,
-                error: errorMessage,
-              };
-            }
-
             const keywordCheck = await requestNaverSearchAdApi(credentials, "/keywordstool", new URLSearchParams({
               hintKeywords: "반바지",
               showDetail: "1",
@@ -569,7 +555,7 @@ export const appRouter = router({
             if (!keywordCheck.response.ok) {
               const rawErrorMessage = getNaverSearchAdErrorMessage(keywordCheck.data, keywordCheck.response.status);
               const errorMessage = rawErrorMessage.includes("10002") || rawErrorMessage.includes("required permission")
-                ? "기본 API 인증은 통과했지만 키워드 도구 권한이 없습니다. 네이버 검색광고 관리자센터에서 키워드 도구/API 권한을 확인해주세요. (10002)"
+                ? "GET /keywordstool 호출 권한이 없습니다. CUSTOMER_ID와 키 발급 계정의 검색광고 API/키워드 도구 권한을 확인해주세요. (10002)"
                 : rawErrorMessage;
               await userApiKeys.updateApiKeyTestStatus(ctx.user, NAVER_SEARCH_AD_PROVIDER, "failed", errorMessage);
               return {
