@@ -6,7 +6,7 @@ var COOKIE_NAME = "app_session_id";
 var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
-var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
+var NOT_ADMIN_ERR_MSG = "\uAD00\uB9AC\uC790 \uAD8C\uD55C\uC774 \uD544\uC694\uD569\uB2C8\uB2E4. \uB2E4\uC2DC \uB85C\uADF8\uC778 \uD6C4 \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694. (ADMIN_REQUIRED)";
 var SUPABASE_ACCESS_TOKEN_COOKIE = "contents_view_supabase_access_token";
 
 // server/vercel-trpc.ts
@@ -703,7 +703,14 @@ var sdk = new SDKServer();
 // server/_core/supabase.ts
 import { createClient } from "@supabase/supabase-js";
 var supabaseAuthKey = ENV.supabaseAnonKey || ENV.supabaseServiceRoleKey;
+var supabaseProfileKey = ENV.supabaseServiceRoleKey || ENV.supabaseAnonKey;
 var supabaseAuthClient = ENV.supabaseUrl && supabaseAuthKey ? createClient(ENV.supabaseUrl, supabaseAuthKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false
+  }
+}) : null;
+var supabaseProfileClient = ENV.supabaseUrl && supabaseProfileKey ? createClient(ENV.supabaseUrl, supabaseProfileKey, {
   auth: {
     persistSession: false,
     autoRefreshToken: false
@@ -715,17 +722,26 @@ function getBearerToken(authorization) {
   if (scheme?.toLowerCase() !== "bearer" || !token) return null;
   return token;
 }
-function mapSupabaseUser(user) {
+function normalizeApprovalStatus(value) {
+  return value === "pending" || value === "rejected" ? value : "approved";
+}
+async function getSupabaseProfile(userId) {
+  if (!supabaseProfileClient) return null;
+  const { data } = await supabaseProfileClient.from("profiles").select("name,email,avatar_url,role,approval_status").eq("id", userId).maybeSingle();
+  return data ?? null;
+}
+async function mapSupabaseUser(user) {
+  const profile = await getSupabaseProfile(user.id);
   const metadata = user.user_metadata ?? {};
-  const name = typeof metadata.full_name === "string" ? metadata.full_name : typeof metadata.name === "string" ? metadata.name : user.email ?? null;
+  const name = profile?.name || (typeof metadata.full_name === "string" ? metadata.full_name : typeof metadata.name === "string" ? metadata.name : user.email ?? null);
   return {
     id: 0,
     openId: user.id,
     name,
-    email: user.email ?? null,
+    email: profile?.email ?? user.email ?? null,
     loginMethod: "supabase",
-    role: "user",
-    approvalStatus: "approved",
+    role: profile?.role === "admin" ? "admin" : "user",
+    approvalStatus: normalizeApprovalStatus(profile?.approval_status),
     createdAt: new Date(user.created_at),
     updatedAt: /* @__PURE__ */ new Date(),
     lastSignedIn: user.last_sign_in_at ? new Date(user.last_sign_in_at) : /* @__PURE__ */ new Date(),
@@ -752,7 +768,7 @@ async function inspectSupabaseBearer(authorization) {
   }
   const { data, error } = await supabaseAuthClient.auth.getUser(token);
   return {
-    user: data.user ? mapSupabaseUser(data.user) : null,
+    user: data.user ? await mapSupabaseUser(data.user) : null,
     error: error ? normalizeSupabaseError(error) : null,
     claims
   };

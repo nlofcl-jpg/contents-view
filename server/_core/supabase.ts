@@ -10,11 +10,24 @@ type SupabaseUser = {
   user_metadata?: Record<string, unknown> | null;
 };
 
+type ApprovalStatus = "pending" | "approved" | "rejected";
+
 const supabaseAuthKey = ENV.supabaseAnonKey || ENV.supabaseServiceRoleKey;
+const supabaseProfileKey = ENV.supabaseServiceRoleKey || ENV.supabaseAnonKey;
 
 const supabaseAuthClient =
   ENV.supabaseUrl && supabaseAuthKey
     ? createClient(ENV.supabaseUrl, supabaseAuthKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      })
+    : null;
+
+const supabaseProfileClient =
+  ENV.supabaseUrl && supabaseProfileKey
+    ? createClient(ENV.supabaseUrl, supabaseProfileKey, {
         auth: {
           persistSession: false,
           autoRefreshToken: false,
@@ -29,23 +42,47 @@ function getBearerToken(authorization: string | undefined): string | null {
   return token;
 }
 
-function mapSupabaseUser(user: SupabaseUser): User {
+function normalizeApprovalStatus(value: string | null | undefined): ApprovalStatus {
+  return value === "pending" || value === "rejected" ? value : "approved";
+}
+
+async function getSupabaseProfile(userId: string) {
+  if (!supabaseProfileClient) return null;
+
+  const { data } = await supabaseProfileClient
+    .from("profiles")
+    .select("name,email,avatar_url,role,approval_status")
+    .eq("id", userId)
+    .maybeSingle<{
+      name?: string | null;
+      email?: string | null;
+      avatar_url?: string | null;
+      role?: string | null;
+      approval_status?: string | null;
+    }>();
+
+  return data ?? null;
+}
+
+async function mapSupabaseUser(user: SupabaseUser): Promise<User> {
+  const profile = await getSupabaseProfile(user.id);
   const metadata = user.user_metadata ?? {};
   const name =
-    typeof metadata.full_name === "string"
+    profile?.name ||
+    (typeof metadata.full_name === "string"
       ? metadata.full_name
       : typeof metadata.name === "string"
         ? metadata.name
-        : user.email ?? null;
+        : user.email ?? null);
 
   return {
     id: 0,
     openId: user.id,
     name,
-    email: user.email ?? null,
+    email: profile?.email ?? user.email ?? null,
     loginMethod: "supabase",
-    role: "user",
-    approvalStatus: "approved",
+    role: profile?.role === "admin" ? "admin" : "user",
+    approvalStatus: normalizeApprovalStatus(profile?.approval_status),
     createdAt: new Date(user.created_at),
     updatedAt: new Date(),
     lastSignedIn: user.last_sign_in_at ? new Date(user.last_sign_in_at) : new Date(),
@@ -86,7 +123,7 @@ export async function inspectSupabaseBearer(authorization: string | undefined) {
   }).getUser(token);
 
   return {
-    user: data.user ? mapSupabaseUser(data.user) : null,
+    user: data.user ? await mapSupabaseUser(data.user) : null,
     error: error ? normalizeSupabaseError(error) : null,
     claims,
   };
