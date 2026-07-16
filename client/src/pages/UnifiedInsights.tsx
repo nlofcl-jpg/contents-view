@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { UnifiedChart } from "@/components/UnifiedChart";
-import { CircleAlert, ListFilter, MoreHorizontal } from "lucide-react";
+import { ChevronDown, CircleAlert, ListFilter } from "lucide-react";
 
 type InsightPoint = {
   period: string;
@@ -465,13 +465,11 @@ export default function UnifiedInsights() {
               ))}
             </div>
             {hasLockedRelatedKeywords && (
-              <div className="mt-3 flex flex-col items-center gap-3">
-                <div className="flex w-full max-w-sm items-center justify-center rounded-xl border border-blue-500/20 bg-slate-950/70 px-5 py-4 text-center shadow-xl shadow-blue-950/20">
-                  <MoreHorizontal className="h-7 w-7 text-blue-300" aria-hidden="true" />
-                </div>
+              <div className="mt-3 flex flex-col items-center gap-2">
+                <ChevronDown className="h-5 w-5 text-blue-400" aria-hidden="true" />
                 <button
                   type="button"
-                  className="h-10 w-full max-w-sm rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 text-sm font-semibold text-blue-100 transition-colors hover:bg-blue-500/20"
+                  className="h-9 rounded-lg border border-blue-500/40 bg-blue-600/20 px-5 text-sm font-semibold text-blue-200 transition-colors hover:bg-blue-600/30 hover:text-blue-100"
                 >
                   더 많은 연관 키워드 확인
                 </button>
