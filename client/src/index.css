@@ -1112,6 +1112,7 @@ a {
 
 .hero {
   position: relative;
+  z-index: 5;
   width: calc(100% + 144px);
   margin: -48px -72px 0;
   min-height: clamp(430px, 58vh, 620px);
@@ -1119,7 +1120,7 @@ a {
   align-items: center;
   justify-content: center;
   padding: 28px 72px;
-  overflow: hidden;
+  overflow: visible;
   background:
     radial-gradient(circle at 82% 34%, rgba(21, 140, 255, 0.13), transparent 42%),
     linear-gradient(90deg, rgba(7, 10, 17, 0.94) 0%, rgba(7, 10, 17, 0.82) 45%, rgba(7, 10, 17, 0.42) 100%);
@@ -1252,7 +1253,7 @@ a {
   position: absolute;
   top: calc(100% + 10px);
   left: 10px;
-  z-index: 20;
+  z-index: 60;
   width: 132px;
   padding: 6px;
   border: 1px solid rgba(21, 140, 255, 0.26);
