@@ -176,15 +176,42 @@ function ApiKeysPanel() {
   return (
     <section className="space-y-4 rounded-lg border border-blue-500/20 bg-slate-900/60 p-5">
       <h2 className="text-xl font-semibold text-white">API 키</h2>
-      <div className="grid gap-3 md:grid-cols-2">
-        <StatusCard title="YouTube" value="사용자별 마이페이지 저장" />
-        <StatusCard title="네이버 데이터랩" value="서비스 환경변수" />
-      </div>
-      <div className="rounded-md border border-slate-800 bg-slate-950/50 p-4">
-        <div className="mb-3">
-          <h3 className="text-sm font-semibold text-slate-100">네이버 검색광고 API</h3>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="flex min-h-[280px] flex-col rounded-md border border-slate-800 bg-slate-950/50 p-4">
+          <div className="border-b border-slate-800 pb-4">
+            <h3 className="text-sm font-semibold text-slate-100">네이버 데이터랩</h3>
+            <p className="mt-2 text-xs leading-5 text-slate-400">
+              검색 트렌드, 쇼핑 클릭량 등 네이버 데이터랩 API 호출에 사용됩니다.
+            </p>
+          </div>
+          <div className="flex flex-1 flex-col justify-between pt-4">
+            <div className="space-y-2 text-xs text-slate-400">
+              <div className="flex items-center justify-between rounded-md bg-slate-900/70 px-3 py-2">
+                <span>Client ID</span>
+                <span className="text-emerald-300">환경변수</span>
+              </div>
+              <div className="flex items-center justify-between rounded-md bg-slate-900/70 px-3 py-2">
+                <span>Client Secret</span>
+                <span className="text-emerald-300">환경변수</span>
+              </div>
+            </div>
+            <p className="mt-4 text-[11px] leading-5 text-slate-500">
+              현재 배포 환경의 `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET` 값으로 관리됩니다.
+            </p>
+          </div>
         </div>
-        <NaverSearchAdKeyPanel isActive />
+
+        <div className="flex min-h-[280px] flex-col rounded-md border border-slate-800 bg-slate-950/50 p-4">
+          <div className="border-b border-slate-800 pb-4">
+            <h3 className="text-sm font-semibold text-slate-100">네이버 검색광고</h3>
+            <p className="mt-2 text-xs leading-5 text-slate-400">
+              월간 검색량, PC/모바일 검색량, 연관 키워드 분석에 사용할 관리자 공용 키입니다.
+            </p>
+          </div>
+          <div className="pt-4">
+            <NaverSearchAdKeyPanel isActive />
+          </div>
+        </div>
       </div>
     </section>
   );
