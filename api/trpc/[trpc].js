@@ -2142,7 +2142,7 @@ var appRouter = router({
           updatedAt: apiKey.updatedAt
         };
       }),
-      saveNaverSearchAd: protectedProcedure.input(z3.object({
+      saveNaverSearchAd: adminProcedure.input(z3.object({
         customerId: z3.string().min(1),
         accessLicense: z3.string().min(1),
         secretKey: z3.string().min(1)
@@ -2169,7 +2169,7 @@ var appRouter = router({
         );
         return { success: true };
       }),
-      getNaverSearchAdWithStatus: protectedProcedure.query(async ({ ctx }) => {
+      getNaverSearchAdWithStatus: adminProcedure.query(async ({ ctx }) => {
         if (!ctx.user) {
           throw new Error("User not authenticated");
         }
@@ -2203,7 +2203,7 @@ var appRouter = router({
           updatedAt: apiKey.updatedAt
         };
       }),
-      testNaverSearchAd: protectedProcedure.mutation(async ({ ctx }) => {
+      testNaverSearchAd: adminProcedure.mutation(async ({ ctx }) => {
         if (!ctx.user) {
           throw new Error("User not authenticated");
         }

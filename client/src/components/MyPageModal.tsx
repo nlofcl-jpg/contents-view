@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { X } from "lucide-react";
 import { YouTubeApiKeySettingsPanel } from "./YouTubeApiKeyModal";
-import NaverSearchAdKeyPanel from "./NaverSearchAdKeyPanel";
 
 interface MyPageModalProps {
   isOpen: boolean;
@@ -167,11 +166,6 @@ export default function MyPageModal({ isOpen, onClose }: MyPageModalProps) {
             <div className="mypageModalField">
               <label className="mypageModalLabel">YouTube API key</label>
               <YouTubeApiKeySettingsPanel isActive={isOpen} compact />
-            </div>
-
-            <div className="mypageModalField">
-              <label className="mypageModalLabel">Naver Search Ad API</label>
-              <NaverSearchAdKeyPanel isActive={isOpen} />
             </div>
           </div>
         </div>

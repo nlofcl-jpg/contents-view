@@ -2,6 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { useState } from "react";
 import { useLocation } from "wouter";
+import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
 
 type AdminTab = "notices" | "users" | "apiKeys" | "collections";
 
@@ -173,11 +174,17 @@ function UsersPanel({ adminEmail }: { adminEmail: string }) {
 
 function ApiKeysPanel() {
   return (
-    <section className="rounded-lg border border-blue-500/20 bg-slate-900/60 p-5">
-      <h2 className="mb-5 text-xl font-semibold text-white">API 키</h2>
+    <section className="space-y-4 rounded-lg border border-blue-500/20 bg-slate-900/60 p-5">
+      <h2 className="text-xl font-semibold text-white">API 키</h2>
       <div className="grid gap-3 md:grid-cols-2">
-        <StatusCard title="YouTube" value="사용자별 저장" />
-        <StatusCard title="Naver" value="서비스 환경변수" />
+        <StatusCard title="YouTube" value="사용자별 마이페이지 저장" />
+        <StatusCard title="네이버 데이터랩" value="서비스 환경변수" />
+      </div>
+      <div className="rounded-md border border-slate-800 bg-slate-950/50 p-4">
+        <div className="mb-3">
+          <h3 className="text-sm font-semibold text-slate-100">네이버 검색광고 API</h3>
+        </div>
+        <NaverSearchAdKeyPanel isActive />
       </div>
     </section>
   );

@@ -408,7 +408,7 @@ export const appRouter = router({
           };
         }),
 
-      saveNaverSearchAd: protectedProcedure
+      saveNaverSearchAd: adminProcedure
         .input(z.object({
           customerId: z.string().min(1),
           accessLicense: z.string().min(1),
@@ -455,7 +455,7 @@ export const appRouter = router({
           return { success: true };
         }),
 
-      getNaverSearchAdWithStatus: protectedProcedure
+      getNaverSearchAdWithStatus: adminProcedure
         .query(async ({ ctx }) => {
           if (!ctx.user) {
             throw new Error("User not authenticated");
@@ -494,7 +494,7 @@ export const appRouter = router({
           };
         }),
 
-      testNaverSearchAd: protectedProcedure
+      testNaverSearchAd: adminProcedure
         .mutation(async ({ ctx }) => {
           if (!ctx.user) {
             throw new Error("User not authenticated");
