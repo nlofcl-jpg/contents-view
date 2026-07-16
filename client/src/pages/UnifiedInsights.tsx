@@ -1,26 +1,28 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { UnifiedChart } from "@/components/UnifiedChart";
-import { ChevronDown } from "lucide-react";
 
 type InsightPoint = {
   period: string;
   ratio: number;
 };
 
+type KeywordMetric = {
+  keyword: string;
+  monthlyPcSearches: number | null;
+  monthlyMobileSearches: number | null;
+  monthlyTotalSearches: number | null;
+  monthlyPcClicks: number | null;
+  monthlyMobileClicks: number | null;
+  monthlyTotalClicks: number | null;
+  competition: string | null;
+  averageAdDepth: number | null;
+};
+
 export default function UnifiedInsights() {
   // State management
   const [keywords, setKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState("");
-  const [chartPeriodDays, setChartPeriodDays] = useState(30);
-  const [chartUnit, setChartUnit] = useState("일간");
-  const [customStartDate, setCustomStartDate] = useState("");
-  const [customEndDate, setCustomEndDate] = useState("");
-  const [selectedDevice, setSelectedDevice] = useState("전체");
-  const [selectedGender, setSelectedGender] = useState("전체");
-  const [selectedAge, setSelectedAge] = useState("전체");
-  const [showTrend, setShowTrend] = useState(true);
-  const [showShopping, setShowShopping] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [queryError, setQueryError] = useState("");
   const [querySuccess, setQuerySuccess] = useState(false);
@@ -54,71 +56,33 @@ export default function UnifiedInsights() {
 
   const primaryKeyword = chartData?.keywords?.[0] || keywords[0] || "";
   const primaryTrendSummary = getSeriesSummary(primaryKeyword ? chartData?.trend?.[primaryKeyword] : undefined);
-  const primaryShoppingSummary = getSeriesSummary(primaryKeyword ? chartData?.shopping?.[primaryKeyword] : undefined);
-  const shoppingStatus = primaryKeyword ? chartData?.meta?.shoppingStatus?.[primaryKeyword] : undefined;
-  const recommendedKeywords = primaryKeyword
-    ? [
-        `${primaryKeyword} 추천`,
-        `${primaryKeyword} 비교`,
-        `${primaryKeyword} 순위`,
-        `${primaryKeyword} 후기`,
-        `${primaryKeyword} 인기`,
-        `${primaryKeyword} 브랜드`,
-        `${primaryKeyword} 가격`,
-        `${primaryKeyword} 신상`,
-        `${primaryKeyword} 할인`,
-        `${primaryKeyword} 베스트`,
-      ]
-    : [];
-  const relatedKeywords = primaryKeyword
-    ? [
-        `${primaryKeyword} 구매`,
-        `${primaryKeyword} 코디`,
-        `${primaryKeyword} 선물`,
-        `${primaryKeyword} 사이즈`,
-        `${primaryKeyword} 고르는법`,
-        `${primaryKeyword} 트렌드`,
-        `${primaryKeyword} 종류`,
-        `${primaryKeyword} 추천템`,
-        `${primaryKeyword} 저렴한곳`,
-        `${primaryKeyword} 프리미엄`,
-        `${primaryKeyword} 브랜드 순위`,
-        `${primaryKeyword} 내돈내산`,
-        `${primaryKeyword} 장점`,
-        `${primaryKeyword} 단점`,
-        `${primaryKeyword} 사용법`,
-        `${primaryKeyword} 관리법`,
-        `${primaryKeyword} 비교표`,
-        `${primaryKeyword} 입문`,
-        `${primaryKeyword} 세일`,
-        `${primaryKeyword} 쿠폰`,
-        `${primaryKeyword} 리뷰`,
-        `${primaryKeyword} 랭킹`,
-        `${primaryKeyword} 모음`,
-        `${primaryKeyword} 최신`,
-      ]
-    : [];
+  const keywordTool = chartData?.meta?.keywordTool;
+  const primaryMetric: KeywordMetric | null = keywordTool?.primary || null;
+  const recommendedKeywords: KeywordMetric[] = keywordTool?.recommended || [];
+  const relatedKeywords: KeywordMetric[] = keywordTool?.related || [];
+  const contentVolume = chartData?.meta?.contentVolume;
 
-  const devices = ["전체", "PC", "모바일"];
-  const genders = ["전체", "남성", "여성"];
-  const ages = ["전체", "10대", "20대", "30대", "40대", "50대", "60대 이상"];
-  const timeUnits = ["일간", "주간", "월간"];
-
-  // Handle layer toggle with validation
-  const handleToggleTrend = () => {
-    if (showTrend && !showShopping) {
-      // Cannot disable trend if shopping is already disabled
-      return;
-    }
-    setShowTrend(!showTrend);
+  const formatNumber = (value: number | null | undefined, suffix = "") => {
+    if (value === null || value === undefined || Number.isNaN(value)) return "-";
+    return `${Math.round(value).toLocaleString("ko-KR")}${suffix}`;
   };
 
-  const handleToggleShopping = () => {
-    if (showShopping && !showTrend) {
-      // Cannot disable shopping if trend is already disabled
-      return;
-    }
-    setShowShopping(!showShopping);
+  const formatDecimal = (value: number | null | undefined, suffix = "") => {
+    if (value === null || value === undefined || Number.isNaN(value)) return "-";
+    return `${Math.round(value * 10) / 10}${suffix}`;
+  };
+
+  const getCompetitionLabel = (competition: string | null | undefined) => {
+    if (!competition) return "-";
+    const labels: Record<string, string> = {
+      높음: "높음",
+      중간: "중간",
+      낮음: "낮음",
+      HIGH: "높음",
+      MID: "중간",
+      LOW: "낮음",
+    };
+    return labels[competition] || competition;
   };
 
   // tRPC mutation
@@ -164,14 +128,8 @@ export default function UnifiedInsights() {
 
     let endDate = now;
 
-    if (chartPeriodDays === 0 && customStartDate && customEndDate) {
-      startDate = new Date(customStartDate);
-      endDate = new Date(customEndDate);
-      timeUnit = chartUnit === "일간" ? "date" : chartUnit === "주간" ? "week" : "month";
-    } else {
-      startDate.setDate(now.getDate() - chartPeriodDays);
-      timeUnit = "date";
-    }
+    startDate.setDate(now.getDate() - 30);
+    timeUnit = "date";
 
     // Format date as local date string (YYYY-MM-DD) without UTC conversion
     const formatLocalDate = (date: Date): string => {
@@ -186,8 +144,8 @@ export default function UnifiedInsights() {
 
     // Logging for diagnosis
     console.log('[Frontend] Date Calculation:', {
-      chartPeriodDays,
-      chartUnit,
+      chartPeriodDays: 30,
+      chartUnit: "일간",
       startDateStr,
       endDateStr,
       nowTime: now.toLocaleString('ko-KR'),
@@ -203,9 +161,6 @@ export default function UnifiedInsights() {
       startDate: startDateStr,
       endDate: endDateStr,
       timeUnit: timeUnit as any,
-      device: selectedDevice !== "전체" ? selectedDevice : undefined,
-      gender: selectedGender !== "전체" ? selectedGender : undefined,
-      ages: selectedAge !== "전체" ? [selectedAge] : undefined,
     });
   };
 
@@ -276,67 +231,80 @@ export default function UnifiedInsights() {
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Monthly Search Volume</p>
                   <h3 className="mt-1 text-lg font-semibold text-white">월간 검색량</h3>
                 </div>
-                <span className="rounded-full border border-amber-500/30 px-3 py-1 text-xs font-semibold text-amber-300">
-                  연결 필요
+                <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                  keywordTool?.success
+                    ? "border-emerald-500/30 text-emerald-300"
+                    : "border-amber-500/30 text-amber-300"
+                }`}>
+                  {keywordTool?.success ? "검색광고 연결" : "연결 확인 필요"}
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="flex h-20 min-w-0 flex-col justify-between rounded-lg bg-slate-800/70 p-3">
                   <p className="text-xs text-slate-500">PC</p>
-                  <p className="mt-2 text-xl font-bold text-slate-300">-</p>
+                  <p className="mt-2 text-xl font-bold text-slate-300">{formatNumber(primaryMetric?.monthlyPcSearches)}</p>
                 </div>
                 <div className="flex h-20 min-w-0 flex-col justify-between rounded-lg bg-slate-800/70 p-3">
                   <p className="text-xs text-slate-500">모바일</p>
-                  <p className="mt-2 text-xl font-bold text-slate-300">-</p>
+                  <p className="mt-2 text-xl font-bold text-slate-300">{formatNumber(primaryMetric?.monthlyMobileSearches)}</p>
                 </div>
                 <div className="flex h-20 min-w-0 flex-col justify-between rounded-lg bg-blue-950/50 p-3">
                   <p className="text-xs text-blue-300">전체</p>
-                  <p className="mt-2 text-xl font-bold text-white">-</p>
+                  <p className="mt-2 text-xl font-bold text-white">{formatNumber(primaryMetric?.monthlyTotalSearches)}</p>
                 </div>
               </div>
-              <p className="mt-3 text-xs text-slate-500">네이버 검색광고 API 연결 후 실제 검색량을 표시합니다.</p>
+              <p className="mt-3 text-xs text-slate-500">
+                {keywordTool?.error || "네이버 검색광고 키워드 도구 기준 월간 검색량입니다."}
+              </p>
             </div>
 
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Monthly Content Volume</p>
-                  <h3 className="mt-1 text-lg font-semibold text-white">월간 콘텐츠 발행량</h3>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Content Volume</p>
+                  <h3 className="mt-1 text-lg font-semibold text-white">콘텐츠 발행량</h3>
                 </div>
-                <span className="rounded-full border border-amber-500/30 px-3 py-1 text-xs font-semibold text-amber-300">
-                  연결 필요
+                <span className="rounded-full border border-blue-500/30 px-3 py-1 text-xs font-semibold text-blue-300">
+                  네이버 검색
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="flex h-20 min-w-0 flex-col justify-between rounded-lg bg-slate-800/70 p-3">
-                  <p className="text-xs text-slate-500">PC</p>
-                  <p className="mt-2 text-xl font-bold text-slate-300">-</p>
+                  <p className="text-xs text-slate-500">블로그</p>
+                  <p className="mt-2 text-xl font-bold text-slate-300">
+                    {formatNumber(contentVolume?.sources?.find((item: any) => item.key === "blog")?.total)}
+                  </p>
                 </div>
                 <div className="flex h-20 min-w-0 flex-col justify-between rounded-lg bg-slate-800/70 p-3">
-                  <p className="text-xs text-slate-500">모바일</p>
-                  <p className="mt-2 text-xl font-bold text-slate-300">-</p>
+                  <p className="text-xs text-slate-500">뉴스</p>
+                  <p className="mt-2 text-xl font-bold text-slate-300">
+                    {formatNumber(contentVolume?.sources?.find((item: any) => item.key === "news")?.total)}
+                  </p>
                 </div>
                 <div className="flex h-20 min-w-0 flex-col justify-between rounded-lg bg-blue-950/50 p-3">
                   <p className="text-xs text-blue-300">전체</p>
-                  <p className="mt-2 text-xl font-bold text-white">-</p>
+                  <p className="mt-2 text-xl font-bold text-white">{formatNumber(contentVolume?.total)}</p>
                 </div>
               </div>
-              <p className="mt-3 text-xs text-slate-500">블로그·뉴스·카페 수집 연결 후 발행량을 표시합니다.</p>
+              <p className="mt-3 text-xs text-slate-500">네이버 검색 API의 블로그·뉴스·카페 검색 결과 수를 합산합니다.</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-4">
               <p className="text-xs font-semibold text-slate-400">검색 관심도</p>
               <p className="mt-2 text-2xl font-bold text-white">{formatRatio(primaryTrendSummary.latest)}</p>
               <p className="mt-1 text-xs text-slate-500">직전 구간 대비 {formatDelta(primaryTrendSummary.delta)}</p>
             </div>
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-4">
-              <p className="text-xs font-semibold text-slate-400">쇼핑 클릭 반응</p>
-              <p className="mt-2 text-2xl font-bold text-white">{formatRatio(primaryShoppingSummary.latest)}</p>
-              <p className="mt-1 text-xs text-slate-500">
-                {shoppingStatus === "NO_DATA" ? "쇼핑 데이터 없음" : `직전 구간 대비 ${formatDelta(primaryShoppingSummary.delta)}`}
-              </p>
+              <p className="text-xs font-semibold text-slate-400">월간 클릭량</p>
+              <p className="mt-2 text-2xl font-bold text-white">{formatDecimal(primaryMetric?.monthlyTotalClicks)}</p>
+              <p className="mt-1 text-xs text-slate-500">PC {formatDecimal(primaryMetric?.monthlyPcClicks)} · 모바일 {formatDecimal(primaryMetric?.monthlyMobileClicks)}</p>
+            </div>
+            <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-4">
+              <p className="text-xs font-semibold text-slate-400">키워드 등급</p>
+              <p className="mt-2 text-2xl font-bold text-white">{getCompetitionLabel(primaryMetric?.competition)}</p>
+              <p className="mt-1 text-xs text-slate-500">광고 노출 깊이 {formatDecimal(primaryMetric?.averageAdDepth)}</p>
             </div>
           </div>
 
@@ -348,23 +316,27 @@ export default function UnifiedInsights() {
                   우선 확인하면 좋은 키워드를 10개 내외로 모아 표시합니다.
                 </p>
               </div>
-              <span className="w-fit rounded-full border border-amber-500/30 px-3 py-1 text-xs font-semibold text-amber-300">
-                검색광고 API 연결 전
+              <span className={`w-fit rounded-full border px-3 py-1 text-xs font-semibold ${
+                keywordTool?.success
+                  ? "border-emerald-500/30 text-emerald-300"
+                  : "border-amber-500/30 text-amber-300"
+              }`}>
+                {keywordTool?.success ? "검색광고 데이터" : "검색광고 API 연결 전"}
               </span>
             </div>
             <div className="-mx-1 overflow-x-auto pb-1">
               <div className="flex w-max max-w-none gap-2 px-1">
-                {recommendedKeywords.map((keyword) => (
+                {recommendedKeywords.map((item) => (
                   <button
-                    key={keyword}
+                    key={item.keyword}
                     type="button"
                     onClick={() => {
-                      setKeywordInput(keyword);
-                      runQuery([keyword]);
+                      setKeywordInput(item.keyword);
+                      runQuery([item.keyword]);
                     }}
                     className="whitespace-nowrap rounded-full border border-blue-500/25 bg-blue-500/10 px-3 py-1.5 text-sm font-medium text-blue-100 transition-colors hover:border-blue-400/50 hover:bg-blue-500/20"
                   >
-                    {keyword}
+                    {item.keyword}
                   </button>
                 ))}
               </div>
@@ -380,202 +352,30 @@ export default function UnifiedInsights() {
                 </div>
                 <span className="text-xs text-slate-500">{relatedKeywords.length}개 표시</span>
               </div>
-              <div className="grid max-h-72 gap-2 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {relatedKeywords.map((keyword) => (
+              <div className="max-h-96 overflow-y-auto rounded-lg border border-slate-700/70">
+                <div className="grid grid-cols-[minmax(120px,1fr)_92px_92px_72px] gap-0 border-b border-slate-700/70 bg-slate-950/50 px-3 py-2 text-xs font-semibold text-slate-400">
+                  <span>키워드</span>
+                  <span className="text-right">검색량</span>
+                  <span className="text-right">클릭량</span>
+                  <span className="text-right">등급</span>
+                </div>
+                {relatedKeywords.map((item) => (
                   <button
-                    key={keyword}
+                    key={item.keyword}
                     type="button"
                     onClick={() => {
-                      setKeywordInput(keyword);
-                      runQuery([keyword]);
+                      setKeywordInput(item.keyword);
+                      runQuery([item.keyword]);
                     }}
-                    className="flex min-h-10 items-center justify-between gap-3 rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-left text-sm text-slate-200 transition-colors hover:border-blue-500/50 hover:bg-slate-800"
+                    className="grid min-h-11 w-full grid-cols-[minmax(120px,1fr)_92px_92px_72px] gap-0 border-b border-slate-800/80 px-3 py-2 text-left text-sm text-slate-200 transition-colors last:border-b-0 hover:bg-slate-800/70"
                   >
-                    <span className="min-w-0 truncate">{keyword}</span>
-                    <span className="shrink-0 text-xs text-blue-300">조회</span>
+                    <span className="min-w-0 truncate">{item.keyword}</span>
+                    <span className="text-right text-slate-300">{formatNumber(item.monthlyTotalSearches)}</span>
+                    <span className="text-right text-slate-400">{formatDecimal(item.monthlyTotalClicks)}</span>
+                    <span className="text-right text-blue-300">{getCompetitionLabel(item.competition)}</span>
                   </button>
                 ))}
               </div>
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-cyan-700/30 bg-slate-900/50 p-4 md:p-5">
-            <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-white">쇼핑 클릭량 분석</h3>
-                <p className="mt-1 text-sm text-slate-400">
-                  카테고리는 자동 매칭하고, 기간·성별·연령·디바이스 조건으로 쇼핑 반응을 확인하세요.
-                </p>
-              </div>
-              <button
-                onClick={() => runQuery()}
-                disabled={isLoading}
-                className="h-10 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:bg-slate-700"
-              >
-                필터 적용
-              </button>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <div className="flex flex-col gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">기간</span>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { label: "1개월", days: 30 },
-                    { label: "3개월", days: 90 },
-                    { label: "6개월", days: 180 },
-                    { label: "1년", days: 365 },
-                    { label: "직접", days: 0 },
-                  ].map((option) => (
-                    <button
-                      key={option.days}
-                      onClick={() => setChartPeriodDays(option.days)}
-                      className={`h-10 rounded-lg px-2 text-xs font-semibold transition-colors ${
-                        chartPeriodDays === option.days
-                          ? "bg-blue-600 text-white"
-                          : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                      } ${option.days === 0 ? "col-span-2" : ""}`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label htmlFor="device" className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  디바이스
-                </label>
-                <div className="relative">
-                  <select
-                    id="device"
-                    value={selectedDevice}
-                    onChange={(e) => setSelectedDevice(e.target.value)}
-                    className="h-10 w-full appearance-none rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm text-white"
-                  >
-                    {devices.map((device) => (
-                      <option key={device} value={device}>
-                        {device}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label htmlFor="gender" className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  성별
-                </label>
-                <div className="relative">
-                  <select
-                    id="gender"
-                    value={selectedGender}
-                    onChange={(e) => setSelectedGender(e.target.value)}
-                    className="h-10 w-full appearance-none rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm text-white"
-                  >
-                    {genders.map((gender) => (
-                      <option key={gender} value={gender}>
-                        {gender}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label htmlFor="age" className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  연령
-                </label>
-                <div className="relative">
-                  <select
-                    id="age"
-                    value={selectedAge}
-                    onChange={(e) => setSelectedAge(e.target.value)}
-                    className="h-10 w-full appearance-none rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm text-white"
-                  >
-                    {ages.map((age) => (
-                      <option key={age} value={age}>
-                        {age}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                </div>
-              </div>
-            </div>
-
-            {chartPeriodDays === 0 && (
-              <div className="mt-4 grid gap-4 md:grid-cols-3">
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="start-date" className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    시작일
-                  </label>
-                  <input
-                    id="start-date"
-                    type="date"
-                    value={customStartDate}
-                    onChange={(e) => setCustomStartDate(e.target.value)}
-                    className="h-10 rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm text-white"
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="end-date" className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    종료일
-                  </label>
-                  <input
-                    id="end-date"
-                    type="date"
-                    value={customEndDate}
-                    onChange={(e) => setCustomEndDate(e.target.value)}
-                    className="h-10 rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm text-white"
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="time-unit" className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    시간 단위
-                  </label>
-                  <div className="relative">
-                    <select
-                      id="time-unit"
-                      value={chartUnit}
-                      onChange={(e) => setChartUnit(e.target.value)}
-                      className="h-10 w-full appearance-none rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm text-white"
-                    >
-                      {timeUnits.map((unit) => (
-                        <option key={unit} value={unit}>
-                          {unit}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                onClick={handleToggleTrend}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-                  showTrend
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                }`}
-              >
-                검색 트렌드
-              </button>
-              <button
-                onClick={handleToggleShopping}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-                  showShopping
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                }`}
-              >
-                쇼핑 클릭량
-              </button>
             </div>
           </div>
 
@@ -583,7 +383,7 @@ export default function UnifiedInsights() {
             {/* Chart Header */}
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-white mb-2">
-                검색 트렌드 · 쇼핑 클릭량 비교
+                검색 트렌드 비교
               </h3>
               <div className="text-sm text-slate-400">
                 <p className="mb-1">{keywords.join(", ")}</p>
@@ -601,8 +401,8 @@ export default function UnifiedInsights() {
                   shoppingStatus: chartData.meta?.shoppingStatus,
                 }}
                 visibleLayers={{
-                  trend: showTrend,
-                  shopping: showShopping,
+                  trend: true,
+                  shopping: false,
                 }}
                 timeUnit={timeUnitForChart}
                 startDate={startDateForChart}
@@ -623,7 +423,7 @@ export default function UnifiedInsights() {
           <div className="bg-slate-900 bg-opacity-50 border border-cyan-700 border-opacity-30 rounded-lg px-6 pt-6 pb-4 md:p-6">
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-white mb-2">
-                검색 트렌드 · 쇼핑 클릭량 비교
+                검색 트렌드 비교
               </h3>
               <div className="text-sm text-slate-400">
                 <p className="mb-1">{keywords.join(", ")}</p>
@@ -639,8 +439,8 @@ export default function UnifiedInsights() {
                   shoppingStatus: chartData.meta?.shoppingStatus,
                 }}
                 visibleLayers={{
-                  trend: showTrend,
-                  shopping: showShopping,
+                  trend: true,
+                  shopping: false,
                 }}
                 timeUnit={timeUnitForChart}
                 startDate={startDateForChart}

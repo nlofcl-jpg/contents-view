@@ -1062,7 +1062,10 @@ function setInCache(key, data) {
 }
 
 // server/naver.unifiedInsight.ts
+import { createClient as createClient2 } from "@supabase/supabase-js";
+import { createHmac } from "crypto";
 var REQUEST_TIMEOUT_MS = 8e3;
+var NAVER_SEARCH_AD_PROVIDER = "naver-search-ad";
 var AUTO_SHOPPING_CATEGORIES = [
   "50000000",
   // 패션의류
@@ -1141,6 +1144,131 @@ function getMatchedShoppingKeyword(shoppingData, fallbackKeyword) {
   );
   return matched?.keyword || matched?.title || fallbackKeyword;
 }
+var supabaseAdmin = ENV.supabaseUrl && ENV.supabaseServiceRoleKey ? createClient2(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false
+  }
+}) : null;
+function parseNaverSearchAdCredentials(value) {
+  try {
+    const parsed = JSON.parse(value);
+    if (!parsed.customerId || !parsed.accessLicense || !parsed.secretKey) {
+      return null;
+    }
+    return {
+      customerId: String(parsed.customerId).trim(),
+      accessLicense: String(parsed.accessLicense).trim(),
+      secretKey: String(parsed.secretKey).trim()
+    };
+  } catch {
+    return null;
+  }
+}
+async function getStoredNaverSearchAdCredentials() {
+  if (!supabaseAdmin) return null;
+  const { data: successData, error: successError } = await supabaseAdmin.from("user_api_keys").select("encrypted_key").eq("provider", NAVER_SEARCH_AD_PROVIDER).eq("test_status", "success").order("updated_at", { ascending: false }).limit(1).maybeSingle();
+  if (successError) {
+    console.error("[Naver SearchAd] Failed to load verified credentials", {
+      error: successError.message
+    });
+  }
+  if (successData?.encrypted_key) {
+    return parseNaverSearchAdCredentials(successData.encrypted_key);
+  }
+  const { data, error } = await supabaseAdmin.from("user_api_keys").select("encrypted_key").eq("provider", NAVER_SEARCH_AD_PROVIDER).order("updated_at", { ascending: false }).limit(1).maybeSingle();
+  if (error) {
+    console.error("[Naver SearchAd] Failed to load credentials", {
+      error: error.message
+    });
+    return null;
+  }
+  return data?.encrypted_key ? parseNaverSearchAdCredentials(data.encrypted_key) : null;
+}
+function getNaverSearchAdSignature(timestamp2, method, uri, secretKey) {
+  return createHmac("sha256", secretKey).update(`${timestamp2}.${method}.${uri}`).digest("base64");
+}
+async function requestNaverSearchAdKeywordTool(credentials, keyword) {
+  const method = "GET";
+  const uri = "/keywordstool";
+  const timestamp2 = Date.now().toString();
+  const params = new URLSearchParams({
+    hintKeywords: keyword,
+    showDetail: "1"
+  });
+  const response = await fetchWithTimeout(
+    `https://api.searchad.naver.com${uri}?${params.toString()}`,
+    {
+      method,
+      headers: {
+        "Content-Type": "application/json; charset=UTF-8",
+        "X-Timestamp": timestamp2,
+        "X-API-KEY": credentials.accessLicense,
+        "X-Customer": credentials.customerId,
+        "X-Signature": getNaverSearchAdSignature(timestamp2, method, uri, credentials.secretKey)
+      }
+    },
+    REQUEST_TIMEOUT_MS
+  );
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    const message = data?.title || data?.detail || data?.message || `HTTP ${response.status}`;
+    throw new Error(`Keyword Tool API failed: ${message}`);
+  }
+  return data;
+}
+function normalizeSearchCount(value) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.includes("<")) return 0;
+  const numeric = Number(trimmed.replace(/,/g, ""));
+  return Number.isFinite(numeric) ? numeric : null;
+}
+function normalizeClickCount(value) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return null;
+  const numeric = Number(value.trim().replace(/,/g, ""));
+  return Number.isFinite(numeric) ? numeric : null;
+}
+function normalizeKeywordMetric(item) {
+  const keyword = String(item?.relKeyword || "").trim();
+  if (!keyword) return null;
+  const monthlyPcSearches = normalizeSearchCount(item.monthlyPcQcCnt);
+  const monthlyMobileSearches = normalizeSearchCount(item.monthlyMobileQcCnt);
+  const monthlyTotalSearches = monthlyPcSearches === null && monthlyMobileSearches === null ? null : (monthlyPcSearches || 0) + (monthlyMobileSearches || 0);
+  const monthlyPcClicks = normalizeClickCount(item.monthlyAvePcClkCnt);
+  const monthlyMobileClicks = normalizeClickCount(item.monthlyAveMobileClkCnt);
+  const monthlyTotalClicks = monthlyPcClicks === null && monthlyMobileClicks === null ? null : (monthlyPcClicks || 0) + (monthlyMobileClicks || 0);
+  const averageAdDepth = normalizeClickCount(item.plAvgDepth);
+  return {
+    keyword,
+    monthlyPcSearches,
+    monthlyMobileSearches,
+    monthlyTotalSearches,
+    monthlyPcClicks,
+    monthlyMobileClicks,
+    monthlyTotalClicks,
+    competition: item.compIdx ? String(item.compIdx) : null,
+    averageAdDepth
+  };
+}
+function buildKeywordToolSummary(keyword, keywordList) {
+  const metrics = keywordList.map(normalizeKeywordMetric).filter((item) => Boolean(item));
+  const normalizedKeyword = keyword.replace(/\s+/g, "").toLowerCase();
+  const exact = metrics.find(
+    (item) => item.keyword.replace(/\s+/g, "").toLowerCase() === normalizedKeyword
+  );
+  const primary = exact || metrics[0] || null;
+  const bySearchVolume = [...metrics].sort(
+    (a, b) => (b.monthlyTotalSearches || 0) - (a.monthlyTotalSearches || 0)
+  );
+  return {
+    primary,
+    recommended: bySearchVolume.slice(0, 10),
+    related: metrics.slice(0, 80)
+  };
+}
 async function fetchWithTimeout(url, options, timeoutMs = REQUEST_TIMEOUT_MS) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -1179,7 +1307,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
     input.ages
   );
   const cachedData = getFromCache(cacheKey);
-  if (cachedData) {
+  if (cachedData?.meta?.keywordTool) {
     console.log("[Naver API] Cache hit for unified insight", {
       cacheKey,
       keywords: input.keywords.length,
@@ -1379,6 +1507,95 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
         return resolvedResult;
       })()
     ]);
+    const keywordToolSettled = await Promise.allSettled([
+      (async () => {
+        const primaryKeyword = input.keywords[0]?.trim();
+        if (!primaryKeyword) {
+          return null;
+        }
+        const credentials = await getStoredNaverSearchAdCredentials();
+        if (!credentials) {
+          return {
+            success: false,
+            error: "\uB124\uC774\uBC84 \uAC80\uC0C9\uAD11\uACE0 API \uD0A4\uAC00 \uC544\uC9C1 \uC5F0\uACB0\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.",
+            primary: null,
+            recommended: [],
+            related: []
+          };
+        }
+        const keywordToolData = await requestNaverSearchAdKeywordTool(credentials, primaryKeyword);
+        const summary = buildKeywordToolSummary(primaryKeyword, keywordToolData?.keywordList || []);
+        return {
+          success: true,
+          error: null,
+          ...summary
+        };
+      })(),
+      (async () => {
+        const primaryKeyword = input.keywords[0]?.trim();
+        if (!primaryKeyword || !clientId || !clientSecret) {
+          return null;
+        }
+        const endpoints = [
+          { key: "blog", label: "\uBE14\uB85C\uADF8", url: "https://openapi.naver.com/v1/search/blog.json" },
+          { key: "news", label: "\uB274\uC2A4", url: "https://openapi.naver.com/v1/search/news.json" },
+          { key: "cafe", label: "\uCE74\uD398", url: "https://openapi.naver.com/v1/search/cafearticle.json" }
+        ];
+        const settled = await Promise.allSettled(
+          endpoints.map(async (endpoint) => {
+            const params = new URLSearchParams({
+              query: primaryKeyword,
+              display: "1",
+              start: "1"
+            });
+            const response = await fetchWithTimeout(
+              `${endpoint.url}?${params.toString()}`,
+              {
+                method: "GET",
+                headers: {
+                  "X-Naver-Client-Id": clientId,
+                  "X-Naver-Client-Secret": clientSecret
+                }
+              },
+              REQUEST_TIMEOUT_MS
+            );
+            const data = await response.json().catch(() => null);
+            if (!response.ok) {
+              throw new Error(`${endpoint.key}: ${data?.errorMessage || response.status}`);
+            }
+            return {
+              key: endpoint.key,
+              label: endpoint.label,
+              total: typeof data?.total === "number" ? data.total : null
+            };
+          })
+        );
+        const sources = settled.map((result2, index) => {
+          if (result2.status === "fulfilled") return result2.value;
+          return {
+            key: endpoints[index].key,
+            label: endpoints[index].label,
+            total: null
+          };
+        });
+        const total = sources.reduce((sum, source) => sum + (source.total || 0), 0);
+        return {
+          sources,
+          total
+        };
+      })()
+    ]);
+    const keywordTool = keywordToolSettled[0].status === "fulfilled" ? keywordToolSettled[0].value : {
+      success: false,
+      error: keywordToolSettled[0].reason?.message || "\uB124\uC774\uBC84 \uAC80\uC0C9\uAD11\uACE0 \uD0A4\uC6CC\uB4DC \uB370\uC774\uD130\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.",
+      primary: null,
+      recommended: [],
+      related: []
+    };
+    const contentVolume = keywordToolSettled[1].status === "fulfilled" ? keywordToolSettled[1].value : {
+      sources: [],
+      total: null
+    };
     const trendSuccess = trendSettled.status === "fulfilled";
     const shoppingSuccess = shoppingSettled.status === "fulfilled";
     if (!trendSuccess && !shoppingSuccess) {
@@ -1481,7 +1698,9 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
       meta: {
         shoppingStatus,
         matchedShoppingCategory,
-        matchedShoppingKeyword
+        matchedShoppingKeyword,
+        keywordTool,
+        contentVolume
       }
     };
     setInCache(cacheKey, result);
@@ -1767,8 +1986,8 @@ async function runDiagnostics(keywords, category, startDate, endDate, timeUnit) 
 }
 
 // server/_core/userApiKeys.ts
-import { createClient as createClient2 } from "@supabase/supabase-js";
-var supabaseAdmin = ENV.supabaseUrl && ENV.supabaseServiceRoleKey ? createClient2(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
+import { createClient as createClient3 } from "@supabase/supabase-js";
+var supabaseAdmin2 = ENV.supabaseUrl && ENV.supabaseServiceRoleKey ? createClient3(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
   auth: {
     persistSession: false,
     autoRefreshToken: false
@@ -1781,10 +2000,10 @@ function maskApiKey(apiKey) {
   return apiKey.length > 10 ? `${apiKey.substring(0, 6)}${"*".repeat(Math.max(1, apiKey.length - 10))}${apiKey.substring(apiKey.length - 4)}` : `${"*".repeat(Math.max(1, apiKey.length - 4))}${apiKey.substring(Math.max(0, apiKey.length - 4))}`;
 }
 function requireSupabaseAdmin() {
-  if (!supabaseAdmin) {
+  if (!supabaseAdmin2) {
     throw new Error("Supabase service role key is not configured.");
   }
-  return supabaseAdmin;
+  return supabaseAdmin2;
 }
 async function saveUserApiKey2(user, provider, apiKey) {
   if (!isSupabaseUser(user)) {
@@ -1860,10 +2079,10 @@ async function updateApiKeyTestStatus2(user, provider, testStatus, testError = n
 
 // server/routers.ts
 import { createRequire } from "module";
-import { createHmac } from "crypto";
+import { createHmac as createHmac2 } from "crypto";
 var require2 = createRequire(import.meta.url);
-var NAVER_SEARCH_AD_PROVIDER = "naver-search-ad";
-function parseNaverSearchAdCredentials(value) {
+var NAVER_SEARCH_AD_PROVIDER2 = "naver-search-ad";
+function parseNaverSearchAdCredentials2(value) {
   try {
     const parsed = JSON.parse(value);
     if (!parsed.customerId || !parsed.accessLicense || !parsed.secretKey) {
@@ -1885,8 +2104,8 @@ function maskNaverSearchAdCredentials(credentials) {
     secretKey: maskApiKey(credentials.secretKey)
   };
 }
-function getNaverSearchAdSignature(timestamp2, method, uri, secretKey) {
-  return createHmac("sha256", secretKey).update(`${timestamp2}.${method}.${uri}`).digest("base64");
+function getNaverSearchAdSignature2(timestamp2, method, uri, secretKey) {
+  return createHmac2("sha256", secretKey).update(`${timestamp2}.${method}.${uri}`).digest("base64");
 }
 function getNaverSearchAdHeaders(credentials, method, uri) {
   const timestamp2 = Date.now().toString();
@@ -1895,7 +2114,7 @@ function getNaverSearchAdHeaders(credentials, method, uri) {
     "X-Timestamp": timestamp2,
     "X-API-KEY": credentials.accessLicense,
     "X-Customer": credentials.customerId,
-    "X-Signature": getNaverSearchAdSignature(timestamp2, method, uri, credentials.secretKey)
+    "X-Signature": getNaverSearchAdSignature2(timestamp2, method, uri, credentials.secretKey)
   };
 }
 async function requestNaverSearchAdApi(credentials, uri, params) {
@@ -2189,8 +2408,8 @@ var appRouter = router({
         if (!ctx.user) {
           throw new Error("User not authenticated");
         }
-        const existingApiKey = await getUserApiKey2(ctx.user, NAVER_SEARCH_AD_PROVIDER);
-        const existingCredentials = existingApiKey ? parseNaverSearchAdCredentials(existingApiKey.apiKey) : null;
+        const existingApiKey = await getUserApiKey2(ctx.user, NAVER_SEARCH_AD_PROVIDER2);
+        const existingCredentials = existingApiKey ? parseNaverSearchAdCredentials2(existingApiKey.apiKey) : null;
         const existingMaskedCredentials = existingCredentials ? maskNaverSearchAdCredentials(existingCredentials) : null;
         const nextInput = normalizeNaverSearchAdInput(input);
         const credentials = {
@@ -2203,7 +2422,7 @@ var appRouter = router({
         }
         await saveUserApiKey2(
           ctx.user,
-          NAVER_SEARCH_AD_PROVIDER,
+          NAVER_SEARCH_AD_PROVIDER2,
           JSON.stringify(credentials)
         );
         return { success: true };
@@ -2212,7 +2431,7 @@ var appRouter = router({
         if (!ctx.user) {
           throw new Error("User not authenticated");
         }
-        const apiKey = await getUserApiKey2(ctx.user, NAVER_SEARCH_AD_PROVIDER);
+        const apiKey = await getUserApiKey2(ctx.user, NAVER_SEARCH_AD_PROVIDER2);
         if (!apiKey) {
           return {
             exists: false,
@@ -2222,7 +2441,7 @@ var appRouter = router({
             lastTestedAt: null
           };
         }
-        const credentials = parseNaverSearchAdCredentials(apiKey.apiKey);
+        const credentials = parseNaverSearchAdCredentials2(apiKey.apiKey);
         if (!credentials) {
           return {
             exists: true,
@@ -2246,8 +2465,8 @@ var appRouter = router({
         if (!ctx.user) {
           throw new Error("User not authenticated");
         }
-        const apiKey = await getUserApiKey2(ctx.user, NAVER_SEARCH_AD_PROVIDER);
-        const credentials = apiKey ? parseNaverSearchAdCredentials(apiKey.apiKey) : null;
+        const apiKey = await getUserApiKey2(ctx.user, NAVER_SEARCH_AD_PROVIDER2);
+        const credentials = apiKey ? parseNaverSearchAdCredentials2(apiKey.apiKey) : null;
         if (!credentials) {
           return {
             success: false,
@@ -2262,17 +2481,17 @@ var appRouter = router({
           if (!keywordCheck.response.ok) {
             const rawErrorMessage = getNaverSearchAdErrorMessage(keywordCheck.data, keywordCheck.response.status);
             const errorMessage = rawErrorMessage.includes("10002") || rawErrorMessage.includes("required permission") ? `GET /keywordstool \uD638\uCD9C\uC774 10002\uB85C \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4. HTTP ${keywordCheck.response.status}. \uB124\uC774\uBC84 \uC751\uB2F5: ${rawErrorMessage}` : `GET /keywordstool \uD638\uCD9C \uC2E4\uD328. HTTP ${keywordCheck.response.status}. \uB124\uC774\uBC84 \uC751\uB2F5: ${rawErrorMessage}`;
-            await updateApiKeyTestStatus2(ctx.user, NAVER_SEARCH_AD_PROVIDER, "failed", errorMessage);
+            await updateApiKeyTestStatus2(ctx.user, NAVER_SEARCH_AD_PROVIDER2, "failed", errorMessage);
             return {
               success: false,
               error: errorMessage
             };
           }
-          await updateApiKeyTestStatus2(ctx.user, NAVER_SEARCH_AD_PROVIDER, "success");
+          await updateApiKeyTestStatus2(ctx.user, NAVER_SEARCH_AD_PROVIDER2, "success");
           return { success: true };
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : "\uB124\uC774\uBC84 \uAC80\uC0C9\uAD11\uACE0 API \uC5F0\uACB0\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.";
-          await updateApiKeyTestStatus2(ctx.user, NAVER_SEARCH_AD_PROVIDER, "failed", errorMessage);
+          await updateApiKeyTestStatus2(ctx.user, NAVER_SEARCH_AD_PROVIDER2, "failed", errorMessage);
           return {
             success: false,
             error: errorMessage
