@@ -1872,6 +1872,28 @@ function maskNaverSearchAdCredentials(credentials) {
 function getNaverSearchAdSignature(timestamp2, method, uri, secretKey) {
   return createHmac("sha256", secretKey).update(`${timestamp2}.${method}.${uri}`).digest("base64");
 }
+function getNaverSearchAdHeaders(credentials, method, uri) {
+  const timestamp2 = Date.now().toString();
+  return {
+    "X-Timestamp": timestamp2,
+    "X-API-KEY": credentials.accessLicense,
+    "X-Customer": credentials.customerId,
+    "X-Signature": getNaverSearchAdSignature(timestamp2, method, uri, credentials.secretKey)
+  };
+}
+async function requestNaverSearchAdApi(credentials, uri, params) {
+  const method = "GET";
+  const query = params ? `?${params.toString()}` : "";
+  const response = await fetch(`https://api.searchad.naver.com${uri}${query}`, {
+    method,
+    headers: getNaverSearchAdHeaders(credentials, method, uri)
+  });
+  const data = await response.json().catch(() => null);
+  return { response, data };
+}
+function getNaverSearchAdErrorMessage(data, status) {
+  return data?.title || data?.detail || data?.message || `\uB124\uC774\uBC84 \uAC80\uC0C9\uAD11\uACE0 API \uC5F0\uACB0 \uC2E4\uD328 (${status})`;
+}
 function normalizeNaverSearchAdInput(input) {
   return {
     customerId: input.customerId.trim(),
@@ -2216,26 +2238,26 @@ var appRouter = router({
           };
         }
         try {
-          const method = "GET";
-          const uri = "/keywordstool";
-          const timestamp2 = Date.now().toString();
-          const signature = getNaverSearchAdSignature(timestamp2, method, uri, credentials.secretKey);
-          const params = new URLSearchParams({
+          const authCheck = await requestNaverSearchAdApi(
+            credentials,
+            "/customer-links",
+            new URLSearchParams({ type: "MYCLIENTS" })
+          );
+          if (!authCheck.response.ok) {
+            const errorMessage = getNaverSearchAdErrorMessage(authCheck.data, authCheck.response.status);
+            await updateApiKeyTestStatus2(ctx.user, NAVER_SEARCH_AD_PROVIDER, "failed", errorMessage);
+            return {
+              success: false,
+              error: errorMessage
+            };
+          }
+          const keywordCheck = await requestNaverSearchAdApi(credentials, "/keywordstool", new URLSearchParams({
             hintKeywords: "\uBC18\uBC14\uC9C0",
             showDetail: "1"
-          });
-          const response = await fetch(`https://api.searchad.naver.com${uri}?${params.toString()}`, {
-            method,
-            headers: {
-              "X-Timestamp": timestamp2,
-              "X-API-KEY": credentials.accessLicense,
-              "X-Customer": credentials.customerId,
-              "X-Signature": signature
-            }
-          });
-          const data = await response.json().catch(() => null);
-          if (!response.ok) {
-            const errorMessage = data?.title || data?.detail || data?.message || `\uB124\uC774\uBC84 \uAC80\uC0C9\uAD11\uACE0 API \uC5F0\uACB0 \uC2E4\uD328 (${response.status})`;
+          }));
+          if (!keywordCheck.response.ok) {
+            const rawErrorMessage = getNaverSearchAdErrorMessage(keywordCheck.data, keywordCheck.response.status);
+            const errorMessage = rawErrorMessage.includes("10002") || rawErrorMessage.includes("required permission") ? "\uAE30\uBCF8 API \uC778\uC99D\uC740 \uD1B5\uACFC\uD588\uC9C0\uB9CC \uD0A4\uC6CC\uB4DC \uB3C4\uAD6C \uAD8C\uD55C\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. \uB124\uC774\uBC84 \uAC80\uC0C9\uAD11\uACE0 \uAD00\uB9AC\uC790\uC13C\uD130\uC5D0\uC11C \uD0A4\uC6CC\uB4DC \uB3C4\uAD6C/API \uAD8C\uD55C\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694. (10002)" : rawErrorMessage;
             await updateApiKeyTestStatus2(ctx.user, NAVER_SEARCH_AD_PROVIDER, "failed", errorMessage);
             return {
               success: false,

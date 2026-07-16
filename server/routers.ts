@@ -53,6 +53,42 @@ function getNaverSearchAdSignature(timestamp: string, method: string, uri: strin
     .digest("base64");
 }
 
+function getNaverSearchAdHeaders(credentials: NaverSearchAdCredentials, method: string, uri: string) {
+  const timestamp = Date.now().toString();
+
+  return {
+    "X-Timestamp": timestamp,
+    "X-API-KEY": credentials.accessLicense,
+    "X-Customer": credentials.customerId,
+    "X-Signature": getNaverSearchAdSignature(timestamp, method, uri, credentials.secretKey),
+  };
+}
+
+async function requestNaverSearchAdApi(
+  credentials: NaverSearchAdCredentials,
+  uri: string,
+  params?: URLSearchParams,
+) {
+  const method = "GET";
+  const query = params ? `?${params.toString()}` : "";
+  const response = await fetch(`https://api.searchad.naver.com${uri}${query}`, {
+    method,
+    headers: getNaverSearchAdHeaders(credentials, method, uri),
+  });
+  const data = await response.json().catch(() => null);
+
+  return { response, data };
+}
+
+function getNaverSearchAdErrorMessage(data: any, status: number) {
+  return (
+    data?.title ||
+    data?.detail ||
+    data?.message ||
+    `네이버 검색광고 API 연결 실패 (${status})`
+  );
+}
+
 function normalizeNaverSearchAdInput(input: {
   customerId: string;
   accessLicense: string;
@@ -510,31 +546,31 @@ export const appRouter = router({
           }
 
           try {
-            const method = "GET";
-            const uri = "/keywordstool";
-            const timestamp = Date.now().toString();
-            const signature = getNaverSearchAdSignature(timestamp, method, uri, credentials.secretKey);
-            const params = new URLSearchParams({
+            const authCheck = await requestNaverSearchAdApi(
+              credentials,
+              "/customer-links",
+              new URLSearchParams({ type: "MYCLIENTS" }),
+            );
+
+            if (!authCheck.response.ok) {
+              const errorMessage = getNaverSearchAdErrorMessage(authCheck.data, authCheck.response.status);
+              await userApiKeys.updateApiKeyTestStatus(ctx.user, NAVER_SEARCH_AD_PROVIDER, "failed", errorMessage);
+              return {
+                success: false,
+                error: errorMessage,
+              };
+            }
+
+            const keywordCheck = await requestNaverSearchAdApi(credentials, "/keywordstool", new URLSearchParams({
               hintKeywords: "반바지",
               showDetail: "1",
-            });
-            const response = await fetch(`https://api.searchad.naver.com${uri}?${params.toString()}`, {
-              method,
-              headers: {
-                "X-Timestamp": timestamp,
-                "X-API-KEY": credentials.accessLicense,
-                "X-Customer": credentials.customerId,
-                "X-Signature": signature,
-              },
-            });
-            const data = await response.json().catch(() => null);
+            }));
 
-            if (!response.ok) {
-              const errorMessage =
-                data?.title ||
-                data?.detail ||
-                data?.message ||
-                `네이버 검색광고 API 연결 실패 (${response.status})`;
+            if (!keywordCheck.response.ok) {
+              const rawErrorMessage = getNaverSearchAdErrorMessage(keywordCheck.data, keywordCheck.response.status);
+              const errorMessage = rawErrorMessage.includes("10002") || rawErrorMessage.includes("required permission")
+                ? "기본 API 인증은 통과했지만 키워드 도구 권한이 없습니다. 네이버 검색광고 관리자센터에서 키워드 도구/API 권한을 확인해주세요. (10002)"
+                : rawErrorMessage;
               await userApiKeys.updateApiKeyTestStatus(ctx.user, NAVER_SEARCH_AD_PROVIDER, "failed", errorMessage);
               return {
                 success: false,
