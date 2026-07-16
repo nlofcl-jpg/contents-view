@@ -65,6 +65,10 @@ export default function UnifiedInsights() {
   const visibleRelatedKeywords = relatedKeywords.slice(0, 10);
   const hasLockedRelatedKeywords = relatedKeywords.length > visibleRelatedKeywords.length;
   const contentVolume = chartData?.meta?.contentVolume;
+  const blogTotalDocuments = contentVolume?.sources?.find((item: any) => item.key === "blog")?.totalDocuments ?? null;
+  const searchRatio = primaryMetric?.monthlyTotalSearches
+    ? blogTotalDocuments / primaryMetric.monthlyTotalSearches
+    : null;
 
   const formatNumber = (value: number | null | undefined, suffix = "") => {
     if (value === null || value === undefined || Number.isNaN(value)) return "-";
@@ -87,6 +91,14 @@ export default function UnifiedInsights() {
       LOW: "낮음",
     };
     return labels[competition] || competition;
+  };
+
+  const getBlogCompetitionStrength = (ratio: number | null) => {
+    if (ratio === null || Number.isNaN(ratio)) return "-";
+    if (ratio < 1) return "낮음";
+    if (ratio < 5) return "보통";
+    if (ratio < 20) return "높음";
+    return "포화";
   };
 
   // tRPC mutation
@@ -290,15 +302,15 @@ export default function UnifiedInsights() {
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Content Volume</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Blog Competition</p>
                   <div className="mt-1 flex items-center gap-1.5">
-                    <h3 className="text-lg font-semibold text-white">월간 컨텐츠 발행량</h3>
+                    <h3 className="text-lg font-semibold text-white">블로그 경쟁도</h3>
                     <button
                       type="button"
-                      aria-label="월간 컨텐츠 발행량 안내"
+                      aria-label="블로그 경쟁도 안내"
                       onClick={() => setInfoPopup({
-                        title: "월간 컨텐츠 발행량",
-                        body: "최근 한달간 발행된 키워드와 관련된 콘텐츠 수가 표시됩니다.",
+                        title: "블로그 경쟁도",
+                        body: "해당 키워드의 블로그 전체 문서 수를 월간 검색량과 비교해 경쟁 정도를 표시합니다.",
                       })}
                       className="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-500 transition-colors hover:text-blue-300"
                     >
@@ -309,20 +321,18 @@ export default function UnifiedInsights() {
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="flex h-20 min-w-0 flex-col justify-between rounded-lg bg-slate-800/70 p-3">
-                  <p className="text-xs text-slate-500">블로그</p>
+                  <p className="text-xs text-slate-500">블로그 발행수</p>
                   <p className="mt-2 text-xl font-bold text-slate-300">
-                    {formatNumber(contentVolume?.sources?.find((item: any) => item.key === "blog")?.total)}
+                    {formatNumber(blogTotalDocuments)}
                   </p>
                 </div>
                 <div className="flex h-20 min-w-0 flex-col justify-between rounded-lg bg-slate-800/70 p-3">
-                  <p className="text-xs text-slate-500">뉴스</p>
-                  <p className="mt-2 text-xl font-bold text-slate-300">
-                    {formatNumber(contentVolume?.sources?.find((item: any) => item.key === "news")?.total)}
-                  </p>
+                  <p className="text-xs text-slate-500">경쟁강도</p>
+                  <p className="mt-2 text-xl font-bold text-slate-300">{getBlogCompetitionStrength(searchRatio)}</p>
                 </div>
                 <div className="flex h-20 min-w-0 flex-col justify-between rounded-lg bg-blue-950/50 p-3">
-                  <p className="text-xs text-blue-300">전체</p>
-                  <p className="mt-2 text-xl font-bold text-white">{formatNumber(contentVolume?.total)}</p>
+                  <p className="text-xs text-blue-300">검색 비율</p>
+                  <p className="mt-2 text-xl font-bold text-white">{formatDecimal(searchRatio)}</p>
                 </div>
               </div>
             </div>

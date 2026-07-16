@@ -308,6 +308,7 @@ async function fetchRecentNaverContentCount(input: {
   let count = 0;
   let checked = 0;
   let capped = false;
+  let totalDocuments: number | null = null;
 
   for (let start = 1; start <= NAVER_SEARCH_MAX_START; start += 100) {
     const params = new URLSearchParams({
@@ -330,6 +331,9 @@ async function fetchRecentNaverContentCount(input: {
     const data = await response.json().catch(() => null);
     if (!response.ok) {
       throw new Error(`${input.endpoint}: ${data?.errorMessage || response.status}`);
+    }
+    if (typeof data?.total === "number" && totalDocuments === null) {
+      totalDocuments = data.total;
     }
 
     const items = Array.isArray(data?.items) ? data.items : [];
@@ -357,7 +361,7 @@ async function fetchRecentNaverContentCount(input: {
     }
   }
 
-  return { count, checked, capped };
+  return { count, checked, capped, totalDocuments };
 }
 
 /**
@@ -721,6 +725,7 @@ export const unifiedInsightProcedure = publicProcedure
                 key: endpoint.key,
                 label: endpoint.label,
                 total: recent.count,
+                totalDocuments: recent.totalDocuments,
                 checked: recent.checked,
                 capped: recent.capped,
               };
@@ -733,6 +738,7 @@ export const unifiedInsightProcedure = publicProcedure
               key: endpoints[index].key,
               label: endpoints[index].label,
               total: null,
+              totalDocuments: null,
               checked: 0,
               capped: false,
             };

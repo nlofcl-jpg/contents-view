@@ -1286,6 +1286,7 @@ async function fetchRecentNaverContentCount(input) {
   let count = 0;
   let checked = 0;
   let capped = false;
+  let totalDocuments = null;
   for (let start = 1; start <= NAVER_SEARCH_MAX_START; start += 100) {
     const params = new URLSearchParams({
       query: input.keyword,
@@ -1308,6 +1309,9 @@ async function fetchRecentNaverContentCount(input) {
     if (!response.ok) {
       throw new Error(`${input.endpoint}: ${data?.errorMessage || response.status}`);
     }
+    if (typeof data?.total === "number" && totalDocuments === null) {
+      totalDocuments = data.total;
+    }
     const items = Array.isArray(data?.items) ? data.items : [];
     if (items.length === 0) break;
     let reachedOlderItem = false;
@@ -1328,7 +1332,7 @@ async function fetchRecentNaverContentCount(input) {
       capped = true;
     }
   }
-  return { count, checked, capped };
+  return { count, checked, capped, totalDocuments };
 }
 async function fetchWithTimeout(url, options, timeoutMs = REQUEST_TIMEOUT_MS) {
   const controller = new AbortController();
@@ -1627,6 +1631,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
               key: endpoint.key,
               label: endpoint.label,
               total: recent.count,
+              totalDocuments: recent.totalDocuments,
               checked: recent.checked,
               capped: recent.capped
             };
@@ -1638,6 +1643,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
             key: endpoints[index].key,
             label: endpoints[index].label,
             total: null,
+            totalDocuments: null,
             checked: 0,
             capped: false
           };
