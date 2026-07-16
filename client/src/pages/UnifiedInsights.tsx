@@ -48,6 +48,8 @@ const AGE_OPTIONS = [
   { value: "11", label: "60대+" },
 ] as const;
 
+type TrendFilterMenu = "period" | "unit" | "device" | "gender" | "age" | null;
+
 export default function UnifiedInsights() {
   // State management
   const [keywords, setKeywords] = useState<string[]>([]);
@@ -59,11 +61,15 @@ export default function UnifiedInsights() {
   const [queryError, setQueryError] = useState("");
   const [querySuccess, setQuerySuccess] = useState(false);
   const [chartData, setChartData] = useState<any>(null);
+  const [trendComparisonData, setTrendComparisonData] = useState<any>(null);
+  const [isTrendFilterLoading, setIsTrendFilterLoading] = useState(false);
+  const [trendFilterError, setTrendFilterError] = useState("");
+  const [openTrendFilterMenu, setOpenTrendFilterMenu] = useState<TrendFilterMenu>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<(typeof PERIOD_OPTIONS)[number]["value"]>("30");
   const [selectedTimeUnit, setSelectedTimeUnit] = useState<(typeof TIME_UNIT_OPTIONS)[number]["value"]>("date");
-  const [selectedDevice, setSelectedDevice] = useState<(typeof DEVICE_OPTIONS)[number]>("전체");
-  const [selectedGender, setSelectedGender] = useState<(typeof GENDER_OPTIONS)[number]>("전체");
-  const [selectedAge, setSelectedAge] = useState("");
+  const [selectedDevices, setSelectedDevices] = useState<string[]>(["전체"]);
+  const [selectedGenders, setSelectedGenders] = useState<string[]>(["전체"]);
+  const [selectedAges, setSelectedAges] = useState<string[]>([""]);
   const [startDateForChart, setStartDateForChart] = useState("");
   const [endDateForChart, setEndDateForChart] = useState("");
   const [timeUnitForChart, setTimeUnitForChart] = useState("date");
@@ -94,6 +100,7 @@ export default function UnifiedInsights() {
 
   const primaryKeyword = chartData?.keywords?.[0] || keywords[0] || "";
   const primaryTrendSummary = getSeriesSummary(primaryKeyword ? chartData?.trend?.[primaryKeyword] : undefined);
+  const displayedTrendData = trendComparisonData || chartData;
   const keywordTool = chartData?.meta?.keywordTool;
   const primaryMetric: KeywordMetric | null = keywordTool?.primary || null;
   const recommendedKeywords: KeywordMetric[] = keywordTool?.recommended || [];
@@ -151,14 +158,96 @@ export default function UnifiedInsights() {
   const getFilterLabel = () => {
     const periodLabel = PERIOD_OPTIONS.find(option => option.value === selectedPeriod)?.label || "1개월";
     const unitLabel = TIME_UNIT_OPTIONS.find(option => option.value === selectedTimeUnit)?.label || "일간";
-    const ageLabel = AGE_OPTIONS.find(option => option.value === selectedAge)?.label || "전체";
+    const deviceLabel = selectedDevices.includes("전체") ? "전체" : selectedDevices.join(", ");
+    const genderLabel = selectedGenders.includes("전체") ? "전체" : selectedGenders.join(", ");
+    const ageLabel = selectedAges.includes("")
+      ? "전체 연령"
+      : selectedAges.map(value => AGE_OPTIONS.find(option => option.value === value)?.label || value).join(", ");
     return [
       periodLabel,
       unitLabel,
-      selectedDevice,
-      selectedGender,
-      ageLabel === "전체" ? "전체 연령" : ageLabel,
+      deviceLabel,
+      genderLabel,
+      ageLabel,
     ].join(" · ");
+  };
+
+  const formatLocalDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const getTrendDateRange = () => {
+    const now = new Date();
+    const periodOption = PERIOD_OPTIONS.find(option => option.value === selectedPeriod) || PERIOD_OPTIONS[0];
+    const startDate = new Date();
+    startDate.setDate(now.getDate() - periodOption.days);
+
+    return {
+      periodOption,
+      startDateStr: formatLocalDate(startDate),
+      endDateStr: formatLocalDate(now),
+      timeUnit: selectedTimeUnit || periodOption.unit,
+    };
+  };
+
+  const toggleMultiFilter = (
+    currentValues: string[],
+    nextValue: string,
+    allValue: string,
+    setter: (values: string[]) => void
+  ) => {
+    if (nextValue === allValue) {
+      setter([allValue]);
+      return;
+    }
+
+    const withoutAll = currentValues.filter(value => value !== allValue);
+    const nextValues = withoutAll.includes(nextValue)
+      ? withoutAll.filter(value => value !== nextValue)
+      : [...withoutAll, nextValue];
+
+    setter(nextValues.length > 0 ? nextValues : [allValue]);
+  };
+
+  const getFilterSummary = (values: string[], allValue: string, allLabel: string, labelMap?: Record<string, string>) => {
+    if (values.includes(allValue)) return allLabel;
+    const labels = values.map(value => labelMap?.[value] || value);
+    if (labels.length <= 2) return labels.join(", ");
+    return `${labels.slice(0, 2).join(", ")} 외 ${labels.length - 2}`;
+  };
+
+  const getChartFilterCombinations = () => {
+    const deviceOptions = selectedDevices.includes("전체")
+      ? [{ value: undefined as string | undefined, label: "전체" }]
+      : selectedDevices.map(value => ({ value, label: value }));
+
+    const genderOptions = selectedGenders.includes("전체")
+      ? [{ value: undefined as string | undefined, label: "전체" }]
+      : selectedGenders.map(value => ({ value, label: value }));
+
+    const ageLabelMap = Object.fromEntries(AGE_OPTIONS.map(option => [option.value, option.label]));
+    const ageOptions = selectedAges.includes("")
+      ? [{ values: undefined as string[] | undefined, label: "전체 연령" }]
+      : selectedAges.map(value => ({
+          values: value.split(","),
+          label: ageLabelMap[value] || value,
+        }));
+
+    return deviceOptions.flatMap(device =>
+      genderOptions.flatMap(gender =>
+        ageOptions.map(age => ({ device, gender, age }))
+      )
+    );
+  };
+
+  const getChartSeriesLabel = (keyword: string, combination: ReturnType<typeof getChartFilterCombinations>[number], totalCount: number) => {
+    if (totalCount === 1) return keyword;
+    const parts = [combination.device.label, combination.gender.label, combination.age.label]
+      .filter(label => label !== "전체" && label !== "전체 연령");
+    return parts.length > 0 ? `${keyword} · ${parts.join(" · ")}` : `${keyword} · 전체`;
   };
 
   // tRPC mutation
@@ -167,12 +256,15 @@ export default function UnifiedInsights() {
       if (data.success) {
         // Store chart data
         setChartData(data);
+        setTrendComparisonData(data);
         setQuerySuccess(true);
         setQueryError("");
+        setTrendFilterError("");
       } else {
         setQueryError(data.error || "데이터를 불러오지 못했습니다.");
         setQuerySuccess(false);
         setChartData(null);
+        setTrendComparisonData(null);
       }
       setIsLoading(false);
     },
@@ -180,9 +272,12 @@ export default function UnifiedInsights() {
       setQueryError("조회 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
       setQuerySuccess(false);
       setChartData(null);
+      setTrendComparisonData(null);
       setIsLoading(false);
     },
   });
+
+  const { mutateAsync: queryTrendFilterInsight } = trpc.naver.unifiedInsight.useMutation();
 
   const runQuery = (requestedKeywords?: string[]) => {
     const nextKeywords = requestedKeywords ?? (keywords.length > 0 ? keywords : [keywordInput.trim()].filter(Boolean));
@@ -198,34 +293,21 @@ export default function UnifiedInsights() {
     setQuerySuccess(false);
     setKeywords(nextKeywords);
 
-    const now = new Date();
-    let endDate = now;
-    const periodOption = PERIOD_OPTIONS.find(option => option.value === selectedPeriod) || PERIOD_OPTIONS[0];
-    const startDate = new Date();
-    startDate.setDate(now.getDate() - periodOption.days);
-    const timeUnit = selectedTimeUnit || periodOption.unit;
-
-    // Format date as local date string (YYYY-MM-DD) without UTC conversion
-    const formatLocalDate = (date: Date): string => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    };
-
-    const startDateStr = formatLocalDate(startDate);
-    const endDateStr = formatLocalDate(endDate);
+    const { periodOption, startDateStr, endDateStr, timeUnit } = getTrendDateRange();
+    const firstDevice = selectedDevices.includes("전체") ? undefined : selectedDevices[0];
+    const firstGender = selectedGenders.includes("전체") ? undefined : selectedGenders[0];
+    const firstAge = selectedAges.includes("") ? undefined : selectedAges[0]?.split(",");
 
     // Logging for diagnosis
     console.log('[Frontend] Date Calculation:', {
       chartPeriodDays: periodOption.days,
       chartUnit: timeUnit,
-      device: selectedDevice,
-      gender: selectedGender,
-      age: selectedAge,
+      device: firstDevice,
+      gender: firstGender,
+      age: firstAge,
       startDateStr,
       endDateStr,
-      nowTime: now.toLocaleString('ko-KR'),
+      nowTime: new Date().toLocaleString('ko-KR'),
     });
 
     // Store dates for chart display
@@ -239,9 +321,9 @@ export default function UnifiedInsights() {
       startDate: startDateStr,
       endDate: endDateStr,
       timeUnit: timeUnit as any,
-      device: selectedDevice === "전체" ? undefined : selectedDevice,
-      gender: selectedGender === "전체" ? undefined : selectedGender,
-      ages: selectedAge ? selectedAge.split(",") : undefined,
+      device: firstDevice,
+      gender: firstGender,
+      ages: firstAge,
     });
   };
 
@@ -255,83 +337,170 @@ export default function UnifiedInsights() {
     runQuery([trimmed]);
   };
 
+  const handleApplyTrendFilters = async () => {
+    const nextKeywords = keywords.length > 0 ? keywords : [keywordInput.trim()].filter(Boolean);
+    const baseKeyword = nextKeywords[0];
+
+    if (!baseKeyword) {
+      setTrendFilterError("검색어를 먼저 입력해주세요.");
+      return;
+    }
+
+    const combinations = getChartFilterCombinations();
+    if (combinations.length > 12) {
+      setTrendFilterError("필터 조합은 한 번에 최대 12개까지 조회할 수 있습니다.");
+      return;
+    }
+
+    const { startDateStr, endDateStr, timeUnit } = getTrendDateRange();
+
+    setIsTrendFilterLoading(true);
+    setTrendFilterError("");
+    setOpenTrendFilterMenu(null);
+
+    try {
+      const results = await Promise.all(
+        combinations.map(async (combination) => {
+          const response: any = await queryTrendFilterInsight({
+            keywords: [baseKeyword],
+            startDate: startDateStr,
+            endDate: endDateStr,
+            timeUnit: timeUnit as any,
+            device: combination.device.value,
+            gender: combination.gender.value,
+            ages: combination.age.values,
+          });
+
+          return {
+            combination,
+            response,
+          };
+        })
+      );
+
+      const trend: Record<string, InsightPoint[]> = {};
+      const chartKeywords: string[] = [];
+
+      results.forEach(({ combination, response }) => {
+        if (!response?.success) return;
+        const label = getChartSeriesLabel(baseKeyword, combination, combinations.length);
+        chartKeywords.push(label);
+        trend[label] = response.trend?.[baseKeyword] || [];
+      });
+
+      if (chartKeywords.length === 0) {
+        setTrendFilterError("선택한 필터의 검색 트렌드 데이터를 불러오지 못했습니다.");
+        return;
+      }
+
+      setTrendComparisonData({
+        keywords: chartKeywords,
+        trend,
+        shopping: {},
+        meta: chartData?.meta || {},
+      });
+      setStartDateForChart(startDateStr);
+      setEndDateForChart(endDateStr);
+      setTimeUnitForChart(timeUnit);
+      setFilterLabelForChart(getFilterLabel());
+    } catch {
+      setTrendFilterError("필터 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setIsTrendFilterLoading(false);
+    }
+  };
+
+  const renderSingleCheckFilter = (
+    menu: Exclude<TrendFilterMenu, null>,
+    label: string,
+    options: Array<{ value: string; label: string; checked: boolean; onChange: () => void }>,
+    summary: string
+  ) => (
+    <div className="relative flex flex-col gap-1 text-xs font-medium text-slate-400">
+      <span>{label}</span>
+      <button
+        type="button"
+        onClick={() => setOpenTrendFilterMenu(openTrendFilterMenu === menu ? null : menu)}
+        className="flex h-10 min-w-0 items-center justify-between gap-2 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-left text-sm text-slate-100 outline-none transition-colors hover:border-blue-500"
+      >
+        <span className="min-w-0 truncate">{summary}</span>
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${openTrendFilterMenu === menu ? "rotate-180" : ""}`}
+          aria-hidden="true"
+        />
+      </button>
+      {openTrendFilterMenu === menu && (
+        <div className="absolute left-0 top-[4.25rem] z-30 w-full min-w-40 overflow-hidden rounded-lg border border-slate-700 bg-slate-950 shadow-xl shadow-black/30">
+          {options.map(option => (
+            <label
+              key={option.value || "all"}
+              className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-slate-200 transition-colors hover:bg-slate-800"
+            >
+              <input
+                type="checkbox"
+                checked={option.checked}
+                onChange={option.onChange}
+                className="h-4 w-4 rounded border-slate-600 bg-slate-900 accent-blue-500"
+              />
+              <span>{option.label}</span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   const renderTrendFilters = () => (
     <div className="mt-4 rounded-lg border border-slate-700/70 bg-slate-950/35 p-3">
       <div className="grid grid-cols-2 gap-2 md:grid-cols-[repeat(5,minmax(0,1fr))_auto]">
-        <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
-          기간
-          <select
-            value={selectedPeriod}
-            onChange={(event) => {
-              const nextPeriod = event.target.value as (typeof PERIOD_OPTIONS)[number]["value"];
-              const periodOption = PERIOD_OPTIONS.find(option => option.value === nextPeriod) || PERIOD_OPTIONS[0];
-              setSelectedPeriod(nextPeriod);
-              setSelectedTimeUnit(periodOption.unit);
-            }}
-            className="h-10 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition-colors focus:border-blue-500"
-          >
-            {PERIOD_OPTIONS.map(option => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
-          단위
-          <select
-            value={selectedTimeUnit}
-            onChange={(event) => setSelectedTimeUnit(event.target.value as (typeof TIME_UNIT_OPTIONS)[number]["value"])}
-            className="h-10 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition-colors focus:border-blue-500"
-          >
-            {TIME_UNIT_OPTIONS.map(option => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
-          기기
-          <select
-            value={selectedDevice}
-            onChange={(event) => setSelectedDevice(event.target.value as (typeof DEVICE_OPTIONS)[number])}
-            className="h-10 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition-colors focus:border-blue-500"
-          >
-            {DEVICE_OPTIONS.map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
-          성별
-          <select
-            value={selectedGender}
-            onChange={(event) => setSelectedGender(event.target.value as (typeof GENDER_OPTIONS)[number])}
-            className="h-10 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition-colors focus:border-blue-500"
-          >
-            {GENDER_OPTIONS.map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
-          연령
-          <select
-            value={selectedAge}
-            onChange={(event) => setSelectedAge(event.target.value)}
-            className="h-10 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition-colors focus:border-blue-500"
-          >
-            {AGE_OPTIONS.map(option => (
-              <option key={option.value || "all"} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </label>
+        {renderSingleCheckFilter("period", "기간", PERIOD_OPTIONS.map(option => ({
+          value: option.value,
+          label: option.label,
+          checked: selectedPeriod === option.value,
+          onChange: () => {
+            setSelectedPeriod(option.value);
+            setSelectedTimeUnit(option.unit);
+          },
+        })), PERIOD_OPTIONS.find(option => option.value === selectedPeriod)?.label || "1개월")}
+        {renderSingleCheckFilter("unit", "단위", TIME_UNIT_OPTIONS.map(option => ({
+          value: option.value,
+          label: option.label,
+          checked: selectedTimeUnit === option.value,
+          onChange: () => setSelectedTimeUnit(option.value),
+        })), TIME_UNIT_OPTIONS.find(option => option.value === selectedTimeUnit)?.label || "일간")}
+        {renderSingleCheckFilter("device", "기기", DEVICE_OPTIONS.map(option => ({
+          value: option,
+          label: option,
+          checked: selectedDevices.includes(option),
+          onChange: () => toggleMultiFilter(selectedDevices, option, "전체", setSelectedDevices),
+        })), getFilterSummary(selectedDevices, "전체", "전체"))}
+        {renderSingleCheckFilter("gender", "성별", GENDER_OPTIONS.map(option => ({
+          value: option,
+          label: option,
+          checked: selectedGenders.includes(option),
+          onChange: () => toggleMultiFilter(selectedGenders, option, "전체", setSelectedGenders),
+        })), getFilterSummary(selectedGenders, "전체", "전체"))}
+        {renderSingleCheckFilter("age", "연령", AGE_OPTIONS.map(option => ({
+          value: option.value,
+          label: option.label,
+          checked: selectedAges.includes(option.value),
+          onChange: () => toggleMultiFilter(selectedAges, option.value, "", setSelectedAges),
+        })), getFilterSummary(
+          selectedAges,
+          "",
+          "전체",
+          Object.fromEntries(AGE_OPTIONS.map(option => [option.value, option.label]))
+        ))}
         <button
           type="button"
-          onClick={() => runQuery(keywords)}
-          disabled={isLoading || keywords.length === 0}
+          onClick={handleApplyTrendFilters}
+          disabled={isTrendFilterLoading || keywords.length === 0}
           className="col-span-2 h-10 self-end rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-400 md:col-span-1"
         >
           필터 적용
         </button>
       </div>
+      {trendFilterError && <p className="mt-3 text-xs text-red-300">{trendFilterError}</p>}
     </div>
   );
 
@@ -632,13 +801,20 @@ export default function UnifiedInsights() {
             </div>
 
             {/* Chart Container */}
-            <div className="md:h-[480px] h-[520px]">
+            <div className="relative md:h-[480px] h-[520px]">
+              {isTrendFilterLoading && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-slate-950/70 backdrop-blur-sm">
+                  <div className="rounded-lg border border-blue-500/20 bg-slate-900 px-5 py-3 text-sm font-medium text-slate-200 shadow-xl shadow-black/30">
+                    검색 트렌드 데이터를 불러오는 중입니다...
+                  </div>
+                </div>
+              )}
               <UnifiedChart
                 data={{
-                  keywords: chartData.keywords || [],
-                  trend: chartData.trend || {},
-                  shopping: chartData.shopping || {},
-                  shoppingStatus: chartData.meta?.shoppingStatus,
+                  keywords: displayedTrendData?.keywords || [],
+                  trend: displayedTrendData?.trend || {},
+                  shopping: displayedTrendData?.shopping || {},
+                  shoppingStatus: displayedTrendData?.meta?.shoppingStatus,
                 }}
                 visibleLayers={{
                   trend: true,
@@ -672,13 +848,20 @@ export default function UnifiedInsights() {
               </div>
               {renderTrendFilters()}
             </div>
-            <div className="md:h-[480px] h-[520px]">
+            <div className="relative md:h-[480px] h-[520px]">
+              {isTrendFilterLoading && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-slate-950/70 backdrop-blur-sm">
+                  <div className="rounded-lg border border-blue-500/20 bg-slate-900 px-5 py-3 text-sm font-medium text-slate-200 shadow-xl shadow-black/30">
+                    검색 트렌드 데이터를 불러오는 중입니다...
+                  </div>
+                </div>
+              )}
               <UnifiedChart
                 data={{
-                  keywords: chartData.keywords || [],
-                  trend: chartData.trend || {},
-                  shopping: chartData.shopping || {},
-                  shoppingStatus: chartData.meta?.shoppingStatus,
+                  keywords: displayedTrendData?.keywords || [],
+                  trend: displayedTrendData?.trend || {},
+                  shopping: displayedTrendData?.shopping || {},
+                  shoppingStatus: displayedTrendData?.meta?.shoppingStatus,
                 }}
                 visibleLayers={{
                   trend: true,
