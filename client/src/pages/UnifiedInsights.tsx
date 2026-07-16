@@ -470,8 +470,8 @@ export default function UnifiedInsights() {
                   {[0, 1, 2].map((index) => (
                     <ChevronDown
                       key={index}
-                      className="h-4 w-4 animate-bounce text-blue-400"
-                      style={{ animationDelay: `${index * 120}ms` }}
+                      className="relatedMoreArrow h-4 w-4 text-blue-400"
+                      style={{ animationDelay: `${index * 180}ms` }}
                       aria-hidden="true"
                     />
                   ))}

@@ -6154,3 +6154,25 @@ input[type="date"].youtubeSelect {
     font-size: 11px;
   }
 }
+
+@keyframes relatedMoreArrowFlow {
+  0% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  25% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.9;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.relatedMoreArrow {
+  animation: relatedMoreArrowFlow 1.25s ease-in-out infinite;
+}
