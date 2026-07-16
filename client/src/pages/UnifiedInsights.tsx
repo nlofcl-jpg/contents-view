@@ -689,9 +689,6 @@ export default function UnifiedInsights() {
             <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div>
                 <h3 className="text-base font-semibold text-white">추천 키워드</h3>
-                <p className="mt-1 text-sm text-slate-400">
-                  우선 확인하면 좋은 키워드를 10개 내외로 모아 표시합니다.
-                </p>
               </div>
             </div>
             <div className="-mx-1 overflow-x-auto pb-1">
@@ -717,9 +714,6 @@ export default function UnifiedInsights() {
             <div className="mb-3 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
               <div>
                 <h3 className="text-base font-semibold text-white">연관 키워드</h3>
-                <p className="mt-1 text-sm text-slate-400">
-                  검색어와 연결된 키워드를 최대한 많이 리스트로 표시합니다.
-                </p>
               </div>
             </div>
             <div className="rounded-lg border border-slate-700/70">
