@@ -408,7 +408,7 @@ export default function UnifiedInsights() {
               </div>
             </div>
             <div className="rounded-lg border border-slate-700/70">
-              <div className="grid grid-cols-[minmax(120px,1fr)_72px_92px_92px_86px] gap-0 border-b border-slate-700/70 bg-slate-950/50 px-3 py-2 text-xs font-semibold text-slate-400">
+              <div className="grid grid-cols-[minmax(180px,2fr)_minmax(76px,0.7fr)_minmax(96px,0.9fr)_minmax(96px,0.9fr)_minmax(86px,0.8fr)] gap-0 border-b border-slate-700/70 bg-slate-950/50 px-4 py-3 text-sm font-semibold text-slate-100">
                 <span>키워드</span>
                 <span className="text-right">등급</span>
                 <span className="text-right">검색량</span>
@@ -417,10 +417,10 @@ export default function UnifiedInsights() {
                   <button
                     type="button"
                     onClick={() => setIsRelatedSortOpen(!isRelatedSortOpen)}
-                    className="inline-flex items-center gap-1 text-right transition-colors hover:text-blue-300"
+                    className="inline-flex items-center gap-1 text-right text-slate-100 transition-colors hover:text-blue-300"
                   >
                     <span>유사도</span>
-                    <ListFilter className="h-3 w-3" aria-hidden="true" />
+                    <ListFilter className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
                   {isRelatedSortOpen && (
                     <div className="absolute right-0 top-6 z-20 w-24 overflow-hidden rounded-lg border border-slate-700 bg-slate-950 shadow-xl shadow-black/30">
@@ -454,7 +454,7 @@ export default function UnifiedInsights() {
                     setKeywordInput(item.keyword);
                     runQuery([item.keyword]);
                   }}
-                  className="grid min-h-11 w-full grid-cols-[minmax(120px,1fr)_72px_92px_92px_86px] gap-0 border-b border-slate-800/80 px-3 py-2 text-left text-sm text-slate-200 transition-colors last:border-b-0 hover:bg-slate-800/70"
+                  className="grid min-h-11 w-full grid-cols-[minmax(180px,2fr)_minmax(76px,0.7fr)_minmax(96px,0.9fr)_minmax(96px,0.9fr)_minmax(86px,0.8fr)] gap-0 border-b border-slate-800/80 px-4 py-2 text-left text-sm text-slate-200 transition-colors last:border-b-0 hover:bg-slate-800/70"
                 >
                   <span className="min-w-0 truncate">{item.keyword}</span>
                   <span className="text-right text-blue-300">{getCompetitionLabel(item.competition)}</span>
