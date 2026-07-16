@@ -21,6 +21,33 @@ type KeywordMetric = {
   similarity: number | null;
 };
 
+const PERIOD_OPTIONS = [
+  { value: "30", label: "1개월", days: 30, unit: "date" },
+  { value: "90", label: "3개월", days: 90, unit: "week" },
+  { value: "180", label: "6개월", days: 180, unit: "week" },
+  { value: "365", label: "1년", days: 365, unit: "month" },
+] as const;
+
+const TIME_UNIT_OPTIONS = [
+  { value: "date", label: "일간" },
+  { value: "week", label: "주간" },
+  { value: "month", label: "월간" },
+] as const;
+
+const DEVICE_OPTIONS = ["전체", "PC", "모바일"] as const;
+const GENDER_OPTIONS = ["전체", "여성", "남성"] as const;
+
+const AGE_OPTIONS = [
+  { value: "", label: "전체" },
+  { value: "1", label: "12세 이하" },
+  { value: "2", label: "10대" },
+  { value: "3,4", label: "20대" },
+  { value: "5,6", label: "30대" },
+  { value: "7,8", label: "40대" },
+  { value: "9,10", label: "50대" },
+  { value: "11", label: "60대+" },
+] as const;
+
 export default function UnifiedInsights() {
   // State management
   const [keywords, setKeywords] = useState<string[]>([]);
@@ -32,9 +59,15 @@ export default function UnifiedInsights() {
   const [queryError, setQueryError] = useState("");
   const [querySuccess, setQuerySuccess] = useState(false);
   const [chartData, setChartData] = useState<any>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<(typeof PERIOD_OPTIONS)[number]["value"]>("30");
+  const [selectedTimeUnit, setSelectedTimeUnit] = useState<(typeof TIME_UNIT_OPTIONS)[number]["value"]>("date");
+  const [selectedDevice, setSelectedDevice] = useState<(typeof DEVICE_OPTIONS)[number]>("전체");
+  const [selectedGender, setSelectedGender] = useState<(typeof GENDER_OPTIONS)[number]>("전체");
+  const [selectedAge, setSelectedAge] = useState("");
   const [startDateForChart, setStartDateForChart] = useState("");
   const [endDateForChart, setEndDateForChart] = useState("");
   const [timeUnitForChart, setTimeUnitForChart] = useState("date");
+  const [filterLabelForChart, setFilterLabelForChart] = useState("1개월 · 일간 · 전체");
 
   const getSeriesSummary = (series?: InsightPoint[]) => {
     if (!series || series.length === 0) {
@@ -115,6 +148,19 @@ export default function UnifiedInsights() {
     return "포화";
   };
 
+  const getFilterLabel = () => {
+    const periodLabel = PERIOD_OPTIONS.find(option => option.value === selectedPeriod)?.label || "1개월";
+    const unitLabel = TIME_UNIT_OPTIONS.find(option => option.value === selectedTimeUnit)?.label || "일간";
+    const ageLabel = AGE_OPTIONS.find(option => option.value === selectedAge)?.label || "전체";
+    return [
+      periodLabel,
+      unitLabel,
+      selectedDevice,
+      selectedGender,
+      ageLabel === "전체" ? "전체 연령" : ageLabel,
+    ].join(" · ");
+  };
+
   // tRPC mutation
   const { mutate: queryUnifiedInsight } = trpc.naver.unifiedInsight.useMutation({
     onSuccess: (data: any) => {
@@ -153,13 +199,11 @@ export default function UnifiedInsights() {
     setKeywords(nextKeywords);
 
     const now = new Date();
-    let startDate = new Date();
-    let timeUnit = "date";
-
     let endDate = now;
-
-    startDate.setDate(now.getDate() - 30);
-    timeUnit = "date";
+    const periodOption = PERIOD_OPTIONS.find(option => option.value === selectedPeriod) || PERIOD_OPTIONS[0];
+    const startDate = new Date();
+    startDate.setDate(now.getDate() - periodOption.days);
+    const timeUnit = selectedTimeUnit || periodOption.unit;
 
     // Format date as local date string (YYYY-MM-DD) without UTC conversion
     const formatLocalDate = (date: Date): string => {
@@ -174,8 +218,11 @@ export default function UnifiedInsights() {
 
     // Logging for diagnosis
     console.log('[Frontend] Date Calculation:', {
-      chartPeriodDays: 30,
-      chartUnit: "일간",
+      chartPeriodDays: periodOption.days,
+      chartUnit: timeUnit,
+      device: selectedDevice,
+      gender: selectedGender,
+      age: selectedAge,
       startDateStr,
       endDateStr,
       nowTime: now.toLocaleString('ko-KR'),
@@ -185,12 +232,16 @@ export default function UnifiedInsights() {
     setStartDateForChart(startDateStr);
     setEndDateForChart(endDateStr);
     setTimeUnitForChart(timeUnit);
+    setFilterLabelForChart(getFilterLabel());
 
     queryUnifiedInsight({
       keywords: nextKeywords,
       startDate: startDateStr,
       endDate: endDateStr,
       timeUnit: timeUnit as any,
+      device: selectedDevice === "전체" ? undefined : selectedDevice,
+      gender: selectedGender === "전체" ? undefined : selectedGender,
+      ages: selectedAge ? selectedAge.split(",") : undefined,
     });
   };
 
@@ -250,6 +301,73 @@ export default function UnifiedInsights() {
           >
             검색
           </button>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-5">
+          <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
+            기간
+            <select
+              value={selectedPeriod}
+              onChange={(event) => {
+                const nextPeriod = event.target.value as (typeof PERIOD_OPTIONS)[number]["value"];
+                const periodOption = PERIOD_OPTIONS.find(option => option.value === nextPeriod) || PERIOD_OPTIONS[0];
+                setSelectedPeriod(nextPeriod);
+                setSelectedTimeUnit(periodOption.unit);
+              }}
+              className="h-10 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition-colors focus:border-blue-500"
+            >
+              {PERIOD_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
+            단위
+            <select
+              value={selectedTimeUnit}
+              onChange={(event) => setSelectedTimeUnit(event.target.value as (typeof TIME_UNIT_OPTIONS)[number]["value"])}
+              className="h-10 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition-colors focus:border-blue-500"
+            >
+              {TIME_UNIT_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
+            기기
+            <select
+              value={selectedDevice}
+              onChange={(event) => setSelectedDevice(event.target.value as (typeof DEVICE_OPTIONS)[number])}
+              className="h-10 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition-colors focus:border-blue-500"
+            >
+              {DEVICE_OPTIONS.map(option => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
+            성별
+            <select
+              value={selectedGender}
+              onChange={(event) => setSelectedGender(event.target.value as (typeof GENDER_OPTIONS)[number])}
+              className="h-10 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition-colors focus:border-blue-500"
+            >
+              {GENDER_OPTIONS.map(option => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
+            연령
+            <select
+              value={selectedAge}
+              onChange={(event) => setSelectedAge(event.target.value)}
+              className="h-10 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition-colors focus:border-blue-500"
+            >
+              {AGE_OPTIONS.map(option => (
+                <option key={option.value || "all"} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
         </div>
         {queryError && !isLoading && !querySuccess && !chartData && (
           <p className="mt-3 text-sm text-red-300">{queryError}</p>
@@ -495,6 +613,7 @@ export default function UnifiedInsights() {
               <div className="text-sm text-slate-400">
                 <p className="mb-1">{keywords.join(", ")}</p>
                 <p>{startDateForChart} – {endDateForChart}</p>
+                <p className="mt-1 text-xs text-slate-500">{filterLabelForChart}</p>
               </div>
             </div>
 
@@ -535,6 +654,7 @@ export default function UnifiedInsights() {
               <div className="text-sm text-slate-400">
                 <p className="mb-1">{keywords.join(", ")}</p>
                 <p>{startDateForChart} – {endDateForChart}</p>
+                <p className="mt-1 text-xs text-slate-500">{filterLabelForChart}</p>
               </div>
             </div>
             <div className="md:h-[480px] h-[520px]">
