@@ -103,6 +103,7 @@ type KeywordMetric = {
   monthlyTotalClicks: number | null;
   competition: string | null;
   averageAdDepth: number | null;
+  similarity: number | null;
 };
 
 const supabaseAdmin =
@@ -255,6 +256,7 @@ function normalizeKeywordMetric(item: any): KeywordMetric | null {
     monthlyTotalClicks,
     competition: item.compIdx ? String(item.compIdx) : null,
     averageAdDepth,
+    similarity: null,
   };
 }
 
@@ -300,6 +302,19 @@ function getKeywordSimilarityScore(baseKeyword: string, candidateKeyword: string
   return 5 + distance + lengthPenalty;
 }
 
+function getKeywordSimilarityPercent(baseKeyword: string, candidateKeyword: string) {
+  const base = normalizeKeywordText(baseKeyword);
+  const candidate = normalizeKeywordText(candidateKeyword);
+  if (!base || !candidate) return null;
+  if (candidate === base) return 100;
+  if (candidate.startsWith(base)) return Math.max(92, 100 - Math.abs(candidate.length - base.length) * 2);
+  if (candidate.includes(base)) return Math.max(82, 94 - Math.abs(candidate.length - base.length) * 2);
+
+  const distance = getLevenshteinDistance(base, candidate);
+  const maxLength = Math.max(base.length, candidate.length, 1);
+  return Math.max(0, Math.round((1 - distance / maxLength) * 100));
+}
+
 function buildKeywordToolSummary(keyword: string, keywordList: any[]): {
   primary: KeywordMetric | null;
   recommended: KeywordMetric[];
@@ -307,7 +322,11 @@ function buildKeywordToolSummary(keyword: string, keywordList: any[]): {
 } {
   const metrics = keywordList
     .map(normalizeKeywordMetric)
-    .filter((item): item is KeywordMetric => Boolean(item));
+    .filter((item): item is KeywordMetric => Boolean(item))
+    .map(item => ({
+      ...item,
+      similarity: getKeywordSimilarityPercent(keyword, item.keyword),
+    }));
   const normalizedKeyword = normalizeKeywordText(keyword);
   const exact = metrics.find(
     item => normalizeKeywordText(item.keyword) === normalizedKeyword

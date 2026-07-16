@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { UnifiedChart } from "@/components/UnifiedChart";
-import { CircleAlert, Lock } from "lucide-react";
+import { CircleAlert, ListFilter, Lock } from "lucide-react";
 
 type InsightPoint = {
   period: string;
@@ -18,6 +18,7 @@ type KeywordMetric = {
   monthlyTotalClicks: number | null;
   competition: string | null;
   averageAdDepth: number | null;
+  similarity: number | null;
 };
 
 export default function UnifiedInsights() {
@@ -25,6 +26,8 @@ export default function UnifiedInsights() {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState("");
   const [infoPopup, setInfoPopup] = useState<{ title: string; body: string } | null>(null);
+  const [relatedSortMode, setRelatedSortMode] = useState<"related" | "recommended">("related");
+  const [isRelatedSortOpen, setIsRelatedSortOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [queryError, setQueryError] = useState("");
   const [querySuccess, setQuerySuccess] = useState(false);
@@ -62,7 +65,13 @@ export default function UnifiedInsights() {
   const primaryMetric: KeywordMetric | null = keywordTool?.primary || null;
   const recommendedKeywords: KeywordMetric[] = keywordTool?.recommended || [];
   const relatedKeywords: KeywordMetric[] = keywordTool?.related || [];
-  const visibleRelatedKeywords = relatedKeywords.slice(0, 10);
+  const sortedRelatedKeywords = [...relatedKeywords].sort((a, b) => {
+    if (relatedSortMode === "recommended") {
+      return (b.monthlyTotalSearches || 0) - (a.monthlyTotalSearches || 0);
+    }
+    return (b.similarity || 0) - (a.similarity || 0) || (b.monthlyTotalSearches || 0) - (a.monthlyTotalSearches || 0);
+  });
+  const visibleRelatedKeywords = sortedRelatedKeywords.slice(0, 10);
   const hasLockedRelatedKeywords = relatedKeywords.length > visibleRelatedKeywords.length;
   const contentVolume = chartData?.meta?.contentVolume;
   const blogTotalDocuments = contentVolume?.sources?.find((item: any) => item.key === "blog")?.totalDocuments ?? null;
@@ -78,6 +87,11 @@ export default function UnifiedInsights() {
   const formatDecimal = (value: number | null | undefined, suffix = "") => {
     if (value === null || value === undefined || Number.isNaN(value)) return "-";
     return `${Math.round(value * 10) / 10}${suffix}`;
+  };
+
+  const formatPercent = (value: number | null | undefined) => {
+    if (value === null || value === undefined || Number.isNaN(value)) return "-";
+    return `${Math.round(value)}%`;
   };
 
   const getCompetitionLabel = (competition: string | null | undefined) => {
@@ -382,59 +396,92 @@ export default function UnifiedInsights() {
                 ))}
               </div>
             </div>
+          </div>
 
-            <div className="mt-5 border-t border-slate-700/70 pt-4">
-              <div className="mb-3 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
-                <div>
-                  <h3 className="text-base font-semibold text-white">연관 키워드</h3>
-                  <p className="mt-1 text-sm text-slate-400">
-                    검색어와 연결된 키워드를 최대한 많이 리스트로 표시합니다.
-                  </p>
-                </div>
+          <div className="rounded-lg border border-slate-700 bg-slate-900/35 p-4">
+            <div className="mb-3 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-white">연관 키워드</h3>
+                <p className="mt-1 text-sm text-slate-400">
+                  검색어와 연결된 키워드를 최대한 많이 리스트로 표시합니다.
+                </p>
               </div>
-              <div className="rounded-lg border border-slate-700/70">
-                <div className="grid grid-cols-[minmax(120px,1fr)_92px_92px_72px] gap-0 border-b border-slate-700/70 bg-slate-950/50 px-3 py-2 text-xs font-semibold text-slate-400">
-                  <span>키워드</span>
-                  <span className="text-right">검색량</span>
-                  <span className="text-right">클릭량</span>
-                  <span className="text-right">등급</span>
-                </div>
-                {visibleRelatedKeywords.map((item) => (
-                  <button
-                    key={item.keyword}
-                    type="button"
-                    onClick={() => {
-                      setKeywordInput(item.keyword);
-                      runQuery([item.keyword]);
-                    }}
-                    className="grid min-h-11 w-full grid-cols-[minmax(120px,1fr)_92px_92px_72px] gap-0 border-b border-slate-800/80 px-3 py-2 text-left text-sm text-slate-200 transition-colors last:border-b-0 hover:bg-slate-800/70"
-                  >
-                    <span className="min-w-0 truncate">{item.keyword}</span>
-                    <span className="text-right text-slate-300">{formatNumber(item.monthlyTotalSearches)}</span>
-                    <span className="text-right text-slate-400">{formatDecimal(item.monthlyTotalClicks)}</span>
-                    <span className="text-right text-blue-300">{getCompetitionLabel(item.competition)}</span>
-                  </button>
-                ))}
-              </div>
-              {hasLockedRelatedKeywords && (
-                <div className="mt-3 flex justify-center">
-                  <div className="flex w-full max-w-sm flex-col items-center rounded-xl border border-blue-500/20 bg-slate-950/80 px-5 py-5 text-center shadow-2xl shadow-blue-950/30">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full border border-blue-400/25 bg-blue-500/10">
-                      <Lock className="h-5 w-5 text-blue-300" aria-hidden="true" />
-                    </div>
-                    <p className="mt-3 text-sm font-medium text-slate-200">
-                      더 많은 연관 키워드를 확인하려면 가입하세요.
-                    </p>
-                    <button
-                      type="button"
-                      className="mt-4 h-10 w-full rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-500"
-                    >
-                      무료 체험하기
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
+            <div className="rounded-lg border border-slate-700/70">
+              <div className="grid grid-cols-[minmax(120px,1fr)_72px_92px_92px_86px] gap-0 border-b border-slate-700/70 bg-slate-950/50 px-3 py-2 text-xs font-semibold text-slate-400">
+                <span>키워드</span>
+                <span className="text-right">등급</span>
+                <span className="text-right">검색량</span>
+                <span className="text-right">클릭량</span>
+                <div className="relative flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsRelatedSortOpen(!isRelatedSortOpen)}
+                    className="inline-flex items-center gap-1 text-right transition-colors hover:text-blue-300"
+                  >
+                    <span>유사도</span>
+                    <ListFilter className="h-3 w-3" aria-hidden="true" />
+                  </button>
+                  {isRelatedSortOpen && (
+                    <div className="absolute right-0 top-6 z-20 w-24 overflow-hidden rounded-lg border border-slate-700 bg-slate-950 shadow-xl shadow-black/30">
+                      {[
+                        { value: "related" as const, label: "관련순" },
+                        { value: "recommended" as const, label: "추천순" },
+                      ].map(option => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => {
+                            setRelatedSortMode(option.value);
+                            setIsRelatedSortOpen(false);
+                          }}
+                          className={`block w-full px-3 py-2 text-left text-xs transition-colors hover:bg-slate-800 ${
+                            relatedSortMode === option.value ? "text-blue-300" : "text-slate-300"
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              {visibleRelatedKeywords.map((item) => (
+                <button
+                  key={item.keyword}
+                  type="button"
+                  onClick={() => {
+                    setKeywordInput(item.keyword);
+                    runQuery([item.keyword]);
+                  }}
+                  className="grid min-h-11 w-full grid-cols-[minmax(120px,1fr)_72px_92px_92px_86px] gap-0 border-b border-slate-800/80 px-3 py-2 text-left text-sm text-slate-200 transition-colors last:border-b-0 hover:bg-slate-800/70"
+                >
+                  <span className="min-w-0 truncate">{item.keyword}</span>
+                  <span className="text-right text-blue-300">{getCompetitionLabel(item.competition)}</span>
+                  <span className="text-right text-slate-300">{formatNumber(item.monthlyTotalSearches)}</span>
+                  <span className="text-right text-slate-400">{formatDecimal(item.monthlyTotalClicks)}</span>
+                  <span className="text-right text-slate-300">{formatPercent(item.similarity)}</span>
+                </button>
+              ))}
+            </div>
+            {hasLockedRelatedKeywords && (
+              <div className="mt-3 flex justify-center">
+                <div className="flex w-full max-w-sm flex-col items-center rounded-xl border border-blue-500/20 bg-slate-950/80 px-5 py-5 text-center shadow-2xl shadow-blue-950/30">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full border border-blue-400/25 bg-blue-500/10">
+                    <Lock className="h-5 w-5 text-blue-300" aria-hidden="true" />
+                  </div>
+                  <p className="mt-3 text-sm font-medium text-slate-200">
+                    더 많은 연관 키워드를 확인하려면 가입하세요.
+                  </p>
+                  <button
+                    type="button"
+                    className="mt-4 h-10 w-full rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-500"
+                  >
+                    무료 체험하기
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="bg-slate-900 bg-opacity-50 border border-cyan-700 border-opacity-30 rounded-lg px-6 pt-6 pb-8 md:p-6 md:pb-6 h-auto min-h-0">

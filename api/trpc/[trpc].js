@@ -1251,7 +1251,8 @@ function normalizeKeywordMetric(item) {
     monthlyMobileClicks,
     monthlyTotalClicks,
     competition: item.compIdx ? String(item.compIdx) : null,
-    averageAdDepth
+    averageAdDepth,
+    similarity: null
   };
 }
 function normalizeKeywordText(value) {
@@ -1289,8 +1290,22 @@ function getKeywordSimilarityScore(baseKeyword, candidateKeyword) {
   const lengthPenalty = Math.abs(candidate.length - base.length) / Math.max(base.length, 1);
   return 5 + distance + lengthPenalty;
 }
+function getKeywordSimilarityPercent(baseKeyword, candidateKeyword) {
+  const base = normalizeKeywordText(baseKeyword);
+  const candidate = normalizeKeywordText(candidateKeyword);
+  if (!base || !candidate) return null;
+  if (candidate === base) return 100;
+  if (candidate.startsWith(base)) return Math.max(92, 100 - Math.abs(candidate.length - base.length) * 2);
+  if (candidate.includes(base)) return Math.max(82, 94 - Math.abs(candidate.length - base.length) * 2);
+  const distance = getLevenshteinDistance(base, candidate);
+  const maxLength = Math.max(base.length, candidate.length, 1);
+  return Math.max(0, Math.round((1 - distance / maxLength) * 100));
+}
 function buildKeywordToolSummary(keyword, keywordList) {
-  const metrics = keywordList.map(normalizeKeywordMetric).filter((item) => Boolean(item));
+  const metrics = keywordList.map(normalizeKeywordMetric).filter((item) => Boolean(item)).map((item) => ({
+    ...item,
+    similarity: getKeywordSimilarityPercent(keyword, item.keyword)
+  }));
   const normalizedKeyword = normalizeKeywordText(keyword);
   const exact = metrics.find(
     (item) => normalizeKeywordText(item.keyword) === normalizedKeyword
