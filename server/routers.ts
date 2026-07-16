@@ -60,7 +60,7 @@ function getNaverSearchAdHeaders(credentials: NaverSearchAdCredentials, method: 
     "Content-Type": "application/json; charset=UTF-8",
     "X-Timestamp": timestamp,
     "X-API-KEY": credentials.accessLicense,
-    "X-Customer": credentials.customerId,
+    "X-CUSTOMER": credentials.customerId,
     "X-Signature": getNaverSearchAdSignature(timestamp, method, uri, credentials.secretKey),
   };
 }

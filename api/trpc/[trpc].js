@@ -1878,7 +1878,7 @@ function getNaverSearchAdHeaders(credentials, method, uri) {
     "Content-Type": "application/json; charset=UTF-8",
     "X-Timestamp": timestamp2,
     "X-API-KEY": credentials.accessLicense,
-    "X-Customer": credentials.customerId,
+    "X-CUSTOMER": credentials.customerId,
     "X-Signature": getNaverSearchAdSignature(timestamp2, method, uri, credentials.secretKey)
   };
 }
