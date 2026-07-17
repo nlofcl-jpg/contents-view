@@ -5800,6 +5800,7 @@ input[type="date"].youtubeSelect {
   display: flex;
   flex-direction: column;
   gap: 48px;
+  overflow: visible;
 }
 
 @media (min-width: 640px) {
@@ -5823,14 +5824,15 @@ input[type="date"].youtubeSelect {
 .savedContentsTabs {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
   width: 100%;
   padding: 6px;
   border: 1px solid rgba(59, 130, 246, 0.14);
   border-radius: 14px;
   background: rgba(8, 17, 32, 0.64);
-  overflow: visible;
+  overflow-x: auto;
+  overflow-y: visible;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -5879,6 +5881,11 @@ input[type="date"].youtubeSelect {
 .savedContentsTabDropdown {
   position: relative;
   display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.savedContentsTab {
+  flex: 0 0 auto;
 }
 
 .savedContentsTabWithChevron {
