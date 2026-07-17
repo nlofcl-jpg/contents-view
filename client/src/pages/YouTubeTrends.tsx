@@ -144,7 +144,9 @@ function isYouTubeUrl(value: string): boolean {
 }
 
 function getSearchParamsFromLocation(location: string) {
-  const queryString = location.includes("?") ? location.split("?")[1] : "";
+  const browserQueryString =
+    typeof window !== "undefined" ? window.location.search.replace(/^\?/, "") : "";
+  const queryString = browserQueryString || (location.includes("?") ? location.split("?")[1] : "");
   return new URLSearchParams(queryString);
 }
 
