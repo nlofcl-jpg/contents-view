@@ -8,12 +8,53 @@ type SocialProvider = "google" | "naver" | "kakao";
 const socialButtons: Array<{
   provider: SocialProvider;
   label: string;
-  mark: string;
 }> = [
-  { provider: "google", label: "Google로 로그인", mark: "G" },
-  { provider: "naver", label: "네이버로 로그인", mark: "N" },
-  { provider: "kakao", label: "카카오로 로그인", mark: "K" },
+  { provider: "google", label: "Google로 로그인" },
+  { provider: "naver", label: "네이버로 로그인" },
+  { provider: "kakao", label: "카카오로 로그인" },
 ];
+
+function SocialLogo({ provider }: { provider: SocialProvider }) {
+  if (provider === "google") {
+    return (
+      <svg className="loginSocialIcon" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          fill="#4285F4"
+          d="M23.49 12.27c0-.82-.07-1.42-.22-2.04H12v4.05h6.62c-.13 1.01-.86 2.54-2.46 3.56l-.02.14 3.56 2.51.25.02c2.3-1.94 3.54-4.8 3.54-8.24Z"
+        />
+        <path
+          fill="#34A853"
+          d="M12 23c3.29 0 6.05-.99 8.06-2.69l-3.84-2.71c-1.03.66-2.4 1.12-4.22 1.12a7.32 7.32 0 0 1-6.93-4.6l-.14.01-3.7 2.61-.05.13C3.23 20.5 7.28 23 12 23Z"
+        />
+        <path
+          fill="#FBBC05"
+          d="M5.07 14.12A6.6 6.6 0 0 1 4.68 12c0-.74.14-1.45.37-2.12l-.01-.14L1.3 7.1l-.12.05A10.26 10.26 0 0 0 0 12c0 1.74.46 3.38 1.25 4.83l3.82-2.71Z"
+        />
+        <path
+          fill="#EA4335"
+          d="M12 5.28c2.29 0 3.83.9 4.71 1.66l3.44-3.06C18.04 2.1 15.29 1 12 1 7.28 1 3.23 3.5 1.25 7.17l3.81 2.71A7.35 7.35 0 0 1 12 5.28Z"
+        />
+      </svg>
+    );
+  }
+
+  if (provider === "naver") {
+    return (
+      <svg className="loginSocialIcon" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M15.05 12.7 8.62 3.5H3.3v17h5.65v-9.2l6.43 9.2h5.32v-17h-5.65v9.2Z" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg className="loginSocialIcon kakaoIcon" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M12 3.5c-5.1 0-9.2 3.18-9.2 7.1 0 2.5 1.67 4.7 4.19 5.96l-.7 2.78c-.06.23.2.42.39.28l3.32-2.22c.65.1 1.32.15 2 .15 5.1 0 9.2-3.18 9.2-7.1s-4.1-6.95-9.2-6.95Z"
+      />
+    </svg>
+  );
+}
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -82,7 +123,7 @@ export default function Login() {
                 disabled={isStarting}
               >
                 <span className="loginSocialMark" aria-hidden="true">
-                  {button.mark}
+                  <SocialLogo provider={button.provider} />
                 </span>
                 <span>{button.provider === "google" && isStarting ? "Google 로그인으로 이동 중" : button.label}</span>
                 <ChevronRight size={18} aria-hidden="true" />

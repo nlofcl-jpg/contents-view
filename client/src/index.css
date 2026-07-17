@@ -2327,29 +2327,31 @@ a {
 }
 
 .loginSocialMark {
-  display: grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 34px;
   height: 34px;
-  border-radius: 6px;
-  font-size: 22px;
-  font-weight: 950;
-  line-height: 1;
 }
 
-.is-google .loginSocialMark {
-  color: #2563eb;
-  background: #ffffff;
+.loginSocialIcon {
+  display: block;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
 }
 
 .is-naver .loginSocialMark {
-  color: #03c75a;
-  background: #ffffff;
+  color: #ffffff;
 }
 
 .is-kakao .loginSocialMark {
   color: #181600;
-  background: rgba(255, 255, 255, 0.48);
+}
+
+.kakaoIcon {
+  width: 26px;
+  height: 26px;
 }
 
 .loginKeepSignedIn {
