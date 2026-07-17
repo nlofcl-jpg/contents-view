@@ -169,9 +169,6 @@ export default function News() {
       <div className="pageHeader">
         <h1 className="pageTitle">뉴스 & 이슈</h1>
         <p className="pageDescription">오늘 주목받는 이슈를 빠르게 확인하고 콘텐츠 아이디어로 연결해보세요.</p>
-        {getLatestUpdateTime && (
-          <p className="text-sm text-slate-500 mt-3">마지막 업데이트: {formatUpdateTime(getLatestUpdateTime)}</p>
-        )}
       </div>
 
       {/* Search Area */}
@@ -189,6 +186,9 @@ export default function News() {
             <Search size={19} strokeWidth={2.1} />
           </button>
         </form>
+        {getLatestUpdateTime && (
+          <p className="newsSearchUpdateTime">마지막 업데이트: {formatUpdateTime(getLatestUpdateTime)}</p>
+        )}
       </section>
 
       {/* Featured News Cards - 4 Categories */}

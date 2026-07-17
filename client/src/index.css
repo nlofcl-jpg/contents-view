@@ -2219,10 +2219,15 @@ a {
 .newsSearchSection {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 12px;
+  width: 100%;
   max-width: 680px;
+  margin-left: auto;
+  margin-right: auto;
   margin-top: -18px;
   margin-bottom: -8px;
+  text-align: center;
 }
 
 .newsSearchTitle {
@@ -2236,6 +2241,14 @@ a {
 .newsSearchForm {
   position: relative;
   width: 100%;
+}
+
+.newsSearchUpdateTime {
+  margin: -2px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
 }
 
 .newsSearchInput {
