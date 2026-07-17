@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 
 const searchPlatforms = [
   { value: "naver", label: "NAVER", className: "isNaver" },
+  { value: "news", label: "뉴스", className: "isNews" },
   { value: "youtube", label: "YOUTUBE", className: "isYoutube" },
   { value: "google", label: "GOOGLE", className: "isGoogle" },
 ];
@@ -20,6 +21,11 @@ export default function Hero() {
 
     if (selectedPlatform.value === "naver") {
       setLocation(`/trends/naver?keyword=${encodeURIComponent(trimmedKeyword)}`);
+      return;
+    }
+
+    if (selectedPlatform.value === "news") {
+      setLocation(`/news/search?keyword=${encodeURIComponent(trimmedKeyword)}`);
       return;
     }
 

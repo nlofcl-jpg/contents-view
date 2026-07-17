@@ -11,6 +11,7 @@ import GoogleTrends from "@/pages/GoogleTrends";
 import Community from "@/pages/Community";
 import SavedContents from "@/pages/SavedContents";
 import News from "@/pages/News";
+import NewsSearchResults from "@/pages/NewsSearchResults";
 import AIStudio from "@/pages/AIStudio";
 import Login from "@/pages/Login";
 import Admin from "@/pages/Admin";
@@ -33,6 +34,7 @@ function Router() {
       <Route path={"/trends/google"} component={GoogleTrends} />
       <Route path={"/community"} component={Community} />
       <Route path={"/saved-contents"} component={SavedContents} />
+      <Route path={"/news/search"} component={NewsSearchResults} />
       <Route path={"/news"} component={News} />
       <Route path={"/ai-studio"} component={AIStudio} />
       <Route path={"/login"} component={Login} />
