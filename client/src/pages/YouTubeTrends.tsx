@@ -8,6 +8,7 @@ import { AlertCircle, Clock, Play, ChevronDown, RotateCw, Users, Bookmark, Searc
 import { useBookmark } from "@/contexts/BookmarkContext";
 
 type TabType = "analysis" | "trending" | "category" | "channels" | "shorts";
+type AnalysisSortType = "relevance" | "publishedAt" | "viewCount";
 
 const YOUTUBE_API_KEY_ERROR_MESSAGE = "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.";
 
@@ -18,6 +19,12 @@ const TABS = [
   { id: "channels", label: "인기 채널" },
   { id: "shorts", label: "쇼츠 트렌드" },
 ] as const;
+
+const ANALYSIS_SORT_OPTIONS: { value: AnalysisSortType; label: string }[] = [
+  { value: "relevance", label: "관련도순" },
+  { value: "publishedAt", label: "최신순" },
+  { value: "viewCount", label: "인기순" },
+];
 
 const COUNTRIES = [
   { value: "KR", label: "한국" },
@@ -164,6 +171,7 @@ export default function YouTubeTrends() {
   const [analysisInput, setAnalysisInput] = useState("");
   const [submittedAnalysisKeyword, setSubmittedAnalysisKeyword] = useState("");
   const [analysisMode, setAnalysisMode] = useState<"keyword" | "url" | null>(null);
+  const [analysisSort, setAnalysisSort] = useState<AnalysisSortType>("relevance");
   const [visibleAnalysisCount, setVisibleAnalysisCount] = useState(10);
   const [lastUpdateTimesByKey, setLastUpdateTimesByKey] = useState<Record<string, number>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -238,6 +246,7 @@ export default function YouTubeTrends() {
     {
       query: submittedAnalysisKeyword,
       regionCode: "KR",
+      sortBy: analysisSort,
       maxResults: 50,
     },
     {
@@ -557,6 +566,7 @@ export default function YouTubeTrends() {
     if (!canSearchAnalysisKeyword) return;
     setAnalysisMode("keyword");
     setSubmittedAnalysisKeyword(analysisInputValue);
+    setAnalysisSort("relevance");
     setVisibleAnalysisCount(10);
   };
 
@@ -564,6 +574,11 @@ export default function YouTubeTrends() {
     if (!canAnalyzeVideoUrl) return;
     setAnalysisMode("url");
     setSubmittedAnalysisKeyword("");
+    setVisibleAnalysisCount(10);
+  };
+
+  const handleAnalysisSortChange = (sortValue: AnalysisSortType) => {
+    setAnalysisSort(sortValue);
     setVisibleAnalysisCount(10);
   };
 
@@ -668,8 +683,22 @@ export default function YouTubeTrends() {
         ) : analysisMode === "keyword" && analysisVideos.length > 0 ? (
           <div className="youtubeAnalysisResults">
             <div className="youtubeAnalysisResultHeader">
-              <span>검색 결과</span>
-              <strong>{submittedAnalysisKeyword}</strong>
+              <div className="youtubeAnalysisResultTitle">
+                <span>검색 결과</span>
+                <strong>{submittedAnalysisKeyword}</strong>
+              </div>
+              <div className="youtubeAnalysisSortGroup" aria-label="영상 분석 결과 정렬">
+                {ANALYSIS_SORT_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`youtubeAnalysisSortButton ${analysisSort === option.value ? "active" : ""}`}
+                    onClick={() => handleAnalysisSortChange(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="videosGrid">
               {visibleAnalysisVideos.map((video: any) => {

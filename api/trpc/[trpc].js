@@ -2969,6 +2969,7 @@ var appRouter = router({
     searchVideos: protectedProcedure.input(z3.object({
       query: z3.string().min(1).max(120),
       regionCode: z3.string().min(2).max(2).default("KR"),
+      sortBy: z3.enum(["relevance", "publishedAt", "viewCount"]).default("relevance"),
       maxResults: z3.number().min(1).max(50).default(50)
     })).query(async ({ ctx, input }) => {
       if (!ctx.user) {
@@ -2995,7 +2996,7 @@ var appRouter = router({
           type: "video",
           q: input.query.trim(),
           regionCode: input.regionCode,
-          order: "viewCount",
+          order: input.sortBy === "publishedAt" ? "date" : input.sortBy,
           maxResults: input.maxResults.toString(),
           key: apiKeyRecord.apiKey
         });
@@ -3055,6 +3056,9 @@ var appRouter = router({
             videos: []
           };
         }
+        const videoOrderMap = new Map(
+          videoIds.map((videoId, index) => [videoId, index])
+        );
         let videos = (videosData.items || []).map((item) => ({
           id: item.id,
           title: item.snippet.title,
@@ -3071,7 +3075,17 @@ var appRouter = router({
           duration: item.contentDetails.duration,
           durationSeconds: parseDurationToSeconds(item.contentDetails.duration)
         }));
-        videos.sort((a, b) => b.viewCount - a.viewCount);
+        if (input.sortBy === "viewCount") {
+          videos.sort((a, b) => b.viewCount - a.viewCount);
+        } else if (input.sortBy === "publishedAt") {
+          videos.sort(
+            (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+          );
+        } else {
+          videos.sort(
+            (a, b) => (videoOrderMap.get(a.id) ?? 999) - (videoOrderMap.get(b.id) ?? 999)
+          );
+        }
         const uniqueChannelIds = Array.from(new Set(videos.map((v) => v.channelId))).slice(0, 50);
         const channelThumbnails = {};
         if (uniqueChannelIds.length > 0) {

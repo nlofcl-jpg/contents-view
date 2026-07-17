@@ -1028,6 +1028,7 @@ export const appRouter = router({
       .input(z.object({
         query: z.string().min(1).max(120),
         regionCode: z.string().min(2).max(2).default("KR"),
+        sortBy: z.enum(["relevance", "publishedAt", "viewCount"]).default("relevance"),
         maxResults: z.number().min(1).max(50).default(50),
       }))
       .query(async ({ ctx, input }) => {
@@ -1058,7 +1059,7 @@ export const appRouter = router({
             type: "video",
             q: input.query.trim(),
             regionCode: input.regionCode,
-            order: "viewCount",
+            order: input.sortBy === "publishedAt" ? "date" : input.sortBy,
             maxResults: input.maxResults.toString(),
             key: apiKeyRecord.apiKey,
           });
@@ -1088,7 +1089,7 @@ export const appRouter = router({
             };
           }
 
-          const videoIds = (searchData.items || [])
+          const videoIds: string[] = (searchData.items || [])
             .map((item: any) => item.id?.videoId)
             .filter(Boolean);
 
@@ -1130,6 +1131,9 @@ export const appRouter = router({
             };
           }
 
+          const videoOrderMap = new Map<string, number>(
+            videoIds.map((videoId: string, index: number) => [videoId, index])
+          );
           let videos = (videosData.items || []).map((item: any) => ({
             id: item.id,
             title: item.snippet.title,
@@ -1147,7 +1151,17 @@ export const appRouter = router({
             durationSeconds: parseDurationToSeconds(item.contentDetails.duration),
           }));
 
-          videos.sort((a: any, b: any) => b.viewCount - a.viewCount);
+          if (input.sortBy === "viewCount") {
+            videos.sort((a: any, b: any) => b.viewCount - a.viewCount);
+          } else if (input.sortBy === "publishedAt") {
+            videos.sort((a: any, b: any) =>
+              new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+            );
+          } else {
+            videos.sort((a: any, b: any) =>
+              (videoOrderMap.get(a.id) ?? 999) - (videoOrderMap.get(b.id) ?? 999)
+            );
+          }
 
           const uniqueChannelIds = Array.from(new Set(videos.map((v: any) => v.channelId))).slice(0, 50);
           const channelThumbnails: Record<string, string> = {};
