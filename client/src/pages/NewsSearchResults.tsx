@@ -93,6 +93,7 @@ export default function NewsSearchResults() {
       </section>
 
       <section className="newsSearchResultsSection">
+        <a href="/news" className="newsSearchBackLink">뉴스이슈 바로가기</a>
         {keyword && <h2 className="newsSearchResultTitle">뉴스 검색결과: {keyword}</h2>}
 
         {isLoadingSearch ? (
