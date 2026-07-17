@@ -2200,10 +2200,7 @@ a {
   display: grid;
   place-items: center;
   padding: 56px 16px 88px;
-  background:
-    radial-gradient(circle at 18% 18%, rgba(30, 64, 175, 0.18), transparent 30%),
-    radial-gradient(circle at 82% 82%, rgba(14, 165, 233, 0.12), transparent 28%),
-    linear-gradient(180deg, rgba(2, 6, 23, 0.35), rgba(2, 6, 23, 0.8));
+  background: transparent;
 }
 
 .loginPanel {
