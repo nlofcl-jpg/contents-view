@@ -728,13 +728,13 @@ a {
   
   .mobileMenuButtonWrapper {
     position: absolute;
-    right: 12px;
+    right: 6px;
     top: 50%;
     transform: translateY(-50%);
     z-index: 10;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 2px;
   }
   
   .headerBrandWrapper {
@@ -3710,8 +3710,7 @@ input[type="date"].youtubeSelect {
 
 .mobileMenuButtonLeft {
   display: none;
-  order: -1;
-  margin-right: 12px;
+  margin-right: 0;
 }
 
 @media (max-width: 768px) {
@@ -3748,7 +3747,7 @@ input[type="date"].youtubeSelect {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 39;
+  z-index: 10010;
   animation: fadeIn 0.2s ease-out;
 }
 
@@ -3764,11 +3763,11 @@ input[type="date"].youtubeSelect {
     radial-gradient(circle at top right, rgba(37, 99, 235, 0.18), transparent 34%),
     linear-gradient(180deg, #111827 0%, #0b1020 100%);
   border-left: 1px solid rgba(96, 165, 250, 0.16);
-  z-index: 40;
+  z-index: 10020;
   overflow-y: auto;
   transform: translateX(100%);
   transition: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1);
-  padding-top: 16px;
+  padding-top: 18px;
 }
 
 .mobileMenuDrawer.open {
@@ -3778,7 +3777,7 @@ input[type="date"].youtubeSelect {
 /* Close Button */
 .mobileMenuClose {
   position: absolute;
-  top: 16px;
+  top: 18px;
   right: 16px;
   width: 40px;
   height: 40px;
@@ -3791,7 +3790,7 @@ input[type="date"].youtubeSelect {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 41;
+  z-index: 10021;
 }
 
 .mobileMenuClose:hover {
@@ -3801,7 +3800,7 @@ input[type="date"].youtubeSelect {
 
 /* Drawer Content */
 .mobileDrawerContent {
-  padding-bottom: 120px;
+  padding-bottom: 32px;
 }
 
 /* Drawer Tabs - REMOVED */
@@ -3914,7 +3913,7 @@ input[type="date"].youtubeSelect {
 }
 
 .mobileMenuBottomActions {
-  margin-top: 26px;
+  margin-top: 18px;
   padding-top: 18px;
   border-top: 1px solid rgba(96, 165, 250, 0.14);
 }
