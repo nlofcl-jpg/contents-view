@@ -544,8 +544,8 @@ export default function UnifiedInsights() {
       )}
 
       {/* Search Card */}
-      <div className="w-full max-w-full min-w-0 bg-slate-900 bg-opacity-50 border border-slate-700 rounded-lg p-4 md:p-6 mb-8 overflow-hidden">
-        <div className="flex flex-col gap-3 md:flex-row">
+      <div className="mb-8 w-full max-w-full min-w-0 overflow-visible rounded-[28px] border border-white/35 bg-white p-2 shadow-[0_18px_48px_rgba(21,140,255,0.24),0_0_70px_rgba(21,140,255,0.14)]">
+        <div className="flex items-center gap-0">
           <input
             id="keyword"
             type="text"
@@ -556,12 +556,12 @@ export default function UnifiedInsights() {
             }}
             placeholder="검색어를 입력하세요. 예: 원피스"
             autoComplete="off"
-            className="h-12 min-w-0 flex-1 rounded-lg border border-slate-600 bg-slate-800 px-4 text-base text-white placeholder-slate-500 outline-none transition-colors focus:border-blue-500"
+            className="h-12 min-w-0 flex-1 rounded-[22px] border-0 bg-transparent px-4 text-base font-semibold text-slate-950 placeholder-slate-400 outline-none"
           />
           <button
             onClick={handleSearch}
             disabled={isLoading}
-            className="h-12 rounded-lg bg-blue-600 px-8 font-semibold text-white transition-colors hover:bg-blue-700 disabled:bg-slate-700 md:w-32"
+            className="h-12 rounded-[22px] bg-blue-600 px-7 font-semibold text-white transition-colors hover:bg-blue-500 disabled:bg-slate-300 disabled:text-slate-500 md:w-28"
           >
             검색
           </button>
