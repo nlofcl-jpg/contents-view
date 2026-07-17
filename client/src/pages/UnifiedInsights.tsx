@@ -719,9 +719,9 @@ export default function UnifiedInsights() {
                 <h3 className="text-base font-semibold text-white">연관 키워드</h3>
               </div>
             </div>
-            <div className="rounded-lg border border-slate-700/70">
-              <div className="grid grid-cols-[minmax(180px,2fr)_minmax(76px,0.7fr)_minmax(96px,0.9fr)_minmax(96px,0.9fr)_minmax(86px,0.8fr)] gap-0 border-b border-slate-700/70 bg-slate-950/50 px-4 py-3 text-sm font-semibold text-slate-100">
-                <span>키워드</span>
+            <div className="overflow-x-auto rounded-lg border border-slate-700/70">
+              <div className="grid min-w-[620px] grid-cols-[150px_76px_120px_120px_96px] gap-0 border-b border-slate-700/70 bg-slate-950/50 px-4 py-3 text-sm font-semibold text-slate-100 md:grid-cols-[minmax(180px,2fr)_minmax(76px,0.7fr)_minmax(96px,0.9fr)_minmax(96px,0.9fr)_minmax(86px,0.8fr)]">
+                <span className="sticky left-0 z-10 bg-slate-950/95 pr-3">키워드</span>
                 <span className="text-right">등급</span>
                 <span className="text-right">검색량</span>
                 <span className="text-right">클릭량</span>
@@ -766,9 +766,9 @@ export default function UnifiedInsights() {
                     setKeywordInput(item.keyword);
                     runQuery([item.keyword]);
                   }}
-                  className="grid min-h-11 w-full grid-cols-[minmax(180px,2fr)_minmax(76px,0.7fr)_minmax(96px,0.9fr)_minmax(96px,0.9fr)_minmax(86px,0.8fr)] gap-0 border-b border-slate-800/80 px-4 py-2 text-left text-sm text-slate-200 transition-colors last:border-b-0 hover:bg-slate-800/70"
+                  className="group grid min-h-11 min-w-[620px] grid-cols-[150px_76px_120px_120px_96px] gap-0 border-b border-slate-800/80 px-4 py-2 text-left text-sm text-slate-200 transition-colors last:border-b-0 hover:bg-slate-800/70 md:w-full md:grid-cols-[minmax(180px,2fr)_minmax(76px,0.7fr)_minmax(96px,0.9fr)_minmax(96px,0.9fr)_minmax(86px,0.8fr)]"
                 >
-                  <span className="min-w-0 truncate">{item.keyword}</span>
+                  <span className="sticky left-0 z-10 min-w-0 truncate bg-slate-900 pr-3 transition-colors group-hover:bg-slate-800">{item.keyword}</span>
                   <span className="text-right text-blue-300">{getCompetitionLabel(item.competition)}</span>
                   <span className="text-right text-slate-300">{formatNumber(item.monthlyTotalSearches)}</span>
                   <span className="text-right text-slate-400">{formatDecimal(item.monthlyTotalClicks)}</span>
