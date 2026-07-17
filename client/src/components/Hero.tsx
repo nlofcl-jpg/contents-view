@@ -30,7 +30,7 @@ export default function Hero() {
     }
 
     if (selectedPlatform.value === "youtube") {
-      setLocation("/trends/youtube");
+      setLocation(`/trends/youtube?tab=analysis&keyword=${encodeURIComponent(trimmedKeyword)}`);
       return;
     }
 

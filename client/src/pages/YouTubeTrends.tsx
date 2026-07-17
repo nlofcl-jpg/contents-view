@@ -6,6 +6,7 @@ import { YouTubeApiStatusCard } from "@/components/YouTubeApiStatusCard";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
 import { AlertCircle, Clock, Play, ChevronDown, RotateCw, Users, Bookmark, Search } from "lucide-react";
 import { useBookmark } from "@/contexts/BookmarkContext";
+import { useLocation } from "wouter";
 
 type TabType = "analysis" | "trending" | "category" | "channels" | "shorts";
 type AnalysisSortType = "relevance" | "publishedAt" | "viewCount";
@@ -142,6 +143,11 @@ function isYouTubeUrl(value: string): boolean {
   }
 }
 
+function getSearchParamsFromLocation(location: string) {
+  const queryString = location.includes("?") ? location.split("?")[1] : "";
+  return new URLSearchParams(queryString);
+}
+
 // Format view count (e.g., 1000000 -> 100만)
 function formatViewCount(count: number): string {
   if (count >= 1000000) {
@@ -162,6 +168,7 @@ function formatDate(dateString: string): string {
 }
 
 export default function YouTubeTrends() {
+  const [location] = useLocation();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { toggleYouTubeBookmark, isYouTubeVideoBookmarked, isBookmarkPending } = useBookmark();
   const [activeTab, setActiveTab] = useState<TabType>("trending");
@@ -180,6 +187,23 @@ export default function YouTubeTrends() {
   const [channelCache, setChannelCache] = useState<Record<string, { data: any; fetchedAt: number }>>({});
   const [shortsCache, setShortsCache] = useState<Record<string, { data: any; fetchedAt: number }>>({});
   const [shouldForceRefresh, setShouldForceRefresh] = useState(false);
+
+  useEffect(() => {
+    const searchParams = getSearchParamsFromLocation(location);
+    const targetTab = searchParams.get("tab");
+    const keywordFromUrl = searchParams.get("keyword")?.trim() || "";
+
+    if (targetTab !== "analysis" || !keywordFromUrl || isYouTubeUrl(keywordFromUrl)) {
+      return;
+    }
+
+    setActiveTab("analysis");
+    setAnalysisInput(keywordFromUrl);
+    setSubmittedAnalysisKeyword(keywordFromUrl);
+    setAnalysisMode("keyword");
+    setAnalysisSort("relevance");
+    setVisibleAnalysisCount(10);
+  }, [location]);
 
   // Manage filters per tab
   const [filtersByTab, setFiltersByTab] = useState({
