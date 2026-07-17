@@ -397,18 +397,15 @@ export default function Header({
               )}
             </>
           ) : (
-            <>
-              <button
-                className="avatarButton"
-                type="button"
-                title="로그인"
-              >
-                <div className="avatar">G</div>
-              </button>
-              <a href={getLoginUrl()} className="profileText">
+            <div className="headerAuthLinks" aria-label="로그인 메뉴">
+              <a href={getLoginUrl()} className="headerAuthLink">
                 로그인
               </a>
-            </>
+              <span className="headerAuthDivider" aria-hidden="true">|</span>
+              <a href={`${getLoginUrl()}?mode=signup`} className="headerAuthLink">
+                가입
+              </a>
+            </div>
             )}
           </div>
         </div>

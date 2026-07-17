@@ -1,100 +1,121 @@
 import { isSupabaseConfigured, signInWithGoogle } from "@/lib/supabase";
-import { useEffect, useState } from "react";
+import { Check, ChevronRight } from "lucide-react";
+import { useState } from "react";
 import { useLocation } from "wouter";
+
+type SocialProvider = "google" | "naver" | "kakao";
+
+const socialButtons: Array<{
+  provider: SocialProvider;
+  label: string;
+  mark: string;
+}> = [
+  { provider: "google", label: "Google로 로그인", mark: "G" },
+  { provider: "naver", label: "네이버로 로그인", mark: "N" },
+  { provider: "kakao", label: "카카오로 로그인", mark: "K" },
+];
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const [error, setError] = useState<string | null>(null);
-  const [isStarting, setIsStarting] = useState(isSupabaseConfigured);
+  const [isStarting, setIsStarting] = useState(false);
+  const [keepSignedIn, setKeepSignedIn] = useState(true);
 
-  useEffect(() => {
+  const handleGoogleLogin = async () => {
     if (!isSupabaseConfigured) {
-      setIsStarting(false);
+      setError("Supabase 로그인 환경변수가 아직 설정되지 않았습니다.");
       return;
     }
 
-    signInWithGoogle().then(({ error: signInError }) => {
+    setIsStarting(true);
+    setError(null);
+
+    try {
+      const { error: signInError } = await signInWithGoogle();
       if (signInError) {
         setError(signInError.message);
         setIsStarting(false);
       }
-    }).catch((signInError: unknown) => {
+    } catch (signInError) {
       setError(
         signInError instanceof Error
           ? signInError.message
           : "로그인을 시작하지 못했습니다.",
       );
       setIsStarting(false);
-    });
-  }, []);
+    }
+  };
 
-  if (isStarting && isSupabaseConfigured && !error) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center px-4">
-        <div
-          role="status"
-          aria-live="polite"
-          className="rounded-lg border border-blue-500/25 bg-slate-950/90 px-5 py-4 text-sm font-medium text-slate-200 shadow-2xl shadow-blue-950/30"
-        >
-          Google 로그인으로 이동 중입니다.
-        </div>
-      </div>
-    );
-  }
+  const handleProviderClick = (provider: SocialProvider) => {
+    if (provider === "google") {
+      handleGoogleLogin();
+      return;
+    }
+
+    setError(`${provider === "naver" ? "네이버" : "카카오"} 로그인은 준비 중입니다.`);
+  };
 
   return (
-    <div className="pageContainer">
-      <div className="pageHeader">
-        <h1 className="pageTitle">로그인</h1>
-        <p className="pageDescription">
-          Google 계정으로 CONTENTS VIEW에 로그인합니다.
-        </p>
-      </div>
+    <div className="loginPage">
+      <section className="loginPanel" aria-labelledby="login-title">
+        <button
+          className="loginBrand"
+          type="button"
+          onClick={() => setLocation("/")}
+          aria-label="홈으로 이동"
+        >
+          <img src="/contents-view-symbol.png" alt="" className="loginBrandLogo" />
+          <span>
+            CONTENTS <strong>VIEW</strong>
+          </span>
+        </button>
 
-      <div className="max-w-md rounded-lg border border-blue-500/20 bg-slate-900/60 p-6">
-        {isStarting ? (
-          <p className="text-sm text-slate-300">Google 로그인으로 이동 중입니다.</p>
-        ) : isSupabaseConfigured ? (
-          <>
-            <p className="mb-4 text-sm text-red-300">
-              {error || "로그인을 시작하지 못했습니다."}
-            </p>
-            <button
-              type="button"
-              className="primaryButton"
-              onClick={() => {
-                setIsStarting(true);
-                setError(null);
-                signInWithGoogle().then(({ error: signInError }) => {
-                  if (signInError) {
-                    setError(signInError.message);
-                    setIsStarting(false);
-                  }
-                });
-              }}
-            >
-              다시 시도
-              <span>→</span>
-            </button>
-          </>
-        ) : (
-          <>
-            <p className="mb-4 text-sm text-slate-300">
-              Supabase 환경변수가 아직 설정되지 않았습니다. `.env` 또는 배포
-              환경에 `VITE_SUPABASE_URL`과 `VITE_SUPABASE_ANON_KEY`를
-              추가하면 Google 로그인이 활성화됩니다.
-            </p>
-            <button
-              type="button"
-              className="primaryButton"
-              onClick={() => setLocation("/")}
-            >
-              홈으로 돌아가기
-              <span>→</span>
-            </button>
-          </>
+        <div className="loginSection">
+          <h1 id="login-title" className="loginTitle">간편 로그인</h1>
+          <div className="loginSocialStack">
+            {socialButtons.map((button) => (
+              <button
+                key={button.provider}
+                type="button"
+                className={`loginSocialButton is-${button.provider}`}
+                onClick={() => handleProviderClick(button.provider)}
+                disabled={isStarting}
+              >
+                <span className="loginSocialMark" aria-hidden="true">
+                  {button.mark}
+                </span>
+                <span>{button.provider === "google" && isStarting ? "Google 로그인으로 이동 중" : button.label}</span>
+                <ChevronRight size={18} aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <label className="loginKeepSignedIn">
+          <input
+            type="checkbox"
+            checked={keepSignedIn}
+            onChange={(event) => setKeepSignedIn(event.target.checked)}
+          />
+          <span className="loginKeepBox" aria-hidden="true">
+            {keepSignedIn && <Check size={13} strokeWidth={3} />}
+          </span>
+          <span>로그인 상태 유지</span>
+        </label>
+
+        {error && (
+          <p className="loginError" role="alert">
+            {error}
+          </p>
         )}
-      </div>
+
+        <div className="loginSignup">
+          <span>CONTENTS VIEW가 처음이신가요?</span>
+          <button type="button" onClick={() => setError("회원 가입은 다음 단계에서 연결됩니다.")}>
+            회원 가입하기
+          </button>
+        </div>
+      </section>
     </div>
   );
 }
