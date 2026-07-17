@@ -54,6 +54,7 @@ export default function UnifiedInsights() {
   // State management
   const [keywords, setKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState("");
+  const [isKeywordInputFocused, setIsKeywordInputFocused] = useState(false);
   const [infoPopup, setInfoPopup] = useState<{ title: string; body: string } | null>(null);
   const [relatedSortMode, setRelatedSortMode] = useState<"related" | "recommended">("related");
   const [isRelatedSortOpen, setIsRelatedSortOpen] = useState(false);
@@ -551,10 +552,12 @@ export default function UnifiedInsights() {
             type="text"
             value={keywordInput}
             onChange={(e) => setKeywordInput(e.target.value)}
+            onFocus={() => setIsKeywordInputFocused(true)}
+            onBlur={() => setIsKeywordInputFocused(false)}
             onKeyDown={(e) => {
               if (e.key === "Enter") handleSearch();
             }}
-            placeholder="검색어를 입력하세요. 예: 원피스"
+            placeholder={isKeywordInputFocused ? "" : "분석할 검색어를 입력하세요."}
             autoComplete="off"
             className="h-12 min-w-0 flex-1 rounded-[22px] border-0 bg-transparent px-4 text-base font-semibold text-slate-950 placeholder-slate-400 outline-none"
           />
