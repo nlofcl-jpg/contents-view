@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { ChevronDown, Loader2, Search } from "lucide-react";
+import { ArrowLeft, ChevronDown, Loader2, Search } from "lucide-react";
 import { useLocation } from "wouter";
 
 interface NewsItem {
@@ -93,7 +93,10 @@ export default function NewsSearchResults() {
       </section>
 
       <section className="newsSearchResultsSection">
-        <a href="/news" className="newsSearchBackLink">뉴스이슈 바로가기</a>
+        <a href="/news" className="newsSearchBackLink">
+          <ArrowLeft size={13} strokeWidth={1.8} aria-hidden="true" />
+          <span>뉴스이슈 바로가기</span>
+        </a>
         {keyword && <h2 className="newsSearchResultTitle">뉴스 검색결과: {keyword}</h2>}
 
         {isLoadingSearch ? (
