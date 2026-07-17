@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
-import { Search } from "lucide-react";
+import { ChevronDown, Search } from "lucide-react";
 
 interface NewsItem {
   title: string;
@@ -21,6 +21,7 @@ interface FeaturedNewsGroup {
 export default function News() {
   const [searchQuery, setSearchQuery] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
+  const [visibleSearchCount, setVisibleSearchCount] = useState(6);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   // Category definitions
@@ -75,7 +76,7 @@ export default function News() {
 
   // Fetch search results
   const { data: searchResultsData, isLoading: isLoadingSearch } = trpc.news.searchNews.useQuery(
-    { query: searchQuery, limit: 20 },
+    { query: searchQuery, limit: 80 },
     {
       enabled: hasSearched && searchQuery.length > 0,
       retry: 1,
@@ -111,9 +112,14 @@ export default function News() {
     return Array.isArray(searchResultsData) ? searchResultsData : [];
   }, [searchResultsData]);
 
+  const visibleSearchResults = useMemo(() => {
+    return searchResults.slice(0, visibleSearchCount);
+  }, [searchResults, visibleSearchCount]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
+      setVisibleSearchCount(6);
       setHasSearched(true);
     }
   };
@@ -207,45 +213,57 @@ export default function News() {
       {/* Search Results */}
       {hasSearched && (
         <div className="mb-12">
-          <h2 className="text-2xl font-bold text-white mb-6">네이버 뉴스 검색 결과: {searchQuery}</h2>
+          <h2 className="newsSearchResultTitle">뉴스 검색결과: {searchQuery}</h2>
           {isLoadingSearch ? (
             <div className="text-center text-gray-400">네이버 뉴스 검색 결과를 불러오는 중...</div>
           ) : searchResults.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {searchResults.map((news: NewsItem, index: number) => (
-                <div
-                  key={index}
-                  className="bg-gray-900 rounded-lg overflow-hidden hover:bg-gray-800 transition-colors"
-                >
-                  {news.thumbnail && (
-                    <div className="w-full h-32 bg-gray-800 overflow-hidden">
-                      <img
-                        src={news.thumbnail}
-                        alt={news.title}
-                        className="w-full h-full object-cover"
-                      />
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {visibleSearchResults.map((news: NewsItem, index: number) => (
+                  <div
+                    key={index}
+                    className="bg-gray-900 rounded-lg overflow-hidden hover:bg-gray-800 transition-colors"
+                  >
+                    {news.thumbnail && (
+                      <div className="w-full h-32 bg-gray-800 overflow-hidden">
+                        <img
+                          src={news.thumbnail}
+                          alt={news.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <div className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs text-gray-500">{news.source}</span>
+                        <span className="text-xs text-gray-500">{formatDate(news.publishedAt || news.pubDate)}</span>
+                      </div>
+                      <h3 className="text-base font-semibold text-white mb-2 line-clamp-2">
+                        {news.title}
+                      </h3>
+                      <a
+                        href={news.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:text-blue-300 text-sm font-medium"
+                      >
+                        원문 보기 →
+                      </a>
                     </div>
-                  )}
-                  <div className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs text-gray-500">{news.source}</span>
-                      <span className="text-xs text-gray-500">{formatDate(news.publishedAt || news.pubDate)}</span>
-                    </div>
-                    <h3 className="text-base font-semibold text-white mb-2 line-clamp-2">
-                      {news.title}
-                    </h3>
-                    <a
-                      href={news.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-400 hover:text-blue-300 text-sm font-medium"
-                    >
-                      원문 보기 →
-                    </a>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+              {visibleSearchCount < searchResults.length && (
+                <button
+                  type="button"
+                  className="newsSearchMoreButton"
+                  onClick={() => setVisibleSearchCount((count) => Math.min(count + 6, searchResults.length))}
+                  aria-label="뉴스 검색결과 더보기"
+                >
+                  <ChevronDown size={20} strokeWidth={1.8} />
+                </button>
+              )}
+            </>
           ) : (
             <div className="text-center text-gray-400">제목에 '{searchQuery}'가 포함된 네이버 뉴스가 없습니다. 다른 키워드로 검색해보세요.</div>
           )}

@@ -4948,7 +4948,8 @@ var appRouter = router({
           console.log(`[News Search] No title matches found for query: "${query}"`);
           finalItems = [];
         }
-        const limitedItems = finalItems.slice(0, 20);
+        const resultLimit = Math.min(Math.max(limit || 20, 1), 100);
+        const limitedItems = finalItems.slice(0, resultLimit);
         console.log("[News Search] Final items count:", limitedItems.length);
         console.log("[News Search] ===== Search SUCCESS =====");
         return limitedItems.map(({ isTitleMatched, isExcluded, ...item }) => item);

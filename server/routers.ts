@@ -3560,8 +3560,8 @@ export const appRouter = router({
             finalItems = [];
           }
           
-          // Limit to 20 items max
-          const limitedItems = finalItems.slice(0, 20);
+          const resultLimit = Math.min(Math.max(limit || 20, 1), 100);
+          const limitedItems = finalItems.slice(0, resultLimit);
           
           console.log('[News Search] Final items count:', limitedItems.length);
           console.log('[News Search] ===== Search SUCCESS =====');
