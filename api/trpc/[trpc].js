@@ -2970,6 +2970,7 @@ var appRouter = router({
       query: z3.string().min(1).max(120),
       regionCode: z3.string().min(2).max(2).default("KR"),
       sortBy: z3.enum(["relevance", "publishedAt", "viewCount"]).default("relevance"),
+      durationType: z3.enum(["all", "shorts", "long"]).default("all"),
       maxResults: z3.number().min(1).max(50).default(50)
     })).query(async ({ ctx, input }) => {
       if (!ctx.user) {
@@ -3000,6 +3001,9 @@ var appRouter = router({
           maxResults: input.maxResults.toString(),
           key: apiKeyRecord.apiKey
         });
+        if (input.durationType === "shorts") {
+          searchParams.set("videoDuration", "short");
+        }
         const searchResponse = await fetch(
           `https://www.googleapis.com/youtube/v3/search?${searchParams.toString()}`,
           { method: "GET" }
@@ -3075,6 +3079,11 @@ var appRouter = router({
           duration: item.contentDetails.duration,
           durationSeconds: parseDurationToSeconds(item.contentDetails.duration)
         }));
+        if (input.durationType === "shorts") {
+          videos = videos.filter((video) => video.durationSeconds <= 60);
+        } else if (input.durationType === "long") {
+          videos = videos.filter((video) => video.durationSeconds > 60);
+        }
         if (input.sortBy === "viewCount") {
           videos.sort((a, b) => b.viewCount - a.viewCount);
         } else if (input.sortBy === "publishedAt") {

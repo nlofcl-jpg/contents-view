@@ -1029,6 +1029,7 @@ export const appRouter = router({
         query: z.string().min(1).max(120),
         regionCode: z.string().min(2).max(2).default("KR"),
         sortBy: z.enum(["relevance", "publishedAt", "viewCount"]).default("relevance"),
+        durationType: z.enum(["all", "shorts", "long"]).default("all"),
         maxResults: z.number().min(1).max(50).default(50),
       }))
       .query(async ({ ctx, input }) => {
@@ -1063,6 +1064,10 @@ export const appRouter = router({
             maxResults: input.maxResults.toString(),
             key: apiKeyRecord.apiKey,
           });
+
+          if (input.durationType === "shorts") {
+            searchParams.set("videoDuration", "short");
+          }
 
           const searchResponse = await fetch(
             `https://www.googleapis.com/youtube/v3/search?${searchParams.toString()}`,
@@ -1150,6 +1155,12 @@ export const appRouter = router({
             duration: item.contentDetails.duration,
             durationSeconds: parseDurationToSeconds(item.contentDetails.duration),
           }));
+
+          if (input.durationType === "shorts") {
+            videos = videos.filter((video: any) => video.durationSeconds <= 60);
+          } else if (input.durationType === "long") {
+            videos = videos.filter((video: any) => video.durationSeconds > 60);
+          }
 
           if (input.sortBy === "viewCount") {
             videos.sort((a: any, b: any) => b.viewCount - a.viewCount);

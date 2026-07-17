@@ -10,6 +10,7 @@ import { useLocation } from "wouter";
 
 type TabType = "analysis" | "trending" | "category" | "channels" | "shorts";
 type AnalysisSortType = "relevance" | "publishedAt" | "viewCount";
+type AnalysisDurationType = "all" | "shorts" | "long";
 
 const YOUTUBE_API_KEY_ERROR_MESSAGE = "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.";
 
@@ -25,6 +26,12 @@ const ANALYSIS_SORT_OPTIONS: { value: AnalysisSortType; label: string }[] = [
   { value: "relevance", label: "관련도순" },
   { value: "publishedAt", label: "최신순" },
   { value: "viewCount", label: "인기순" },
+];
+
+const ANALYSIS_DURATION_OPTIONS: { value: AnalysisDurationType; label: string }[] = [
+  { value: "all", label: "전체" },
+  { value: "shorts", label: "쇼츠" },
+  { value: "long", label: "롱영상" },
 ];
 
 const COUNTRIES = [
@@ -181,6 +188,7 @@ export default function YouTubeTrends() {
   const [submittedAnalysisKeyword, setSubmittedAnalysisKeyword] = useState("");
   const [analysisMode, setAnalysisMode] = useState<"keyword" | "url" | null>(null);
   const [analysisSort, setAnalysisSort] = useState<AnalysisSortType>("relevance");
+  const [analysisDurationType, setAnalysisDurationType] = useState<AnalysisDurationType>("all");
   const [visibleAnalysisCount, setVisibleAnalysisCount] = useState(10);
   const [lastUpdateTimesByKey, setLastUpdateTimesByKey] = useState<Record<string, number>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -204,6 +212,7 @@ export default function YouTubeTrends() {
     setSubmittedAnalysisKeyword(keywordFromUrl);
     setAnalysisMode("keyword");
     setAnalysisSort("relevance");
+    setAnalysisDurationType("all");
     setVisibleAnalysisCount(10);
   }, [location]);
 
@@ -273,6 +282,7 @@ export default function YouTubeTrends() {
       query: submittedAnalysisKeyword,
       regionCode: "KR",
       sortBy: analysisSort,
+      durationType: analysisDurationType,
       maxResults: 50,
     },
     {
@@ -593,6 +603,7 @@ export default function YouTubeTrends() {
     setAnalysisMode("keyword");
     setSubmittedAnalysisKeyword(analysisInputValue);
     setAnalysisSort("relevance");
+    setAnalysisDurationType("all");
     setVisibleAnalysisCount(10);
   };
 
@@ -605,6 +616,11 @@ export default function YouTubeTrends() {
 
   const handleAnalysisSortChange = (sortValue: AnalysisSortType) => {
     setAnalysisSort(sortValue);
+    setVisibleAnalysisCount(10);
+  };
+
+  const handleAnalysisDurationChange = (durationType: AnalysisDurationType) => {
+    setAnalysisDurationType(durationType);
     setVisibleAnalysisCount(10);
   };
 
@@ -713,12 +729,26 @@ export default function YouTubeTrends() {
                 <span>검색 결과</span>
                 <strong>{submittedAnalysisKeyword}</strong>
               </div>
-              <div className="youtubeAnalysisSortGroup" aria-label="영상 분석 결과 정렬">
+            </div>
+            <div className="youtubeAnalysisFilterBar">
+              <div className="youtubeAnalysisSegmentGroup" aria-label="영상 유형 필터">
+                {ANALYSIS_DURATION_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`youtubeAnalysisSegmentButton ${analysisDurationType === option.value ? "active" : ""}`}
+                    onClick={() => handleAnalysisDurationChange(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <div className="youtubeAnalysisSegmentGroup" aria-label="영상 분석 결과 정렬">
                 {ANALYSIS_SORT_OPTIONS.map((option) => (
                   <button
                     key={option.value}
                     type="button"
-                    className={`youtubeAnalysisSortButton ${analysisSort === option.value ? "active" : ""}`}
+                    className={`youtubeAnalysisSegmentButton ${analysisSort === option.value ? "active" : ""}`}
                     onClick={() => handleAnalysisSortChange(option.value)}
                   >
                     {option.label}
