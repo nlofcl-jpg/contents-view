@@ -2964,6 +2964,158 @@ var appRouter = router({
       }
     }),
     /**
+     * Search popular YouTube videos by keyword
+     */
+    searchVideos: protectedProcedure.input(z3.object({
+      query: z3.string().min(1).max(120),
+      regionCode: z3.string().min(2).max(2).default("KR"),
+      maxResults: z3.number().min(1).max(50).default(50)
+    })).query(async ({ ctx, input }) => {
+      if (!ctx.user) {
+        throw new Error("User not authenticated");
+      }
+      const apiKeyRecord = await getUserApiKey2(ctx.user, "youtube");
+      if (!apiKeyRecord) {
+        return {
+          success: false,
+          error: "API Key not found",
+          videos: []
+        };
+      }
+      if (apiKeyRecord.testStatus !== "success") {
+        return {
+          success: false,
+          error: "YouTube API \uD0A4 \uC624\uB958\uC785\uB2C8\uB2E4.\nAPI \uD0A4 \uD655\uC778 \uD6C4 \uB2E4\uC2DC \uC785\uB825\uD574\uC8FC\uC138\uC694.",
+          videos: []
+        };
+      }
+      try {
+        const searchParams = new URLSearchParams({
+          part: "snippet",
+          type: "video",
+          q: input.query.trim(),
+          regionCode: input.regionCode,
+          order: "viewCount",
+          maxResults: input.maxResults.toString(),
+          key: apiKeyRecord.apiKey
+        });
+        const searchResponse = await fetch(
+          `https://www.googleapis.com/youtube/v3/search?${searchParams.toString()}`,
+          { method: "GET" }
+        );
+        if (!searchResponse.ok) {
+          const errorData = await searchResponse.json();
+          const errorMsg = errorData.error?.message || "Failed to search videos";
+          return {
+            success: false,
+            error: translateYouTubeError(errorMsg),
+            videos: []
+          };
+        }
+        const searchData = await searchResponse.json();
+        if (searchData.error) {
+          const errorMsg = searchData.error.message || "YouTube API error";
+          return {
+            success: false,
+            error: translateYouTubeError(errorMsg),
+            videos: []
+          };
+        }
+        const videoIds = (searchData.items || []).map((item) => item.id?.videoId).filter(Boolean);
+        if (videoIds.length === 0) {
+          return {
+            success: true,
+            videos: []
+          };
+        }
+        const videosParams = new URLSearchParams({
+          part: "snippet,statistics,contentDetails",
+          id: videoIds.join(","),
+          key: apiKeyRecord.apiKey
+        });
+        const videosResponse = await fetch(
+          `https://www.googleapis.com/youtube/v3/videos?${videosParams.toString()}`,
+          { method: "GET" }
+        );
+        if (!videosResponse.ok) {
+          const errorData = await videosResponse.json();
+          const errorMsg = errorData.error?.message || "Failed to fetch video details";
+          return {
+            success: false,
+            error: translateYouTubeError(errorMsg),
+            videos: []
+          };
+        }
+        const videosData = await videosResponse.json();
+        if (videosData.error) {
+          const errorMsg = videosData.error.message || "YouTube API error";
+          return {
+            success: false,
+            error: translateYouTubeError(errorMsg),
+            videos: []
+          };
+        }
+        let videos = (videosData.items || []).map((item) => ({
+          id: item.id,
+          title: item.snippet.title,
+          description: item.snippet.description,
+          thumbnail: item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url,
+          channelTitle: item.snippet.channelTitle,
+          channelId: item.snippet.channelId,
+          publishedAt: item.snippet.publishedAt,
+          viewCount: parseInt(item.statistics.viewCount || "0"),
+          commentCount: parseInt(item.statistics.commentCount || "0"),
+          likeCount: parseInt(item.statistics.likeCount || "0"),
+          categoryId: item.snippet.categoryId,
+          tags: Array.isArray(item.snippet.tags) ? item.snippet.tags.slice(0, 12) : [],
+          duration: item.contentDetails.duration,
+          durationSeconds: parseDurationToSeconds(item.contentDetails.duration)
+        }));
+        videos.sort((a, b) => b.viewCount - a.viewCount);
+        const uniqueChannelIds = Array.from(new Set(videos.map((v) => v.channelId))).slice(0, 50);
+        const channelThumbnails = {};
+        if (uniqueChannelIds.length > 0) {
+          try {
+            const channelParams = new URLSearchParams({
+              part: "snippet",
+              id: uniqueChannelIds.join(","),
+              key: apiKeyRecord.apiKey
+            });
+            const channelResponse = await fetch(
+              `https://www.googleapis.com/youtube/v3/channels?${channelParams.toString()}`,
+              { method: "GET" }
+            );
+            if (channelResponse.ok) {
+              const channelData = await channelResponse.json();
+              (channelData.items || []).forEach((channel) => {
+                const thumbnailUrl = channel.snippet?.thumbnails?.high?.url || channel.snippet?.thumbnails?.medium?.url || channel.snippet?.thumbnails?.default?.url;
+                if (thumbnailUrl) {
+                  channelThumbnails[channel.id] = thumbnailUrl;
+                }
+              });
+            }
+          } catch (channelError) {
+            console.error("Failed to fetch channel thumbnails for search videos:", channelError);
+          }
+        }
+        videos = videos.map((video) => ({
+          ...video,
+          channelThumbnail: channelThumbnails[video.channelId] || null
+        }));
+        return {
+          success: true,
+          videos: videos.slice(0, input.maxResults)
+        };
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : "Connection failed";
+        return {
+          success: false,
+          error: translateYouTubeError(errorMsg),
+          videos: []
+        };
+      }
+    }),
+    /**
      * Get trending shorts (videos <= 60 seconds)
      * Uses videos.list with duration filtering
      */

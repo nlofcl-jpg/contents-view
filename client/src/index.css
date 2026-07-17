@@ -2771,19 +2771,141 @@ a {
   line-height: 1.6;
 }
 
-.youtubeAnalysisSearchBox {
-  width: min(100%, 520px);
+.youtubeAnalysisSearchForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.youtubeAnalysisInputWrap {
   min-height: 46px;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 0 16px;
-  border: 1px solid rgba(59, 130, 246, 0.28);
+  border: 1px solid rgba(226, 232, 240, 0.9);
   border-radius: 999px;
-  background: rgba(8, 17, 32, 0.76);
-  color: #64748b;
+  background: #ffffff;
+  color: #4b5563;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16);
+}
+
+.youtubeAnalysisInputWrap svg {
+  flex-shrink: 0;
+}
+
+.youtubeAnalysisInput {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #111827;
   font-size: 14px;
   font-weight: 400;
+}
+
+.youtubeAnalysisInput::placeholder {
+  color: #8b95a1;
+}
+
+.youtubeAnalysisActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.youtubeAnalysisActionButton {
+  min-width: 74px;
+  height: 44px;
+  padding: 0 18px;
+  border: 1px solid rgba(59, 130, 246, 0.34);
+  border-radius: 999px;
+  background: #1d4ed8;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    opacity 0.18s ease;
+}
+
+.youtubeAnalysisActionButton:not(:disabled):hover {
+  background: #2563eb;
+  border-color: rgba(96, 165, 250, 0.72);
+}
+
+.youtubeAnalysisActionButton:disabled {
+  background: rgba(15, 23, 42, 0.76);
+  border-color: rgba(71, 85, 105, 0.56);
+  color: #64748b;
+  cursor: not-allowed;
+  opacity: 0.9;
+}
+
+.youtubeAnalysisState {
+  margin-top: 4px;
+  min-height: 180px;
+}
+
+.youtubeAnalysisUrlNotice {
+  padding: 18px 20px;
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  border-radius: 14px;
+  background: rgba(8, 17, 32, 0.62);
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.youtubeAnalysisResults {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.youtubeAnalysisResultHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.youtubeAnalysisResultHeader strong {
+  color: #e2e8f0;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.youtubeAnalysisMoreButton {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #93c5fd;
+  cursor: pointer;
+  transition:
+    color 0.18s ease,
+    transform 0.18s ease,
+    background 0.18s ease;
+}
+
+.youtubeAnalysisMoreButton:hover {
+  color: #ffffff;
+  background: rgba(59, 130, 246, 0.12);
+  transform: translateY(2px);
 }
 
 /* Filter Section */
@@ -4516,6 +4638,27 @@ input[type="date"].youtubeSelect {
   .filterSection {
     padding: 16px 12px;
     gap: 14px;
+  }
+
+  .youtubeAnalysisPanel {
+    padding: 20px 14px;
+    gap: 16px;
+  }
+
+  .youtubeAnalysisSearchForm {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .youtubeAnalysisActions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .youtubeAnalysisActionButton {
+    width: 100%;
+    min-width: 0;
   }
 
   .apiEmptyState {
