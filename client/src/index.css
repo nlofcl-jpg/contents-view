@@ -2672,6 +2672,119 @@ a {
   border: 1px solid rgba(34, 211, 238, 0.25);
 }
 
+.youtubeMobileTabFilter {
+  display: none;
+}
+
+.youtubeMobileTabTrigger {
+  width: 100%;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 16px 0 20px;
+  border: 1px solid rgba(203, 213, 225, 0.76);
+  border-radius: 16px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: 0;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.14);
+}
+
+.youtubeMobileTabTrigger svg {
+  color: #4b5563;
+  transition: transform 0.18s ease;
+}
+
+.youtubeMobileTabTrigger.open svg {
+  transform: rotate(180deg);
+}
+
+.youtubeMobileTabPanel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid rgba(203, 213, 225, 0.74);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.2);
+}
+
+.youtubeMobileTabOption {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #111827;
+  font-size: 16px;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+}
+
+.youtubeMobileTabOption.active {
+  background: #bfdbfe;
+}
+
+.youtubeAnalysisPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 28px;
+  border: 1px solid rgba(59, 130, 246, 0.16);
+  border-radius: 16px;
+  background: rgba(12, 18, 32, 0.56);
+}
+
+.youtubeAnalysisHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.youtubeAnalysisTitle {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.youtubeAnalysisDescription {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.youtubeAnalysisSearchBox {
+  width: min(100%, 520px);
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  border-radius: 999px;
+  background: rgba(8, 17, 32, 0.76);
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 400;
+}
+
 /* Filter Section */
 .unifiedMenuBar {
   display: flex;
@@ -4287,17 +4400,15 @@ input[type="date"].youtubeSelect {
   }
 
   /* Tab Menu Mobile */
-  .tabMenu {
+  .youtubeMobileTabFilter {
+    position: relative;
+    display: block;
     width: 100%;
-    max-width: 100%;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    padding: 0;
-    margin-bottom: 24px;
-    background: transparent;
-    border: none;
-    overflow-x: visible;
+    margin-bottom: 12px;
+  }
+
+  .tabMenu {
+    display: none;
   }
 
   .tabMenu::-webkit-scrollbar {

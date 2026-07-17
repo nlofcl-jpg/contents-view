@@ -4,14 +4,15 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { YouTubeApiStatusCard } from "@/components/YouTubeApiStatusCard";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
-import { AlertCircle, Clock, Play, ChevronDown, RotateCw, Users, Bookmark } from "lucide-react";
+import { AlertCircle, Clock, Play, ChevronDown, RotateCw, Users, Bookmark, Search } from "lucide-react";
 import { useBookmark } from "@/contexts/BookmarkContext";
 
-type TabType = "trending" | "category" | "channels" | "shorts";
+type TabType = "analysis" | "trending" | "category" | "channels" | "shorts";
 
 const YOUTUBE_API_KEY_ERROR_MESSAGE = "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.";
 
 const TABS = [
+  { id: "analysis", label: "영상 분석" },
   { id: "trending", label: "인기 급상승 영상" },
   { id: "category", label: "카테고리별 인기" },
   { id: "channels", label: "인기 채널" },
@@ -70,6 +71,7 @@ const SORT_OPTIONS = {
 };
 
 const TAB_MESSAGES = {
+  analysis: "YouTube 영상 분석 기능을 준비 중입니다.",
   trending: "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.",
   category: "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.",
   channels: "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.",
@@ -77,6 +79,7 @@ const TAB_MESSAGES = {
 };
 
 const EMPTY_STATE_MESSAGES = {
+  analysis: "영상 링크 또는 키워드 분석 기능을 준비 중입니다.",
   trending: "선택한 국가의 인기 영상 데이터를 찾을 수 없습니다.",
   category: "선택한 국가와 카테고리의 인기 영상을 찾을 수 없습니다.",
   channels: "선택한 조건에서 인기 채널을 찾을 수 없습니다.",
@@ -143,6 +146,7 @@ export default function YouTubeTrends() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { toggleYouTubeBookmark, isYouTubeVideoBookmarked, isBookmarkPending } = useBookmark();
   const [activeTab, setActiveTab] = useState<TabType>("trending");
+  const [isMobileTabMenuOpen, setIsMobileTabMenuOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [lastUpdateTimesByKey, setLastUpdateTimesByKey] = useState<Record<string, number>>({});
@@ -155,6 +159,10 @@ export default function YouTubeTrends() {
 
   // Manage filters per tab
   const [filtersByTab, setFiltersByTab] = useState({
+    analysis: {
+      country: "KR",
+      sort: "trending",
+    },
     trending: {
       country: "KR",
       sort: "trending",
@@ -495,6 +503,12 @@ export default function YouTubeTrends() {
   const handleCountryChange = (value: string) => updateCurrentFilter("country", value);
   const handleCategoryChange = (value: string) => updateCurrentFilter("category", value);
   const handleSortChange = (value: string) => updateCurrentFilter("sort", value);
+  const activeTabLabel = TABS.find((tab) => tab.id === activeTab)?.label || "인기 급상승 영상";
+
+  const handleTabChange = (tabId: TabType) => {
+    setActiveTab(tabId);
+    setIsMobileTabMenuOpen(false);
+  };
 
   const formatLastUpdateTime = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -504,6 +518,23 @@ export default function YouTubeTrends() {
   };
 
   // Render trending videos
+  const renderAnalysisTab = () => {
+    return (
+      <section className="youtubeAnalysisPanel" aria-labelledby="youtube-analysis-title">
+        <div className="youtubeAnalysisHeader">
+          <h2 id="youtube-analysis-title" className="youtubeAnalysisTitle">영상 분석</h2>
+          <p className="youtubeAnalysisDescription">
+            유튜브 링크 또는 키워드를 입력해 영상 분석으로 연결할 예정입니다.
+          </p>
+        </div>
+        <div className="youtubeAnalysisSearchBox" aria-hidden="true">
+          <Search size={18} strokeWidth={1.9} />
+          <span>유튜브 링크 또는 키워드 입력</span>
+        </div>
+      </section>
+    );
+  };
+
   const renderTrendingTab = () => {
     if (isGlobalSelected) {
       return (
@@ -1015,11 +1046,37 @@ export default function YouTubeTrends() {
       </div>
 
       {/* Tab Menu */}
+      <div className="youtubeMobileTabFilter">
+        <button
+          type="button"
+          className={`youtubeMobileTabTrigger ${isMobileTabMenuOpen ? "open" : ""}`}
+          onClick={() => setIsMobileTabMenuOpen((isOpen) => !isOpen)}
+          aria-expanded={isMobileTabMenuOpen}
+        >
+          <span>{activeTabLabel}</span>
+          <ChevronDown size={22} strokeWidth={2.4} aria-hidden="true" />
+        </button>
+        {isMobileTabMenuOpen && (
+          <div className="youtubeMobileTabPanel">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                className={`youtubeMobileTabOption ${activeTab === tab.id ? "active" : ""}`}
+                onClick={() => handleTabChange(tab.id as TabType)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="tabMenu">
         {TABS.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as TabType)}
+            onClick={() => handleTabChange(tab.id as TabType)}
             className={`tabButton ${activeTab === tab.id ? "active" : ""}`}
           >
             {tab.label}
@@ -1028,7 +1085,7 @@ export default function YouTubeTrends() {
       </div>
 
       {/* Filter Section */}
-      <div className="filterSection">
+      {activeTab !== "analysis" && <div className="filterSection">
         <div className="filterGroup">
           <label htmlFor="country-select" className="filterLabel">
             국가
@@ -1093,7 +1150,7 @@ export default function YouTubeTrends() {
             <ChevronDown className="selectChevron" />
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* Content Section */}
       {authLoading ? (
@@ -1133,6 +1190,8 @@ export default function YouTubeTrends() {
             로그인
           </button>
         </div>
+      ) : activeTab === "analysis" ? (
+        renderAnalysisTab()
       ) : isAuthenticated && !apiKeyData?.exists ? (
         <YouTubeApiStatusCard activeTab={activeTab} apiKeyMessage={TAB_MESSAGES.trending} />
       ) : activeTab === "trending" || activeTab === "category" ? (
