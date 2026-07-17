@@ -5821,6 +5821,12 @@ input[type="date"].youtubeSelect {
   gap: 48px;
 }
 
+.savedContentsTabsArea {
+  position: relative;
+  width: 100%;
+  overflow: visible;
+}
+
 .savedContentsTabs {
   display: flex;
   align-items: center;
@@ -5905,7 +5911,7 @@ input[type="date"].youtubeSelect {
   position: absolute;
   z-index: 40;
   top: calc(100% + 8px);
-  left: 0;
+  left: 6px;
   min-width: 168px;
   display: flex;
   flex-direction: column;

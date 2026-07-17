@@ -146,19 +146,19 @@ export default function SavedContents() {
         <p className="pageDescription">저장한 콘텐츠를 플랫폼별로 확인하고 관리하세요.</p>
       </div>
 
-      <div className="savedContentsTabs" role="tablist" aria-label="보관함 콘텐츠 분류">
-        {SECTIONS.map((section) => {
-          if (section.id === "youtube") {
-            return (
-              <div
-                key={section.id}
-                className="savedContentsTabDropdown"
-                onBlur={(event) => {
-                  if (!event.currentTarget.contains(event.relatedTarget)) {
-                    setIsVideoPlatformMenuOpen(false);
-                  }
-                }}
-              >
+      <div
+        className="savedContentsTabsArea"
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) {
+            setIsVideoPlatformMenuOpen(false);
+          }
+        }}
+      >
+        <div className="savedContentsTabs" role="tablist" aria-label="보관함 콘텐츠 분류">
+          {SECTIONS.map((section) => {
+            if (section.id === "youtube") {
+              return (
+                <div key={section.id} className="savedContentsTabDropdown">
                 <button
                   type="button"
                   role="tab"
@@ -180,46 +180,48 @@ export default function SavedContents() {
                     aria-hidden="true"
                   />
                 </button>
-                {isVideoPlatformMenuOpen && (
-                  <div className="savedContentsTabMenu" role="listbox" aria-label="영상 플랫폼 선택">
-                    {VIDEO_PLATFORMS.map((platform) => (
-                      <button
-                        key={platform.id}
-                        type="button"
-                        role="option"
-                        aria-selected={selectedVideoPlatform.id === platform.id}
-                        className={`savedContentsTabMenuItem ${selectedVideoPlatform.id === platform.id ? "active" : ""}`}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => {
-                          setSelectedVideoPlatformId(platform.id);
-                          setActiveSectionId("youtube");
-                          setIsVideoPlatformMenuOpen(false);
-                        }}
-                      >
-                        <span>{platform.icon}</span>
-                        <span>{platform.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
             );
           }
 
-          return (
-            <button
-              key={section.id}
-              type="button"
-              role="tab"
-              aria-selected={activeSection.id === section.id}
-              className={`savedContentsTab ${activeSection.id === section.id ? "active" : ""}`}
-              onClick={() => handleSectionChange(section.id)}
-            >
-              <span className="savedContentsTabIcon">{section.icon}</span>
-              <span>{section.label}</span>
-            </button>
-          );
-        })}
+            return (
+              <button
+                key={section.id}
+                type="button"
+                role="tab"
+                aria-selected={activeSection.id === section.id}
+                className={`savedContentsTab ${activeSection.id === section.id ? "active" : ""}`}
+                onClick={() => handleSectionChange(section.id)}
+              >
+                <span className="savedContentsTabIcon">{section.icon}</span>
+                <span>{section.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {isVideoPlatformMenuOpen && (
+          <div className="savedContentsTabMenu" role="listbox" aria-label="영상 플랫폼 선택">
+            {VIDEO_PLATFORMS.map((platform) => (
+              <button
+                key={platform.id}
+                type="button"
+                role="option"
+                aria-selected={selectedVideoPlatform.id === platform.id}
+                className={`savedContentsTabMenuItem ${selectedVideoPlatform.id === platform.id ? "active" : ""}`}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  setSelectedVideoPlatformId(platform.id);
+                  setActiveSectionId("youtube");
+                  setIsVideoPlatformMenuOpen(false);
+                }}
+              >
+                <span>{platform.icon}</span>
+                <span>{platform.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <section className="savedContentsSection" aria-labelledby="saved-contents-section-title">
