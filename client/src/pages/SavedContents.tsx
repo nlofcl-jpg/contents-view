@@ -53,8 +53,71 @@ const SECTIONS = [
 export default function SavedContents() {
   const { isAuthenticated } = useAuth();
   const { bookmarkedYouTubeVideos, removeYouTubeBookmark } = useBookmark();
+  const [activeSectionId, setActiveSectionId] = useState(SECTIONS[0].id);
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const activeSection = SECTIONS.find((section) => section.id === activeSectionId) || SECTIONS[0];
+
+  const renderSectionContent = () => {
+    if (activeSection.id === "youtube" && bookmarkedYouTubeVideos.length > 0) {
+      return (
+        <div className="youtubeCardsGrid">
+          {bookmarkedYouTubeVideos.map((video) => (
+            <div
+              key={video.id}
+              className="youtubeContentCard"
+              onClick={() => {
+                setSelectedVideo(video);
+                setIsModalOpen(true);
+              }}
+              style={{ cursor: "pointer" }}
+            >
+              <div className="cardThumbnail">
+                <img src={video.thumbnail} alt={video.title} />
+              </div>
+              <div className="cardContent">
+                <h3 className="cardTitle">{video.title}</h3>
+                <p className="cardChannel">{video.channelTitle}</p>
+                <div className="cardMeta">
+                  <span>{formatViewCount(video.viewCount)} 조회</span>
+                  <span className="cardSavedDate">저장일: {formatSavedDate()}</span>
+                </div>
+                <div className="cardActions">
+                  <a
+                    href={`https://www.youtube.com/watch?v=${video.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="viewButton"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExternalLink size={16} />
+                    원본 보기
+                  </a>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeYouTubeBookmark(video.id);
+                    }}
+                    className="removeButtonOutline"
+                    title="보관 해제"
+                  >
+                    <Trash2 size={16} />
+                    보관 해제
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <div className="emptyStateContainer">
+        <p className="emptyStateText">아직 저장된 콘텐츠가 없습니다.</p>
+      </div>
+    );
+  };
 
   return (
     <div className="savedContentsPageContainer">
@@ -64,78 +127,32 @@ export default function SavedContents() {
         <p className="pageDescription">저장한 콘텐츠를 플랫폼별로 확인하고 관리하세요.</p>
       </div>
 
-      {/* Vertical Sections */}
-      <div className="savedContentsSections">
-        {SECTIONS.map((section) => {
-          return (
-            <section key={section.id} className="savedContentsSection">
-              {/* Section Header */}
-              <div className="sectionHeader">
-                <span className="sectionIcon">{section.icon}</span>
-                <h2 className="sectionTitle">{section.label}</h2>
-              </div>
-
-              {/* Content List Area */}
-              <div className="contentListArea">
-                {section.id === "youtube" && bookmarkedYouTubeVideos.length > 0 ? (
-                  <div className="youtubeCardsGrid">
-                    {bookmarkedYouTubeVideos.map((video) => (
-                      <div
-                        key={video.id}
-                        className="youtubeContentCard"
-                        onClick={() => {
-                          setSelectedVideo(video);
-                          setIsModalOpen(true);
-                        }}
-                        style={{ cursor: "pointer" }}
-                      >
-                        <div className="cardThumbnail">
-                          <img src={video.thumbnail} alt={video.title} />
-                        </div>
-                        <div className="cardContent">
-                          <h3 className="cardTitle">{video.title}</h3>
-                          <p className="cardChannel">{video.channelTitle}</p>
-                          <div className="cardMeta">
-                            <span>{formatViewCount(video.viewCount)} 조회</span>
-                            <span className="cardSavedDate">저장일: {formatSavedDate()}</span>
-                          </div>
-                          <div className="cardActions">
-                            <a
-                              href={`https://www.youtube.com/watch?v=${video.id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="viewButton"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <ExternalLink size={16} />
-                              원본 보기
-                            </a>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeYouTubeBookmark(video.id);
-                              }}
-                              className="removeButtonOutline"
-                              title="보관 해제"
-                            >
-                              <Trash2 size={16} />
-                              보관 해제
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="emptyStateContainer">
-                    <p className="emptyStateText">아직 저장된 콘텐츠가 없습니다.</p>
-                  </div>
-                )}
-              </div>
-            </section>
-          );
-        })}
+      <div className="savedContentsTabs" role="tablist" aria-label="보관함 콘텐츠 분류">
+        {SECTIONS.map((section) => (
+          <button
+            key={section.id}
+            type="button"
+            role="tab"
+            aria-selected={activeSection.id === section.id}
+            className={`savedContentsTab ${activeSection.id === section.id ? "active" : ""}`}
+            onClick={() => setActiveSectionId(section.id)}
+          >
+            <span className="savedContentsTabIcon">{section.icon}</span>
+            <span>{section.label}</span>
+          </button>
+        ))}
       </div>
+
+      <section className="savedContentsSection" aria-labelledby="saved-contents-section-title">
+        <div className="sectionHeader">
+          <span className="sectionIcon">{activeSection.icon}</span>
+          <h2 id="saved-contents-section-title" className="sectionTitle">{activeSection.label}</h2>
+        </div>
+
+        <div className="contentListArea">
+          {renderSectionContent()}
+        </div>
+      </section>
 
       {/* YouTube Video Detail Modal */}
       {selectedVideo && (
