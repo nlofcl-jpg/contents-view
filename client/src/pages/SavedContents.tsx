@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useBookmark } from "@/contexts/BookmarkContext";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
-import { Trash2, ExternalLink } from "lucide-react";
+import { ChevronDown, Trash2, ExternalLink } from "lucide-react";
 
 // Format view count (e.g., 74540 → 7.4만)
 const formatViewCount = (count: string): string => {
@@ -50,16 +50,30 @@ const SECTIONS = [
   { id: "community", label: "커미니티 반응", icon: "∷" },
 ];
 
+const VIDEO_PLATFORMS = [
+  { id: "youtube", label: "YouTube", icon: "▶" },
+  { id: "tiktok", label: "TikTok", icon: "♪" },
+  { id: "instagram", label: "Instagram", icon: "◎" },
+];
+
 export default function SavedContents() {
   const { isAuthenticated } = useAuth();
   const { bookmarkedYouTubeVideos, removeYouTubeBookmark } = useBookmark();
   const [activeSectionId, setActiveSectionId] = useState(SECTIONS[0].id);
+  const [selectedVideoPlatformId, setSelectedVideoPlatformId] = useState(VIDEO_PLATFORMS[0].id);
+  const [isVideoPlatformMenuOpen, setIsVideoPlatformMenuOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const activeSection = SECTIONS.find((section) => section.id === activeSectionId) || SECTIONS[0];
+  const selectedVideoPlatform =
+    VIDEO_PLATFORMS.find((platform) => platform.id === selectedVideoPlatformId) || VIDEO_PLATFORMS[0];
 
   const renderSectionContent = () => {
-    if (activeSection.id === "youtube" && bookmarkedYouTubeVideos.length > 0) {
+    if (
+      activeSection.id === "youtube" &&
+      selectedVideoPlatform.id === "youtube" &&
+      bookmarkedYouTubeVideos.length > 0
+    ) {
       return (
         <div className="youtubeCardsGrid">
           {bookmarkedYouTubeVideos.map((video) => (
@@ -119,6 +133,11 @@ export default function SavedContents() {
     );
   };
 
+  const handleSectionChange = (sectionId: string) => {
+    setActiveSectionId(sectionId);
+    setIsVideoPlatformMenuOpen(false);
+  };
+
   return (
     <div className="savedContentsPageContainer">
       {/* Page Header */}
@@ -128,25 +147,89 @@ export default function SavedContents() {
       </div>
 
       <div className="savedContentsTabs" role="tablist" aria-label="보관함 콘텐츠 분류">
-        {SECTIONS.map((section) => (
-          <button
-            key={section.id}
-            type="button"
-            role="tab"
-            aria-selected={activeSection.id === section.id}
-            className={`savedContentsTab ${activeSection.id === section.id ? "active" : ""}`}
-            onClick={() => setActiveSectionId(section.id)}
-          >
-            <span className="savedContentsTabIcon">{section.icon}</span>
-            <span>{section.label}</span>
-          </button>
-        ))}
+        {SECTIONS.map((section) => {
+          if (section.id === "youtube") {
+            return (
+              <div
+                key={section.id}
+                className="savedContentsTabDropdown"
+                onBlur={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget)) {
+                    setIsVideoPlatformMenuOpen(false);
+                  }
+                }}
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeSection.id === section.id}
+                  aria-haspopup="listbox"
+                  aria-expanded={isVideoPlatformMenuOpen}
+                  className={`savedContentsTab savedContentsTabWithChevron ${activeSection.id === section.id ? "active" : ""}`}
+                  onClick={() => {
+                    setActiveSectionId(section.id);
+                    setIsVideoPlatformMenuOpen((isOpen) => !isOpen);
+                  }}
+                >
+                  <span className="savedContentsTabIcon">{section.icon}</span>
+                  <span>{section.label}</span>
+                  <ChevronDown
+                    className={`savedContentsTabChevron ${isVideoPlatformMenuOpen ? "open" : ""}`}
+                    size={14}
+                    strokeWidth={2}
+                    aria-hidden="true"
+                  />
+                </button>
+                {isVideoPlatformMenuOpen && (
+                  <div className="savedContentsTabMenu" role="listbox" aria-label="영상 플랫폼 선택">
+                    {VIDEO_PLATFORMS.map((platform) => (
+                      <button
+                        key={platform.id}
+                        type="button"
+                        role="option"
+                        aria-selected={selectedVideoPlatform.id === platform.id}
+                        className={`savedContentsTabMenuItem ${selectedVideoPlatform.id === platform.id ? "active" : ""}`}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          setSelectedVideoPlatformId(platform.id);
+                          setActiveSectionId("youtube");
+                          setIsVideoPlatformMenuOpen(false);
+                        }}
+                      >
+                        <span>{platform.icon}</span>
+                        <span>{platform.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          return (
+            <button
+              key={section.id}
+              type="button"
+              role="tab"
+              aria-selected={activeSection.id === section.id}
+              className={`savedContentsTab ${activeSection.id === section.id ? "active" : ""}`}
+              onClick={() => handleSectionChange(section.id)}
+            >
+              <span className="savedContentsTabIcon">{section.icon}</span>
+              <span>{section.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       <section className="savedContentsSection" aria-labelledby="saved-contents-section-title">
         <div className="sectionHeader">
-          <span className="sectionIcon">{activeSection.icon}</span>
-          <h2 id="saved-contents-section-title" className="sectionTitle">{activeSection.label}</h2>
+          <span className="sectionIcon">
+            {activeSection.id === "youtube" ? selectedVideoPlatform.icon : activeSection.icon}
+          </span>
+          <h2 id="saved-contents-section-title" className="sectionTitle">
+            {activeSection.id === "youtube" ? selectedVideoPlatform.label : activeSection.label}
+          </h2>
         </div>
 
         <div className="contentListArea">
