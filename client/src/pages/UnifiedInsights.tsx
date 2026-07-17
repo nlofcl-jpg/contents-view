@@ -798,13 +798,13 @@ export default function UnifiedInsights() {
             )}
           </div>
 
-          <div className="bg-slate-900 bg-opacity-50 border border-cyan-700 border-opacity-30 rounded-lg px-6 pt-6 pb-8 md:p-6 md:pb-6 h-auto min-h-0">
+          <div className="bg-slate-900 bg-opacity-50 border border-cyan-700 border-opacity-30 rounded-lg px-4 pt-4 pb-5 md:px-6 md:pt-6 md:pb-6 h-auto min-h-0">
             {/* Chart Header */}
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-white mb-2">
+            <div className="mb-4 md:mb-6">
+              <h3 className="mb-1 text-base font-medium text-white md:mb-2 md:text-lg md:font-semibold">
                 검색 트렌드 비교
               </h3>
-              <div className="text-sm text-slate-400">
+              <div className="text-xs font-normal text-slate-400 md:text-sm">
                 <p className="mb-1">{keywords.join(", ")}</p>
                 <p>{startDateForChart} – {endDateForChart}</p>
                 <p className="mt-1 text-xs text-slate-500">{filterLabelForChart}</p>
@@ -813,7 +813,7 @@ export default function UnifiedInsights() {
             </div>
 
             {/* Chart Container */}
-            <div className="relative md:h-[480px] h-[520px]">
+            <div className="relative h-[300px] md:h-[480px]">
               {isTrendFilterLoading && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-slate-950/70 backdrop-blur-sm">
                   <div className="rounded-lg border border-blue-500/20 bg-slate-900 px-5 py-3 text-sm font-medium text-slate-200 shadow-xl shadow-black/30">
@@ -848,19 +848,19 @@ export default function UnifiedInsights() {
             {queryError}
           </div>
           {/* Show previous chart if available */}
-          <div className="bg-slate-900 bg-opacity-50 border border-cyan-700 border-opacity-30 rounded-lg px-6 pt-6 pb-4 md:p-6">
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-white mb-2">
+          <div className="bg-slate-900 bg-opacity-50 border border-cyan-700 border-opacity-30 rounded-lg px-4 pt-4 pb-5 md:p-6">
+            <div className="mb-4 md:mb-6">
+              <h3 className="mb-1 text-base font-medium text-white md:mb-2 md:text-lg md:font-semibold">
                 검색 트렌드 비교
               </h3>
-              <div className="text-sm text-slate-400">
+              <div className="text-xs font-normal text-slate-400 md:text-sm">
                 <p className="mb-1">{keywords.join(", ")}</p>
                 <p>{startDateForChart} – {endDateForChart}</p>
                 <p className="mt-1 text-xs text-slate-500">{filterLabelForChart}</p>
               </div>
               {renderTrendFilters()}
             </div>
-            <div className="relative md:h-[480px] h-[520px]">
+            <div className="relative h-[300px] md:h-[480px]">
               {isTrendFilterLoading && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-slate-950/70 backdrop-blur-sm">
                   <div className="rounded-lg border border-blue-500/20 bg-slate-900 px-5 py-3 text-sm font-medium text-slate-200 shadow-xl shadow-black/30">

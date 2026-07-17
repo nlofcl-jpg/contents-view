@@ -276,10 +276,10 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
           data: values,
           borderColor: palette.trend,
           backgroundColor: `${palette.trend}10`,
-          borderWidth: 2,
+          borderWidth: isMobile ? 1.6 : 2,
           borderDash: [],
           pointRadius: 0,
-          pointHoverRadius: 5,
+          pointHoverRadius: isMobile ? 3 : 5,
           pointBackgroundColor: palette.trend,
           pointBorderColor: 'transparent',
           pointBorderWidth: 0,
@@ -301,10 +301,10 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
           data: values,
           borderColor: palette.shopping,
           backgroundColor: `${palette.shopping}10`,
-          borderWidth: 2,
+          borderWidth: isMobile ? 1.6 : 2,
           borderDash: [5, 5],
           pointRadius: 0,
-          pointHoverRadius: 5,
+          pointHoverRadius: isMobile ? 3 : 5,
           pointBackgroundColor: palette.shopping,
           pointBorderColor: 'transparent',
           pointBorderWidth: 0,
@@ -331,7 +331,10 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
     },
     layout: {
       padding: {
-        top: 0,
+        top: isMobile ? 0 : 0,
+        right: isMobile ? 4 : 0,
+        bottom: isMobile ? 0 : 0,
+        left: isMobile ? 0 : 0,
       },
     },
     plugins: {
@@ -343,10 +346,10 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
         labels: {
           color: '#cbd5e1',
           font: {
-            size: 13,
-            weight: 'bold' as any,
+            size: isMobile ? 10 : 13,
+            weight: isMobile ? 'normal' as any : 'bold' as any,
           },
-          padding: 22,
+          padding: isMobile ? 10 : 22,
           usePointStyle: true,
           pointStyle: 'circle',
           boxWidth: 14,
@@ -393,12 +396,13 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
         ticks: {
           color: '#94a3b8',
           font: {
-            size: 12,
+            size: isMobile ? 10 : 12,
+            weight: isMobile ? 'normal' as any : undefined,
           },
           maxRotation: 0,
           autoSkip: false,
           // 모바일에서 라벨과 축선 사이 간격 확대
-          padding: isMobile ? 8 : 0,
+          padding: isMobile ? 4 : 0,
           // tickFormatter: 선택된 인덱스만 라벨 표시
           callback: function (value: any, index: number) {
             if (labelIndexes.has(index)) {
@@ -425,10 +429,11 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
           stepSize: 25,
           color: '#94a3b8',
           font: {
-            size: 12,
+            size: isMobile ? 10 : 12,
+            weight: isMobile ? 'normal' as any : undefined,
           },
           // 모바일에서 Y축 숫자와 축선 사이 간격
-          padding: isMobile ? 8 : 0,
+          padding: isMobile ? 4 : 0,
         },
         grid: {
           color: '#334155',
@@ -459,36 +464,40 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
         </div>
       )}
       {isMobile && data.keywords.length > 0 && (
-        <div className="mb-6 flex flex-col gap-3">
+        <div className="mb-3 flex flex-col gap-1.5">
           {data.keywords.map((keyword) => (
-            <div key={keyword} className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <span
-                  className="inline-block w-3 h-3 rounded-full"
-                  style={{
-                    backgroundColor: chartData.datasets[0]?.borderColor || '#3b82f6',
-                  }}
-                />
-                <span className="text-xs font-bold text-slate-200">
-                  {keyword} · 검색 트렌드
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span
-                  className="inline-block w-3 h-3 rounded-full"
-                  style={{
-                    backgroundColor: chartData.datasets[1]?.borderColor || '#06b6d4',
-                  }}
-                />
-                <span className="text-xs font-bold text-slate-200">
-                  {keyword} · 쇼핑 클릭량
-                </span>
-              </div>
+            <div key={keyword} className="flex flex-col gap-1">
+              {visibleLayers.trend && (
+                <div className="flex items-center gap-2">
+                  <span
+                    className="inline-block h-2 w-2 rounded-full"
+                    style={{
+                      backgroundColor: colorPalettes[data.keywords.indexOf(keyword) % colorPalettes.length].trend,
+                    }}
+                  />
+                  <span className="truncate text-[10px] font-normal text-slate-300">
+                    {keyword} · 검색 트렌드
+                  </span>
+                </div>
+              )}
+              {visibleLayers.shopping && (
+                <div className="flex items-center gap-2">
+                  <span
+                    className="inline-block h-2 w-2 rounded-full"
+                    style={{
+                      backgroundColor: colorPalettes[data.keywords.indexOf(keyword) % colorPalettes.length].shopping,
+                    }}
+                  />
+                  <span className="truncate text-[10px] font-normal text-slate-300">
+                    {keyword} · 쇼핑 클릭량
+                  </span>
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
-      <div className="md:min-h-[400px] min-h-0 h-[480px]">
+      <div className="h-[260px] min-h-0 md:h-[480px] md:min-h-[400px]">
         <Line data={chartData} options={options} />
       </div>
     </div>
