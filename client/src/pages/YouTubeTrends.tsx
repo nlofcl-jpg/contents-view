@@ -1039,10 +1039,12 @@ export default function YouTubeTrends() {
         <p className="pageDescription">
           국가별, 카테고리별 YouTube 콘텐츠 트렌드를 확인하세요.
         </p>
-        <div className="youtubeSubNotice">
-          <span className="youtubeSubNoticeIcon">ⓘ</span>
-          <span>쇼츠 트렌드는 최근 7일 인기 데이터를 기반으로 제공되고 있습니다.</span>
-        </div>
+        {activeTab === "shorts" && (
+          <div className="youtubeSubNotice">
+            <span className="youtubeSubNoticeIcon">ⓘ</span>
+            <span>쇼츠 트렌드는 최근 7일 인기 데이터를 기반으로 제공되고 있습니다.</span>
+          </div>
+        )}
       </div>
 
       {/* Tab Menu */}
