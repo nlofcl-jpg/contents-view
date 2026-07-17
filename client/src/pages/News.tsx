@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 
 interface NewsItem {
   title: string;
@@ -188,6 +187,23 @@ export default function News() {
         )}
       </div>
 
+      {/* Search Area */}
+      <section className="newsSearchSection" aria-labelledby="news-search-title">
+        <h2 id="news-search-title" className="newsSearchTitle">키워드 이슈 검색</h2>
+        <form onSubmit={handleSearch} className="newsSearchForm">
+          <input
+            type="text"
+            placeholder="관심 키워드를 검색해보세요."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="newsSearchInput"
+          />
+          <button type="submit" className="newsSearchIconButton" aria-label="검색">
+            <Search size={19} strokeWidth={2.1} />
+          </button>
+        </form>
+      </section>
+
       {/* Featured News Cards - 4 Categories */}
       {isLoadingFeatured ? (
         <div className="mb-12 text-center text-gray-400">뉴스를 불러오는 중...</div>
@@ -251,27 +267,6 @@ export default function News() {
           </div>
         </div>
       )}
-
-      {/* Search Area */}
-      <div className="mb-12 bg-gray-900 rounded-lg p-6">
-        <h2 className="text-2xl font-bold text-white mb-2">키워드 이슈 검색</h2>
-        <p className="text-sm text-slate-400 mb-6">관심 있는 키워드의 최신 뉴스를 찾아보세요.</p>
-        <form onSubmit={handleSearch} className="flex gap-2">
-          <Input
-            type="text"
-            placeholder="유튜브, AI, 아이돌, 경제, 브랜드, 사건 등 관심 키워드를 검색해보세요."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 bg-gray-800 border-gray-700 text-white placeholder-gray-500"
-          />
-          <Button
-            type="submit"
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            검색
-          </Button>
-        </form>
-      </div>
 
       {/* Search Results */}
       {hasSearched && (
