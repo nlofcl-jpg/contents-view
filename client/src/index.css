@@ -2398,29 +2398,6 @@ a {
   line-height: 1.45;
 }
 
-.loginSignup {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  gap: 6px;
-  color: #dbe4f3;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.loginSignup button {
-  border: 0;
-  background: transparent;
-  color: #38a8ff;
-  padding: 0;
-  cursor: pointer;
-  font: inherit;
-}
-
-.loginSignup button:hover {
-  color: #8fd0ff;
-}
-
 @media (max-width: 640px) {
   .loginPage {
     align-items: start;
@@ -2442,11 +2419,6 @@ a {
     height: 50px;
     padding: 0 14px;
     font-size: 15px;
-  }
-
-  .loginSignup {
-    flex-wrap: wrap;
-    font-size: 13px;
   }
 }
 

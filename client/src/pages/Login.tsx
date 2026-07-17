@@ -112,7 +112,7 @@ export default function Login() {
         </button>
 
         <div className="loginSection">
-          <h1 id="login-title" className="loginTitle">간편 로그인</h1>
+          <h1 id="login-title" className="loginTitle">간편 로그인 / 회원가입</h1>
           <div className="loginSocialStack">
             {socialButtons.map((button) => (
               <button
@@ -149,13 +149,6 @@ export default function Login() {
             {error}
           </p>
         )}
-
-        <div className="loginSignup">
-          <span>CONTENTS VIEW가 처음이신가요?</span>
-          <button type="button" onClick={() => setError("회원 가입은 다음 단계에서 연결됩니다.")}>
-            회원 가입하기
-          </button>
-        </div>
       </section>
     </div>
   );
