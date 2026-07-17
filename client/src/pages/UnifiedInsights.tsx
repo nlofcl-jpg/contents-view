@@ -614,18 +614,18 @@ export default function UnifiedInsights() {
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-slate-800/70 p-3 text-center">
+              <div className="grid grid-cols-3 gap-2 md:gap-3">
+                <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-slate-800/70 p-2 text-center md:p-3">
                   <p className="text-xs text-slate-500">PC</p>
-                  <p className="mt-2 text-xl font-bold text-slate-300">{formatNumber(primaryMetric?.monthlyPcSearches)}</p>
+                  <p className="mt-2 max-w-full truncate text-sm font-medium text-slate-300 md:text-xl md:font-bold">{formatNumber(primaryMetric?.monthlyPcSearches)}</p>
                 </div>
-                <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-slate-800/70 p-3 text-center">
+                <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-slate-800/70 p-2 text-center md:p-3">
                   <p className="text-xs text-slate-500">모바일</p>
-                  <p className="mt-2 text-xl font-bold text-slate-300">{formatNumber(primaryMetric?.monthlyMobileSearches)}</p>
+                  <p className="mt-2 max-w-full truncate text-sm font-medium text-slate-300 md:text-xl md:font-bold">{formatNumber(primaryMetric?.monthlyMobileSearches)}</p>
                 </div>
-                <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-blue-950/50 p-3 text-center">
+                <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-blue-950/50 p-2 text-center md:p-3">
                   <p className="text-xs text-blue-300">전체</p>
-                  <p className="mt-2 text-xl font-bold text-white">{formatNumber(primaryMetric?.monthlyTotalSearches)}</p>
+                  <p className="mt-2 max-w-full truncate text-sm font-medium text-white md:text-xl md:font-bold">{formatNumber(primaryMetric?.monthlyTotalSearches)}</p>
                 </div>
               </div>
               {keywordTool?.error && <p className="mt-3 text-xs text-slate-500">{keywordTool.error}</p>}
@@ -651,20 +651,20 @@ export default function UnifiedInsights() {
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-slate-800/70 p-3 text-center">
+              <div className="grid grid-cols-3 gap-2 md:gap-3">
+                <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-slate-800/70 p-2 text-center md:p-3">
                   <p className="text-xs text-slate-500">블로그 발행수</p>
-                  <p className="mt-2 text-xl font-bold text-slate-300">
+                  <p className="mt-2 max-w-full truncate text-sm font-medium text-slate-300 md:text-xl md:font-bold">
                     {formatNumber(blogTotalDocuments)}
                   </p>
                 </div>
-                <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-slate-800/70 p-3 text-center">
+                <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-slate-800/70 p-2 text-center md:p-3">
                   <p className="text-xs text-slate-500">경쟁강도</p>
-                  <p className="mt-2 text-xl font-bold text-slate-300">{getBlogCompetitionStrength(searchRatio)}</p>
+                  <p className="mt-2 max-w-full truncate text-sm font-medium text-slate-300 md:text-xl md:font-bold">{getBlogCompetitionStrength(searchRatio)}</p>
                 </div>
-                <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-blue-950/50 p-3 text-center">
+                <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-blue-950/50 p-2 text-center md:p-3">
                   <p className="text-xs text-blue-300">검색 비율</p>
-                  <p className="mt-2 text-xl font-bold text-white">{formatDecimal(searchRatio)}</p>
+                  <p className="mt-2 max-w-full truncate text-sm font-medium text-white md:text-xl md:font-bold">{formatDecimal(searchRatio)}</p>
                 </div>
               </div>
             </div>
