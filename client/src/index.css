@@ -728,17 +728,20 @@ a {
   
   .mobileMenuButtonWrapper {
     position: absolute;
-    left: 16px;
+    right: 12px;
     top: 50%;
     transform: translateY(-50%);
     z-index: 10;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
   }
   
   .headerBrandWrapper {
     position: absolute;
-    left: 50%;
+    left: 16px;
     top: 50%;
-    transform: translate(-50%, -50%);
+    transform: translateY(-50%);
     z-index: 9;
   }
   
@@ -1010,6 +1013,19 @@ a {
   color: #94a3b8;
   font-size: 13px;
   text-align: center;
+}
+
+.mobileNoticePopover {
+  display: none;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(300px, calc(100vw - 24px));
+}
+
+@media (max-width: 768px) {
+  .mobileNoticePopover {
+    display: block;
+  }
 }
 
 .profileArea {
@@ -2253,7 +2269,7 @@ a {
 .loginTitle {
   margin: 0;
   color: #f8fafc;
-  font-size: 19px;
+  font-size: 14px;
   font-weight: 400;
   letter-spacing: 0;
 }
@@ -3667,6 +3683,26 @@ input[type="date"].youtubeSelect {
   justify-content: center;
 }
 
+.mobileHeaderIconButton {
+  display: none;
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  color: #e0e7ff;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobileHeaderIconButton:hover {
+  background: rgba(59, 130, 246, 0.12);
+  color: #93c5fd;
+}
+
 .mobileMenuButton:hover {
   background: rgba(59, 130, 246, 0.12);
   color: #93c5fd;
@@ -3679,7 +3715,8 @@ input[type="date"].youtubeSelect {
 }
 
 @media (max-width: 768px) {
-  .mobileMenuButton {
+  .mobileMenuButton,
+  .mobileHeaderIconButton {
     display: flex;
   }
   
@@ -3874,6 +3911,38 @@ input[type="date"].youtubeSelect {
 
 .mobileMenuAction svg {
   flex-shrink: 0;
+}
+
+.mobileMenuBottomActions {
+  margin-top: 26px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(96, 165, 250, 0.14);
+}
+
+.mobileAuthButtonRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.mobileAuthButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  background: rgba(21, 140, 255, 0.2);
+  color: #eaf4ff;
+  font-size: 14px;
+  font-weight: 400;
+  text-decoration: none;
+}
+
+.mobileAuthButton.secondary {
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.28);
+  color: #cbd5e1;
 }
 
 /* Nav Item */

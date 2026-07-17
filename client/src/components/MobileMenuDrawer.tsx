@@ -231,6 +231,38 @@ export function MobileMenuDrawer({
                   <span>관리자</span>
                 </button>
               )}
+
+              <div className="mobileMenuBottomActions">
+                {isAuthenticated && user ? (
+                  <>
+                    <button
+                      className="mobileMenuAction"
+                      onClick={handleMyPage}
+                      type="button"
+                    >
+                      <User size={18} />
+                      <span>마이페이지</span>
+                    </button>
+                    <button
+                      className="mobileMenuAction logout"
+                      onClick={handleLogout}
+                      type="button"
+                    >
+                      <LogOut size={18} />
+                      <span>로그아웃</span>
+                    </button>
+                  </>
+                ) : (
+                  <div className="mobileAuthButtonRow">
+                    <a href={getLoginUrl()} className="mobileAuthButton">
+                      로그인
+                    </a>
+                    <a href={`${getLoginUrl()}?mode=signup`} className="mobileAuthButton secondary">
+                      가입
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

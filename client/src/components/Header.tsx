@@ -188,8 +188,20 @@ export default function Header({
   return (
     <header className="header">
       <div className="headerContentWrapper">
-        {/* 모바일: 왼쪽 메뉴 버튼 */}
+        {/* 모바일: 오른쪽 알림/메뉴 버튼 */}
         <div className="mobileMenuButtonWrapper">
+          <button
+            className="mobileHeaderIconButton"
+            type="button"
+            aria-label="공지사항"
+            onClick={handleNoticeClick}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+            {hasUnreadNotice && <span className="notificationUnreadDot" />}
+          </button>
           <button
             className="mobileMenuButton mobileMenuButtonLeft"
             onClick={() => onToggleMobileMenu?.("menu")}
@@ -198,6 +210,26 @@ export default function Header({
           >
             <Menu size={24} />
           </button>
+          {isNoticeOpen && (
+            <div className="noticePopover mobileNoticePopover">
+              <div className="noticePopoverHeader">공지사항</div>
+              {notices.length > 0 ? (
+                <div className="noticeList">
+                  {notices.map(notice => (
+                    <article key={notice.id} className="noticeItem">
+                      <div className="noticeItemTitle">{notice.title}</div>
+                      <div className="noticeItemBody">{notice.body}</div>
+                      <time className="noticeItemDate">
+                        {new Date(notice.created_at).toLocaleDateString("ko-KR")}
+                      </time>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="noticeEmpty">등록된 공지가 없습니다.</div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 로고 중앙 배치 */}
@@ -270,26 +302,6 @@ export default function Header({
           </a>
         )}
         </nav>
-
-        {/* 모바일: 오른쪽 프로필 영역 */}
-        <div className="mobileProfileWrapper">
-          {isAuthenticated && user ? (
-            <button
-              className="mobileAvatarButton"
-              onClick={() => onToggleMobileMenu?.("account")}
-              type="button"
-              title="프로필 메뉴"
-            >
-              <div className="mobileAvatar">
-                {user.name?.charAt(0).toUpperCase() || "U"}
-              </div>
-            </button>
-          ) : (
-            <a href={getLoginUrl()} className="mobileLoginButton">
-              <div className="mobileAvatar">G</div>
-            </a>
-          )}
-        </div>
 
         {/* 오른쪽 영역 */}
         <div className="headerRight">
