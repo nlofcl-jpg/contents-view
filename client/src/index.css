@@ -2243,12 +2243,13 @@ a {
   width: 100%;
 }
 
-.newsSearchUpdateTime {
-  margin: -2px 0 0;
+.newsCardsUpdateTime {
+  margin: 0 0 14px;
   color: #64748b;
   font-size: 12px;
   font-weight: 400;
   line-height: 1.5;
+  text-align: left;
 }
 
 .newsSearchInput {

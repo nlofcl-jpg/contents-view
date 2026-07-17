@@ -186,9 +186,6 @@ export default function News() {
             <Search size={19} strokeWidth={2.1} />
           </button>
         </form>
-        {getLatestUpdateTime && (
-          <p className="newsSearchUpdateTime">마지막 업데이트: {formatUpdateTime(getLatestUpdateTime)}</p>
-        )}
       </section>
 
       {/* Featured News Cards - 4 Categories */}
@@ -196,6 +193,9 @@ export default function News() {
         <div className="mb-12 text-center text-gray-400">뉴스를 불러오는 중...</div>
       ) : (
         <div className="mb-12">
+          {getLatestUpdateTime && (
+            <p className="newsCardsUpdateTime">마지막 업데이트: {formatUpdateTime(getLatestUpdateTime)}</p>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             {featuredNewsGroups.map(group => (
               <div key={group.categoryId} className="flex flex-col gap-4">
