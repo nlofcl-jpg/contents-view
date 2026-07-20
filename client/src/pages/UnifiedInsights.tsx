@@ -67,6 +67,35 @@ const AGE_OPTIONS = [
 ] as const;
 
 type TrendFilterMenu = "period" | "unit" | "device" | "gender" | "age" | null;
+type InsightTab = "content" | "seller";
+
+type TabSearchState = {
+  keywords: string[];
+  keywordInput: string;
+  queryError: string;
+  querySuccess: boolean;
+  chartData: any;
+  trendComparisonData: any;
+  trendFilterError: string;
+  startDateForChart: string;
+  endDateForChart: string;
+  timeUnitForChart: string;
+  filterLabelForChart: string;
+};
+
+const createEmptyTabSearchState = (): TabSearchState => ({
+  keywords: [],
+  keywordInput: "",
+  queryError: "",
+  querySuccess: false,
+  chartData: null,
+  trendComparisonData: null,
+  trendFilterError: "",
+  startDateForChart: "",
+  endDateForChart: "",
+  timeUnitForChart: "date",
+  filterLabelForChart: "1개월 · 일간 · 전체",
+});
 
 export default function UnifiedInsights() {
   // State management
@@ -74,7 +103,11 @@ export default function UnifiedInsights() {
   const [keywordInput, setKeywordInput] = useState("");
   const [isKeywordInputFocused, setIsKeywordInputFocused] = useState(false);
   const [infoPopup, setInfoPopup] = useState<{ title: string; body: string } | null>(null);
-  const [activeInsightTab, setActiveInsightTab] = useState<"content" | "seller">("content");
+  const [activeInsightTab, setActiveInsightTab] = useState<InsightTab>("content");
+  const [tabSearchStates, setTabSearchStates] = useState<Record<InsightTab, TabSearchState>>({
+    content: createEmptyTabSearchState(),
+    seller: createEmptyTabSearchState(),
+  });
   const [isKeywordGradeInfoOpen, setIsKeywordGradeInfoOpen] = useState(false);
   const [relatedSortMode, setRelatedSortMode] = useState<"related" | "recommended">("related");
   const [isRelatedSortOpen, setIsRelatedSortOpen] = useState(false);
@@ -95,6 +128,53 @@ export default function UnifiedInsights() {
   const [endDateForChart, setEndDateForChart] = useState("");
   const [timeUnitForChart, setTimeUnitForChart] = useState("date");
   const [filterLabelForChart, setFilterLabelForChart] = useState("1개월 · 일간 · 전체");
+
+  const getCurrentTabSearchState = (): TabSearchState => ({
+    keywords,
+    keywordInput,
+    queryError,
+    querySuccess,
+    chartData,
+    trendComparisonData,
+    trendFilterError,
+    startDateForChart,
+    endDateForChart,
+    timeUnitForChart,
+    filterLabelForChart,
+  });
+
+  const applyTabSearchState = (state: TabSearchState) => {
+    setKeywords(state.keywords);
+    setKeywordInput(state.keywordInput);
+    setQueryError(state.queryError);
+    setQuerySuccess(state.querySuccess);
+    setChartData(state.chartData);
+    setTrendComparisonData(state.trendComparisonData);
+    setTrendFilterError(state.trendFilterError);
+    setStartDateForChart(state.startDateForChart);
+    setEndDateForChart(state.endDateForChart);
+    setTimeUnitForChart(state.timeUnitForChart);
+    setFilterLabelForChart(state.filterLabelForChart);
+  };
+
+  const handleInsightTabChange = (nextTab: InsightTab) => {
+    if (nextTab === activeInsightTab) return;
+
+    const currentState = getCurrentTabSearchState();
+    const nextState = tabSearchStates[nextTab] || createEmptyTabSearchState();
+
+    setTabSearchStates(prev => ({
+      ...prev,
+      [activeInsightTab]: currentState,
+    }));
+    applyTabSearchState(nextState);
+    setIsLoading(false);
+    setIsTrendFilterLoading(false);
+    setOpenTrendFilterMenu(null);
+    setIsKeywordGradeInfoOpen(false);
+    setIsRelatedSortOpen(false);
+    setActiveInsightTab(nextTab);
+  };
 
   const getInitialKeywordFromUrl = () => {
     if (typeof window === "undefined") return "";
@@ -625,7 +705,7 @@ export default function UnifiedInsights() {
             <button
               key={tab.value}
               type="button"
-              onClick={() => setActiveInsightTab(tab.value)}
+              onClick={() => handleInsightTabChange(tab.value)}
               className={`h-9 min-w-24 rounded-full px-5 text-sm transition-colors ${
                 activeInsightTab === tab.value
                   ? "bg-blue-600 text-white shadow-lg shadow-blue-950/40"
