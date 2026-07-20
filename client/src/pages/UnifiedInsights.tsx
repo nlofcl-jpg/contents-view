@@ -56,6 +56,7 @@ export default function UnifiedInsights() {
   const [keywordInput, setKeywordInput] = useState("");
   const [isKeywordInputFocused, setIsKeywordInputFocused] = useState(false);
   const [infoPopup, setInfoPopup] = useState<{ title: string; body: string } | null>(null);
+  const [activeInsightTab, setActiveInsightTab] = useState<"content" | "seller">("content");
   const [isKeywordGradeInfoOpen, setIsKeywordGradeInfoOpen] = useState(false);
   const [relatedSortMode, setRelatedSortMode] = useState<"related" | "recommended">("related");
   const [isRelatedSortOpen, setIsRelatedSortOpen] = useState(false);
@@ -107,6 +108,7 @@ export default function UnifiedInsights() {
 
   const primaryKeyword = chartData?.keywords?.[0] || keywords[0] || "";
   const primaryTrendSummary = getSeriesSummary(primaryKeyword ? chartData?.trend?.[primaryKeyword] : undefined);
+  const primaryShoppingSummary = getSeriesSummary(primaryKeyword ? chartData?.shopping?.[primaryKeyword] : undefined);
   const displayedTrendData = trendComparisonData || chartData;
   const keywordTool = chartData?.meta?.keywordTool;
   const primaryMetric: KeywordMetric | null = keywordTool?.primary || null;
@@ -122,6 +124,7 @@ export default function UnifiedInsights() {
   const hasLockedRelatedKeywords = relatedKeywords.length > visibleRelatedKeywords.length;
   const contentVolume = chartData?.meta?.contentVolume;
   const blogTotalDocuments = contentVolume?.sources?.find((item: any) => item.key === "blog")?.totalDocuments ?? null;
+  const shoppingStatus = primaryKeyword ? chartData?.meta?.shoppingStatus?.[primaryKeyword] : null;
   const searchRatio = primaryMetric?.monthlyTotalSearches
     ? blogTotalDocuments / primaryMetric.monthlyTotalSearches
     : null;
@@ -160,6 +163,11 @@ export default function UnifiedInsights() {
     if (ratio < 5) return "보통";
     if (ratio < 20) return "높음";
     return "포화";
+  };
+
+  const getShoppingCompetitionStrength = () => {
+    if (!shoppingStatus || shoppingStatus === "NO_DATA") return "-";
+    return getCompetitionLabel(primaryMetric?.competition);
   };
 
   const getFilterLabel = () => {
@@ -575,6 +583,28 @@ export default function UnifiedInsights() {
         )}
       </div>
 
+      <div className="mb-6 flex w-full justify-center">
+        <div className="inline-flex rounded-full border border-slate-700/80 bg-slate-950/55 p-1">
+          {[
+            { value: "content" as const, label: "컨텐츠" },
+            { value: "seller" as const, label: "셀러" },
+          ].map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              onClick={() => setActiveInsightTab(tab.value)}
+              className={`h-9 min-w-24 rounded-full px-5 text-sm transition-colors ${
+                activeInsightTab === tab.value
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-950/40"
+                  : "text-slate-400 hover:text-slate-100"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Empty State */}
       {keywords.length === 0 && !isLoading && !querySuccess && (
         <div className="mt-8 p-8 text-center bg-slate-900 bg-opacity-30 border border-slate-700 rounded-lg min-h-[260px] sm:min-h-[320px] lg:min-h-[380px] flex items-center justify-center">
@@ -632,6 +662,7 @@ export default function UnifiedInsights() {
               {keywordTool?.error && <p className="mt-3 text-xs text-slate-500">{keywordTool.error}</p>}
             </div>
 
+            {activeInsightTab === "content" ? (
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
@@ -669,13 +700,56 @@ export default function UnifiedInsights() {
                 </div>
               </div>
             </div>
+            ) : (
+            <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-5">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Shopping Competition</p>
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <h3 className="text-lg font-semibold text-white">쇼핑 경쟁도</h3>
+                    <button
+                      type="button"
+                      aria-label="쇼핑 경쟁도 안내"
+                      onClick={() => setInfoPopup({
+                        title: "쇼핑 경쟁도",
+                        body: "해당 키워드의 쇼핑 데이터와 검색광고 지표를 함께 참고해 셀러 관점의 경쟁 정도를 표시합니다.",
+                      })}
+                      className="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-500 transition-colors hover:text-blue-300"
+                    >
+                      <CircleAlert className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 md:gap-3">
+                <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-slate-800/70 p-2 text-center md:p-3">
+                  <p className="text-xs text-slate-500">상품 수</p>
+                  <p className="mt-2 max-w-full truncate text-sm font-medium text-slate-300 md:text-xl md:font-bold">-</p>
+                </div>
+                <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-slate-800/70 p-2 text-center md:p-3">
+                  <p className="text-xs text-slate-500">경쟁강도</p>
+                  <p className="mt-2 max-w-full truncate text-sm font-medium text-slate-300 md:text-xl md:font-bold">{getShoppingCompetitionStrength()}</p>
+                </div>
+                <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-blue-950/50 p-2 text-center md:p-3">
+                  <p className="text-xs text-blue-300">쇼핑 데이터</p>
+                  <p className="mt-2 max-w-full truncate text-sm font-medium text-white md:text-xl md:font-bold">
+                    {shoppingStatus === "AVAILABLE" ? "확인" : "-"}
+                  </p>
+                </div>
+              </div>
+            </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-4 text-center">
-              <p className="text-xs font-semibold text-slate-200">검색 관심도</p>
-              <p className="mt-2 text-2xl font-bold text-white">{formatRatio(primaryTrendSummary.latest)}</p>
-              <p className="mt-1 text-xs text-slate-300">직전 구간 대비 {formatDelta(primaryTrendSummary.delta)}</p>
+              <p className="text-xs font-semibold text-slate-200">{activeInsightTab === "content" ? "검색 관심도" : "쇼핑 관심도"}</p>
+              <p className="mt-2 text-2xl font-bold text-white">
+                {activeInsightTab === "content" ? formatRatio(primaryTrendSummary.latest) : formatRatio(primaryShoppingSummary.latest)}
+              </p>
+              <p className="mt-1 text-xs text-slate-300">
+                직전 구간 대비 {activeInsightTab === "content" ? formatDelta(primaryTrendSummary.delta) : formatDelta(primaryShoppingSummary.delta)}
+              </p>
             </div>
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-4 text-center">
               <p className="text-xs font-semibold text-slate-200">월간 클릭량</p>
@@ -684,7 +758,7 @@ export default function UnifiedInsights() {
             </div>
             <div className="relative rounded-lg border border-blue-500/20 bg-slate-900/50 p-4 text-center">
               <div className="relative inline-flex items-center justify-center gap-1.5">
-                <p className="text-xs font-semibold text-slate-200">키워드 등급</p>
+                <p className="text-xs font-semibold text-slate-200">{activeInsightTab === "content" ? "키워드 등급" : "검색광고 등급"}</p>
                 <button
                   type="button"
                   aria-label="키워드 등급 기준 안내"
@@ -821,14 +895,16 @@ export default function UnifiedInsights() {
             {/* Chart Header */}
             <div className="mb-4 md:mb-6">
               <h3 className="mb-1 text-base font-medium text-white md:mb-2 md:text-lg md:font-semibold">
-                검색 트렌드 비교
+                {activeInsightTab === "content" ? "검색 트렌드 비교" : "쇼핑 트렌드 비교"}
               </h3>
               <div className="text-xs font-normal text-slate-400 md:text-sm">
                 <p className="mb-1">{keywords.join(", ")}</p>
                 <p>{startDateForChart} – {endDateForChart}</p>
-                <p className="mt-1 text-xs text-slate-500">{filterLabelForChart}</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {activeInsightTab === "content" ? filterLabelForChart : "쇼핑 데이터랩 기준"}
+                </p>
               </div>
-              {renderTrendFilters()}
+              {activeInsightTab === "content" && renderTrendFilters()}
             </div>
 
             {/* Chart Container */}
@@ -842,14 +918,14 @@ export default function UnifiedInsights() {
               )}
               <UnifiedChart
                 data={{
-                  keywords: displayedTrendData?.keywords || [],
-                  trend: displayedTrendData?.trend || {},
-                  shopping: displayedTrendData?.shopping || {},
-                  shoppingStatus: displayedTrendData?.meta?.shoppingStatus,
+                  keywords: activeInsightTab === "content" ? displayedTrendData?.keywords || [] : chartData?.keywords || [],
+                  trend: activeInsightTab === "content" ? displayedTrendData?.trend || {} : {},
+                  shopping: activeInsightTab === "content" ? {} : chartData?.shopping || {},
+                  shoppingStatus: chartData?.meta?.shoppingStatus,
                 }}
                 visibleLayers={{
-                  trend: true,
-                  shopping: false,
+                  trend: activeInsightTab === "content",
+                  shopping: activeInsightTab === "seller",
                 }}
                 timeUnit={timeUnitForChart}
                 startDate={startDateForChart}
@@ -870,14 +946,16 @@ export default function UnifiedInsights() {
           <div className="bg-slate-900 bg-opacity-50 border border-cyan-700 border-opacity-30 rounded-lg px-4 pt-4 pb-5 md:p-6">
             <div className="mb-4 md:mb-6">
               <h3 className="mb-1 text-base font-medium text-white md:mb-2 md:text-lg md:font-semibold">
-                검색 트렌드 비교
+                {activeInsightTab === "content" ? "검색 트렌드 비교" : "쇼핑 트렌드 비교"}
               </h3>
               <div className="text-xs font-normal text-slate-400 md:text-sm">
                 <p className="mb-1">{keywords.join(", ")}</p>
                 <p>{startDateForChart} – {endDateForChart}</p>
-                <p className="mt-1 text-xs text-slate-500">{filterLabelForChart}</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {activeInsightTab === "content" ? filterLabelForChart : "쇼핑 데이터랩 기준"}
+                </p>
               </div>
-              {renderTrendFilters()}
+              {activeInsightTab === "content" && renderTrendFilters()}
             </div>
             <div className="relative h-[300px] md:h-[480px]">
               {isTrendFilterLoading && (
@@ -889,14 +967,14 @@ export default function UnifiedInsights() {
               )}
               <UnifiedChart
                 data={{
-                  keywords: displayedTrendData?.keywords || [],
-                  trend: displayedTrendData?.trend || {},
-                  shopping: displayedTrendData?.shopping || {},
-                  shoppingStatus: displayedTrendData?.meta?.shoppingStatus,
+                  keywords: activeInsightTab === "content" ? displayedTrendData?.keywords || [] : chartData?.keywords || [],
+                  trend: activeInsightTab === "content" ? displayedTrendData?.trend || {} : {},
+                  shopping: activeInsightTab === "content" ? {} : chartData?.shopping || {},
+                  shoppingStatus: chartData?.meta?.shoppingStatus,
                 }}
                 visibleLayers={{
-                  trend: true,
-                  shopping: false,
+                  trend: activeInsightTab === "content",
+                  shopping: activeInsightTab === "seller",
                 }}
                 timeUnit={timeUnitForChart}
                 startDate={startDateForChart}
