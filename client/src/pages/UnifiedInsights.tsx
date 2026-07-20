@@ -780,7 +780,7 @@ export default function UnifiedInsights() {
               <p className="mt-1 text-xs text-slate-300">
                 {activeInsightTab === "content"
                   ? `PC ${formatDecimal(primaryMetric?.monthlyPcClicks)} · 모바일 ${formatDecimal(primaryMetric?.monthlyMobileClicks)}`
-                  : "쇼핑 데이터랩 클릭 지수"}
+                  : "쇼핑 상대 지수"}
               </p>
             </div>
             <div className="relative rounded-lg border border-blue-500/20 bg-slate-900/50 p-4 text-center">
