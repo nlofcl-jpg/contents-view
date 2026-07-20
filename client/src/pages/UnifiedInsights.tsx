@@ -120,11 +120,11 @@ export default function UnifiedInsights() {
     return `${value > 0 ? "+" : ""}${Math.round(value * 10) / 10}p`;
   };
 
-  const getShoppingIndexGrade = (value: number | null | undefined) => {
-    if (value === null || value === undefined || Number.isNaN(value)) return "-";
-    if (value < 25) return "낮음";
-    if (value < 50) return "보통";
-    if (value < 75) return "높음";
+  const getShoppingIndexGrade = (indexValue: number | null | undefined) => {
+    if (indexValue === null || indexValue === undefined || Number.isNaN(indexValue)) return "-";
+    if (indexValue < 5) return "낮음";
+    if (indexValue < 15) return "보통";
+    if (indexValue < 30) return "높음";
     return "최악";
   };
 
