@@ -694,16 +694,19 @@ export default function UnifiedInsights() {
                   <CircleAlert className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
                 {isKeywordGradeInfoOpen && (
-                  <div className="absolute left-1/2 top-6 z-20 w-64 -translate-x-1/2 rounded-lg border border-blue-500/25 bg-slate-950 p-3 text-left shadow-xl shadow-black/30">
-                    <p className="text-xs font-medium text-slate-100">수치 기준 안내</p>
-                    <p className="mt-2 text-xs leading-5 text-slate-300">
+                  <div className="absolute left-1/2 top-6 z-20 w-64 -translate-x-1/2 rounded-lg border border-slate-200 bg-white p-3 text-left shadow-xl shadow-black/20">
+                    <p className="text-xs font-medium text-slate-900">수치 기준 안내</p>
+                    <p className="mt-2 text-xs leading-5 text-slate-600">
                       키워드 등급은 네이버 검색광고의 경쟁도입니다. 검색광고 등급 수치는 광고 노출 깊이 값이며, 값이 높을수록 광고 노출 경쟁이 더 많은 키워드로 볼 수 있습니다.
                     </p>
                   </div>
                 )}
               </div>
-              <p className="mt-2 text-2xl font-bold text-white">{getCompetitionLabel(primaryMetric?.competition)}</p>
-              <p className="mt-1 text-xs text-slate-300">검색광고 등급 수치 {formatDecimal(primaryMetric?.averageAdDepth)}</p>
+              <p className="mt-2 text-2xl font-bold text-white">
+                {getCompetitionLabel(primaryMetric?.competition)}
+                <span className="ml-2 text-lg font-medium text-blue-200">{formatDecimal(primaryMetric?.averageAdDepth)}</span>
+              </p>
+              <p className="mt-1 text-xs text-slate-300">검색광고 등급</p>
             </div>
           </div>
 
