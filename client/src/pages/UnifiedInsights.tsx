@@ -697,16 +697,13 @@ export default function UnifiedInsights() {
                   <div className="absolute left-1/2 top-6 z-20 w-64 -translate-x-1/2 rounded-lg border border-slate-200 bg-white p-3 text-left shadow-xl shadow-black/20">
                     <p className="text-xs font-medium text-slate-900">수치 기준 안내</p>
                     <p className="mt-2 text-xs leading-5 text-slate-600">
-                      키워드 등급은 네이버 검색광고의 경쟁도입니다. 검색광고 등급 수치는 광고 노출 깊이 값이며, 값이 높을수록 광고 노출 경쟁이 더 많은 키워드로 볼 수 있습니다.
+                      키워드 등급은 네이버 검색광고의 경쟁도입니다. 광고 노출 깊이는 검색광고 API에서 제공되는 평균 노출 깊이 참고 수치입니다.
                     </p>
                   </div>
                 )}
               </div>
-              <p className="mt-2 text-2xl font-bold text-white">
-                {getCompetitionLabel(primaryMetric?.competition)}
-                <span className="ml-2 text-lg font-medium text-blue-200">{formatDecimal(primaryMetric?.averageAdDepth)}</span>
-              </p>
-              <p className="mt-1 text-xs text-slate-300">검색광고 등급</p>
+              <p className="mt-2 text-2xl font-bold text-white">{getCompetitionLabel(primaryMetric?.competition)}</p>
+              <p className="mt-1 text-xs text-slate-300">광고 노출 깊이 {formatDecimal(primaryMetric?.averageAdDepth)}</p>
             </div>
           </div>
 
