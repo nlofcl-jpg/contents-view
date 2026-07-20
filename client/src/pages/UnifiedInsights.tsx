@@ -847,43 +847,6 @@ export default function UnifiedInsights() {
             </div>
           </div>
 
-          {activeInsightTab === "seller" && (
-            <div className="rounded-lg border border-slate-700 bg-slate-900/35 p-4">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h3 className="text-base font-semibold text-white">쇼핑 연관 키워드</h3>
-              </div>
-              {shoppingRelatedKeywords.length > 0 ? (
-                <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-5">
-                  {shoppingRelatedKeywords.map((item) => (
-                    <button
-                      key={item.keyword}
-                      type="button"
-                      onClick={() => {
-                        setKeywordInput(item.keyword);
-                        runQuery([item.keyword]);
-                      }}
-                      className="rounded-lg border border-blue-500/20 bg-slate-950/45 p-3 text-left transition-colors hover:border-blue-400/50 hover:bg-blue-500/10"
-                    >
-                      <p className="truncate text-sm font-medium text-white">{item.keyword}</p>
-                      <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                        <span className="text-slate-500">검색량</span>
-                        <span className="text-right text-slate-300">{formatNumber(item.monthlySearches)}</span>
-                        <span className="text-slate-500">상품 수</span>
-                        <span className="text-right text-slate-300">{formatNumber(item.productCount)}</span>
-                        <span className="text-slate-500">경쟁</span>
-                        <span className="text-right text-blue-300">{item.strength || "-"}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-lg border border-slate-800 bg-slate-950/35 px-4 py-5 text-center text-sm text-slate-500">
-                  쇼핑 연관 키워드를 확인할 수 없습니다.
-                </div>
-              )}
-            </div>
-          )}
-
           <div className="rounded-lg border border-slate-700 bg-slate-900/35 p-4">
             <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div>
@@ -912,15 +875,16 @@ export default function UnifiedInsights() {
           <div className="rounded-lg border border-slate-700 bg-slate-900/35 p-4">
             <div className="mb-3 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
               <div>
-                <h3 className="text-base font-semibold text-white">연관 키워드</h3>
+                <h3 className="text-base font-semibold text-white">{activeInsightTab === "content" ? "연관 키워드" : "쇼핑 연관 키워드"}</h3>
               </div>
             </div>
             <div className="overflow-x-auto rounded-lg border border-slate-700/70">
               <div className="grid min-w-[620px] grid-cols-[150px_76px_120px_120px_96px] gap-0 border-b border-slate-700/70 bg-slate-950/50 px-4 py-3 text-sm font-semibold text-slate-100 md:grid-cols-[minmax(180px,2fr)_minmax(76px,0.7fr)_minmax(96px,0.9fr)_minmax(96px,0.9fr)_minmax(86px,0.8fr)]">
                 <span className="sticky left-0 z-10 relative pr-3 after:pointer-events-none after:absolute after:bottom-0 after:right-0 after:top-0 after:w-4 after:bg-gradient-to-r after:from-transparent after:to-slate-950/20">키워드</span>
-                <span className="text-right">등급</span>
+                <span className="text-right">{activeInsightTab === "content" ? "등급" : "경쟁"}</span>
                 <span className="text-right">검색량</span>
-                <span className="text-right">클릭량</span>
+                <span className="text-right">{activeInsightTab === "content" ? "클릭량" : "상품 수"}</span>
+                {activeInsightTab === "content" ? (
                 <div className="relative flex justify-end">
                   <button
                     type="button"
@@ -953,8 +917,11 @@ export default function UnifiedInsights() {
                     </div>
                   )}
                 </div>
+                ) : (
+                  <span className="text-right">평균가</span>
+                )}
               </div>
-              {visibleRelatedKeywords.map((item) => (
+              {activeInsightTab === "content" ? visibleRelatedKeywords.map((item) => (
                 <button
                   key={item.keyword}
                   type="button"
@@ -970,9 +937,30 @@ export default function UnifiedInsights() {
                   <span className="text-right text-slate-400">{formatDecimal(item.monthlyTotalClicks)}</span>
                   <span className="text-right text-slate-300">{formatPercent(item.similarity)}</span>
                 </button>
+              )) : shoppingRelatedKeywords.map((item) => (
+                <button
+                  key={item.keyword}
+                  type="button"
+                  onClick={() => {
+                    setKeywordInput(item.keyword);
+                    runQuery([item.keyword]);
+                  }}
+                  className="group grid min-h-11 min-w-[620px] grid-cols-[150px_76px_120px_120px_96px] gap-0 border-b border-slate-800/80 px-4 py-2 text-left text-sm text-slate-200 transition-colors last:border-b-0 hover:bg-slate-800/70 md:w-full md:grid-cols-[minmax(180px,2fr)_minmax(76px,0.7fr)_minmax(96px,0.9fr)_minmax(96px,0.9fr)_minmax(86px,0.8fr)]"
+                >
+                  <span className="sticky left-0 z-10 relative min-w-0 truncate pr-3 after:pointer-events-none after:absolute after:bottom-0 after:right-0 after:top-0 after:w-4 after:bg-gradient-to-r after:from-transparent after:to-slate-900/20">{item.keyword}</span>
+                  <span className="text-right text-blue-300">{item.strength || "-"}</span>
+                  <span className="text-right text-slate-300">{formatNumber(item.monthlySearches)}</span>
+                  <span className="text-right text-slate-400">{formatNumber(item.productCount)}</span>
+                  <span className="text-right text-slate-300">{formatNumber(item.averagePrice, "원")}</span>
+                </button>
               ))}
+              {activeInsightTab === "seller" && shoppingRelatedKeywords.length === 0 && (
+                <div className="px-4 py-5 text-center text-sm text-slate-500">
+                  쇼핑 연관 키워드를 확인할 수 없습니다.
+                </div>
+              )}
             </div>
-            {hasLockedRelatedKeywords && (
+            {activeInsightTab === "content" && hasLockedRelatedKeywords && (
               <div className="mt-4 flex flex-col items-center gap-3">
                 <div className="flex flex-col items-center py-1">
                   {[0, 1, 2].map((index) => (

@@ -1041,7 +1041,7 @@ export const unifiedInsightProcedure = publicProcedure
         const primaryKeywordKey = normalizeKeywordText(normalizedKeywords[0] || "");
         const candidates = keywordTool.related
           .filter((item: KeywordMetric) => normalizeKeywordText(item.keyword) !== primaryKeywordKey)
-          .slice(0, 12);
+          .slice(0, 20);
         const settled = await Promise.allSettled(
           candidates.map(async (item: KeywordMetric) => {
             const summary = await fetchNaverShoppingSummary({

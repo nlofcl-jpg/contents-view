@@ -1873,7 +1873,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
     const shoppingRelatedKeywords = [];
     if (clientId && clientSecret && Array.isArray(keywordTool?.related)) {
       const primaryKeywordKey = normalizeKeywordText(normalizedKeywords[0] || "");
-      const candidates = keywordTool.related.filter((item) => normalizeKeywordText(item.keyword) !== primaryKeywordKey).slice(0, 12);
+      const candidates = keywordTool.related.filter((item) => normalizeKeywordText(item.keyword) !== primaryKeywordKey).slice(0, 20);
       const settled = await Promise.allSettled(
         candidates.map(async (item) => {
           const summary = await fetchNaverShoppingSummary({
