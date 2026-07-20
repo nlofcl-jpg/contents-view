@@ -23,6 +23,7 @@ type KeywordMetric = {
 
 type ShoppingCompetition = {
   productCount: number | null;
+  averagePrice: number | null;
   monthlySearches: number | null;
   competitionRatio: number | null;
   strength: string | null;
@@ -766,11 +767,18 @@ export default function UnifiedInsights() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className={`grid grid-cols-1 gap-4 ${activeInsightTab === "content" ? "md:grid-cols-3" : "md:grid-cols-4"}`}>
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-4 text-center">
               <p className="text-xs font-semibold text-slate-200">{activeInsightTab === "content" ? "검색 관심도" : "쇼핑 관심도"}</p>
               <p className="mt-2 text-2xl font-bold text-white">
-                {activeInsightTab === "content" ? formatRatio(primaryTrendSummary.latest) : formatRatio(primaryShoppingSummary.latest)}
+                {activeInsightTab === "content" ? (
+                  formatRatio(primaryTrendSummary.latest)
+                ) : (
+                  <span className="inline-flex items-baseline justify-center gap-2">
+                    <span>{getShoppingIndexGrade(primaryShoppingSummary.latest)}</span>
+                    <span className="text-sm font-medium text-slate-300">{formatRatio(primaryShoppingSummary.latest)}</span>
+                  </span>
+                )}
               </p>
               <p className="mt-1 text-xs text-slate-300">
                 직전 구간 대비 {activeInsightTab === "content" ? formatDelta(primaryTrendSummary.delta) : formatDelta(primaryShoppingSummary.delta)}
@@ -788,12 +796,19 @@ export default function UnifiedInsights() {
               <p className="mt-1 text-xs text-slate-300">
                 {activeInsightTab === "content"
                   ? `PC ${formatDecimal(primaryMetric?.monthlyPcClicks)} · 모바일 ${formatDecimal(primaryMetric?.monthlyMobileClicks)}`
-                  : `쇼핑 상대 지수 ${formatRatio(primaryShoppingMonthlyClickIndex)}`}
+                  : formatRatio(primaryShoppingMonthlyClickIndex)}
               </p>
             </div>
+            {activeInsightTab === "seller" && (
+              <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-4 text-center">
+                <p className="text-xs font-semibold text-slate-200">상품 평균가</p>
+                <p className="mt-2 text-2xl font-bold text-white">{formatNumber(shoppingCompetition?.averagePrice, "원")}</p>
+                <p className="mt-1 text-xs text-slate-300">상위 상품 기준</p>
+              </div>
+            )}
             <div className="relative rounded-lg border border-blue-500/20 bg-slate-900/50 p-4 text-center">
               <div className="relative inline-flex items-center justify-center gap-1.5">
-                <p className="text-xs font-semibold text-slate-200">{activeInsightTab === "content" ? "키워드 등급" : "검색광고 등급"}</p>
+                <p className="text-xs font-semibold text-slate-200">{activeInsightTab === "content" ? "키워드 등급" : "쇼핑 광고"}</p>
                 <button
                   type="button"
                   aria-label="키워드 등급 기준 안내"
@@ -812,7 +827,11 @@ export default function UnifiedInsights() {
                 )}
               </div>
               <p className="mt-2 text-2xl font-bold text-white">{getCompetitionLabel(primaryMetric?.competition)}</p>
-              <p className="mt-1 text-xs text-slate-300">광고 노출 깊이 {formatDecimal(primaryMetric?.averageAdDepth)}</p>
+              <p className="mt-1 text-xs text-slate-300">
+                {activeInsightTab === "content"
+                  ? `광고 노출 깊이 ${formatDecimal(primaryMetric?.averageAdDepth)}`
+                  : formatDecimal(primaryMetric?.averageAdDepth)}
+              </p>
             </div>
           </div>
 

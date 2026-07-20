@@ -1429,10 +1429,10 @@ function getShoppingCompetitionStrength(ratio) {
   if (ratio < 8) return "\uB192\uC74C";
   return "\uD3EC\uD654";
 }
-async function fetchNaverShoppingProductCount(input) {
+async function fetchNaverShoppingSummary(input) {
   const params = new URLSearchParams({
     query: input.keyword,
-    display: "1",
+    display: "100",
     start: "1",
     sort: "sim"
   });
@@ -1451,7 +1451,12 @@ async function fetchNaverShoppingProductCount(input) {
   if (!response.ok) {
     throw new Error(data?.errorMessage || `HTTP ${response.status}`);
   }
-  return typeof data?.total === "number" ? data.total : null;
+  const prices = Array.isArray(data?.items) ? data.items.map((item) => Number(String(item?.lprice || "").replace(/,/g, ""))).filter((price) => Number.isFinite(price) && price > 0) : [];
+  const averagePrice = prices.length > 0 ? prices.reduce((sum, price) => sum + price, 0) / prices.length : null;
+  return {
+    productCount: typeof data?.total === "number" ? data.total : null,
+    averagePrice
+  };
 }
 async function fetchWithTimeout(url, options, timeoutMs = REQUEST_TIMEOUT_MS) {
   const controller = new AbortController();
@@ -1742,19 +1747,21 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
         if (!primaryKeyword || !clientId || !clientSecret) {
           return {
             productCount: null,
+            averagePrice: null,
             monthlySearches: null,
             competitionRatio: null,
             strength: null
           };
         }
         try {
-          const productCount = await fetchNaverShoppingProductCount({
+          const shoppingSummary = await fetchNaverShoppingSummary({
             keyword: primaryKeyword,
             clientId,
             clientSecret
           });
           return {
-            productCount,
+            productCount: shoppingSummary.productCount,
+            averagePrice: shoppingSummary.averagePrice,
             monthlySearches: null,
             competitionRatio: null,
             strength: null
@@ -1767,6 +1774,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
           });
           return {
             productCount: null,
+            averagePrice: null,
             monthlySearches: null,
             competitionRatio: null,
             strength: null,
@@ -1848,6 +1856,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
     };
     const rawShoppingCompetition = keywordToolSettled[1].status === "fulfilled" ? keywordToolSettled[1].value : {
       productCount: null,
+      averagePrice: null,
       monthlySearches: null,
       competitionRatio: null,
       strength: null,

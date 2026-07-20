@@ -134,6 +134,7 @@ type KeywordMetric = {
 
 type ShoppingCompetition = {
   productCount: number | null;
+  averagePrice: number | null;
   monthlySearches: number | null;
   competitionRatio: number | null;
   strength: "낮음" | "보통" | "높음" | "포화" | null;
@@ -488,14 +489,14 @@ function getShoppingCompetitionStrength(ratio: number | null): ShoppingCompetiti
   return "포화";
 }
 
-async function fetchNaverShoppingProductCount(input: {
+async function fetchNaverShoppingSummary(input: {
   keyword: string;
   clientId: string;
   clientSecret: string;
 }) {
   const params = new URLSearchParams({
     query: input.keyword,
-    display: "1",
+    display: "100",
     start: "1",
     sort: "sim",
   });
@@ -517,7 +518,20 @@ async function fetchNaverShoppingProductCount(input: {
     throw new Error(data?.errorMessage || `HTTP ${response.status}`);
   }
 
-  return typeof data?.total === "number" ? data.total : null;
+  const prices = Array.isArray(data?.items)
+    ? data.items
+        .map((item: any) => Number(String(item?.lprice || "").replace(/,/g, "")))
+        .filter((price: number) => Number.isFinite(price) && price > 0)
+    : [];
+  const averagePrice =
+    prices.length > 0
+      ? prices.reduce((sum: number, price: number) => sum + price, 0) / prices.length
+      : null;
+
+  return {
+    productCount: typeof data?.total === "number" ? data.total : null,
+    averagePrice,
+  };
 }
 
 /**
@@ -872,6 +886,7 @@ export const unifiedInsightProcedure = publicProcedure
           if (!primaryKeyword || !clientId || !clientSecret) {
             return {
               productCount: null,
+              averagePrice: null,
               monthlySearches: null,
               competitionRatio: null,
               strength: null,
@@ -879,14 +894,15 @@ export const unifiedInsightProcedure = publicProcedure
           }
 
           try {
-            const productCount = await fetchNaverShoppingProductCount({
+            const shoppingSummary = await fetchNaverShoppingSummary({
               keyword: primaryKeyword,
               clientId,
               clientSecret,
             });
 
             return {
-              productCount,
+              productCount: shoppingSummary.productCount,
+              averagePrice: shoppingSummary.averagePrice,
               monthlySearches: null,
               competitionRatio: null,
               strength: null,
@@ -900,6 +916,7 @@ export const unifiedInsightProcedure = publicProcedure
 
             return {
               productCount: null,
+              averagePrice: null,
               monthlySearches: null,
               competitionRatio: null,
               strength: null,
@@ -991,6 +1008,7 @@ export const unifiedInsightProcedure = publicProcedure
       const rawShoppingCompetition =
         keywordToolSettled[1].status === "fulfilled" ? keywordToolSettled[1].value : {
           productCount: null,
+          averagePrice: null,
           monthlySearches: null,
           competitionRatio: null,
           strength: null,
