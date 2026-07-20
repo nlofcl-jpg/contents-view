@@ -1200,7 +1200,7 @@ export const unifiedInsightProcedure = publicProcedure
           keywordTool,
           contentVolume,
           shoppingCompetition,
-          shoppingRelatedKeywords: shoppingRelatedKeywords.slice(0, 10),
+          shoppingRelatedKeywords: shoppingRelatedKeywords.slice(0, 20),
         },
       };
 

@@ -241,6 +241,8 @@ export default function UnifiedInsights() {
   const shoppingStatus = primaryKeyword ? chartData?.meta?.shoppingStatus?.[primaryKeyword] : null;
   const shoppingCompetition: ShoppingCompetition | null = chartData?.meta?.shoppingCompetition || null;
   const shoppingRelatedKeywords: ShoppingRelatedKeyword[] = chartData?.meta?.shoppingRelatedKeywords || [];
+  const visibleShoppingRelatedKeywords = shoppingRelatedKeywords.slice(0, 10);
+  const hasLockedShoppingRelatedKeywords = shoppingRelatedKeywords.length > visibleShoppingRelatedKeywords.length;
   const searchRatio = primaryMetric?.monthlyTotalSearches
     ? blogTotalDocuments / primaryMetric.monthlyTotalSearches
     : null;
@@ -927,30 +929,32 @@ export default function UnifiedInsights() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-slate-700 bg-slate-900/35 p-4">
-            <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h3 className="text-base font-semibold text-white">추천 키워드</h3>
+          {activeInsightTab === "content" && (
+            <div className="rounded-lg border border-slate-700 bg-slate-900/35 p-4">
+              <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h3 className="text-base font-semibold text-white">추천 키워드</h3>
+                </div>
+              </div>
+              <div className="-mx-1 overflow-x-auto pb-1">
+                <div className="flex w-max max-w-none gap-2 px-1">
+                  {recommendedKeywords.map((item) => (
+                    <button
+                      key={item.keyword}
+                      type="button"
+                      onClick={() => {
+                        setKeywordInput(item.keyword);
+                        runQuery([item.keyword]);
+                      }}
+                      className="whitespace-nowrap rounded-full border border-blue-500/25 bg-blue-500/10 px-3 py-1.5 text-sm font-medium text-blue-100 transition-colors hover:border-blue-400/50 hover:bg-blue-500/20"
+                    >
+                      {item.keyword}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-            <div className="-mx-1 overflow-x-auto pb-1">
-              <div className="flex w-max max-w-none gap-2 px-1">
-                {recommendedKeywords.map((item) => (
-                  <button
-                    key={item.keyword}
-                    type="button"
-                    onClick={() => {
-                      setKeywordInput(item.keyword);
-                      runQuery([item.keyword]);
-                    }}
-                    className="whitespace-nowrap rounded-full border border-blue-500/25 bg-blue-500/10 px-3 py-1.5 text-sm font-medium text-blue-100 transition-colors hover:border-blue-400/50 hover:bg-blue-500/20"
-                  >
-                    {item.keyword}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
+          )}
 
           <div className="rounded-lg border border-slate-700 bg-slate-900/35 p-4">
             <div className="mb-3 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
@@ -1017,7 +1021,7 @@ export default function UnifiedInsights() {
                   <span className="text-right text-slate-400">{formatDecimal(item.monthlyTotalClicks)}</span>
                   <span className="text-right text-slate-300">{formatPercent(item.similarity)}</span>
                 </button>
-              )) : shoppingRelatedKeywords.map((item) => (
+              )) : visibleShoppingRelatedKeywords.map((item) => (
                 <button
                   key={item.keyword}
                   type="button"
@@ -1040,7 +1044,8 @@ export default function UnifiedInsights() {
                 </div>
               )}
             </div>
-            {activeInsightTab === "content" && hasLockedRelatedKeywords && (
+            {((activeInsightTab === "content" && hasLockedRelatedKeywords) ||
+              (activeInsightTab === "seller" && hasLockedShoppingRelatedKeywords)) && (
               <div className="mt-4 flex flex-col items-center gap-3">
                 <div className="flex flex-col items-center py-1">
                   {[0, 1, 2].map((index) => (
@@ -1056,7 +1061,7 @@ export default function UnifiedInsights() {
                   type="button"
                   className="min-h-11 rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold leading-none text-white transition-colors hover:bg-blue-500"
                 >
-                  더 많은 연관 키워드 확인
+                  {activeInsightTab === "content" ? "더 많은 연관 키워드 확인" : "더 많은 쇼핑 연관 키워드 확인"}
                 </button>
               </div>
             )}

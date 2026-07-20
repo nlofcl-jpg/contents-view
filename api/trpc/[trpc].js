@@ -2006,7 +2006,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
         keywordTool,
         contentVolume,
         shoppingCompetition,
-        shoppingRelatedKeywords: shoppingRelatedKeywords.slice(0, 10)
+        shoppingRelatedKeywords: shoppingRelatedKeywords.slice(0, 20)
       }
     };
     setInCache(cacheKey, result);
