@@ -79,23 +79,19 @@ function generateShoppingKeywordVariants(keyword: string) {
 function generateKeywordToolVariants(keyword: string) {
   const normalized = normalizeKeywordInput(keyword);
   const noSpace = normalized.replace(/\s+/g, "");
-  const variants = [normalized, noSpace];
+  const variants = [noSpace];
 
   if (/여성|여자/.test(noSpace)) {
     variants.push(
       noSpace.replace(/여성/g, "여자"),
-      noSpace.replace(/여자/g, "여성"),
-      normalized.replace(/여성/g, "여자"),
-      normalized.replace(/여자/g, "여성")
+      noSpace.replace(/여자/g, "여성")
     );
   }
 
   if (/남성|남자/.test(noSpace)) {
     variants.push(
       noSpace.replace(/남성/g, "남자"),
-      noSpace.replace(/남자/g, "남성"),
-      normalized.replace(/남성/g, "남자"),
-      normalized.replace(/남자/g, "남성")
+      noSpace.replace(/남자/g, "남성")
     );
   }
 
@@ -213,8 +209,9 @@ async function requestNaverSearchAdKeywordTool(credentials: NaverSearchAdCredent
   const method = "GET";
   const uri = "/keywordstool";
   const timestamp = Date.now().toString();
+  const hintKeyword = keyword.replace(/\s+/g, "").trim();
   const params = new URLSearchParams({
-    hintKeywords: keyword,
+    hintKeywords: hintKeyword,
     showDetail: "1",
   });
 

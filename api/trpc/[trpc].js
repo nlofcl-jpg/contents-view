@@ -1139,21 +1139,17 @@ function generateShoppingKeywordVariants(keyword) {
 function generateKeywordToolVariants(keyword) {
   const normalized = normalizeKeywordInput(keyword);
   const noSpace = normalized.replace(/\s+/g, "");
-  const variants = [normalized, noSpace];
+  const variants = [noSpace];
   if (/여성|여자/.test(noSpace)) {
     variants.push(
       noSpace.replace(/여성/g, "\uC5EC\uC790"),
-      noSpace.replace(/여자/g, "\uC5EC\uC131"),
-      normalized.replace(/여성/g, "\uC5EC\uC790"),
-      normalized.replace(/여자/g, "\uC5EC\uC131")
+      noSpace.replace(/여자/g, "\uC5EC\uC131")
     );
   }
   if (/남성|남자/.test(noSpace)) {
     variants.push(
       noSpace.replace(/남성/g, "\uB0A8\uC790"),
-      noSpace.replace(/남자/g, "\uB0A8\uC131"),
-      normalized.replace(/남성/g, "\uB0A8\uC790"),
-      normalized.replace(/남자/g, "\uB0A8\uC131")
+      noSpace.replace(/남자/g, "\uB0A8\uC131")
     );
   }
   return uniqueValues(variants).slice(0, 8);
@@ -1218,8 +1214,9 @@ async function requestNaverSearchAdKeywordTool(credentials, keyword) {
   const method = "GET";
   const uri = "/keywordstool";
   const timestamp2 = Date.now().toString();
+  const hintKeyword = keyword.replace(/\s+/g, "").trim();
   const params = new URLSearchParams({
-    hintKeywords: keyword,
+    hintKeywords: hintKeyword,
     showDetail: "1"
   });
   const response = await fetchWithTimeout(
