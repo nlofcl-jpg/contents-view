@@ -56,6 +56,7 @@ export default function UnifiedInsights() {
   const [keywordInput, setKeywordInput] = useState("");
   const [isKeywordInputFocused, setIsKeywordInputFocused] = useState(false);
   const [infoPopup, setInfoPopup] = useState<{ title: string; body: string } | null>(null);
+  const [isKeywordGradeInfoOpen, setIsKeywordGradeInfoOpen] = useState(false);
   const [relatedSortMode, setRelatedSortMode] = useState<"related" | "recommended">("related");
   const [isRelatedSortOpen, setIsRelatedSortOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -681,10 +682,28 @@ export default function UnifiedInsights() {
               <p className="mt-2 text-2xl font-bold text-white">{formatDecimal(primaryMetric?.monthlyTotalClicks)}</p>
               <p className="mt-1 text-xs text-slate-300">PC {formatDecimal(primaryMetric?.monthlyPcClicks)} · 모바일 {formatDecimal(primaryMetric?.monthlyMobileClicks)}</p>
             </div>
-            <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-4 text-center">
-              <p className="text-xs font-semibold text-slate-200">키워드 등급</p>
+            <div className="relative rounded-lg border border-blue-500/20 bg-slate-900/50 p-4 text-center">
+              <div className="relative inline-flex items-center justify-center gap-1.5">
+                <p className="text-xs font-semibold text-slate-200">키워드 등급</p>
+                <button
+                  type="button"
+                  aria-label="키워드 등급 기준 안내"
+                  onClick={() => setIsKeywordGradeInfoOpen((isOpen) => !isOpen)}
+                  className="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-500 transition-colors hover:text-blue-300"
+                >
+                  <CircleAlert className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+                {isKeywordGradeInfoOpen && (
+                  <div className="absolute left-1/2 top-6 z-20 w-64 -translate-x-1/2 rounded-lg border border-blue-500/25 bg-slate-950 p-3 text-left shadow-xl shadow-black/30">
+                    <p className="text-xs font-medium text-slate-100">수치 기준 안내</p>
+                    <p className="mt-2 text-xs leading-5 text-slate-300">
+                      키워드 등급은 네이버 검색광고의 경쟁도입니다. 검색광고 등급 수치는 광고 노출 깊이 값이며, 값이 높을수록 광고 노출 경쟁이 더 많은 키워드로 볼 수 있습니다.
+                    </p>
+                  </div>
+                )}
+              </div>
               <p className="mt-2 text-2xl font-bold text-white">{getCompetitionLabel(primaryMetric?.competition)}</p>
-              <p className="mt-1 text-xs text-slate-300">검색광고 등급 {formatDecimal(primaryMetric?.averageAdDepth)}</p>
+              <p className="mt-1 text-xs text-slate-300">검색광고 등급 수치 {formatDecimal(primaryMetric?.averageAdDepth)}</p>
             </div>
           </div>
 
