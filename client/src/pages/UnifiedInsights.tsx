@@ -103,6 +103,12 @@ export default function UnifiedInsights() {
     return { latest, delta, peak };
   };
 
+  const getSeriesAverage = (series?: InsightPoint[]) => {
+    if (!series || series.length === 0) return null;
+    const total = series.reduce((sum, item) => sum + item.ratio, 0);
+    return total / series.length;
+  };
+
   const formatRatio = (value: number | null) => {
     if (value === null || Number.isNaN(value)) return "-";
     return `${Math.round(value * 10) / 10}`;
@@ -116,7 +122,9 @@ export default function UnifiedInsights() {
 
   const primaryKeyword = chartData?.keywords?.[0] || keywords[0] || "";
   const primaryTrendSummary = getSeriesSummary(primaryKeyword ? chartData?.trend?.[primaryKeyword] : undefined);
-  const primaryShoppingSummary = getSeriesSummary(primaryKeyword ? chartData?.shopping?.[primaryKeyword] : undefined);
+  const primaryShoppingSeries: InsightPoint[] | undefined = primaryKeyword ? chartData?.shopping?.[primaryKeyword] : undefined;
+  const primaryShoppingSummary = getSeriesSummary(primaryShoppingSeries);
+  const primaryShoppingMonthlyClickIndex = getSeriesAverage(primaryShoppingSeries);
   const displayedTrendData = trendComparisonData || chartData;
   const keywordTool = chartData?.meta?.keywordTool;
   const primaryMetric: KeywordMetric | null = keywordTool?.primary || null;
@@ -761,9 +769,19 @@ export default function UnifiedInsights() {
               </p>
             </div>
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-4 text-center">
-              <p className="text-xs font-semibold text-slate-200">월간 클릭량</p>
-              <p className="mt-2 text-2xl font-bold text-white">{formatDecimal(primaryMetric?.monthlyTotalClicks)}</p>
-              <p className="mt-1 text-xs text-slate-300">PC {formatDecimal(primaryMetric?.monthlyPcClicks)} · 모바일 {formatDecimal(primaryMetric?.monthlyMobileClicks)}</p>
+              <p className="text-xs font-semibold text-slate-200">
+                {activeInsightTab === "content" ? "월간 클릭량" : "월간 쇼핑 클릭량"}
+              </p>
+              <p className="mt-2 text-2xl font-bold text-white">
+                {activeInsightTab === "content"
+                  ? formatDecimal(primaryMetric?.monthlyTotalClicks)
+                  : formatRatio(primaryShoppingMonthlyClickIndex)}
+              </p>
+              <p className="mt-1 text-xs text-slate-300">
+                {activeInsightTab === "content"
+                  ? `PC ${formatDecimal(primaryMetric?.monthlyPcClicks)} · 모바일 ${formatDecimal(primaryMetric?.monthlyMobileClicks)}`
+                  : "쇼핑 데이터랩 클릭 지수"}
+              </p>
             </div>
             <div className="relative rounded-lg border border-blue-500/20 bg-slate-900/50 p-4 text-center">
               <div className="relative inline-flex items-center justify-center gap-1.5">
