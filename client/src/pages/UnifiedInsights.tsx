@@ -809,15 +809,17 @@ export default function UnifiedInsights() {
             <div className="relative rounded-lg border border-blue-500/20 bg-slate-900/50 p-4 text-center">
               <div className="relative inline-flex items-center justify-center gap-1.5">
                 <p className="text-xs font-semibold text-slate-200">{activeInsightTab === "content" ? "키워드 등급" : "쇼핑 광고"}</p>
-                <button
-                  type="button"
-                  aria-label="키워드 등급 기준 안내"
-                  onClick={() => setIsKeywordGradeInfoOpen((isOpen) => !isOpen)}
-                  className="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-500 transition-colors hover:text-blue-300"
-                >
-                  <CircleAlert className="h-3.5 w-3.5" aria-hidden="true" />
-                </button>
-                {isKeywordGradeInfoOpen && (
+                {activeInsightTab === "content" && (
+                  <button
+                    type="button"
+                    aria-label="키워드 등급 기준 안내"
+                    onClick={() => setIsKeywordGradeInfoOpen((isOpen) => !isOpen)}
+                    className="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-500 transition-colors hover:text-blue-300"
+                  >
+                    <CircleAlert className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                )}
+                {activeInsightTab === "content" && isKeywordGradeInfoOpen && (
                   <div className="absolute left-1/2 top-6 z-20 w-64 -translate-x-1/2 rounded-lg border border-slate-200 bg-white p-3 text-left shadow-xl shadow-black/20">
                     <p className="text-xs font-medium text-slate-900">수치 기준 안내</p>
                     <p className="mt-2 text-xs leading-5 text-slate-600">
