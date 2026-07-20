@@ -1422,6 +1422,37 @@ async function fetchRecentNaverContentCount(input) {
   }
   return { count, checked, capped, totalDocuments };
 }
+function getShoppingCompetitionStrength(ratio) {
+  if (ratio === null || Number.isNaN(ratio)) return null;
+  if (ratio < 0.5) return "\uB0AE\uC74C";
+  if (ratio < 2) return "\uBCF4\uD1B5";
+  if (ratio < 8) return "\uB192\uC74C";
+  return "\uD3EC\uD654";
+}
+async function fetchNaverShoppingProductCount(input) {
+  const params = new URLSearchParams({
+    query: input.keyword,
+    display: "1",
+    start: "1",
+    sort: "sim"
+  });
+  const response = await fetchWithTimeout(
+    `https://openapi.naver.com/v1/search/shop.json?${params.toString()}`,
+    {
+      method: "GET",
+      headers: {
+        "X-Naver-Client-Id": input.clientId,
+        "X-Naver-Client-Secret": input.clientSecret
+      }
+    },
+    REQUEST_TIMEOUT_MS
+  );
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.errorMessage || `HTTP ${response.status}`);
+  }
+  return typeof data?.total === "number" ? data.total : null;
+}
 async function fetchWithTimeout(url, options, timeoutMs = REQUEST_TIMEOUT_MS) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -1461,7 +1492,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
     input.ages
   );
   const cachedData = getFromCache(cacheKey);
-  if (cachedData?.meta?.keywordTool) {
+  if (cachedData?.meta?.keywordTool && cachedData?.meta?.shoppingCompetition) {
     console.log("[Naver API] Cache hit for unified insight", {
       cacheKey,
       keywords: normalizedKeywords.length,
@@ -1709,6 +1740,43 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
       (async () => {
         const primaryKeyword = normalizedKeywords[0];
         if (!primaryKeyword || !clientId || !clientSecret) {
+          return {
+            productCount: null,
+            monthlySearches: null,
+            competitionRatio: null,
+            strength: null
+          };
+        }
+        try {
+          const productCount = await fetchNaverShoppingProductCount({
+            keyword: primaryKeyword,
+            clientId,
+            clientSecret
+          });
+          return {
+            productCount,
+            monthlySearches: null,
+            competitionRatio: null,
+            strength: null
+          };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "\uC1FC\uD551 \uC0C1\uD488 \uC218\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.";
+          console.error("[Naver Shopping] Product count failed", {
+            keyword: primaryKeyword,
+            error: message
+          });
+          return {
+            productCount: null,
+            monthlySearches: null,
+            competitionRatio: null,
+            strength: null,
+            error: message
+          };
+        }
+      })(),
+      (async () => {
+        const primaryKeyword = normalizedKeywords[0];
+        if (!primaryKeyword || !clientId || !clientSecret) {
           return null;
         }
         const since = /* @__PURE__ */ new Date();
@@ -1774,9 +1842,24 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
       recommended: [],
       related: []
     };
-    const contentVolume = keywordToolSettled[1].status === "fulfilled" ? keywordToolSettled[1].value : {
+    const contentVolume = keywordToolSettled[2].status === "fulfilled" ? keywordToolSettled[2].value : {
       sources: [],
       total: null
+    };
+    const rawShoppingCompetition = keywordToolSettled[1].status === "fulfilled" ? keywordToolSettled[1].value : {
+      productCount: null,
+      monthlySearches: null,
+      competitionRatio: null,
+      strength: null,
+      error: keywordToolSettled[1].reason?.message || "\uC1FC\uD551 \uACBD\uC7C1\uB3C4 \uB370\uC774\uD130\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4."
+    };
+    const shoppingMonthlySearches = keywordTool?.primary?.monthlyTotalSearches ?? null;
+    const shoppingCompetitionRatio = rawShoppingCompetition.productCount !== null && rawShoppingCompetition.productCount !== void 0 && shoppingMonthlySearches ? rawShoppingCompetition.productCount / shoppingMonthlySearches : null;
+    const shoppingCompetition = {
+      ...rawShoppingCompetition,
+      monthlySearches: shoppingMonthlySearches,
+      competitionRatio: shoppingCompetitionRatio,
+      strength: getShoppingCompetitionStrength(shoppingCompetitionRatio)
     };
     const trendSuccess = trendSettled.status === "fulfilled";
     const shoppingSuccess = shoppingSettled.status === "fulfilled";
@@ -1882,7 +1965,8 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
         matchedShoppingCategory,
         matchedShoppingKeyword,
         keywordTool,
-        contentVolume
+        contentVolume,
+        shoppingCompetition
       }
     };
     setInCache(cacheKey, result);

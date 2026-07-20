@@ -21,6 +21,14 @@ type KeywordMetric = {
   similarity: number | null;
 };
 
+type ShoppingCompetition = {
+  productCount: number | null;
+  monthlySearches: number | null;
+  competitionRatio: number | null;
+  strength: string | null;
+  error?: string | null;
+};
+
 const PERIOD_OPTIONS = [
   { value: "30", label: "1개월", days: 30, unit: "date" },
   { value: "90", label: "3개월", days: 90, unit: "week" },
@@ -125,6 +133,7 @@ export default function UnifiedInsights() {
   const contentVolume = chartData?.meta?.contentVolume;
   const blogTotalDocuments = contentVolume?.sources?.find((item: any) => item.key === "blog")?.totalDocuments ?? null;
   const shoppingStatus = primaryKeyword ? chartData?.meta?.shoppingStatus?.[primaryKeyword] : null;
+  const shoppingCompetition: ShoppingCompetition | null = chartData?.meta?.shoppingCompetition || null;
   const searchRatio = primaryMetric?.monthlyTotalSearches
     ? blogTotalDocuments / primaryMetric.monthlyTotalSearches
     : null;
@@ -165,10 +174,7 @@ export default function UnifiedInsights() {
     return "포화";
   };
 
-  const getShoppingCompetitionStrength = () => {
-    if (!shoppingStatus || shoppingStatus === "NO_DATA") return "-";
-    return getCompetitionLabel(primaryMetric?.competition);
-  };
+  const getShoppingCompetitionStrength = () => shoppingCompetition?.strength || "-";
 
   const getFilterLabel = () => {
     const periodLabel = PERIOD_OPTIONS.find(option => option.value === selectedPeriod)?.label || "1개월";
@@ -724,19 +730,22 @@ export default function UnifiedInsights() {
               <div className="grid grid-cols-3 gap-2 md:gap-3">
                 <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-slate-800/70 p-2 text-center md:p-3">
                   <p className="text-xs text-slate-500">상품 수</p>
-                  <p className="mt-2 max-w-full truncate text-sm font-medium text-slate-300 md:text-xl md:font-bold">-</p>
+                  <p className="mt-2 max-w-full truncate text-sm font-medium text-slate-300 md:text-xl md:font-bold">
+                    {formatNumber(shoppingCompetition?.productCount)}
+                  </p>
                 </div>
                 <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-slate-800/70 p-2 text-center md:p-3">
                   <p className="text-xs text-slate-500">경쟁강도</p>
                   <p className="mt-2 max-w-full truncate text-sm font-medium text-slate-300 md:text-xl md:font-bold">{getShoppingCompetitionStrength()}</p>
                 </div>
                 <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-blue-950/50 p-2 text-center md:p-3">
-                  <p className="text-xs text-blue-300">쇼핑 데이터</p>
+                  <p className="text-xs text-blue-300">월 검색량</p>
                   <p className="mt-2 max-w-full truncate text-sm font-medium text-white md:text-xl md:font-bold">
-                    {shoppingStatus === "AVAILABLE" ? "확인" : "-"}
+                    {formatNumber(shoppingCompetition?.monthlySearches)}
                   </p>
                 </div>
               </div>
+              {shoppingCompetition?.error && <p className="mt-3 text-xs text-slate-500">{shoppingCompetition.error}</p>}
             </div>
             )}
           </div>

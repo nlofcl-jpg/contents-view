@@ -132,6 +132,14 @@ type KeywordMetric = {
   similarity: number | null;
 };
 
+type ShoppingCompetition = {
+  productCount: number | null;
+  monthlySearches: number | null;
+  competitionRatio: number | null;
+  strength: "낮음" | "보통" | "높음" | "포화" | null;
+  error?: string | null;
+};
+
 const supabaseAdmin =
   ENV.supabaseUrl && ENV.supabaseServiceRoleKey
     ? createClient(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
@@ -472,6 +480,46 @@ async function fetchRecentNaverContentCount(input: {
   return { count, checked, capped, totalDocuments };
 }
 
+function getShoppingCompetitionStrength(ratio: number | null): ShoppingCompetition["strength"] {
+  if (ratio === null || Number.isNaN(ratio)) return null;
+  if (ratio < 0.5) return "낮음";
+  if (ratio < 2) return "보통";
+  if (ratio < 8) return "높음";
+  return "포화";
+}
+
+async function fetchNaverShoppingProductCount(input: {
+  keyword: string;
+  clientId: string;
+  clientSecret: string;
+}) {
+  const params = new URLSearchParams({
+    query: input.keyword,
+    display: "1",
+    start: "1",
+    sort: "sim",
+  });
+
+  const response = await fetchWithTimeout(
+    `https://openapi.naver.com/v1/search/shop.json?${params.toString()}`,
+    {
+      method: "GET",
+      headers: {
+        "X-Naver-Client-Id": input.clientId,
+        "X-Naver-Client-Secret": input.clientSecret,
+      },
+    },
+    REQUEST_TIMEOUT_MS
+  );
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.errorMessage || `HTTP ${response.status}`);
+  }
+
+  return typeof data?.total === "number" ? data.total : null;
+}
+
 /**
  * Fetch with timeout using AbortController
  */
@@ -525,7 +573,7 @@ export const unifiedInsightProcedure = publicProcedure
     );
 
     const cachedData = getFromCache(cacheKey);
-    if ((cachedData as any)?.meta?.keywordTool) {
+    if ((cachedData as any)?.meta?.keywordTool && (cachedData as any)?.meta?.shoppingCompetition) {
       console.log('[Naver API] Cache hit for unified insight', {
         cacheKey,
         keywords: normalizedKeywords.length,
@@ -822,6 +870,46 @@ export const unifiedInsightProcedure = publicProcedure
         (async () => {
           const primaryKeyword = normalizedKeywords[0];
           if (!primaryKeyword || !clientId || !clientSecret) {
+            return {
+              productCount: null,
+              monthlySearches: null,
+              competitionRatio: null,
+              strength: null,
+            } satisfies ShoppingCompetition;
+          }
+
+          try {
+            const productCount = await fetchNaverShoppingProductCount({
+              keyword: primaryKeyword,
+              clientId,
+              clientSecret,
+            });
+
+            return {
+              productCount,
+              monthlySearches: null,
+              competitionRatio: null,
+              strength: null,
+            } satisfies ShoppingCompetition;
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "쇼핑 상품 수를 불러오지 못했습니다.";
+            console.error("[Naver Shopping] Product count failed", {
+              keyword: primaryKeyword,
+              error: message,
+            });
+
+            return {
+              productCount: null,
+              monthlySearches: null,
+              competitionRatio: null,
+              strength: null,
+              error: message,
+            } satisfies ShoppingCompetition;
+          }
+        })(),
+        (async () => {
+          const primaryKeyword = normalizedKeywords[0];
+          if (!primaryKeyword || !clientId || !clientSecret) {
             return null;
           }
 
@@ -896,10 +984,31 @@ export const unifiedInsightProcedure = publicProcedure
           related: [],
         };
       const contentVolume =
-        keywordToolSettled[1].status === "fulfilled" ? keywordToolSettled[1].value : {
+        keywordToolSettled[2].status === "fulfilled" ? keywordToolSettled[2].value : {
           sources: [],
           total: null,
         };
+      const rawShoppingCompetition =
+        keywordToolSettled[1].status === "fulfilled" ? keywordToolSettled[1].value : {
+          productCount: null,
+          monthlySearches: null,
+          competitionRatio: null,
+          strength: null,
+          error: keywordToolSettled[1].reason?.message || "쇼핑 경쟁도 데이터를 불러오지 못했습니다.",
+        };
+      const shoppingMonthlySearches = keywordTool?.primary?.monthlyTotalSearches ?? null;
+      const shoppingCompetitionRatio =
+        rawShoppingCompetition.productCount !== null &&
+        rawShoppingCompetition.productCount !== undefined &&
+        shoppingMonthlySearches
+          ? rawShoppingCompetition.productCount / shoppingMonthlySearches
+          : null;
+      const shoppingCompetition: ShoppingCompetition = {
+        ...rawShoppingCompetition,
+        monthlySearches: shoppingMonthlySearches,
+        competitionRatio: shoppingCompetitionRatio,
+        strength: getShoppingCompetitionStrength(shoppingCompetitionRatio),
+      };
 
       // Check if both APIs succeeded
       const trendSuccess = trendSettled.status === "fulfilled";
@@ -1024,6 +1133,7 @@ export const unifiedInsightProcedure = publicProcedure
           matchedShoppingKeyword,
           keywordTool,
           contentVolume,
+          shoppingCompetition,
         },
       };
 
