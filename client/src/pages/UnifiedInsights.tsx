@@ -120,6 +120,14 @@ export default function UnifiedInsights() {
     return `${value > 0 ? "+" : ""}${Math.round(value * 10) / 10}p`;
   };
 
+  const getShoppingIndexGrade = (value: number | null | undefined) => {
+    if (value === null || value === undefined || Number.isNaN(value)) return "-";
+    if (value < 25) return "낮음";
+    if (value < 50) return "보통";
+    if (value < 75) return "높음";
+    return "최악";
+  };
+
   const primaryKeyword = chartData?.keywords?.[0] || keywords[0] || "";
   const primaryTrendSummary = getSeriesSummary(primaryKeyword ? chartData?.trend?.[primaryKeyword] : undefined);
   const primaryShoppingSeries: InsightPoint[] | undefined = primaryKeyword ? chartData?.shopping?.[primaryKeyword] : undefined;
@@ -775,12 +783,12 @@ export default function UnifiedInsights() {
               <p className="mt-2 text-2xl font-bold text-white">
                 {activeInsightTab === "content"
                   ? formatDecimal(primaryMetric?.monthlyTotalClicks)
-                  : formatRatio(primaryShoppingMonthlyClickIndex)}
+                  : getShoppingIndexGrade(primaryShoppingMonthlyClickIndex)}
               </p>
               <p className="mt-1 text-xs text-slate-300">
                 {activeInsightTab === "content"
                   ? `PC ${formatDecimal(primaryMetric?.monthlyPcClicks)} · 모바일 ${formatDecimal(primaryMetric?.monthlyMobileClicks)}`
-                  : "쇼핑 상대 지수"}
+                  : `쇼핑 상대 지수 ${formatRatio(primaryShoppingMonthlyClickIndex)}`}
               </p>
             </div>
             <div className="relative rounded-lg border border-blue-500/20 bg-slate-900/50 p-4 text-center">
