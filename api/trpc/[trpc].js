@@ -1870,6 +1870,36 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
       competitionRatio: shoppingCompetitionRatio,
       strength: getShoppingCompetitionStrength(shoppingCompetitionRatio)
     };
+    const shoppingRelatedKeywords = [];
+    if (clientId && clientSecret && Array.isArray(keywordTool?.related)) {
+      const primaryKeywordKey = normalizeKeywordText(normalizedKeywords[0] || "");
+      const candidates = keywordTool.related.filter((item) => normalizeKeywordText(item.keyword) !== primaryKeywordKey).slice(0, 12);
+      const settled = await Promise.allSettled(
+        candidates.map(async (item) => {
+          const summary = await fetchNaverShoppingSummary({
+            keyword: item.keyword,
+            clientId,
+            clientSecret
+          });
+          const monthlySearches = item.monthlyTotalSearches;
+          const competitionRatio = summary.productCount !== null && summary.productCount !== void 0 && monthlySearches ? summary.productCount / monthlySearches : null;
+          return {
+            keyword: item.keyword,
+            monthlySearches,
+            productCount: summary.productCount,
+            averagePrice: summary.averagePrice,
+            competitionRatio,
+            strength: getShoppingCompetitionStrength(competitionRatio)
+          };
+        })
+      );
+      settled.forEach((result2) => {
+        if (result2.status === "fulfilled" && result2.value.productCount && result2.value.productCount > 0) {
+          shoppingRelatedKeywords.push(result2.value);
+        }
+      });
+      shoppingRelatedKeywords.sort((a, b) => (b.monthlySearches || 0) - (a.monthlySearches || 0));
+    }
     const trendSuccess = trendSettled.status === "fulfilled";
     const shoppingSuccess = shoppingSettled.status === "fulfilled";
     if (!trendSuccess && !shoppingSuccess) {
@@ -1975,7 +2005,8 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
         matchedShoppingKeyword,
         keywordTool,
         contentVolume,
-        shoppingCompetition
+        shoppingCompetition,
+        shoppingRelatedKeywords: shoppingRelatedKeywords.slice(0, 10)
       }
     };
     setInCache(cacheKey, result);

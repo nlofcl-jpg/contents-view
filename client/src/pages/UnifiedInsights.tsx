@@ -30,6 +30,15 @@ type ShoppingCompetition = {
   error?: string | null;
 };
 
+type ShoppingRelatedKeyword = {
+  keyword: string;
+  monthlySearches: number | null;
+  productCount: number | null;
+  averagePrice: number | null;
+  competitionRatio: number | null;
+  strength: string | null;
+};
+
 const PERIOD_OPTIONS = [
   { value: "30", label: "1개월", days: 30, unit: "date" },
   { value: "90", label: "3개월", days: 90, unit: "week" },
@@ -151,6 +160,7 @@ export default function UnifiedInsights() {
   const blogTotalDocuments = contentVolume?.sources?.find((item: any) => item.key === "blog")?.totalDocuments ?? null;
   const shoppingStatus = primaryKeyword ? chartData?.meta?.shoppingStatus?.[primaryKeyword] : null;
   const shoppingCompetition: ShoppingCompetition | null = chartData?.meta?.shoppingCompetition || null;
+  const shoppingRelatedKeywords: ShoppingRelatedKeyword[] = chartData?.meta?.shoppingRelatedKeywords || [];
   const searchRatio = primaryMetric?.monthlyTotalSearches
     ? blogTotalDocuments / primaryMetric.monthlyTotalSearches
     : null;
@@ -836,6 +846,43 @@ export default function UnifiedInsights() {
               </p>
             </div>
           </div>
+
+          {activeInsightTab === "seller" && (
+            <div className="rounded-lg border border-slate-700 bg-slate-900/35 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3 className="text-base font-semibold text-white">쇼핑 연관 키워드</h3>
+              </div>
+              {shoppingRelatedKeywords.length > 0 ? (
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-5">
+                  {shoppingRelatedKeywords.map((item) => (
+                    <button
+                      key={item.keyword}
+                      type="button"
+                      onClick={() => {
+                        setKeywordInput(item.keyword);
+                        runQuery([item.keyword]);
+                      }}
+                      className="rounded-lg border border-blue-500/20 bg-slate-950/45 p-3 text-left transition-colors hover:border-blue-400/50 hover:bg-blue-500/10"
+                    >
+                      <p className="truncate text-sm font-medium text-white">{item.keyword}</p>
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                        <span className="text-slate-500">검색량</span>
+                        <span className="text-right text-slate-300">{formatNumber(item.monthlySearches)}</span>
+                        <span className="text-slate-500">상품 수</span>
+                        <span className="text-right text-slate-300">{formatNumber(item.productCount)}</span>
+                        <span className="text-slate-500">경쟁</span>
+                        <span className="text-right text-blue-300">{item.strength || "-"}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-slate-800 bg-slate-950/35 px-4 py-5 text-center text-sm text-slate-500">
+                  쇼핑 연관 키워드를 확인할 수 없습니다.
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="rounded-lg border border-slate-700 bg-slate-900/35 p-4">
             <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">

@@ -141,6 +141,15 @@ type ShoppingCompetition = {
   error?: string | null;
 };
 
+type ShoppingRelatedKeyword = {
+  keyword: string;
+  monthlySearches: number | null;
+  productCount: number | null;
+  averagePrice: number | null;
+  competitionRatio: number | null;
+  strength: "낮음" | "보통" | "높음" | "포화" | null;
+};
+
 const supabaseAdmin =
   ENV.supabaseUrl && ENV.supabaseServiceRoleKey
     ? createClient(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
@@ -1027,6 +1036,45 @@ export const unifiedInsightProcedure = publicProcedure
         competitionRatio: shoppingCompetitionRatio,
         strength: getShoppingCompetitionStrength(shoppingCompetitionRatio),
       };
+      const shoppingRelatedKeywords: ShoppingRelatedKeyword[] = [];
+      if (clientId && clientSecret && Array.isArray(keywordTool?.related)) {
+        const primaryKeywordKey = normalizeKeywordText(normalizedKeywords[0] || "");
+        const candidates = keywordTool.related
+          .filter((item: KeywordMetric) => normalizeKeywordText(item.keyword) !== primaryKeywordKey)
+          .slice(0, 12);
+        const settled = await Promise.allSettled(
+          candidates.map(async (item: KeywordMetric) => {
+            const summary = await fetchNaverShoppingSummary({
+              keyword: item.keyword,
+              clientId,
+              clientSecret,
+            });
+            const monthlySearches = item.monthlyTotalSearches;
+            const competitionRatio =
+              summary.productCount !== null &&
+              summary.productCount !== undefined &&
+              monthlySearches
+                ? summary.productCount / monthlySearches
+                : null;
+
+            return {
+              keyword: item.keyword,
+              monthlySearches,
+              productCount: summary.productCount,
+              averagePrice: summary.averagePrice,
+              competitionRatio,
+              strength: getShoppingCompetitionStrength(competitionRatio),
+            } satisfies ShoppingRelatedKeyword;
+          })
+        );
+
+        settled.forEach((result) => {
+          if (result.status === "fulfilled" && result.value.productCount && result.value.productCount > 0) {
+            shoppingRelatedKeywords.push(result.value);
+          }
+        });
+        shoppingRelatedKeywords.sort((a, b) => (b.monthlySearches || 0) - (a.monthlySearches || 0));
+      }
 
       // Check if both APIs succeeded
       const trendSuccess = trendSettled.status === "fulfilled";
@@ -1152,6 +1200,7 @@ export const unifiedInsightProcedure = publicProcedure
           keywordTool,
           contentVolume,
           shoppingCompetition,
+          shoppingRelatedKeywords: shoppingRelatedKeywords.slice(0, 10),
         },
       };
 
