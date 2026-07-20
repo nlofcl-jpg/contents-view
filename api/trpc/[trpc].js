@@ -1092,8 +1092,11 @@ var AUTO_SHOPPING_CATEGORIES = [
 function uniqueValues(values) {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 }
+function normalizeKeywordInput(keyword) {
+  return keyword.trim().replace(/\s+/g, " ");
+}
 function generateShoppingKeywordVariants(keyword) {
-  const normalized = keyword.trim();
+  const normalized = normalizeKeywordInput(keyword);
   const noSpace = normalized.replace(/\s+/g, "");
   const spaced = normalized.replace(/\s+/g, " ");
   const variants = [normalized, noSpace, spaced];
@@ -1132,6 +1135,28 @@ function generateShoppingKeywordVariants(keyword) {
     );
   }
   return uniqueValues(variants).slice(0, 20);
+}
+function generateKeywordToolVariants(keyword) {
+  const normalized = normalizeKeywordInput(keyword);
+  const noSpace = normalized.replace(/\s+/g, "");
+  const variants = [normalized, noSpace];
+  if (/여성|여자/.test(noSpace)) {
+    variants.push(
+      noSpace.replace(/여성/g, "\uC5EC\uC790"),
+      noSpace.replace(/여자/g, "\uC5EC\uC131"),
+      normalized.replace(/여성/g, "\uC5EC\uC790"),
+      normalized.replace(/여자/g, "\uC5EC\uC131")
+    );
+  }
+  if (/남성|남자/.test(noSpace)) {
+    variants.push(
+      noSpace.replace(/남성/g, "\uB0A8\uC790"),
+      noSpace.replace(/남자/g, "\uB0A8\uC131"),
+      normalized.replace(/남성/g, "\uB0A8\uC790"),
+      normalized.replace(/남자/g, "\uB0A8\uC131")
+    );
+  }
+  return uniqueValues(variants).slice(0, 8);
 }
 function getShoppingDataPointCount(shoppingData) {
   return (shoppingData.results || []).reduce(
@@ -1254,6 +1279,20 @@ function normalizeKeywordMetric(item) {
     averageAdDepth,
     similarity: null
   };
+}
+function mergeKeywordToolLists(keywordLists) {
+  const merged = /* @__PURE__ */ new Map();
+  for (const keywordList of keywordLists) {
+    for (const item of keywordList) {
+      const keyword = String(item?.relKeyword || "").trim();
+      if (!keyword) continue;
+      const key = normalizeKeywordText(keyword);
+      if (!merged.has(key)) {
+        merged.set(key, item);
+      }
+    }
+  }
+  return Array.from(merged.values());
 }
 function normalizeKeywordText(value) {
   return value.replace(/\s+/g, "").toLowerCase();
@@ -1412,9 +1451,10 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
   ages: z2.array(z2.string()).optional()
 })).mutation(async ({ input }) => {
   const requestedCategory = input.category || "auto";
+  const normalizedKeywords = uniqueValues(input.keywords.map(normalizeKeywordInput)).slice(0, 5);
   const cacheKey = generateCacheKey(
     "unified",
-    input.keywords,
+    normalizedKeywords,
     requestedCategory,
     input.startDate,
     input.endDate,
@@ -1427,7 +1467,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
   if (cachedData?.meta?.keywordTool) {
     console.log("[Naver API] Cache hit for unified insight", {
       cacheKey,
-      keywords: input.keywords.length,
+      keywords: normalizedKeywords.length,
       category: requestedCategory
     });
     return cachedData;
@@ -1439,7 +1479,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
     return {
       success: false,
       error: "\uD1B5\uD569 \uC778\uC0AC\uC774\uD2B8 \uB370\uC774\uD130\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.",
-      keywords: input.keywords,
+      keywords: normalizedKeywords,
       trend: {},
       shopping: {}
     };
@@ -1454,7 +1494,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
       startDate: input.startDate,
       endDate: input.endDate,
       timeUnit: input.timeUnit,
-      keywordGroups: input.keywords.map((kw) => ({
+      keywordGroups: normalizedKeywords.map((kw) => ({
         groupName: kw,
         keywords: [kw]
       }))
@@ -1472,8 +1512,8 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
     }
     const trendStartTime = Date.now();
     const shoppingStartTime = Date.now();
-    const primaryShoppingKeyword = input.keywords[0] || "";
-    const shoppingKeywordsToTry = input.keywords.length === 1 ? generateShoppingKeywordVariants(primaryShoppingKeyword) : input.keywords;
+    const primaryShoppingKeyword = normalizedKeywords[0] || "";
+    const shoppingKeywordsToTry = normalizedKeywords.length === 1 ? generateShoppingKeywordVariants(primaryShoppingKeyword) : normalizedKeywords;
     const fetchShoppingTrend = async (category, shoppingKeywords) => {
       const shoppingRequestBody = {
         startDate: input.startDate,
@@ -1522,7 +1562,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
       (async () => {
         console.log("[Naver API] Search Trend API - Request started", {
           timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-          keywords: input.keywords.length,
+          keywords: normalizedKeywords.length,
           startDate: input.startDate,
           endDate: input.endDate,
           timeUnit: input.timeUnit
@@ -1579,7 +1619,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
       (async () => {
         console.log("[Naver API] Shopping Trend API - Request started", {
           timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-          keywords: input.keywords.length,
+          keywords: normalizedKeywords.length,
           category: requestedCategory,
           startDate: input.startDate,
           endDate: input.endDate,
@@ -1626,7 +1666,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
     ]);
     const keywordToolSettled = await Promise.allSettled([
       (async () => {
-        const primaryKeyword = input.keywords[0]?.trim();
+        const primaryKeyword = normalizedKeywords[0];
         if (!primaryKeyword) {
           return null;
         }
@@ -1640,16 +1680,37 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
             related: []
           };
         }
-        const keywordToolData = await requestNaverSearchAdKeywordTool(credentials, primaryKeyword);
-        const summary = buildKeywordToolSummary(primaryKeyword, keywordToolData?.keywordList || []);
+        const keywordToolVariants = generateKeywordToolVariants(primaryKeyword);
+        const keywordToolResults = [];
+        for (let index = 0; index < keywordToolVariants.length; index += 2) {
+          const batch = keywordToolVariants.slice(index, index + 2);
+          const batchResults = await Promise.allSettled(
+            batch.map((keyword) => requestNaverSearchAdKeywordTool(credentials, keyword))
+          );
+          batchResults.forEach((result2, resultIndex) => {
+            const variant = batch[resultIndex];
+            if (result2.status === "fulfilled") {
+              keywordToolResults.push(result2.value?.keywordList || []);
+            } else {
+              console.error("[Naver SearchAd] Keyword tool variant failed", {
+                keyword: variant,
+                error: result2.reason instanceof Error ? result2.reason.message : "Unknown error"
+              });
+            }
+          });
+        }
+        const mergedKeywordList = mergeKeywordToolLists(keywordToolResults);
+        const summary = buildKeywordToolSummary(primaryKeyword, mergedKeywordList);
+        const hasKeywordData = Boolean(summary.primary || summary.recommended.length > 0 || summary.related.length > 0);
         return {
-          success: true,
-          error: null,
+          success: hasKeywordData,
+          error: hasKeywordData ? null : "\uAC80\uC0C9\uAD11\uACE0 \uD0A4\uC6CC\uB4DC \uB370\uC774\uD130\uB97C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.",
+          variants: keywordToolVariants,
           ...summary
         };
       })(),
       (async () => {
-        const primaryKeyword = input.keywords[0]?.trim();
+        const primaryKeyword = normalizedKeywords[0];
         if (!primaryKeyword || !clientId || !clientSecret) {
           return null;
         }
@@ -1730,7 +1791,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
       return {
         success: false,
         error: "\uD1B5\uD569 \uC778\uC0AC\uC774\uD2B8 \uB370\uC774\uD130\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.",
-        keywords: input.keywords,
+        keywords: normalizedKeywords,
         trend: {},
         shopping: {}
       };
@@ -1742,7 +1803,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
       return {
         success: false,
         error: "\uAC80\uC0C9 \uD2B8\uB80C\uB4DC \uB370\uC774\uD130\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.",
-        keywords: input.keywords,
+        keywords: normalizedKeywords,
         trend: {},
         shopping: {}
       };
@@ -1783,7 +1844,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
     if (shoppingData.results && Array.isArray(shoppingData.results)) {
       shoppingData.results.forEach((item) => {
         if (item.keyword && item.data) {
-          const resultKey = input.keywords.length === 1 && item.keyword === matchedShoppingKeyword ? input.keywords[0] : item.keyword;
+          const resultKey = normalizedKeywords.length === 1 && item.keyword === matchedShoppingKeyword ? normalizedKeywords[0] : item.keyword;
           shoppingResult[resultKey] = item.data.map((d) => ({
             period: d.period,
             ratio: d.ratio
@@ -1792,7 +1853,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
       });
     }
     console.log("[Naver API] Unified Insight success", {
-      keywords: input.keywords.length,
+      keywords: normalizedKeywords.length,
       category: requestedCategory,
       matchedShoppingCategory,
       matchedShoppingKeyword,
@@ -1802,7 +1863,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
       shoppingDataPoints: Object.values(shoppingResult).reduce((sum, arr) => sum + arr.length, 0)
     });
     const shoppingStatus = {};
-    input.keywords.forEach((keyword) => {
+    normalizedKeywords.forEach((keyword) => {
       const shoppingData2 = shoppingResult[keyword];
       if (shoppingData2 && Array.isArray(shoppingData2) && shoppingData2.length > 0) {
         shoppingStatus[keyword] = "AVAILABLE";
@@ -1811,12 +1872,12 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
       }
     });
     console.log("[Naver API] Shopping Status", {
-      keywords: input.keywords,
+      keywords: normalizedKeywords,
       shoppingStatus
     });
     const result = {
       success: true,
-      keywords: input.keywords,
+      keywords: normalizedKeywords,
       trend: trendResult,
       shopping: shoppingResult,
       meta: {
@@ -1833,13 +1894,13 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
     const errorMsg = error instanceof Error ? error.message : "Connection failed";
     console.error("[Naver API] Unified Insight Exception", {
       error: errorMsg,
-      keywords: input.keywords.length,
+      keywords: normalizedKeywords.length,
       category: requestedCategory
     });
     return {
       success: false,
       error: "\uD1B5\uD569 \uC778\uC0AC\uC774\uD2B8 \uB370\uC774\uD130\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.",
-      keywords: input.keywords,
+      keywords: normalizedKeywords,
       trend: {},
       shopping: {}
     };

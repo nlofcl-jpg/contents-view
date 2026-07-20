@@ -26,8 +26,12 @@ function uniqueValues(values: string[]) {
   return Array.from(new Set(values.map(value => value.trim()).filter(Boolean)));
 }
 
+function normalizeKeywordInput(keyword: string) {
+  return keyword.trim().replace(/\s+/g, " ");
+}
+
 function generateShoppingKeywordVariants(keyword: string) {
-  const normalized = keyword.trim();
+  const normalized = normalizeKeywordInput(keyword);
   const noSpace = normalized.replace(/\s+/g, "");
   const spaced = normalized.replace(/\s+/g, " ");
   const variants = [normalized, noSpace, spaced];
@@ -70,6 +74,32 @@ function generateShoppingKeywordVariants(keyword: string) {
   }
 
   return uniqueValues(variants).slice(0, 20);
+}
+
+function generateKeywordToolVariants(keyword: string) {
+  const normalized = normalizeKeywordInput(keyword);
+  const noSpace = normalized.replace(/\s+/g, "");
+  const variants = [normalized, noSpace];
+
+  if (/여성|여자/.test(noSpace)) {
+    variants.push(
+      noSpace.replace(/여성/g, "여자"),
+      noSpace.replace(/여자/g, "여성"),
+      normalized.replace(/여성/g, "여자"),
+      normalized.replace(/여자/g, "여성")
+    );
+  }
+
+  if (/남성|남자/.test(noSpace)) {
+    variants.push(
+      noSpace.replace(/남성/g, "남자"),
+      noSpace.replace(/남자/g, "남성"),
+      normalized.replace(/남성/g, "남자"),
+      normalized.replace(/남자/g, "남성")
+    );
+  }
+
+  return uniqueValues(variants).slice(0, 8);
 }
 
 function getShoppingDataPointCount(shoppingData: any) {
@@ -258,6 +288,24 @@ function normalizeKeywordMetric(item: any): KeywordMetric | null {
     averageAdDepth,
     similarity: null,
   };
+}
+
+function mergeKeywordToolLists(keywordLists: any[][]) {
+  const merged = new Map<string, any>();
+
+  for (const keywordList of keywordLists) {
+    for (const item of keywordList) {
+      const keyword = String(item?.relKeyword || "").trim();
+      if (!keyword) continue;
+
+      const key = normalizeKeywordText(keyword);
+      if (!merged.has(key)) {
+        merged.set(key, item);
+      }
+    }
+  }
+
+  return Array.from(merged.values());
 }
 
 function normalizeKeywordText(value: string) {
@@ -464,11 +512,12 @@ export const unifiedInsightProcedure = publicProcedure
   }))
   .mutation(async ({ input }) => {
     const requestedCategory = input.category || "auto";
+    const normalizedKeywords = uniqueValues(input.keywords.map(normalizeKeywordInput)).slice(0, 5);
 
     // Check cache first
     const cacheKey = generateCacheKey(
       "unified",
-      input.keywords,
+      normalizedKeywords,
       requestedCategory,
       input.startDate,
       input.endDate,
@@ -482,7 +531,7 @@ export const unifiedInsightProcedure = publicProcedure
     if ((cachedData as any)?.meta?.keywordTool) {
       console.log('[Naver API] Cache hit for unified insight', {
         cacheKey,
-        keywords: input.keywords.length,
+        keywords: normalizedKeywords.length,
         category: requestedCategory,
       });
       return cachedData;
@@ -496,7 +545,7 @@ export const unifiedInsightProcedure = publicProcedure
       return {
         success: false,
         error: "통합 인사이트 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.",
-        keywords: input.keywords,
+        keywords: normalizedKeywords,
         trend: {},
         shopping: {},
       };
@@ -515,7 +564,7 @@ export const unifiedInsightProcedure = publicProcedure
         startDate: input.startDate,
         endDate: input.endDate,
         timeUnit: input.timeUnit,
-        keywordGroups: input.keywords.map(kw => ({
+        keywordGroups: normalizedKeywords.map(kw => ({
           groupName: kw,
           keywords: [kw],
         })),
@@ -541,10 +590,10 @@ export const unifiedInsightProcedure = publicProcedure
       // Parallel API calls with allSettled to handle individual failures
       const trendStartTime = Date.now();
       const shoppingStartTime = Date.now();
-      const primaryShoppingKeyword = input.keywords[0] || "";
-      const shoppingKeywordsToTry = input.keywords.length === 1
+      const primaryShoppingKeyword = normalizedKeywords[0] || "";
+      const shoppingKeywordsToTry = normalizedKeywords.length === 1
         ? generateShoppingKeywordVariants(primaryShoppingKeyword)
-        : input.keywords;
+        : normalizedKeywords;
 
       const fetchShoppingTrend = async (category: string, shoppingKeywords: string[]) => {
         const shoppingRequestBody: any = {
@@ -603,7 +652,7 @@ export const unifiedInsightProcedure = publicProcedure
         (async () => {
           console.log('[Naver API] Search Trend API - Request started', {
             timestamp: new Date().toISOString(),
-            keywords: input.keywords.length,
+            keywords: normalizedKeywords.length,
             startDate: input.startDate,
             endDate: input.endDate,
             timeUnit: input.timeUnit,
@@ -668,7 +717,7 @@ export const unifiedInsightProcedure = publicProcedure
         (async () => {
           console.log('[Naver API] Shopping Trend API - Request started', {
             timestamp: new Date().toISOString(),
-            keywords: input.keywords.length,
+            keywords: normalizedKeywords.length,
             category: requestedCategory,
             startDate: input.startDate,
             endDate: input.endDate,
@@ -724,7 +773,7 @@ export const unifiedInsightProcedure = publicProcedure
 
       const keywordToolSettled = await Promise.allSettled([
         (async () => {
-          const primaryKeyword = input.keywords[0]?.trim();
+          const primaryKeyword = normalizedKeywords[0];
           if (!primaryKeyword) {
             return null;
           }
@@ -740,17 +789,41 @@ export const unifiedInsightProcedure = publicProcedure
             };
           }
 
-          const keywordToolData = await requestNaverSearchAdKeywordTool(credentials, primaryKeyword);
-          const summary = buildKeywordToolSummary(primaryKeyword, keywordToolData?.keywordList || []);
+          const keywordToolVariants = generateKeywordToolVariants(primaryKeyword);
+          const keywordToolResults: any[][] = [];
+
+          for (let index = 0; index < keywordToolVariants.length; index += 2) {
+            const batch = keywordToolVariants.slice(index, index + 2);
+            const batchResults = await Promise.allSettled(
+              batch.map(keyword => requestNaverSearchAdKeywordTool(credentials, keyword))
+            );
+
+            batchResults.forEach((result, resultIndex) => {
+              const variant = batch[resultIndex];
+              if (result.status === "fulfilled") {
+                keywordToolResults.push(result.value?.keywordList || []);
+              } else {
+                console.error("[Naver SearchAd] Keyword tool variant failed", {
+                  keyword: variant,
+                  error: result.reason instanceof Error ? result.reason.message : "Unknown error",
+                });
+              }
+            });
+          }
+
+          const mergedKeywordList = mergeKeywordToolLists(keywordToolResults);
+          const summary = buildKeywordToolSummary(primaryKeyword, mergedKeywordList);
+          const hasKeywordData = Boolean(summary.primary || summary.recommended.length > 0 || summary.related.length > 0);
 
           return {
-            success: true,
-            error: null,
+            success: hasKeywordData,
+            error: hasKeywordData ? null : "검색광고 키워드 데이터를 찾지 못했습니다.",
+            variants: keywordToolVariants,
             ...summary,
           };
         })(),
         (async () => {
-          const primaryKeyword = input.keywords[0]?.trim();
+          const primaryKeyword = normalizedKeywords[0];
           if (!primaryKeyword || !clientId || !clientSecret) {
             return null;
           }
@@ -843,7 +916,7 @@ export const unifiedInsightProcedure = publicProcedure
         return {
           success: false,
           error: "통합 인사이트 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.",
-          keywords: input.keywords,
+          keywords: normalizedKeywords,
           trend: {},
           shopping: {},
         };
@@ -856,7 +929,7 @@ export const unifiedInsightProcedure = publicProcedure
         return {
           success: false,
           error: "검색 트렌드 데이터를 불러오지 못했습니다.",
-          keywords: input.keywords,
+          keywords: normalizedKeywords,
           trend: {},
           shopping: {},
         };
@@ -904,8 +977,8 @@ export const unifiedInsightProcedure = publicProcedure
       if (shoppingData.results && Array.isArray(shoppingData.results)) {
         shoppingData.results.forEach((item: any) => {
           if (item.keyword && item.data) {
-            const resultKey = input.keywords.length === 1 && item.keyword === matchedShoppingKeyword
-              ? input.keywords[0]
+            const resultKey = normalizedKeywords.length === 1 && item.keyword === matchedShoppingKeyword
+              ? normalizedKeywords[0]
               : item.keyword;
             shoppingResult[resultKey] = item.data.map((d: any) => ({
               period: d.period,
@@ -916,7 +989,7 @@ export const unifiedInsightProcedure = publicProcedure
       }
 
       console.log('[Naver API] Unified Insight success', {
-        keywords: input.keywords.length,
+        keywords: normalizedKeywords.length,
         category: requestedCategory,
         matchedShoppingCategory,
         matchedShoppingKeyword,
@@ -928,7 +1001,7 @@ export const unifiedInsightProcedure = publicProcedure
 
       // Determine shopping data status for each keyword
       const shoppingStatus: Record<string, 'AVAILABLE' | 'NO_DATA'> = {};
-      input.keywords.forEach(keyword => {
+      normalizedKeywords.forEach(keyword => {
         const shoppingData = shoppingResult[keyword];
         // Check if shopping data exists and has valid data points
         if (shoppingData && Array.isArray(shoppingData) && shoppingData.length > 0) {
@@ -939,13 +1012,13 @@ export const unifiedInsightProcedure = publicProcedure
       });
 
       console.log('[Naver API] Shopping Status', {
-        keywords: input.keywords,
+        keywords: normalizedKeywords,
         shoppingStatus,
       });
 
       const result = {
         success: true,
-        keywords: input.keywords,
+        keywords: normalizedKeywords,
         trend: trendResult,
         shopping: shoppingResult,
         meta: {
@@ -965,13 +1038,13 @@ export const unifiedInsightProcedure = publicProcedure
       const errorMsg = error instanceof Error ? error.message : "Connection failed";
       console.error('[Naver API] Unified Insight Exception', {
         error: errorMsg,
-        keywords: input.keywords.length,
+        keywords: normalizedKeywords.length,
         category: requestedCategory,
       });
       return {
         success: false,
         error: "통합 인사이트 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.",
-        keywords: input.keywords,
+        keywords: normalizedKeywords,
         trend: {},
         shopping: {},
       };
