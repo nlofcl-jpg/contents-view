@@ -684,7 +684,7 @@ export default function UnifiedInsights() {
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-4 text-center">
               <p className="text-xs font-semibold text-slate-200">키워드 등급</p>
               <p className="mt-2 text-2xl font-bold text-white">{getCompetitionLabel(primaryMetric?.competition)}</p>
-              <p className="mt-1 text-xs text-slate-300">광고 노출 깊이 {formatDecimal(primaryMetric?.averageAdDepth)}</p>
+              <p className="mt-1 text-xs text-slate-300">검색광고 등급 {formatDecimal(primaryMetric?.averageAdDepth)}</p>
             </div>
           </div>
 
