@@ -1041,7 +1041,8 @@ export const unifiedInsightProcedure = publicProcedure
         const primaryKeywordKey = normalizeKeywordText(normalizedKeywords[0] || "");
         const candidates = keywordTool.related
           .filter((item: KeywordMetric) => normalizeKeywordText(item.keyword) !== primaryKeywordKey)
-          .slice(0, 20);
+          .filter((item: KeywordMetric) => (item.monthlyTotalSearches || 0) > 0)
+          .slice(0, 40);
         const settled = await Promise.allSettled(
           candidates.map(async (item: KeywordMetric) => {
             const summary = await fetchNaverShoppingSummary({
@@ -1069,7 +1070,14 @@ export const unifiedInsightProcedure = publicProcedure
         );
 
         settled.forEach((result) => {
-          if (result.status === "fulfilled" && result.value.productCount && result.value.productCount > 0) {
+          if (
+            result.status === "fulfilled" &&
+            result.value.productCount &&
+            result.value.productCount > 0 &&
+            result.value.monthlySearches &&
+            result.value.monthlySearches > 0 &&
+            result.value.strength
+          ) {
             shoppingRelatedKeywords.push(result.value);
           }
         });

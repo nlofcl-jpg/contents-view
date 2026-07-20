@@ -1873,7 +1873,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
     const shoppingRelatedKeywords = [];
     if (clientId && clientSecret && Array.isArray(keywordTool?.related)) {
       const primaryKeywordKey = normalizeKeywordText(normalizedKeywords[0] || "");
-      const candidates = keywordTool.related.filter((item) => normalizeKeywordText(item.keyword) !== primaryKeywordKey).slice(0, 20);
+      const candidates = keywordTool.related.filter((item) => normalizeKeywordText(item.keyword) !== primaryKeywordKey).filter((item) => (item.monthlyTotalSearches || 0) > 0).slice(0, 40);
       const settled = await Promise.allSettled(
         candidates.map(async (item) => {
           const summary = await fetchNaverShoppingSummary({
@@ -1894,7 +1894,7 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
         })
       );
       settled.forEach((result2) => {
-        if (result2.status === "fulfilled" && result2.value.productCount && result2.value.productCount > 0) {
+        if (result2.status === "fulfilled" && result2.value.productCount && result2.value.productCount > 0 && result2.value.monthlySearches && result2.value.monthlySearches > 0 && result2.value.strength) {
           shoppingRelatedKeywords.push(result2.value);
         }
       });
