@@ -1155,17 +1155,27 @@ export const unifiedInsightProcedure = publicProcedure
       const matchedShoppingKeyword = shoppingSuccess ? shoppingSettled.value.matchedKeyword : null;
       const shoppingResult: Record<string, Array<{ period: string; ratio: number }>> = {};
       if (shoppingData.results && Array.isArray(shoppingData.results)) {
-        shoppingData.results.forEach((item: any) => {
-          if (item.keyword && item.data) {
-            const resultKey = normalizedKeywords.length === 1 && item.keyword === matchedShoppingKeyword
-              ? normalizedKeywords[0]
-              : item.keyword;
-            shoppingResult[resultKey] = item.data.map((d: any) => ({
+        if (normalizedKeywords.length === 1) {
+          const matchedItem =
+            shoppingData.results.find((item: any) => item.keyword === matchedShoppingKeyword && Array.isArray(item.data) && item.data.length > 0) ||
+            shoppingData.results.find((item: any) => Array.isArray(item.data) && item.data.length > 0);
+
+          if (matchedItem) {
+            shoppingResult[normalizedKeywords[0]] = matchedItem.data.map((d: any) => ({
               period: d.period,
               ratio: d.ratio,
             }));
           }
-        });
+        } else {
+          shoppingData.results.forEach((item: any) => {
+            if (item.keyword && item.data) {
+              shoppingResult[item.keyword] = item.data.map((d: any) => ({
+                period: d.period,
+                ratio: d.ratio,
+              }));
+            }
+          });
+        }
       }
 
       console.log('[Naver API] Unified Insight success', {
