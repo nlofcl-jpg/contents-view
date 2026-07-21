@@ -69,6 +69,7 @@ type BlogPostKeywordResult = {
   matchedTitle: string | null;
   matchedLink: string | null;
   checkedCount: number;
+  error?: string | null;
 };
 
 type BlogPostAnalysisData = {
@@ -586,10 +587,10 @@ export default function UnifiedInsights() {
       if (extraKeyword?.trim()) {
         setBlogPostKeywordInputs(prev => ({ ...prev, [post.link]: "" }));
       }
-    } catch {
+    } catch (error) {
       setBlogPostAnalysisErrors(prev => ({
         ...prev,
-        [post.link]: "게시글 분석에 실패했습니다. 잠시 후 다시 시도해주세요.",
+        [post.link]: error instanceof Error ? error.message : "게시글 분석에 실패했습니다. 잠시 후 다시 시도해주세요.",
       }));
     } finally {
       setBlogPostAnalysisLoading(null);
@@ -1117,6 +1118,11 @@ export default function UnifiedInsights() {
                           <p className="mt-1 text-xs text-slate-500">
                             네이버 블로그 검색 상위 {postAnalysis.results?.[0]?.checkedCount || 100}개 기준
                           </p>
+                          {postAnalysis.searchVolumeAvailable === false && (
+                            <p className="mt-1 text-xs text-amber-300">
+                              검색광고 키를 확인하지 못해 검색량은 비어 있을 수 있습니다.
+                            </p>
+                          )}
                         </div>
                         <div className="flex gap-2">
                           <input
@@ -1163,7 +1169,7 @@ export default function UnifiedInsights() {
                                 {result.rank ? `${result.rank}위` : "-"}
                               </span>
                               <span className="text-right text-xs text-slate-400">
-                                {result.rank ? "노출" : "100위 밖"}
+                                {result.error || (result.rank ? "노출" : "100위 밖")}
                               </span>
                             </div>
                           ))}

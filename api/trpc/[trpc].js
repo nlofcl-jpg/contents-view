@@ -2464,11 +2464,22 @@ function normalizeNaverSearchAdInput(input) {
 }
 async function getStoredNaverSearchAdCredentials2() {
   if (!supabaseAdminForNaverKeys) return null;
-  const { data: successData } = await supabaseAdminForNaverKeys.from("user_api_keys").select("encrypted_key").eq("provider", NAVER_SEARCH_AD_PROVIDER2).eq("test_status", "success").order("updated_at", { ascending: false }).limit(1).maybeSingle();
+  const { data: successData, error: successError } = await supabaseAdminForNaverKeys.from("user_api_keys").select("encrypted_key").eq("provider", NAVER_SEARCH_AD_PROVIDER2).eq("test_status", "success").order("updated_at", { ascending: false }).limit(1).maybeSingle();
+  if (successError) {
+    console.error("[Naver Blog Post Analysis] Failed to load verified SearchAd credentials", {
+      error: successError.message
+    });
+  }
   if (successData?.encrypted_key) {
     return parseNaverSearchAdCredentials2(successData.encrypted_key);
   }
-  const { data } = await supabaseAdminForNaverKeys.from("user_api_keys").select("encrypted_key").eq("provider", NAVER_SEARCH_AD_PROVIDER2).order("updated_at", { ascending: false }).limit(1).maybeSingle();
+  const { data, error } = await supabaseAdminForNaverKeys.from("user_api_keys").select("encrypted_key").eq("provider", NAVER_SEARCH_AD_PROVIDER2).order("updated_at", { ascending: false }).limit(1).maybeSingle();
+  if (error) {
+    console.error("[Naver Blog Post Analysis] Failed to load SearchAd credentials", {
+      error: error.message
+    });
+    return null;
+  }
   return data?.encrypted_key ? parseNaverSearchAdCredentials2(data.encrypted_key) : null;
 }
 function normalizeSearchCount2(value) {
@@ -3898,53 +3909,86 @@ var appRouter = router({
       title: z3.string().optional(),
       keywords: z3.array(z3.string()).min(1).max(10)
     })).mutation(async ({ input }) => {
-      const clientId = process.env.NAVER_CLIENT_ID;
-      const clientSecret = process.env.NAVER_CLIENT_SECRET;
-      const keywords = Array.from(new Set(
-        input.keywords.map((keyword) => keyword.trim()).filter(Boolean)
-      )).slice(0, 10);
-      if (!clientId || !clientSecret) {
-        return {
-          success: false,
-          error: "\uB124\uC774\uBC84 \uAC80\uC0C9 API \uD0A4\uAC00 \uC124\uC815\uB418\uC5B4 \uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4."
-        };
-      }
-      if (keywords.length === 0) {
-        return {
-          success: false,
-          error: "\uBD84\uC11D\uD560 \uD0A4\uC6CC\uB4DC\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694."
-        };
-      }
-      const credentials = await getStoredNaverSearchAdCredentials2();
-      const results = await Promise.all(
-        keywords.map(async (keyword) => {
-          const [monthlySearches, rankResult] = await Promise.all([
-            getKeywordMonthlySearches(keyword, credentials).catch(() => null),
-            getBlogPostRankForKeyword({
-              keyword,
-              postUrl: input.postUrl,
-              clientId,
-              clientSecret
-            })
-          ]);
+      try {
+        const clientId = process.env.NAVER_CLIENT_ID;
+        const clientSecret = process.env.NAVER_CLIENT_SECRET;
+        const keywords = Array.from(new Set(
+          input.keywords.map((keyword) => keyword.trim()).filter(Boolean)
+        )).slice(0, 10);
+        if (!clientId || !clientSecret) {
           return {
-            keyword,
-            monthlySearches,
-            rank: rankResult.rank,
-            matchedTitle: rankResult.matchedTitle,
-            matchedLink: rankResult.matchedLink,
-            checkedCount: rankResult.checkedCount
+            success: false,
+            error: "\uB124\uC774\uBC84 \uAC80\uC0C9 API \uD0A4\uAC00 \uC124\uC815\uB418\uC5B4 \uC788\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4."
           };
-        })
-      );
-      return {
-        success: true,
-        postUrl: input.postUrl,
-        title: input.title || "",
-        results,
-        searchedAt: (/* @__PURE__ */ new Date()).toISOString(),
-        searchVolumeAvailable: Boolean(credentials)
-      };
+        }
+        if (keywords.length === 0) {
+          return {
+            success: false,
+            error: "\uBD84\uC11D\uD560 \uD0A4\uC6CC\uB4DC\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694."
+          };
+        }
+        const credentials = await getStoredNaverSearchAdCredentials2();
+        const results = await Promise.all(
+          keywords.map(async (keyword) => {
+            try {
+              const [monthlySearches, rankResult] = await Promise.all([
+                getKeywordMonthlySearches(keyword, credentials).catch((error) => {
+                  console.error("[Naver Blog Post Analysis] Search volume failed", {
+                    keyword,
+                    error: error instanceof Error ? error.message : "Unknown error"
+                  });
+                  return null;
+                }),
+                getBlogPostRankForKeyword({
+                  keyword,
+                  postUrl: input.postUrl,
+                  clientId,
+                  clientSecret
+                })
+              ]);
+              return {
+                keyword,
+                monthlySearches,
+                rank: rankResult.rank,
+                matchedTitle: rankResult.matchedTitle,
+                matchedLink: rankResult.matchedLink,
+                checkedCount: rankResult.checkedCount,
+                error: null
+              };
+            } catch (error) {
+              console.error("[Naver Blog Post Analysis] Keyword analysis failed", {
+                keyword,
+                error: error instanceof Error ? error.message : "Unknown error"
+              });
+              return {
+                keyword,
+                monthlySearches: null,
+                rank: null,
+                matchedTitle: null,
+                matchedLink: null,
+                checkedCount: 0,
+                error: "\uD0A4\uC6CC\uB4DC \uBD84\uC11D \uC2E4\uD328"
+              };
+            }
+          })
+        );
+        return {
+          success: true,
+          postUrl: input.postUrl,
+          title: input.title || "",
+          results,
+          searchedAt: (/* @__PURE__ */ new Date()).toISOString(),
+          searchVolumeAvailable: Boolean(credentials)
+        };
+      } catch (error) {
+        console.error("[Naver Blog Post Analysis] Failed", {
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
+        return {
+          success: false,
+          error: "\uAC8C\uC2DC\uAE00 \uBD84\uC11D\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694."
+        };
+      }
     }),
     diagnostic: publicProcedure.input(z3.object({
       keywords: z3.array(z3.string()).min(1).max(5),

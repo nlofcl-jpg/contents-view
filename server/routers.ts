@@ -120,7 +120,7 @@ function normalizeNaverSearchAdInput(input: {
 async function getStoredNaverSearchAdCredentials() {
   if (!supabaseAdminForNaverKeys) return null;
 
-  const { data: successData } = await supabaseAdminForNaverKeys
+  const { data: successData, error: successError } = await supabaseAdminForNaverKeys
     .from("user_api_keys")
     .select("encrypted_key")
     .eq("provider", NAVER_SEARCH_AD_PROVIDER)
@@ -129,17 +129,30 @@ async function getStoredNaverSearchAdCredentials() {
     .limit(1)
     .maybeSingle();
 
+  if (successError) {
+    console.error("[Naver Blog Post Analysis] Failed to load verified SearchAd credentials", {
+      error: successError.message,
+    });
+  }
+
   if (successData?.encrypted_key) {
     return parseNaverSearchAdCredentials(successData.encrypted_key);
   }
 
-  const { data } = await supabaseAdminForNaverKeys
+  const { data, error } = await supabaseAdminForNaverKeys
     .from("user_api_keys")
     .select("encrypted_key")
     .eq("provider", NAVER_SEARCH_AD_PROVIDER)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  if (error) {
+    console.error("[Naver Blog Post Analysis] Failed to load SearchAd credentials", {
+      error: error.message,
+    });
+    return null;
+  }
 
   return data?.encrypted_key ? parseNaverSearchAdCredentials(data.encrypted_key) : null;
 }
@@ -1941,60 +1954,94 @@ export const appRouter = router({
         keywords: z.array(z.string()).min(1).max(10),
       }))
       .mutation(async ({ input }) => {
-        const clientId = process.env.NAVER_CLIENT_ID;
-        const clientSecret = process.env.NAVER_CLIENT_SECRET;
-        const keywords = Array.from(new Set(
-          input.keywords
-            .map(keyword => keyword.trim())
-            .filter(Boolean)
-        )).slice(0, 10);
+        try {
+          const clientId = process.env.NAVER_CLIENT_ID;
+          const clientSecret = process.env.NAVER_CLIENT_SECRET;
+          const keywords = Array.from(new Set(
+            input.keywords
+              .map(keyword => keyword.trim())
+              .filter(Boolean)
+          )).slice(0, 10);
 
-        if (!clientId || !clientSecret) {
-          return {
-            success: false,
-            error: "네이버 검색 API 키가 설정되어 있지 않습니다.",
-          };
-        }
-
-        if (keywords.length === 0) {
-          return {
-            success: false,
-            error: "분석할 키워드를 입력해주세요.",
-          };
-        }
-
-        const credentials = await getStoredNaverSearchAdCredentials();
-        const results = await Promise.all(
-          keywords.map(async (keyword) => {
-            const [monthlySearches, rankResult] = await Promise.all([
-              getKeywordMonthlySearches(keyword, credentials).catch(() => null),
-              getBlogPostRankForKeyword({
-                keyword,
-                postUrl: input.postUrl,
-                clientId,
-                clientSecret,
-              }),
-            ]);
-
+          if (!clientId || !clientSecret) {
             return {
-              keyword,
-              monthlySearches,
-              rank: rankResult.rank,
-              matchedTitle: rankResult.matchedTitle,
-              matchedLink: rankResult.matchedLink,
-              checkedCount: rankResult.checkedCount,
+              success: false,
+              error: "네이버 검색 API 키가 설정되어 있지 않습니다.",
             };
-          })
-        );
+          }
 
-        return {
-          success: true,
-          postUrl: input.postUrl,
-          title: input.title || "",
-          results,
-          searchedAt: new Date().toISOString(),
-          searchVolumeAvailable: Boolean(credentials),
-        };
+          if (keywords.length === 0) {
+            return {
+              success: false,
+              error: "분석할 키워드를 입력해주세요.",
+            };
+          }
+
+          const credentials = await getStoredNaverSearchAdCredentials();
+          const results = await Promise.all(
+            keywords.map(async (keyword) => {
+              try {
+                const [monthlySearches, rankResult] = await Promise.all([
+                  getKeywordMonthlySearches(keyword, credentials).catch((error) => {
+                    console.error("[Naver Blog Post Analysis] Search volume failed", {
+                      keyword,
+                      error: error instanceof Error ? error.message : "Unknown error",
+                    });
+                    return null;
+                  }),
+                  getBlogPostRankForKeyword({
+                    keyword,
+                    postUrl: input.postUrl,
+                    clientId,
+                    clientSecret,
+                  }),
+                ]);
+
+                return {
+                  keyword,
+                  monthlySearches,
+                  rank: rankResult.rank,
+                  matchedTitle: rankResult.matchedTitle,
+                  matchedLink: rankResult.matchedLink,
+                  checkedCount: rankResult.checkedCount,
+                  error: null,
+                };
+              } catch (error) {
+                console.error("[Naver Blog Post Analysis] Keyword analysis failed", {
+                  keyword,
+                  error: error instanceof Error ? error.message : "Unknown error",
+                });
+
+                return {
+                  keyword,
+                  monthlySearches: null,
+                  rank: null,
+                  matchedTitle: null,
+                  matchedLink: null,
+                  checkedCount: 0,
+                  error: "키워드 분석 실패",
+                };
+              }
+            })
+          );
+
+          return {
+            success: true,
+            postUrl: input.postUrl,
+            title: input.title || "",
+            results,
+            searchedAt: new Date().toISOString(),
+            searchVolumeAvailable: Boolean(credentials),
+          };
+        } catch (error) {
+          console.error("[Naver Blog Post Analysis] Failed", {
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+          return {
+            success: false,
+            error: "게시글 분석에 실패했습니다. 잠시 후 다시 시도해주세요.",
+          };
+        }
       }),
 
     diagnostic: publicProcedure
