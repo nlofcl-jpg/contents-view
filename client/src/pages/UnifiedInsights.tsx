@@ -215,7 +215,7 @@ export default function UnifiedInsights() {
     if (indexValue < 5) return "낮음";
     if (indexValue < 15) return "보통";
     if (indexValue < 30) return "높음";
-    return "최악";
+    return "매우 높음";
   };
 
   const primaryKeyword = chartData?.keywords?.[0] || keywords[0] || "";
@@ -751,7 +751,7 @@ export default function UnifiedInsights() {
         <div className="inline-flex rounded-full border border-slate-700/80 bg-slate-950/55 p-1">
           {[
             { value: "content" as const, label: "컨텐츠" },
-            { value: "seller" as const, label: "셀러" },
+            { value: "seller" as const, label: "쇼핑" },
           ].map((tab) => (
             <button
               key={tab.value}
@@ -876,7 +876,7 @@ export default function UnifiedInsights() {
                       aria-label="쇼핑 경쟁도 안내"
                       onClick={() => setInfoPopup({
                         title: "쇼핑 경쟁도",
-                        body: "해당 키워드의 쇼핑 데이터와 검색광고 지표를 함께 참고해 셀러 관점의 경쟁 정도를 표시합니다.",
+                        body: "해당 키워드의 쇼핑 데이터와 검색광고 지표를 함께 참고해 쇼핑 관점의 경쟁 정도를 표시합니다.",
                       })}
                       className="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-500 transition-colors hover:text-blue-300"
                     >
