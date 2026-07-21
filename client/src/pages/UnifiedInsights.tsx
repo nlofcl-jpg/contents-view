@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { UnifiedChart } from "@/components/UnifiedChart";
-import { ChevronDown, CircleAlert, ListFilter } from "lucide-react";
+import { ChevronDown, CircleAlert, ExternalLink, ListFilter } from "lucide-react";
 
 type InsightPoint = {
   period: string;
@@ -939,21 +939,30 @@ export default function UnifiedInsights() {
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Blog Analysis</p>
-                <h3 className="mt-1 truncate text-xl font-semibold text-white">{blogAnalysisData.blog.title}</h3>
+                <div className="mt-1 flex min-w-0 items-center gap-2">
+                  <h3 className="truncate text-xl font-semibold text-white">{blogAnalysisData.blog.title}</h3>
+                  <a
+                    href={blogAnalysisData.blog.link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-800 hover:text-blue-200"
+                    aria-label="블로그 바로가기"
+                  >
+                    <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                  </a>
+                </div>
                 <p className="mt-2 text-sm text-slate-400">{blogAnalysisData.blog.description || "블로그 설명 정보가 없습니다."}</p>
                 <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                   <span>ID {blogAnalysisData.blog.blogId}</span>
                   {blogAnalysisData.fetchedAt && <span>확인 {formatBlogDate(blogAnalysisData.fetchedAt)}</span>}
                 </div>
               </div>
-              <a
-                href={blogAnalysisData.blog.link}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg border border-blue-500/30 px-4 text-sm text-blue-200 transition-colors hover:border-blue-400 hover:text-white"
+              <button
+                type="button"
+                className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-500"
               >
-                블로그 보기
-              </a>
+                블로그 분석
+              </button>
             </div>
           </div>
 
