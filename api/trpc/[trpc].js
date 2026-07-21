@@ -2498,15 +2498,38 @@ function extractPostKeywords(input) {
     "\uB9AC\uBDF0",
     "\uBC29\uBC95",
     "\uC815\uBCF4",
-    "\uBE14\uB85C\uADF8"
+    "\uBE14\uB85C\uADF8",
+    "\uBB34\uB824",
+    "\uB9CC\uC6D0\uB300",
+    "\uC785\uB2C8\uB2E4",
+    "\uD574\uC694",
+    "\uD558\uB294",
+    "\uC788\uB294",
+    "\uC5C6\uB294"
   ]);
-  const text2 = `${input.title} ${input.category} ${input.description}`.replace(/https?:\/\/\S+/g, " ").replace(/[^0-9A-Za-z가-힣ㄱ-ㅎㅏ-ㅣ\s]/g, " ").replace(/\s+/g, " ").trim();
-  const tokens = text2.split(" ").map((token) => token.trim()).filter((token) => token.length >= 2 && token.length <= 20 && !stopWords.has(token));
-  const counts = /* @__PURE__ */ new Map();
-  tokens.forEach((token) => {
-    counts.set(token, (counts.get(token) || 0) + 1);
-  });
-  return Array.from(counts.entries()).sort((a, b) => b[1] - a[1] || b[0].length - a[0].length).map(([keyword]) => keyword).slice(0, 8);
+  const cleanedTitle = input.title.replace(/https?:\/\/\S+/g, " ").replace(/[^0-9A-Za-z가-힣ㄱ-ㅎㅏ-ㅣ\s]/g, " ").replace(/\s+/g, " ").trim();
+  const tokens = cleanedTitle.split(" ").map((token) => token.trim()).filter((token) => token.length >= 2 && token.length <= 18 && !stopWords.has(token));
+  const candidates = [];
+  const addCandidate = (value) => {
+    const keyword = value.trim();
+    if (!keyword || keyword.length < 2 || keyword.length > 28) return;
+    if (candidates.includes(keyword)) return;
+    candidates.push(keyword);
+  };
+  for (let index = 0; index < tokens.length; index += 1) {
+    const first = tokens[index];
+    const second = tokens[index + 1];
+    const third = tokens[index + 2];
+    if (second) {
+      addCandidate(`${first} ${second}`);
+      addCandidate(`${first}${second}`);
+    }
+    if (second && third) {
+      addCandidate(`${first} ${second} ${third}`);
+    }
+  }
+  tokens.forEach(addCandidate);
+  return candidates.slice(0, 8);
 }
 async function fetchNaverBlogRss(blogUrl) {
   const blogId = extractNaverBlogId(blogUrl);

@@ -155,26 +155,48 @@ function extractPostKeywords(input: { title: string; description: string; catego
     "방법",
     "정보",
     "블로그",
+    "무려",
+    "만원대",
+    "입니다",
+    "해요",
+    "하는",
+    "있는",
+    "없는",
   ]);
-  const text = `${input.title} ${input.category} ${input.description}`
+  const cleanedTitle = input.title
     .replace(/https?:\/\/\S+/g, " ")
     .replace(/[^0-9A-Za-z가-힣ㄱ-ㅎㅏ-ㅣ\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  const tokens = text
+  const tokens = cleanedTitle
     .split(" ")
     .map(token => token.trim())
-    .filter(token => token.length >= 2 && token.length <= 20 && !stopWords.has(token));
-  const counts = new Map<string, number>();
+    .filter(token => token.length >= 2 && token.length <= 18 && !stopWords.has(token));
+  const candidates: string[] = [];
+  const addCandidate = (value: string) => {
+    const keyword = value.trim();
+    if (!keyword || keyword.length < 2 || keyword.length > 28) return;
+    if (candidates.includes(keyword)) return;
+    candidates.push(keyword);
+  };
 
-  tokens.forEach((token) => {
-    counts.set(token, (counts.get(token) || 0) + 1);
-  });
+  for (let index = 0; index < tokens.length; index += 1) {
+    const first = tokens[index];
+    const second = tokens[index + 1];
+    const third = tokens[index + 2];
 
-  return Array.from(counts.entries())
-    .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
-    .map(([keyword]) => keyword)
-    .slice(0, 8);
+    if (second) {
+      addCandidate(`${first} ${second}`);
+      addCandidate(`${first}${second}`);
+    }
+    if (second && third) {
+      addCandidate(`${first} ${second} ${third}`);
+    }
+  }
+
+  tokens.forEach(addCandidate);
+
+  return candidates.slice(0, 8);
 }
 
 async function fetchNaverBlogRss(blogUrl: string) {
