@@ -173,10 +173,13 @@ function extractPostKeywords(input: { title: string; description: string; catego
     .map(token => token.trim())
     .filter(token => token.length >= 2 && token.length <= 18 && !stopWords.has(token));
   const candidates: string[] = [];
+  const candidateKeys = new Set<string>();
   const addCandidate = (value: string) => {
     const keyword = value.trim();
+    const key = keyword.replace(/\s+/g, "").toLowerCase();
     if (!keyword || keyword.length < 2 || keyword.length > 28) return;
-    if (candidates.includes(keyword)) return;
+    if (candidateKeys.has(key)) return;
+    candidateKeys.add(key);
     candidates.push(keyword);
   };
 
@@ -187,7 +190,6 @@ function extractPostKeywords(input: { title: string; description: string; catego
 
     if (second) {
       addCandidate(`${first} ${second}`);
-      addCandidate(`${first}${second}`);
     }
     if (second && third) {
       addCandidate(`${first} ${second} ${third}`);
@@ -196,7 +198,7 @@ function extractPostKeywords(input: { title: string; description: string; catego
 
   tokens.forEach(addCandidate);
 
-  return candidates.slice(0, 8);
+  return candidates.slice(0, 5);
 }
 
 async function fetchNaverBlogRss(blogUrl: string) {

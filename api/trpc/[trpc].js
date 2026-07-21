@@ -2510,10 +2510,13 @@ function extractPostKeywords(input) {
   const cleanedTitle = input.title.replace(/https?:\/\/\S+/g, " ").replace(/[^0-9A-Za-z가-힣ㄱ-ㅎㅏ-ㅣ\s]/g, " ").replace(/\s+/g, " ").trim();
   const tokens = cleanedTitle.split(" ").map((token) => token.trim()).filter((token) => token.length >= 2 && token.length <= 18 && !stopWords.has(token));
   const candidates = [];
+  const candidateKeys = /* @__PURE__ */ new Set();
   const addCandidate = (value) => {
     const keyword = value.trim();
+    const key = keyword.replace(/\s+/g, "").toLowerCase();
     if (!keyword || keyword.length < 2 || keyword.length > 28) return;
-    if (candidates.includes(keyword)) return;
+    if (candidateKeys.has(key)) return;
+    candidateKeys.add(key);
     candidates.push(keyword);
   };
   for (let index = 0; index < tokens.length; index += 1) {
@@ -2522,14 +2525,13 @@ function extractPostKeywords(input) {
     const third = tokens[index + 2];
     if (second) {
       addCandidate(`${first} ${second}`);
-      addCandidate(`${first}${second}`);
     }
     if (second && third) {
       addCandidate(`${first} ${second} ${third}`);
     }
   }
   tokens.forEach(addCandidate);
-  return candidates.slice(0, 8);
+  return candidates.slice(0, 5);
 }
 async function fetchNaverBlogRss(blogUrl) {
   const blogId = extractNaverBlogId(blogUrl);
