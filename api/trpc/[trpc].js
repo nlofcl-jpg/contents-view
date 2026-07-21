@@ -2393,10 +2393,12 @@ async function updateApiKeyTestStatus2(user, provider, testStatus, testError = n
 }
 
 // server/routers.ts
+import * as cheerio from "cheerio";
 import { createRequire } from "module";
 import { createHmac as createHmac2 } from "crypto";
 var require2 = createRequire(import.meta.url);
 var NAVER_SEARCH_AD_PROVIDER2 = "naver-search-ad";
+var BLOG_ANALYSIS_POST_LIMIT = 6;
 function parseNaverSearchAdCredentials2(value) {
   try {
     const parsed = JSON.parse(value);
@@ -2450,6 +2452,82 @@ function normalizeNaverSearchAdInput(input) {
     customerId: input.customerId.trim(),
     accessLicense: input.accessLicense.trim(),
     secretKey: input.secretKey.trim()
+  };
+}
+function normalizeBlogUrlInput(value) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+function extractNaverBlogId(value) {
+  const normalized = normalizeBlogUrlInput(value);
+  try {
+    const url = new URL(normalized);
+    const blogIdFromQuery = url.searchParams.get("blogId");
+    if (blogIdFromQuery) return blogIdFromQuery.trim();
+    const host = url.hostname.replace(/^m\./, "");
+    if (host === "blog.naver.com") {
+      return url.pathname.split("/").filter(Boolean)[0]?.trim() || null;
+    }
+  } catch {
+    if (/^[a-zA-Z0-9._-]+$/.test(value.trim())) return value.trim();
+  }
+  return null;
+}
+function getXmlText($, element, selector) {
+  return element.find(selector).first().text().trim();
+}
+function stripHtmlText(value) {
+  return cheerio.load(value).text().replace(/\s+/g, " ").trim();
+}
+async function fetchNaverBlogRss(blogUrl) {
+  const blogId = extractNaverBlogId(blogUrl);
+  if (!blogId) {
+    return {
+      success: false,
+      error: "\uB124\uC774\uBC84 \uBE14\uB85C\uADF8 \uBA54\uC778 \uC8FC\uC18C\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694."
+    };
+  }
+  const rssUrl = `https://rss.blog.naver.com/${encodeURIComponent(blogId)}.xml`;
+  const response = await fetch(rssUrl, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (compatible; ContentsView/1.0)",
+      Accept: "application/rss+xml, application/xml, text/xml"
+    }
+  });
+  if (!response.ok) {
+    return {
+      success: false,
+      error: "\uBE14\uB85C\uADF8 \uCD5C\uC2E0\uAE00\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC8FC\uC18C\uB97C \uD655\uC778\uD574\uC8FC\uC138\uC694."
+    };
+  }
+  const xml = await response.text();
+  const $ = cheerio.load(xml, { xmlMode: true });
+  const channel = $("channel").first();
+  const posts = $("item").toArray().slice(0, BLOG_ANALYSIS_POST_LIMIT).map((item, index) => {
+    const itemNode = $(item);
+    const rawDescription = getXmlText($, itemNode, "description");
+    return {
+      rank: index + 1,
+      title: getXmlText($, itemNode, "title"),
+      link: getXmlText($, itemNode, "link"),
+      pubDate: getXmlText($, itemNode, "pubDate"),
+      description: stripHtmlText(rawDescription).slice(0, 180),
+      category: getXmlText($, itemNode, "category")
+    };
+  });
+  return {
+    success: true,
+    blog: {
+      blogId,
+      title: getXmlText($, channel, "title") || blogId,
+      link: getXmlText($, channel, "link") || `https://blog.naver.com/${blogId}`,
+      description: stripHtmlText(getXmlText($, channel, "description")),
+      rssUrl
+    },
+    posts,
+    fetchedAt: (/* @__PURE__ */ new Date()).toISOString()
   };
 }
 var googleTrendsCache = {};
@@ -3645,6 +3723,21 @@ var appRouter = router({
       }
     }),
     unifiedInsight: unifiedInsightProcedure,
+    blogAnalysis: publicProcedure.input(z3.object({
+      blogUrl: z3.string().min(1)
+    })).mutation(async ({ input }) => {
+      try {
+        return await fetchNaverBlogRss(input.blogUrl);
+      } catch (error) {
+        console.error("[Naver Blog Analysis] Failed", {
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
+        return {
+          success: false,
+          error: "\uBE14\uB85C\uADF8 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694."
+        };
+      }
+    }),
     diagnostic: publicProcedure.input(z3.object({
       keywords: z3.array(z3.string()).min(1).max(5),
       category: z3.string(),
@@ -4357,8 +4450,8 @@ var appRouter = router({
             stream.on("end", () => resolve(data));
           }).on("error", reject);
         });
-        const cheerio = require2("cheerio");
-        const $ = cheerio.load(html);
+        const cheerio2 = require2("cheerio");
+        const $ = cheerio2.load(html);
         const posts = [];
         const rows = $("tbody tr");
         let rank = 1;

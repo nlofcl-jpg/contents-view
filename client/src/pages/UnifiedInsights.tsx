@@ -39,6 +39,29 @@ type ShoppingRelatedKeyword = {
   strength: string | null;
 };
 
+type BlogAnalysisPost = {
+  rank: number;
+  title: string;
+  link: string;
+  pubDate: string;
+  description: string;
+  category?: string;
+};
+
+type BlogAnalysisData = {
+  success: boolean;
+  error?: string;
+  blog?: {
+    blogId: string;
+    title: string;
+    link: string;
+    description: string;
+    rssUrl: string;
+  };
+  posts?: BlogAnalysisPost[];
+  fetchedAt?: string;
+};
+
 const PERIOD_OPTIONS = [
   { value: "30", label: "1개월", days: 30, unit: "date" },
   { value: "90", label: "3개월", days: 90, unit: "week" },
@@ -120,6 +143,8 @@ export default function UnifiedInsights() {
   const [relatedSortMode, setRelatedSortMode] = useState<"related" | "recommended">("related");
   const [isRelatedSortOpen, setIsRelatedSortOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isBlogLoading, setIsBlogLoading] = useState(false);
+  const [blogAnalysisData, setBlogAnalysisData] = useState<BlogAnalysisData | null>(null);
   const [queryError, setQueryError] = useState("");
   const [querySuccess, setQuerySuccess] = useState(false);
   const [chartData, setChartData] = useState<any>(null);
@@ -269,6 +294,17 @@ export default function UnifiedInsights() {
   const formatPercent = (value: number | null | undefined) => {
     if (value === null || value === undefined || Number.isNaN(value)) return "-";
     return `${Math.round(value)}%`;
+  };
+
+  const formatBlogDate = (value: string | undefined) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleDateString("ko-KR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
   };
 
   const getCompetitionLabel = (competition: string | null | undefined) => {
@@ -452,6 +488,36 @@ export default function UnifiedInsights() {
 
   const { mutateAsync: queryTrendFilterInsight } = trpc.naver.unifiedInsight.useMutation();
 
+  const { mutate: queryBlogAnalysis } = trpc.naver.blogAnalysis.useMutation({
+    onSuccess: (data: BlogAnalysisData) => {
+      if (data.success) {
+        setBlogAnalysisData(data);
+        setQueryError("");
+      } else {
+        setBlogAnalysisData(null);
+        setQueryError(data.error || "블로그 정보를 불러오지 못했습니다.");
+      }
+      setIsBlogLoading(false);
+    },
+    onError: () => {
+      setBlogAnalysisData(null);
+      setQueryError("블로그 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+      setIsBlogLoading(false);
+    },
+  });
+
+  const runBlogAnalysis = (blogUrl: string) => {
+    setIsBlogLoading(true);
+    setIsSearchModeOpen(false);
+    setQueryError("");
+    setQuerySuccess(false);
+    setKeywords([]);
+    setChartData(null);
+    setTrendComparisonData(null);
+    setBlogAnalysisData(null);
+    queryBlogAnalysis({ blogUrl });
+  };
+
   const runQuery = (requestedKeywords?: string[]) => {
     const nextKeywords = requestedKeywords ?? (keywords.length > 0 ? keywords : [keywordInput.trim()].filter(Boolean));
 
@@ -504,10 +570,15 @@ export default function UnifiedInsights() {
   const handleSearch = () => {
     const trimmed = keywordInput.trim();
     if (!trimmed) {
-      setQueryError("검색어를 입력해주세요.");
+      setQueryError(searchMode === "rank" ? "블로그 주소를 입력해주세요." : "검색어를 입력해주세요.");
       setQuerySuccess(false);
       return;
     }
+    if (searchMode === "rank") {
+      runBlogAnalysis(trimmed);
+      return;
+    }
+    setBlogAnalysisData(null);
     runQuery([trimmed]);
   };
 
@@ -779,23 +850,30 @@ export default function UnifiedInsights() {
             onKeyDown={(e) => {
               if (e.key === "Enter") handleSearch();
             }}
-            placeholder={isKeywordInputFocused ? "" : "분석할 검색어를 입력하세요."}
+            placeholder={
+              isKeywordInputFocused
+                ? ""
+                : searchMode === "rank"
+                  ? "블로그 주소를 입력하세요."
+                  : "분석할 검색어를 입력하세요."
+            }
             autoComplete="off"
             className="h-12 min-w-0 flex-1 rounded-[22px] border-0 bg-transparent px-4 text-base font-semibold text-slate-950 placeholder-slate-400 outline-none"
           />
           <button
             onClick={handleSearch}
-            disabled={isLoading}
+            disabled={isLoading || isBlogLoading}
             className="h-12 rounded-[22px] bg-blue-600 px-7 font-semibold text-white transition-colors hover:bg-blue-500 disabled:bg-slate-300 disabled:text-slate-500 md:w-28"
           >
             검색
           </button>
         </div>
-        {queryError && !isLoading && !querySuccess && !chartData && (
+        {queryError && !isLoading && !isBlogLoading && !querySuccess && !chartData && !blogAnalysisData && (
           <p className="mt-3 text-sm text-red-300">{queryError}</p>
         )}
       </div>
 
+      {searchMode === "analysis" && (
       <div className="mb-6 flex w-full justify-center">
         <div className="inline-flex rounded-full border border-slate-700/80 bg-slate-950/55 p-1">
           {[
@@ -817,12 +895,21 @@ export default function UnifiedInsights() {
           ))}
         </div>
       </div>
+      )}
 
       {/* Empty State */}
-      {keywords.length === 0 && !isLoading && !querySuccess && (
+      {searchMode === "analysis" && keywords.length === 0 && !isLoading && !querySuccess && (
         <div className="mt-8 p-8 text-center bg-slate-900 bg-opacity-30 border border-slate-700 rounded-lg min-h-[260px] sm:min-h-[320px] lg:min-h-[380px] flex items-center justify-center">
           <p className="text-slate-400">
             검색어를 입력하고 검색 버튼을 눌러주세요.
+          </p>
+        </div>
+      )}
+
+      {searchMode === "rank" && !isBlogLoading && !blogAnalysisData && !queryError && (
+        <div className="mt-8 flex min-h-[260px] items-center justify-center rounded-lg border border-slate-700 bg-slate-900/30 p-8 text-center sm:min-h-[320px] lg:min-h-[380px]">
+          <p className="text-slate-400">
+            블로그 메인 주소를 입력하고 검색 버튼을 눌러주세요.
           </p>
         </div>
       )}
@@ -834,8 +921,83 @@ export default function UnifiedInsights() {
         </div>
       )}
 
+      {isBlogLoading && (
+        <div className="mt-8 rounded-lg border border-slate-700 bg-slate-900/30 p-8 text-center">
+          <p className="text-slate-400">블로그 정보를 불러오는 중입니다...</p>
+        </div>
+      )}
+
+      {searchMode === "rank" && queryError && !isBlogLoading && !blogAnalysisData && (
+        <div className="mt-8 rounded-lg border border-red-500/30 bg-red-950/30 p-5 text-sm text-red-200">
+          {queryError}
+        </div>
+      )}
+
+      {searchMode === "rank" && !isBlogLoading && blogAnalysisData?.blog && (
+        <div className="mt-8 space-y-6">
+          <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-5">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Blog Analysis</p>
+                <h3 className="mt-1 truncate text-xl font-semibold text-white">{blogAnalysisData.blog.title}</h3>
+                <p className="mt-2 text-sm text-slate-400">{blogAnalysisData.blog.description || "블로그 설명 정보가 없습니다."}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                  <span>ID {blogAnalysisData.blog.blogId}</span>
+                  {blogAnalysisData.fetchedAt && <span>확인 {formatBlogDate(blogAnalysisData.fetchedAt)}</span>}
+                </div>
+              </div>
+              <a
+                href={blogAnalysisData.blog.link}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg border border-blue-500/30 px-4 text-sm text-blue-200 transition-colors hover:border-blue-400 hover:text-white"
+              >
+                블로그 보기
+              </a>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-700 bg-slate-900/35 p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h3 className="text-base font-semibold text-white">최신글</h3>
+              <span className="text-xs text-slate-500">{blogAnalysisData.posts?.length || 0}개 표시</span>
+            </div>
+            <div className="divide-y divide-slate-800/80">
+              {(blogAnalysisData.posts || []).map((post) => (
+                <a
+                  key={`${post.rank}-${post.link}`}
+                  href={post.link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block py-4 transition-colors hover:bg-slate-800/30 md:px-2"
+                >
+                  <div className="flex gap-3">
+                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-600/20 text-xs font-semibold text-blue-200">
+                      {post.rank}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                        <h4 className="line-clamp-1 text-sm font-medium text-slate-100 md:text-base">{post.title}</h4>
+                        <span className="shrink-0 text-xs text-slate-500">{formatBlogDate(post.pubDate)}</span>
+                      </div>
+                      {post.description && (
+                        <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-400">{post.description}</p>
+                      )}
+                      {post.category && <p className="mt-2 text-xs text-blue-300">{post.category}</p>}
+                    </div>
+                  </div>
+                </a>
+              ))}
+              {(!blogAnalysisData.posts || blogAnalysisData.posts.length === 0) && (
+                <div className="py-8 text-center text-sm text-slate-500">표시할 최신글이 없습니다.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Chart Display */}
-      {!isLoading && querySuccess && chartData && (
+      {searchMode === "analysis" && !isLoading && querySuccess && chartData && (
         <div className="mt-8 space-y-6">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-5">

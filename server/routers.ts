@@ -7,6 +7,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { unifiedInsightProcedure } from "./naver.unifiedInsight";
 import { runDiagnostics } from "./naver.diagnostic";
 import * as userApiKeys from "./_core/userApiKeys";
+import * as cheerio from "cheerio";
 import { createRequire } from "module";
 import { createHmac } from "crypto";
 import { eq } from "drizzle-orm";
@@ -15,6 +16,7 @@ import { users } from "../drizzle/schema";
 const require = createRequire(import.meta.url);
 
 const NAVER_SEARCH_AD_PROVIDER = "naver-search-ad";
+const BLOG_ANALYSIS_POST_LIMIT = 6;
 
 type NaverSearchAdCredentials = {
   customerId: string;
@@ -99,6 +101,93 @@ function normalizeNaverSearchAdInput(input: {
     customerId: input.customerId.trim(),
     accessLicense: input.accessLicense.trim(),
     secretKey: input.secretKey.trim(),
+  };
+}
+
+function normalizeBlogUrlInput(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
+function extractNaverBlogId(value: string) {
+  const normalized = normalizeBlogUrlInput(value);
+  try {
+    const url = new URL(normalized);
+    const blogIdFromQuery = url.searchParams.get("blogId");
+    if (blogIdFromQuery) return blogIdFromQuery.trim();
+
+    const host = url.hostname.replace(/^m\./, "");
+    if (host === "blog.naver.com") {
+      return url.pathname.split("/").filter(Boolean)[0]?.trim() || null;
+    }
+  } catch {
+    if (/^[a-zA-Z0-9._-]+$/.test(value.trim())) return value.trim();
+  }
+
+  return null;
+}
+
+function getXmlText($: cheerio.CheerioAPI, element: cheerio.Cheerio<any>, selector: string) {
+  return element.find(selector).first().text().trim();
+}
+
+function stripHtmlText(value: string) {
+  return cheerio.load(value).text().replace(/\s+/g, " ").trim();
+}
+
+async function fetchNaverBlogRss(blogUrl: string) {
+  const blogId = extractNaverBlogId(blogUrl);
+  if (!blogId) {
+    return {
+      success: false,
+      error: "네이버 블로그 메인 주소를 입력해주세요.",
+    };
+  }
+
+  const rssUrl = `https://rss.blog.naver.com/${encodeURIComponent(blogId)}.xml`;
+  const response = await fetch(rssUrl, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (compatible; ContentsView/1.0)",
+      Accept: "application/rss+xml, application/xml, text/xml",
+    },
+  });
+
+  if (!response.ok) {
+    return {
+      success: false,
+      error: "블로그 최신글을 불러오지 못했습니다. 주소를 확인해주세요.",
+    };
+  }
+
+  const xml = await response.text();
+  const $ = cheerio.load(xml, { xmlMode: true });
+  const channel = $("channel").first();
+  const posts = $("item").toArray().slice(0, BLOG_ANALYSIS_POST_LIMIT).map((item, index) => {
+    const itemNode = $(item);
+    const rawDescription = getXmlText($, itemNode, "description");
+    return {
+      rank: index + 1,
+      title: getXmlText($, itemNode, "title"),
+      link: getXmlText($, itemNode, "link"),
+      pubDate: getXmlText($, itemNode, "pubDate"),
+      description: stripHtmlText(rawDescription).slice(0, 180),
+      category: getXmlText($, itemNode, "category"),
+    };
+  });
+
+  return {
+    success: true,
+    blog: {
+      blogId,
+      title: getXmlText($, channel, "title") || blogId,
+      link: getXmlText($, channel, "link") || `https://blog.naver.com/${blogId}`,
+      description: stripHtmlText(getXmlText($, channel, "description")),
+      rssUrl,
+    },
+    posts,
+    fetchedAt: new Date().toISOString(),
   };
 }
 
@@ -1615,6 +1704,24 @@ export const appRouter = router({
       }),
 
     unifiedInsight: unifiedInsightProcedure,
+
+    blogAnalysis: publicProcedure
+      .input(z.object({
+        blogUrl: z.string().min(1),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          return await fetchNaverBlogRss(input.blogUrl);
+        } catch (error) {
+          console.error("[Naver Blog Analysis] Failed", {
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+          return {
+            success: false,
+            error: "블로그 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.",
+          };
+        }
+      }),
 
     diagnostic: publicProcedure
       .input(z.object({
