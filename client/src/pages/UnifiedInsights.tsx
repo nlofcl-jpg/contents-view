@@ -386,7 +386,41 @@ export default function UnifiedInsights() {
       if (data.success) {
         // Store chart data
         setChartData(data);
-        setTrendComparisonData(data);
+        setTrendComparisonData((previous: any) => {
+          if (activeInsightTab !== "seller") {
+            return data;
+          }
+
+          const previousChartData = previous || trendComparisonData || chartData;
+          const previousShopping = previousChartData?.shopping || {};
+          const nextShopping = data.shopping || {};
+          const mergedShopping = {
+            ...previousShopping,
+            ...nextShopping,
+          };
+          const mergedKeywords = Array.from(
+            new Set([
+              ...(previousChartData?.keywords || []),
+              ...(data.keywords || []),
+              ...Object.keys(mergedShopping),
+            ])
+          ).filter((keyword) => Array.isArray(mergedShopping[keyword]) && mergedShopping[keyword].length > 0);
+
+          return {
+            ...data,
+            keywords: mergedKeywords,
+            trend: {},
+            shopping: mergedShopping,
+            meta: {
+              ...(previousChartData?.meta || {}),
+              ...(data.meta || {}),
+              shoppingStatus: {
+                ...(previousChartData?.meta?.shoppingStatus || {}),
+                ...(data.meta?.shoppingStatus || {}),
+              },
+            },
+          };
+        });
         setQuerySuccess(true);
         setQueryError("");
         setTrendFilterError("");
