@@ -44,8 +44,8 @@ type BlogAnalysisPost = {
   title: string;
   link: string;
   pubDate: string;
-  description: string;
   category?: string;
+  keywords?: string[];
 };
 
 type BlogAnalysisData = {
@@ -964,29 +964,52 @@ export default function UnifiedInsights() {
             </div>
             <div className="divide-y divide-slate-800/80">
               {(blogAnalysisData.posts || []).map((post) => (
-                <a
+                <article
                   key={`${post.rank}-${post.link}`}
-                  href={post.link}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block py-4 transition-colors hover:bg-slate-800/30 md:px-2"
+                  className="py-4 transition-colors hover:bg-slate-800/30 md:px-2"
                 >
-                  <div className="flex gap-3">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div className="flex min-w-0 flex-1 gap-3">
                     <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-600/20 text-xs font-semibold text-blue-200">
                       {post.rank}
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                        <h4 className="line-clamp-1 text-sm font-medium text-slate-100 md:text-base">{post.title}</h4>
-                        <span className="shrink-0 text-xs text-slate-500">{formatBlogDate(post.pubDate)}</span>
+                        <a
+                          href={post.link}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="line-clamp-1 text-sm font-medium text-slate-100 transition-colors hover:text-blue-200 md:text-base"
+                        >
+                          {post.title}
+                        </a>
                       </div>
-                      {post.description && (
-                        <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-400">{post.description}</p>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                        <span>{formatBlogDate(post.pubDate)}</span>
+                        {post.category && <span>{post.category}</span>}
+                      </div>
+                      {post.keywords && post.keywords.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {post.keywords.map((keyword) => (
+                            <span
+                              key={`${post.link}-${keyword}`}
+                              className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2 py-1 text-xs text-blue-100"
+                            >
+                              {keyword}
+                            </span>
+                          ))}
+                        </div>
                       )}
-                      {post.category && <p className="mt-2 text-xs text-blue-300">{post.category}</p>}
                     </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="h-9 shrink-0 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-500 md:self-center"
+                    >
+                      분석
+                    </button>
                   </div>
-                </a>
+                </article>
               ))}
               {(!blogAnalysisData.posts || blogAnalysisData.posts.length === 0) && (
                 <div className="py-8 text-center text-sm text-slate-500">표시할 최신글이 없습니다.</div>

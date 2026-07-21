@@ -137,6 +137,46 @@ function stripHtmlText(value: string) {
   return cheerio.load(value).text().replace(/\s+/g, " ").trim();
 }
 
+function extractPostKeywords(input: { title: string; description: string; category: string }) {
+  const stopWords = new Set([
+    "그리고",
+    "하지만",
+    "오늘",
+    "이번",
+    "있는",
+    "없는",
+    "하기",
+    "하는",
+    "위한",
+    "추천",
+    "정리",
+    "후기",
+    "리뷰",
+    "방법",
+    "정보",
+    "블로그",
+  ]);
+  const text = `${input.title} ${input.category} ${input.description}`
+    .replace(/https?:\/\/\S+/g, " ")
+    .replace(/[^0-9A-Za-z가-힣ㄱ-ㅎㅏ-ㅣ\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const tokens = text
+    .split(" ")
+    .map(token => token.trim())
+    .filter(token => token.length >= 2 && token.length <= 20 && !stopWords.has(token));
+  const counts = new Map<string, number>();
+
+  tokens.forEach((token) => {
+    counts.set(token, (counts.get(token) || 0) + 1);
+  });
+
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
+    .map(([keyword]) => keyword)
+    .slice(0, 8);
+}
+
 async function fetchNaverBlogRss(blogUrl: string) {
   const blogId = extractNaverBlogId(blogUrl);
   if (!blogId) {
@@ -167,13 +207,17 @@ async function fetchNaverBlogRss(blogUrl: string) {
   const posts = $("item").toArray().slice(0, BLOG_ANALYSIS_POST_LIMIT).map((item, index) => {
     const itemNode = $(item);
     const rawDescription = getXmlText($, itemNode, "description");
+    const title = getXmlText($, itemNode, "title");
+    const description = stripHtmlText(rawDescription).slice(0, 180);
+    const category = getXmlText($, itemNode, "category");
+
     return {
       rank: index + 1,
-      title: getXmlText($, itemNode, "title"),
+      title,
       link: getXmlText($, itemNode, "link"),
       pubDate: getXmlText($, itemNode, "pubDate"),
-      description: stripHtmlText(rawDescription).slice(0, 180),
-      category: getXmlText($, itemNode, "category"),
+      category,
+      keywords: extractPostKeywords({ title, description, category }),
     };
   });
 

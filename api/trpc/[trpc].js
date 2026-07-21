@@ -2481,6 +2481,33 @@ function getXmlText($, element, selector) {
 function stripHtmlText(value) {
   return cheerio.load(value).text().replace(/\s+/g, " ").trim();
 }
+function extractPostKeywords(input) {
+  const stopWords = /* @__PURE__ */ new Set([
+    "\uADF8\uB9AC\uACE0",
+    "\uD558\uC9C0\uB9CC",
+    "\uC624\uB298",
+    "\uC774\uBC88",
+    "\uC788\uB294",
+    "\uC5C6\uB294",
+    "\uD558\uAE30",
+    "\uD558\uB294",
+    "\uC704\uD55C",
+    "\uCD94\uCC9C",
+    "\uC815\uB9AC",
+    "\uD6C4\uAE30",
+    "\uB9AC\uBDF0",
+    "\uBC29\uBC95",
+    "\uC815\uBCF4",
+    "\uBE14\uB85C\uADF8"
+  ]);
+  const text2 = `${input.title} ${input.category} ${input.description}`.replace(/https?:\/\/\S+/g, " ").replace(/[^0-9A-Za-z가-힣ㄱ-ㅎㅏ-ㅣ\s]/g, " ").replace(/\s+/g, " ").trim();
+  const tokens = text2.split(" ").map((token) => token.trim()).filter((token) => token.length >= 2 && token.length <= 20 && !stopWords.has(token));
+  const counts = /* @__PURE__ */ new Map();
+  tokens.forEach((token) => {
+    counts.set(token, (counts.get(token) || 0) + 1);
+  });
+  return Array.from(counts.entries()).sort((a, b) => b[1] - a[1] || b[0].length - a[0].length).map(([keyword]) => keyword).slice(0, 8);
+}
 async function fetchNaverBlogRss(blogUrl) {
   const blogId = extractNaverBlogId(blogUrl);
   if (!blogId) {
@@ -2508,13 +2535,16 @@ async function fetchNaverBlogRss(blogUrl) {
   const posts = $("item").toArray().slice(0, BLOG_ANALYSIS_POST_LIMIT).map((item, index) => {
     const itemNode = $(item);
     const rawDescription = getXmlText($, itemNode, "description");
+    const title = getXmlText($, itemNode, "title");
+    const description = stripHtmlText(rawDescription).slice(0, 180);
+    const category = getXmlText($, itemNode, "category");
     return {
       rank: index + 1,
-      title: getXmlText($, itemNode, "title"),
+      title,
       link: getXmlText($, itemNode, "link"),
       pubDate: getXmlText($, itemNode, "pubDate"),
-      description: stripHtmlText(rawDescription).slice(0, 180),
-      category: getXmlText($, itemNode, "category")
+      category,
+      keywords: extractPostKeywords({ title, description, category })
     };
   });
   return {
