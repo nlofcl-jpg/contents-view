@@ -519,24 +519,39 @@ export default function UnifiedInsights() {
       );
 
       const trend: Record<string, InsightPoint[]> = {};
+      const shopping: Record<string, InsightPoint[]> = {};
       const chartKeywords: string[] = [];
 
       results.forEach(({ combination, response }) => {
         if (!response?.success) return;
         const label = getChartSeriesLabel(baseKeyword, combination, combinations.length);
+        const series =
+          activeInsightTab === "content"
+            ? response.trend?.[baseKeyword] || Object.values(response.trend || {})[0] || []
+            : response.shopping?.[baseKeyword] || Object.values(response.shopping || {})[0] || [];
+        if (!Array.isArray(series) || series.length === 0) return;
+
         chartKeywords.push(label);
-        trend[label] = response.trend?.[baseKeyword] || [];
+        if (activeInsightTab === "content") {
+          trend[label] = series;
+        } else {
+          shopping[label] = series;
+        }
       });
 
       if (chartKeywords.length === 0) {
-        setTrendFilterError("선택한 필터의 검색 트렌드 데이터를 불러오지 못했습니다.");
+        setTrendFilterError(
+          activeInsightTab === "content"
+            ? "선택한 필터의 검색 트렌드 데이터를 불러오지 못했습니다."
+            : "선택한 필터의 쇼핑 트렌드 데이터를 불러오지 못했습니다."
+        );
         return;
       }
 
       setTrendComparisonData({
         keywords: chartKeywords,
         trend,
-        shopping: {},
+        shopping,
         meta: chartData?.meta || {},
       });
       setStartDateForChart(startDateStr);
@@ -1077,10 +1092,10 @@ export default function UnifiedInsights() {
                 <p className="mb-1">{keywords.join(", ")}</p>
                 <p>{startDateForChart} – {endDateForChart}</p>
                 <p className="mt-1 text-xs text-slate-500">
-                  {activeInsightTab === "content" ? filterLabelForChart : "쇼핑 데이터랩 기준"}
+                  {filterLabelForChart}
                 </p>
               </div>
-              {activeInsightTab === "content" && renderTrendFilters()}
+              {renderTrendFilters()}
             </div>
 
             {/* Chart Container */}
@@ -1088,15 +1103,15 @@ export default function UnifiedInsights() {
               {isTrendFilterLoading && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-slate-950/70 backdrop-blur-sm">
                   <div className="rounded-lg border border-blue-500/20 bg-slate-900 px-5 py-3 text-sm font-medium text-slate-200 shadow-xl shadow-black/30">
-                    검색 트렌드 데이터를 불러오는 중입니다...
+                    {activeInsightTab === "content" ? "검색 트렌드" : "쇼핑 트렌드"} 데이터를 불러오는 중입니다...
                   </div>
                 </div>
               )}
               <UnifiedChart
                 data={{
-                  keywords: activeInsightTab === "content" ? displayedTrendData?.keywords || [] : chartData?.keywords || [],
+                  keywords: displayedTrendData?.keywords || [],
                   trend: activeInsightTab === "content" ? displayedTrendData?.trend || {} : {},
-                  shopping: activeInsightTab === "content" ? {} : chartData?.shopping || {},
+                  shopping: activeInsightTab === "content" ? {} : displayedTrendData?.shopping || {},
                   shoppingStatus: chartData?.meta?.shoppingStatus,
                 }}
                 visibleLayers={{
@@ -1128,24 +1143,24 @@ export default function UnifiedInsights() {
                 <p className="mb-1">{keywords.join(", ")}</p>
                 <p>{startDateForChart} – {endDateForChart}</p>
                 <p className="mt-1 text-xs text-slate-500">
-                  {activeInsightTab === "content" ? filterLabelForChart : "쇼핑 데이터랩 기준"}
+                  {filterLabelForChart}
                 </p>
               </div>
-              {activeInsightTab === "content" && renderTrendFilters()}
+              {renderTrendFilters()}
             </div>
             <div className="relative h-[300px] md:h-[480px]">
               {isTrendFilterLoading && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-slate-950/70 backdrop-blur-sm">
                   <div className="rounded-lg border border-blue-500/20 bg-slate-900 px-5 py-3 text-sm font-medium text-slate-200 shadow-xl shadow-black/30">
-                    검색 트렌드 데이터를 불러오는 중입니다...
+                    {activeInsightTab === "content" ? "검색 트렌드" : "쇼핑 트렌드"} 데이터를 불러오는 중입니다...
                   </div>
                 </div>
               )}
               <UnifiedChart
                 data={{
-                  keywords: activeInsightTab === "content" ? displayedTrendData?.keywords || [] : chartData?.keywords || [],
+                  keywords: displayedTrendData?.keywords || [],
                   trend: activeInsightTab === "content" ? displayedTrendData?.trend || {} : {},
-                  shopping: activeInsightTab === "content" ? {} : chartData?.shopping || {},
+                  shopping: activeInsightTab === "content" ? {} : displayedTrendData?.shopping || {},
                   shoppingStatus: chartData?.meta?.shoppingStatus,
                 }}
                 visibleLayers={{
