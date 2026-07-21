@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -214,6 +214,8 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
   startDate,
   endDate,
 }) => {
+  const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
+
   // 모든 날짜 수집 (원본 데이터 전체)
   const allDates = useMemo(() => getAllDates(data), [data]);
 
@@ -274,6 +276,7 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
         datasets.push({
           label: `${keyword} · 검색 트렌드`,
           data: values,
+          hidden: hiddenSeries.has(`${keyword} · 검색 트렌드`),
           borderColor: palette.trend,
           backgroundColor: `${palette.trend}10`,
           borderWidth: isMobile ? 1.6 : 2,
@@ -299,6 +302,7 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
         datasets.push({
           label: `${keyword} · 쇼핑 클릭량`,
           data: values,
+          hidden: hiddenSeries.has(`${keyword} · 쇼핑 클릭량`),
           borderColor: palette.shopping,
           backgroundColor: `${palette.shopping}10`,
           borderWidth: isMobile ? 1.6 : 2,
@@ -318,7 +322,29 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
       labels: allDates, // 원본 모든 날짜 (데이터 전체 기준)
       datasets,
     };
-  }, [data, visibleLayers, allDates]);
+  }, [data, visibleLayers, allDates, hiddenSeries]);
+
+  const legendItems = useMemo(
+    () =>
+      chartData.datasets.map((dataset: any) => ({
+        label: String(dataset.label || ""),
+        color: String(dataset.borderColor || "#94a3b8"),
+        hidden: hiddenSeries.has(String(dataset.label || "")),
+      })),
+    [chartData.datasets, hiddenSeries]
+  );
+
+  const toggleSeries = (label: string) => {
+    setHiddenSeries((previous) => {
+      const next = new Set(previous);
+      if (next.has(label)) {
+        next.delete(label);
+      } else {
+        next.add(label);
+      }
+      return next;
+    });
+  };
 
 
 
@@ -339,7 +365,7 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
     },
     plugins: {
       legend: {
-        display: !isMobile,
+        display: false,
         position: 'top',
         padding: isMobile ? { bottom: 24 } : { bottom: 12 },
         fullWidth: true,
@@ -463,37 +489,29 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
           </p>
         </div>
       )}
-      {isMobile && data.keywords.length > 0 && (
-        <div className="mb-3 flex flex-col gap-1.5">
-          {data.keywords.map((keyword) => (
-            <div key={keyword} className="flex flex-col gap-1">
-              {visibleLayers.trend && (
-                <div className="flex items-center gap-2">
-                  <span
-                    className="inline-block h-2 w-2 rounded-full"
-                    style={{
-                      backgroundColor: colorPalettes[data.keywords.indexOf(keyword) % colorPalettes.length].trend,
-                    }}
-                  />
-                  <span className="truncate text-[10px] font-normal text-slate-300">
-                    {keyword} · 검색 트렌드
-                  </span>
-                </div>
-              )}
-              {visibleLayers.shopping && (
-                <div className="flex items-center gap-2">
-                  <span
-                    className="inline-block h-2 w-2 rounded-full"
-                    style={{
-                      backgroundColor: colorPalettes[data.keywords.indexOf(keyword) % colorPalettes.length].shopping,
-                    }}
-                  />
-                  <span className="truncate text-[10px] font-normal text-slate-300">
-                    {keyword} · 쇼핑 클릭량
-                  </span>
-                </div>
-              )}
-            </div>
+      {legendItems.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 md:mb-4">
+          {legendItems.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              onClick={() => toggleSeries(item.label)}
+              className={`flex min-w-0 items-center gap-2 text-left text-[10px] font-normal transition-opacity md:text-xs ${
+                item.hidden ? "opacity-45" : "opacity-100"
+              }`}
+              aria-pressed={!item.hidden}
+            >
+              <span
+                className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full text-[9px] leading-none text-white shadow-sm md:h-4 md:w-4 md:text-[10px]"
+                style={{ backgroundColor: item.color }}
+                aria-hidden="true"
+              >
+                {!item.hidden && "✓"}
+              </span>
+              <span className="max-w-[11rem] truncate text-slate-300 md:max-w-[16rem]">
+                {item.label}
+              </span>
+            </button>
           ))}
         </div>
       )}
