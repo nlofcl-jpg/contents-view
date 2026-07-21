@@ -71,8 +71,8 @@ type InsightTab = "content" | "seller";
 type SearchMode = "analysis" | "rank";
 
 const SEARCH_MODE_OPTIONS: Array<{ value: SearchMode; label: string }> = [
-  { value: "analysis", label: "분석" },
-  { value: "rank", label: "순위" },
+  { value: "analysis", label: "통합 분석" },
+  { value: "rank", label: "블로그 분석" },
 ];
 
 type TabSearchState = {
@@ -734,7 +734,7 @@ export default function UnifiedInsights() {
             <button
               type="button"
               onClick={() => setIsSearchModeOpen((open) => !open)}
-              className="flex h-12 w-[6.5rem] items-center justify-center gap-2 rounded-[22px] text-sm font-semibold text-blue-600 transition-colors hover:bg-slate-100 md:w-32 md:text-base"
+              className="flex h-12 w-[7.5rem] items-center justify-center gap-2 rounded-[22px] text-sm font-semibold text-blue-600 transition-colors hover:bg-slate-100 md:w-36 md:text-base"
               aria-haspopup="listbox"
               aria-expanded={isSearchModeOpen}
             >
@@ -745,7 +745,7 @@ export default function UnifiedInsights() {
               />
             </button>
             {isSearchModeOpen && (
-              <div className="absolute left-0 top-[3.35rem] z-40 w-32 overflow-hidden rounded-2xl border border-slate-200 bg-white py-1 shadow-xl shadow-blue-950/20" role="listbox">
+              <div className="absolute left-0 top-[3.35rem] z-40 w-40 overflow-hidden rounded-2xl border border-slate-200 bg-white py-1 shadow-xl shadow-blue-950/20" role="listbox">
                 {SEARCH_MODE_OPTIONS.map((option) => (
                   <button
                     key={option.value}
