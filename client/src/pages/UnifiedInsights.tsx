@@ -62,6 +62,25 @@ type BlogAnalysisData = {
   fetchedAt?: string;
 };
 
+type BlogPostKeywordResult = {
+  keyword: string;
+  monthlySearches: number | null;
+  rank: number | null;
+  matchedTitle: string | null;
+  matchedLink: string | null;
+  checkedCount: number;
+};
+
+type BlogPostAnalysisData = {
+  success: boolean;
+  error?: string;
+  postUrl?: string;
+  title?: string;
+  results?: BlogPostKeywordResult[];
+  searchedAt?: string;
+  searchVolumeAvailable?: boolean;
+};
+
 const PERIOD_OPTIONS = [
   { value: "30", label: "1개월", days: 30, unit: "date" },
   { value: "90", label: "3개월", days: 90, unit: "week" },
@@ -145,6 +164,10 @@ export default function UnifiedInsights() {
   const [isLoading, setIsLoading] = useState(false);
   const [isBlogLoading, setIsBlogLoading] = useState(false);
   const [blogAnalysisData, setBlogAnalysisData] = useState<BlogAnalysisData | null>(null);
+  const [blogPostAnalysisData, setBlogPostAnalysisData] = useState<Record<string, BlogPostAnalysisData>>({});
+  const [blogPostAnalysisErrors, setBlogPostAnalysisErrors] = useState<Record<string, string>>({});
+  const [blogPostAnalysisLoading, setBlogPostAnalysisLoading] = useState<string | null>(null);
+  const [blogPostKeywordInputs, setBlogPostKeywordInputs] = useState<Record<string, string>>({});
   const [queryError, setQueryError] = useState("");
   const [querySuccess, setQuerySuccess] = useState(false);
   const [chartData, setChartData] = useState<any>(null);
@@ -506,6 +529,8 @@ export default function UnifiedInsights() {
     },
   });
 
+  const { mutateAsync: queryBlogPostAnalysis } = trpc.naver.blogPostAnalysis.useMutation();
+
   const runBlogAnalysis = (blogUrl: string) => {
     setIsBlogLoading(true);
     setIsSearchModeOpen(false);
@@ -515,7 +540,60 @@ export default function UnifiedInsights() {
     setChartData(null);
     setTrendComparisonData(null);
     setBlogAnalysisData(null);
+    setBlogPostAnalysisData({});
+    setBlogPostAnalysisErrors({});
+    setBlogPostKeywordInputs({});
     queryBlogAnalysis({ blogUrl });
+  };
+
+  const runBlogPostAnalysis = async (post: BlogAnalysisPost, extraKeyword?: string) => {
+    const baseKeywords = post.keywords || [];
+    const keywordsToAnalyze = Array.from(new Set([
+      ...baseKeywords,
+      ...(extraKeyword?.trim() ? [extraKeyword.trim()] : []),
+    ])).slice(0, 10);
+
+    if (keywordsToAnalyze.length === 0) {
+      setBlogPostAnalysisErrors(prev => ({
+        ...prev,
+        [post.link]: "분석할 키워드가 없습니다.",
+      }));
+      return;
+    }
+
+    setBlogPostAnalysisLoading(post.link);
+    setBlogPostAnalysisErrors(prev => ({ ...prev, [post.link]: "" }));
+
+    try {
+      const data = await queryBlogPostAnalysis({
+        postUrl: post.link,
+        title: post.title,
+        keywords: keywordsToAnalyze,
+      }) as BlogPostAnalysisData;
+
+      if (!data.success) {
+        setBlogPostAnalysisErrors(prev => ({
+          ...prev,
+          [post.link]: data.error || "게시글 분석에 실패했습니다.",
+        }));
+        return;
+      }
+
+      setBlogPostAnalysisData(prev => ({
+        ...prev,
+        [post.link]: data,
+      }));
+      if (extraKeyword?.trim()) {
+        setBlogPostKeywordInputs(prev => ({ ...prev, [post.link]: "" }));
+      }
+    } catch {
+      setBlogPostAnalysisErrors(prev => ({
+        ...prev,
+        [post.link]: "게시글 분석에 실패했습니다. 잠시 후 다시 시도해주세요.",
+      }));
+    } finally {
+      setBlogPostAnalysisLoading(null);
+    }
   };
 
   const runQuery = (requestedKeywords?: string[]) => {
@@ -972,7 +1050,13 @@ export default function UnifiedInsights() {
               <span className="text-xs text-slate-500">{blogAnalysisData.posts?.length || 0}개 표시</span>
             </div>
             <div className="divide-y divide-slate-800/80">
-              {(blogAnalysisData.posts || []).map((post) => (
+              {(blogAnalysisData.posts || []).map((post) => {
+                const postAnalysis = blogPostAnalysisData[post.link];
+                const postError = blogPostAnalysisErrors[post.link];
+                const isPostLoading = blogPostAnalysisLoading === post.link;
+                const keywordInputValue = blogPostKeywordInputs[post.link] || "";
+
+                return (
                 <article
                   key={`${post.rank}-${post.link}`}
                   className="py-4 transition-colors hover:bg-slate-800/30 md:px-2"
@@ -1013,13 +1097,83 @@ export default function UnifiedInsights() {
                     </div>
                     <button
                       type="button"
+                      onClick={() => runBlogPostAnalysis(post)}
+                      disabled={isPostLoading}
                       className="h-9 shrink-0 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-500 md:self-center"
                     >
-                      분석
+                      {isPostLoading ? "분석 중" : "분석"}
                     </button>
                   </div>
+                  {postError && (
+                    <div className="mt-4 rounded-lg border border-red-500/25 bg-red-950/30 p-3 text-sm text-red-200">
+                      {postError}
+                    </div>
+                  )}
+                  {postAnalysis?.success && (
+                    <div className="mt-4 rounded-lg border border-blue-500/15 bg-slate-950/45 p-4">
+                      <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <h4 className="text-sm font-semibold text-white">키워드 순위 분석</h4>
+                          <p className="mt-1 text-xs text-slate-500">
+                            네이버 블로그 검색 상위 {postAnalysis.results?.[0]?.checkedCount || 100}개 기준
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={keywordInputValue}
+                            onChange={(event) => setBlogPostKeywordInputs(prev => ({
+                              ...prev,
+                              [post.link]: event.target.value,
+                            }))}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" && keywordInputValue.trim()) {
+                                runBlogPostAnalysis(post, keywordInputValue);
+                              }
+                            }}
+                            placeholder="키워드 입력"
+                            className="h-9 w-36 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-blue-500 md:w-48"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => runBlogPostAnalysis(post, keywordInputValue)}
+                            disabled={isPostLoading || !keywordInputValue.trim()}
+                            className="h-9 rounded-lg border border-blue-500/30 px-3 text-sm text-blue-100 transition-colors hover:border-blue-400 hover:text-white disabled:border-slate-700 disabled:text-slate-500"
+                          >
+                            추가
+                          </button>
+                        </div>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <div className="min-w-[520px] overflow-hidden rounded-lg border border-slate-800">
+                          <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr] bg-slate-900/70 px-3 py-2 text-xs font-semibold text-slate-400">
+                            <span>키워드</span>
+                            <span className="text-right">검색량</span>
+                            <span className="text-right">게시글 순위</span>
+                            <span className="text-right">상태</span>
+                          </div>
+                          {(postAnalysis.results || []).map((result) => (
+                            <div
+                              key={`${post.link}-${result.keyword}`}
+                              className="grid grid-cols-[1.4fr_1fr_1fr_1fr] border-t border-slate-800 px-3 py-2 text-sm text-slate-200"
+                            >
+                              <span className="truncate pr-2">{result.keyword}</span>
+                              <span className="text-right text-slate-300">{formatNumber(result.monthlySearches)}</span>
+                              <span className="text-right text-blue-200">
+                                {result.rank ? `${result.rank}위` : "-"}
+                              </span>
+                              <span className="text-right text-xs text-slate-400">
+                                {result.rank ? "노출" : "100위 밖"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </article>
-              ))}
+                );
+              })}
               {(!blogAnalysisData.posts || blogAnalysisData.posts.length === 0) && (
                 <div className="py-8 text-center text-sm text-slate-500">표시할 최신글이 없습니다.</div>
               )}

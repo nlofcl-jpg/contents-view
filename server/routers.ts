@@ -8,6 +8,8 @@ import { unifiedInsightProcedure } from "./naver.unifiedInsight";
 import { runDiagnostics } from "./naver.diagnostic";
 import * as userApiKeys from "./_core/userApiKeys";
 import * as cheerio from "cheerio";
+import { ENV } from "./_core/env";
+import { createClient } from "@supabase/supabase-js";
 import { createRequire } from "module";
 import { createHmac } from "crypto";
 import { eq } from "drizzle-orm";
@@ -17,6 +19,17 @@ const require = createRequire(import.meta.url);
 
 const NAVER_SEARCH_AD_PROVIDER = "naver-search-ad";
 const BLOG_ANALYSIS_POST_LIMIT = 6;
+const BLOG_RANK_SEARCH_LIMIT = 100;
+
+const supabaseAdminForNaverKeys =
+  ENV.supabaseUrl && ENV.supabaseServiceRoleKey
+    ? createClient(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      })
+    : null;
 
 type NaverSearchAdCredentials = {
   customerId: string;
@@ -104,6 +117,63 @@ function normalizeNaverSearchAdInput(input: {
   };
 }
 
+async function getStoredNaverSearchAdCredentials() {
+  if (!supabaseAdminForNaverKeys) return null;
+
+  const { data: successData } = await supabaseAdminForNaverKeys
+    .from("user_api_keys")
+    .select("encrypted_key")
+    .eq("provider", NAVER_SEARCH_AD_PROVIDER)
+    .eq("test_status", "success")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (successData?.encrypted_key) {
+    return parseNaverSearchAdCredentials(successData.encrypted_key);
+  }
+
+  const { data } = await supabaseAdminForNaverKeys
+    .from("user_api_keys")
+    .select("encrypted_key")
+    .eq("provider", NAVER_SEARCH_AD_PROVIDER)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return data?.encrypted_key ? parseNaverSearchAdCredentials(data.encrypted_key) : null;
+}
+
+function normalizeSearchCount(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.includes("<")) return 0;
+  const numeric = Number(trimmed.replace(/,/g, ""));
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+async function getKeywordMonthlySearches(keyword: string, credentials: NaverSearchAdCredentials | null) {
+  if (!credentials) return null;
+
+  const result = await requestNaverSearchAdApi(credentials, "/keywordstool", new URLSearchParams({
+    hintKeywords: keyword.replace(/\s+/g, ""),
+    showDetail: "1",
+  }));
+
+  if (!result.response.ok || !Array.isArray(result.data?.keywordList)) return null;
+
+  const normalizedKeyword = keyword.replace(/\s+/g, "").toLowerCase();
+  const metric =
+    result.data.keywordList.find((item: any) => String(item?.relKeyword || "").replace(/\s+/g, "").toLowerCase() === normalizedKeyword) ||
+    result.data.keywordList[0];
+  const pc = normalizeSearchCount(metric?.monthlyPcQcCnt);
+  const mobile = normalizeSearchCount(metric?.monthlyMobileQcCnt);
+
+  if (pc === null && mobile === null) return null;
+  return (pc || 0) + (mobile || 0);
+}
+
 function normalizeBlogUrlInput(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return "";
@@ -135,6 +205,79 @@ function getXmlText($: cheerio.CheerioAPI, element: cheerio.Cheerio<any>, select
 
 function stripHtmlText(value: string) {
   return cheerio.load(value).text().replace(/\s+/g, " ").trim();
+}
+
+function normalizeBlogPostUrlForMatch(value: string) {
+  try {
+    const url = new URL(normalizeBlogUrlInput(value));
+    const host = url.hostname.replace(/^m\./, "");
+    const paths = url.pathname.split("/").filter(Boolean);
+    if (host === "blog.naver.com" && paths.length >= 2) {
+      return `${host}/${paths[0]}/${paths[1]}`.toLowerCase();
+    }
+
+    const blogId = url.searchParams.get("blogId");
+    const logNo = url.searchParams.get("logNo");
+    if (blogId && logNo) {
+      return `blog.naver.com/${blogId}/${logNo}`.toLowerCase();
+    }
+
+    return `${host}${url.pathname}`.replace(/\/$/, "").toLowerCase();
+  } catch {
+    return value.split("?")[0].replace(/^https?:\/\//i, "").replace(/\/$/, "").toLowerCase();
+  }
+}
+
+async function getBlogPostRankForKeyword(input: {
+  keyword: string;
+  postUrl: string;
+  clientId: string;
+  clientSecret: string;
+}) {
+  const params = new URLSearchParams({
+    query: input.keyword,
+    display: String(BLOG_RANK_SEARCH_LIMIT),
+    start: "1",
+    sort: "sim",
+  });
+  const response = await fetch(`https://openapi.naver.com/v1/search/blog.json?${params.toString()}`, {
+    headers: {
+      "X-Naver-Client-Id": input.clientId,
+      "X-Naver-Client-Secret": input.clientSecret,
+    },
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !Array.isArray(data?.items)) {
+    return {
+      rank: null,
+      matchedTitle: null,
+      matchedLink: null,
+      checkedCount: 0,
+    };
+  }
+
+  const target = normalizeBlogPostUrlForMatch(input.postUrl);
+  const matchedIndex = data.items.findIndex((item: any) => {
+    const link = normalizeBlogPostUrlForMatch(String(item?.link || ""));
+    return link === target;
+  });
+
+  if (matchedIndex < 0) {
+    return {
+      rank: null,
+      matchedTitle: null,
+      matchedLink: null,
+      checkedCount: data.items.length,
+    };
+  }
+
+  const matched = data.items[matchedIndex];
+  return {
+    rank: matchedIndex + 1,
+    matchedTitle: stripHtmlText(String(matched.title || "")),
+    matchedLink: matched.link || null,
+    checkedCount: data.items.length,
+  };
 }
 
 function extractPostKeywords(input: { title: string; description: string; category: string }) {
@@ -1789,6 +1932,69 @@ export const appRouter = router({
             error: "블로그 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.",
           };
         }
+      }),
+
+    blogPostAnalysis: publicProcedure
+      .input(z.object({
+        postUrl: z.string().min(1),
+        title: z.string().optional(),
+        keywords: z.array(z.string()).min(1).max(10),
+      }))
+      .mutation(async ({ input }) => {
+        const clientId = process.env.NAVER_CLIENT_ID;
+        const clientSecret = process.env.NAVER_CLIENT_SECRET;
+        const keywords = Array.from(new Set(
+          input.keywords
+            .map(keyword => keyword.trim())
+            .filter(Boolean)
+        )).slice(0, 10);
+
+        if (!clientId || !clientSecret) {
+          return {
+            success: false,
+            error: "네이버 검색 API 키가 설정되어 있지 않습니다.",
+          };
+        }
+
+        if (keywords.length === 0) {
+          return {
+            success: false,
+            error: "분석할 키워드를 입력해주세요.",
+          };
+        }
+
+        const credentials = await getStoredNaverSearchAdCredentials();
+        const results = await Promise.all(
+          keywords.map(async (keyword) => {
+            const [monthlySearches, rankResult] = await Promise.all([
+              getKeywordMonthlySearches(keyword, credentials).catch(() => null),
+              getBlogPostRankForKeyword({
+                keyword,
+                postUrl: input.postUrl,
+                clientId,
+                clientSecret,
+              }),
+            ]);
+
+            return {
+              keyword,
+              monthlySearches,
+              rank: rankResult.rank,
+              matchedTitle: rankResult.matchedTitle,
+              matchedLink: rankResult.matchedLink,
+              checkedCount: rankResult.checkedCount,
+            };
+          })
+        );
+
+        return {
+          success: true,
+          postUrl: input.postUrl,
+          title: input.title || "",
+          results,
+          searchedAt: new Date().toISOString(),
+          searchVolumeAvailable: Boolean(credentials),
+        };
       }),
 
     diagnostic: publicProcedure
