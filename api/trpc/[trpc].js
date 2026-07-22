@@ -2919,6 +2919,94 @@ async function fetchNaverBlogRss(blogUrl) {
     fetchedAt: (/* @__PURE__ */ new Date()).toISOString()
   };
 }
+async function fetchNaverBlogPostDetails(postUrl) {
+  const postIdentifier = getNaverBlogPostIdentifier(postUrl);
+  if (!postIdentifier) {
+    return {
+      success: false,
+      error: "\uB124\uC774\uBC84 \uBE14\uB85C\uADF8 \uAC8C\uC2DC\uAE00 \uC8FC\uC18C\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694."
+    };
+  }
+  const rssUrl = `https://rss.blog.naver.com/${encodeURIComponent(postIdentifier.blogId)}.xml`;
+  let title = "";
+  let pubDate = "";
+  let category = "";
+  let description = "";
+  let canonicalLink = postUrl;
+  try {
+    const response = await fetch(rssUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; ContentsView/1.0)",
+        Accept: "application/rss+xml, application/xml, text/xml"
+      }
+    });
+    if (response.ok) {
+      const xml = await response.text();
+      const $ = cheerio.load(xml, { xmlMode: true });
+      const matchedItem = $("item").toArray().find((item) => {
+        const itemLink = getXmlText($, $(item), "link");
+        return normalizeBlogPostUrlForMatch(itemLink) === normalizeBlogPostUrlForMatch(postUrl);
+      });
+      if (matchedItem) {
+        const itemNode = $(matchedItem);
+        title = getXmlText($, itemNode, "title");
+        pubDate = getXmlText($, itemNode, "pubDate");
+        category = getXmlText($, itemNode, "category");
+        description = stripHtmlText(getXmlText($, itemNode, "description"));
+        canonicalLink = getXmlText($, itemNode, "link") || postUrl;
+      }
+    }
+  } catch (error) {
+    console.warn("[Naver Blog Post Details] RSS lookup failed", {
+      postUrl,
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+  if (!title) {
+    try {
+      const response = await fetch(
+        `https://m.blog.naver.com/${encodeURIComponent(postIdentifier.blogId)}/${encodeURIComponent(postIdentifier.logNo)}`,
+        {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (compatible; ContentsView/1.0)",
+            Accept: "text/html,application/xhtml+xml"
+          }
+        }
+      );
+      if (response.ok) {
+        const html = await response.text();
+        const $ = cheerio.load(html);
+        title = $("meta[property='og:title']").attr("content")?.trim() || $("title").text().trim();
+        const addDateMatch = html.match(/addDate="(\d+)"/i);
+        if (addDateMatch) pubDate = new Date(Number(addDateMatch[1])).toISOString();
+      }
+    } catch (error) {
+      console.warn("[Naver Blog Post Details] Mobile lookup failed", {
+        postUrl,
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  }
+  if (!title) {
+    return {
+      success: false,
+      error: "\uAC8C\uC2DC\uAE00 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uACF5\uAC1C\uB41C \uB124\uC774\uBC84 \uBE14\uB85C\uADF8 \uAE00\uC778\uC9C0 \uD655\uC778\uD574\uC8FC\uC138\uC694."
+    };
+  }
+  const tags = await fetchNaverBlogPostTags(canonicalLink);
+  return {
+    success: true,
+    post: {
+      rank: 1,
+      title,
+      link: canonicalLink,
+      pubDate,
+      category,
+      tags,
+      keywords: extractPostKeywords({ title, description, category })
+    }
+  };
+}
 var googleTrendsCache = {};
 var CACHE_TTL = 10 * 60 * 1e3;
 var GOOGLE_TRENDS_RSS_URLS = {
@@ -4124,6 +4212,22 @@ var appRouter = router({
         return {
           success: false,
           error: "\uBE14\uB85C\uADF8 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694."
+        };
+      }
+    }),
+    blogPostDetails: publicProcedure.input(z3.object({
+      postUrl: z3.string().min(1)
+    })).mutation(async ({ input }) => {
+      try {
+        return await fetchNaverBlogPostDetails(input.postUrl);
+      } catch (error) {
+        console.error("[Naver Blog Post Details] Failed", {
+          postUrl: input.postUrl,
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
+        return {
+          success: false,
+          error: "\uAC8C\uC2DC\uAE00 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694."
         };
       }
     }),

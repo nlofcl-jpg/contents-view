@@ -64,6 +64,12 @@ type BlogAnalysisData = {
   fetchedAt?: string;
 };
 
+type BlogPostDetailsData = {
+  success: boolean;
+  error?: string;
+  post?: BlogAnalysisPost;
+};
+
 type BlogPostKeywordResult = {
   keyword: string;
   monthlySearches: number | null;
@@ -173,7 +179,8 @@ export default function UnifiedInsights() {
   const [isLoading, setIsLoading] = useState(false);
   const [isBlogLoading, setIsBlogLoading] = useState(false);
   const [blogAnalysisData, setBlogAnalysisData] = useState<BlogAnalysisData | null>(null);
-  const [blogPostRankUrl, setBlogPostRankUrl] = useState("");
+  const [blogPostRankData, setBlogPostRankData] = useState<BlogPostDetailsData | null>(null);
+  const [isBlogPostRankLoading, setIsBlogPostRankLoading] = useState(false);
   const [blogPostAnalysisData, setBlogPostAnalysisData] = useState<Record<string, BlogPostAnalysisData>>({});
   const [blogPostAnalysisErrors, setBlogPostAnalysisErrors] = useState<Record<string, string>>({});
   const [blogPostAnalysisLoading, setBlogPostAnalysisLoading] = useState<string | null>(null);
@@ -543,6 +550,7 @@ export default function UnifiedInsights() {
   });
 
   const { mutateAsync: queryBlogPostAnalysis } = trpc.naver.blogPostAnalysis.useMutation();
+  const { mutateAsync: queryBlogPostDetails } = trpc.naver.blogPostDetails.useMutation();
   const { mutateAsync: queryBlogPostEngagement } = trpc.naver.blogPostEngagement.useMutation();
 
   const runBlogAnalysis = (blogUrl: string) => {
@@ -561,6 +569,33 @@ export default function UnifiedInsights() {
     setBlogPostEngagementData({});
     setBlogPostEngagementLoading(null);
     queryBlogAnalysis({ blogUrl });
+  };
+
+  const runBlogPostRankAnalysis = async (postUrl: string) => {
+    setIsBlogPostRankLoading(true);
+    setQueryError("");
+    setBlogPostRankData(null);
+    setBlogPostAnalysisData({});
+    setBlogPostAnalysisErrors({});
+    setBlogPostAnalysisOpen({});
+    setBlogPostKeywordInputs({});
+    setBlogPostEngagementData({});
+
+    try {
+      const data = await queryBlogPostDetails({ postUrl }) as BlogPostDetailsData;
+      if (!data.success || !data.post) {
+        setQueryError(data.error || "게시글 정보를 불러오지 못했습니다.");
+        return;
+      }
+
+      setBlogPostRankData(data);
+      setBlogPostAnalysisOpen({ [data.post.link]: true });
+      runBlogPostEngagement(data.post);
+    } catch {
+      setQueryError("게시글 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setIsBlogPostRankLoading(false);
+    }
   };
 
   const runBlogPostEngagement = async (post: BlogAnalysisPost) => {
@@ -701,10 +736,9 @@ export default function UnifiedInsights() {
       return;
     }
     if (searchMode === "postRank") {
-      setBlogPostRankUrl(trimmed);
-      setQueryError("");
-      setQuerySuccess(false);
       setBlogAnalysisData(null);
+      setQuerySuccess(false);
+      runBlogPostRankAnalysis(trimmed);
       return;
     }
     setBlogAnalysisData(null);
@@ -1045,16 +1079,13 @@ export default function UnifiedInsights() {
         </div>
       )}
 
-      {searchMode === "postRank" && (
+      {searchMode === "postRank" && !isBlogPostRankLoading && !blogPostRankData && !queryError && (
         <div className="mt-8 flex min-h-[260px] items-center justify-center rounded-lg border border-slate-700 bg-slate-900/30 p-8 text-center sm:min-h-[320px] lg:min-h-[380px]">
           <div className="max-w-md">
             <h2 className="text-lg font-medium text-slate-100">블로그 게시글 순위</h2>
             <p className="mt-2 text-sm text-slate-400">
               블로그 게시글 URL을 입력해 키워드별 검색 노출 순위를 분석합니다.
             </p>
-            {blogPostRankUrl && (
-              <p className="mt-4 truncate text-xs text-blue-200">{blogPostRankUrl}</p>
-            )}
           </div>
         </div>
       )}
@@ -1072,14 +1103,21 @@ export default function UnifiedInsights() {
         </div>
       )}
 
+      {isBlogPostRankLoading && (
+        <div className="mt-8 rounded-lg border border-slate-700 bg-slate-900/30 p-8 text-center">
+          <p className="text-slate-400">게시글 정보를 불러오는 중입니다...</p>
+        </div>
+      )}
+
       {searchMode === "rank" && queryError && !isBlogLoading && !blogAnalysisData && (
         <div className="mt-8 rounded-lg border border-red-500/30 bg-red-950/30 p-5 text-sm text-red-200">
           {queryError}
         </div>
       )}
 
-      {searchMode === "rank" && !isBlogLoading && blogAnalysisData?.blog && (
+      {((searchMode === "rank" && !isBlogLoading && blogAnalysisData?.blog) || (searchMode === "postRank" && !isBlogPostRankLoading && blogPostRankData?.post)) && (
         <div className="mt-8 space-y-6">
+          {searchMode === "rank" && blogAnalysisData?.blog && (
           <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-5">
             <div className="flex flex-col gap-4 md:flex-row md:items-start">
               <div className="flex min-w-0 items-stretch gap-4 sm:gap-5">
@@ -1114,14 +1152,20 @@ export default function UnifiedInsights() {
               </div>
             </div>
           </div>
+          )}
 
           <div className="rounded-lg border border-slate-700 bg-slate-900/35 p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h3 className="text-base font-semibold text-white">최신글</h3>
-              <span className="text-xs text-slate-500">{blogAnalysisData.posts?.length || 0}개 표시</span>
+              <h3 className="text-base font-semibold text-white">{searchMode === "postRank" ? "게시글 정보" : "최신글"}</h3>
+              <span className="text-xs text-slate-500">
+                {searchMode === "postRank" ? "1개 표시" : `${blogAnalysisData?.posts?.length || 0}개 표시`}
+              </span>
             </div>
             <div className="divide-y divide-slate-800/80">
-              {(blogAnalysisData.posts || []).map((post) => {
+              {(searchMode === "postRank"
+                ? (blogPostRankData?.post ? [blogPostRankData.post] : [])
+                : (blogAnalysisData?.posts || [])
+              ).map((post) => {
                 const postAnalysis = blogPostAnalysisData[post.link];
                 const postError = blogPostAnalysisErrors[post.link];
                 const isPostLoading = blogPostAnalysisLoading === post.link;
@@ -1288,7 +1332,7 @@ export default function UnifiedInsights() {
                 </article>
                 );
               })}
-              {(!blogAnalysisData.posts || blogAnalysisData.posts.length === 0) && (
+              {searchMode === "rank" && (!blogAnalysisData?.posts || blogAnalysisData.posts.length === 0) && (
                 <div className="py-8 text-center text-sm text-slate-500">표시할 최신글이 없습니다.</div>
               )}
             </div>
