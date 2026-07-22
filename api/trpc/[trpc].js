@@ -2856,6 +2856,7 @@ async function fetchNaverBlogRss(blogUrl) {
       title: getXmlText($, channel, "title") || blogId,
       link: getXmlText($, channel, "link") || `https://blog.naver.com/${blogId}`,
       description: stripHtmlText(getXmlText($, channel, "description")),
+      profileImageUrl: getXmlText($, channel, "image > url").replace(/^http:/i, "https:") || null,
       rssUrl
     },
     posts,

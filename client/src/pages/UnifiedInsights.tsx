@@ -57,6 +57,7 @@ type BlogAnalysisData = {
     title: string;
     link: string;
     description: string;
+    profileImageUrl?: string | null;
     rssUrl: string;
   };
   posts?: BlogAnalysisPost[];
@@ -1022,7 +1023,14 @@ export default function UnifiedInsights() {
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Blog Analysis</p>
-                <div className="mt-1 flex min-w-0 items-center gap-2">
+                <div className="mt-2 flex min-w-0 items-center gap-3">
+                  {blogAnalysisData.blog.profileImageUrl && (
+                    <img
+                      src={blogAnalysisData.blog.profileImageUrl}
+                      alt=""
+                      className="h-10 w-10 shrink-0 rounded-full border border-slate-700 object-cover"
+                    />
+                  )}
                   <h3 className="truncate text-xl font-semibold text-white">{blogAnalysisData.blog.title}</h3>
                   <a
                     href={blogAnalysisData.blog.link}
