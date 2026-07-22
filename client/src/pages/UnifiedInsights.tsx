@@ -1021,31 +1021,34 @@ export default function UnifiedInsights() {
         <div className="mt-8 space-y-6">
           <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-5">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Blog Analysis</p>
-                <div className="mt-2 flex min-w-0 items-center gap-3">
-                  {blogAnalysisData.blog.profileImageUrl && (
-                    <img
-                      src={blogAnalysisData.blog.profileImageUrl}
-                      alt=""
-                      className="h-10 w-10 shrink-0 rounded-full border border-slate-700 object-cover"
-                    />
-                  )}
-                  <h3 className="truncate text-xl font-semibold text-white">{blogAnalysisData.blog.title}</h3>
-                  <a
-                    href={blogAnalysisData.blog.link}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-800 hover:text-blue-200"
-                    aria-label="블로그 바로가기"
-                  >
-                    <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                  </a>
-                </div>
-                <p className="mt-2 text-sm text-slate-400">{blogAnalysisData.blog.description || "블로그 설명 정보가 없습니다."}</p>
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                  <span>ID {blogAnalysisData.blog.blogId}</span>
-                  {blogAnalysisData.fetchedAt && <span>확인 {formatBlogDate(blogAnalysisData.fetchedAt)}</span>}
+              <div className="flex min-w-0 items-stretch gap-4 sm:gap-5">
+                {blogAnalysisData.blog.profileImageUrl && (
+                  <img
+                    src={blogAnalysisData.blog.profileImageUrl}
+                    alt=""
+                    className="h-24 w-24 shrink-0 self-center rounded-full border border-slate-700 object-cover sm:h-28 sm:w-28"
+                  />
+                )}
+                <div className="flex min-w-0 flex-1 flex-col justify-center py-1">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <h3 className="truncate text-xl font-semibold text-white sm:text-2xl">{blogAnalysisData.blog.title}</h3>
+                    <a
+                      href={blogAnalysisData.blog.link}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-800 hover:text-blue-200"
+                      aria-label="블로그 바로가기"
+                    >
+                      <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                    </a>
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-sm leading-5 text-slate-300 sm:text-base">
+                    {blogAnalysisData.blog.description || "블로그 설명 정보가 없습니다."}
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 sm:text-sm">
+                    <span>블로그 ID {blogAnalysisData.blog.blogId}</span>
+                    {blogAnalysisData.fetchedAt && <span>최근 확인 {formatBlogDate(blogAnalysisData.fetchedAt)}</span>}
+                  </div>
                 </div>
               </div>
               <button
