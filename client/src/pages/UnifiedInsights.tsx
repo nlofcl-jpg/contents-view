@@ -169,6 +169,7 @@ export default function UnifiedInsights() {
   const [blogPostAnalysisData, setBlogPostAnalysisData] = useState<Record<string, BlogPostAnalysisData>>({});
   const [blogPostAnalysisErrors, setBlogPostAnalysisErrors] = useState<Record<string, string>>({});
   const [blogPostAnalysisLoading, setBlogPostAnalysisLoading] = useState<string | null>(null);
+  const [blogPostAnalysisOpen, setBlogPostAnalysisOpen] = useState<Record<string, boolean>>({});
   const [blogPostKeywordInputs, setBlogPostKeywordInputs] = useState<Record<string, string>>({});
   const [queryError, setQueryError] = useState("");
   const [querySuccess, setQuerySuccess] = useState(false);
@@ -544,15 +545,17 @@ export default function UnifiedInsights() {
     setBlogAnalysisData(null);
     setBlogPostAnalysisData({});
     setBlogPostAnalysisErrors({});
+    setBlogPostAnalysisOpen({});
     setBlogPostKeywordInputs({});
     queryBlogAnalysis({ blogUrl });
   };
 
   const runBlogPostAnalysis = async (post: BlogAnalysisPost, extraKeyword?: string) => {
-    const baseKeywords = post.keywords || [];
+    const requestedKeyword = extraKeyword?.trim();
+    const previousKeywords = blogPostAnalysisData[post.link]?.results?.map(result => result.keyword) || [];
     const keywordsToAnalyze = Array.from(new Set([
-      ...baseKeywords,
-      ...(extraKeyword?.trim() ? [extraKeyword.trim()] : []),
+      ...previousKeywords,
+      ...(requestedKeyword ? [requestedKeyword] : []),
     ])).slice(0, 10);
 
     if (keywordsToAnalyze.length === 0) {
@@ -585,7 +588,7 @@ export default function UnifiedInsights() {
         ...prev,
         [post.link]: data,
       }));
-      if (extraKeyword?.trim()) {
+      if (requestedKeyword) {
         setBlogPostKeywordInputs(prev => ({ ...prev, [post.link]: "" }));
       }
     } catch (error) {
@@ -1056,6 +1059,7 @@ export default function UnifiedInsights() {
                 const postAnalysis = blogPostAnalysisData[post.link];
                 const postError = blogPostAnalysisErrors[post.link];
                 const isPostLoading = blogPostAnalysisLoading === post.link;
+                const isPostAnalysisOpen = Boolean(blogPostAnalysisOpen[post.link]);
                 const keywordInputValue = blogPostKeywordInputs[post.link] || "";
 
                 return (
@@ -1098,27 +1102,17 @@ export default function UnifiedInsights() {
                           ))}
                         </div>
                       )}
-                      {post.keywords && post.keywords.length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-1.5">
-                          {post.keywords.map((keyword) => (
-                            <span
-                              key={`${post.link}-${keyword}`}
-                              className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2 py-1 text-xs text-blue-100"
-                            >
-                              {keyword}
-                            </span>
-                          ))}
-                        </div>
-                      )}
                     </div>
                     </div>
                     <button
                       type="button"
-                      onClick={() => runBlogPostAnalysis(post)}
-                      disabled={isPostLoading}
+                      onClick={() => {
+                        setBlogPostAnalysisOpen(prev => ({ ...prev, [post.link]: true }));
+                        setBlogPostAnalysisErrors(prev => ({ ...prev, [post.link]: "" }));
+                      }}
                       className="h-9 shrink-0 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-500 md:self-center"
                     >
-                      {isPostLoading ? "분석 중" : "분석"}
+                      분석 하기
                     </button>
                   </div>
                   {postError && (
@@ -1126,15 +1120,17 @@ export default function UnifiedInsights() {
                       {postError}
                     </div>
                   )}
-                  {postAnalysis?.success && (
+                  {isPostAnalysisOpen && (
                     <div className="mt-4 rounded-lg border border-blue-500/15 bg-slate-950/45 p-4">
                       <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                         <div>
                           <h4 className="text-sm font-semibold text-white">키워드 순위 분석</h4>
-                          <p className="mt-1 text-xs text-slate-500">
-                            네이버 블로그 검색 상위 {postAnalysis.results?.[0]?.checkedCount || 100}개 기준
-                          </p>
-                          {postAnalysis.searchVolumeAvailable === false && (
+                          {postAnalysis?.success && (
+                            <p className="mt-1 text-xs text-slate-500">
+                              네이버 블로그 검색 상위 {postAnalysis.results?.[0]?.checkedCount || 100}개 기준
+                            </p>
+                          )}
+                          {postAnalysis?.searchVolumeAvailable === false && (
                             <p className="mt-1 text-xs text-amber-300">
                               검색광고 키를 확인하지 못해 검색량은 비어 있을 수 있습니다.
                             </p>
@@ -1174,7 +1170,7 @@ export default function UnifiedInsights() {
                             <span className="text-right">게시글 순위</span>
                             <span className="text-right">상태</span>
                           </div>
-                          {(postAnalysis.results || []).map((result) => (
+                          {(postAnalysis?.results || []).map((result) => (
                             <div
                               key={`${post.link}-${result.keyword}`}
                               className="grid grid-cols-[1.4fr_1fr_1fr_1fr] border-t border-slate-800 px-3 py-2 text-sm text-slate-200"
