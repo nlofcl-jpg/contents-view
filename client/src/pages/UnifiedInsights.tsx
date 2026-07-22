@@ -45,6 +45,7 @@ type BlogAnalysisPost = {
   link: string;
   pubDate: string;
   category?: string;
+  blogTitle?: string;
   tags?: string[];
   keywords?: string[];
 };
@@ -1192,7 +1193,7 @@ export default function UnifiedInsights() {
                     <div className="min-w-0 flex-1">
                       {searchMode === "postRank" && (
                         <p className="mb-1 text-xs text-slate-500">
-                          블로그 주제 <span className="ml-1 text-slate-300">{post.category || "미분류"}</span>
+                          블로그 이름 <span className="ml-1 text-slate-300">{post.blogTitle || "블로그 이름 정보 없음"}</span>
                         </p>
                       )}
                       <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">

@@ -723,6 +723,7 @@ async function fetchNaverBlogPostDetails(postUrl: string) {
   let category = "";
   let description = "";
   let canonicalLink = postUrl;
+  let blogTitle = postIdentifier.blogId;
 
   try {
     const response = await fetch(rssUrl, {
@@ -734,6 +735,7 @@ async function fetchNaverBlogPostDetails(postUrl: string) {
     if (response.ok) {
       const xml = await response.text();
       const $ = cheerio.load(xml, { xmlMode: true });
+      blogTitle = getXmlText($, $("channel").first(), "title") || blogTitle;
       const matchedItem = $("item").toArray().find((item) => {
         const itemLink = getXmlText($, $(item), "link");
         return normalizeBlogPostUrlForMatch(itemLink) === normalizeBlogPostUrlForMatch(postUrl);
@@ -797,6 +799,7 @@ async function fetchNaverBlogPostDetails(postUrl: string) {
       link: canonicalLink,
       pubDate,
       category,
+      blogTitle,
       tags,
       keywords: extractPostKeywords({ title, description, category }),
     },
