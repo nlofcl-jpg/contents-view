@@ -2528,8 +2528,91 @@ function extractNaverBlogId(value) {
 function getXmlText($, element, selector) {
   return element.find(selector).first().text().trim();
 }
+function getXmlTexts($, element, selector) {
+  return element.find(selector).toArray().map((node) => $(node).text().trim()).filter(Boolean);
+}
 function stripHtmlText(value) {
   return cheerio.load(value).text().replace(/\s+/g, " ").trim();
+}
+function normalizePostTag(value) {
+  return stripHtmlText(value).replace(/^#/, "").replace(/\s+/g, " ").trim();
+}
+function uniqueTags(values) {
+  const tags = [];
+  const seen = /* @__PURE__ */ new Set();
+  values.forEach((value) => {
+    const tag = normalizePostTag(value);
+    const key = tag.replace(/\s+/g, "").toLowerCase();
+    if (!tag || tag.length > 24 || seen.has(key)) return;
+    seen.add(key);
+    tags.push(tag);
+  });
+  return tags.slice(0, 8);
+}
+function extractNaverPostTagsFromHtml(html) {
+  const $ = cheerio.load(html);
+  const candidates = [];
+  const selectors = [
+    "meta[property='article:tag']",
+    "meta[name='keywords']",
+    ".post_tag a",
+    ".wrap_tag a",
+    ".tag_area a",
+    ".se-hash-tag",
+    "a[href*='postTagName=']",
+    "a[href*='PostList.naver'][href*='tagName=']"
+  ];
+  selectors.forEach((selector) => {
+    $(selector).each((_, element) => {
+      const node = $(element);
+      const content = node.attr("content");
+      const href = node.attr("href");
+      if (content) {
+        candidates.push(...content.split(","));
+      } else {
+        candidates.push(node.text());
+      }
+      if (href) {
+        try {
+          const tagFromPostTagName = new URL(href, "https://blog.naver.com").searchParams.get("postTagName");
+          const tagFromTagName = new URL(href, "https://blog.naver.com").searchParams.get("tagName");
+          if (tagFromPostTagName) candidates.push(decodeURIComponent(tagFromPostTagName));
+          if (tagFromTagName) candidates.push(decodeURIComponent(tagFromTagName));
+        } catch {
+        }
+      }
+    });
+  });
+  const inlineTagRegex = /postTagName=([^"'&#<\s]+)/g;
+  let match = inlineTagRegex.exec(html);
+  while (match) {
+    candidates.push(decodeURIComponent(match[1].replace(/\+/g, " ")));
+    match = inlineTagRegex.exec(html);
+  }
+  return uniqueTags(candidates);
+}
+async function fetchNaverBlogPostTags(postUrl) {
+  if (!postUrl) return [];
+  const fetchHtml = async (url) => {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; ContentsView/1.0)",
+        Accept: "text/html,application/xhtml+xml"
+      }
+    });
+    if (!response.ok) return "";
+    return response.text();
+  };
+  const initialHtml = await fetchHtml(normalizeBlogUrlInput(postUrl));
+  if (!initialHtml) return [];
+  const initialTags = extractNaverPostTagsFromHtml(initialHtml);
+  if (initialTags.length > 0) return initialTags;
+  const $ = cheerio.load(initialHtml);
+  const iframeSrc = $("#mainFrame").attr("src");
+  if (!iframeSrc) return [];
+  const iframeUrl = new URL(iframeSrc, "https://blog.naver.com").href;
+  const iframeHtml = await fetchHtml(iframeUrl);
+  return iframeHtml ? extractNaverPostTagsFromHtml(iframeHtml) : [];
 }
 function normalizeBlogPostUrlForMatch(value) {
   try {
@@ -2668,21 +2751,40 @@ async function fetchNaverBlogRss(blogUrl) {
   const xml = await response.text();
   const $ = cheerio.load(xml, { xmlMode: true });
   const channel = $("channel").first();
-  const posts = $("item").toArray().slice(0, BLOG_ANALYSIS_POST_LIMIT).map((item, index) => {
+  const basePosts = $("item").toArray().slice(0, BLOG_ANALYSIS_POST_LIMIT).map((item, index) => {
     const itemNode = $(item);
     const rawDescription = getXmlText($, itemNode, "description");
     const title = getXmlText($, itemNode, "title");
     const description = stripHtmlText(rawDescription).slice(0, 180);
-    const category = getXmlText($, itemNode, "category");
+    const rssCategories = getXmlTexts($, itemNode, "category");
+    const category = rssCategories[0] || "";
     return {
       rank: index + 1,
       title,
       link: getXmlText($, itemNode, "link"),
       pubDate: getXmlText($, itemNode, "pubDate"),
       category,
+      tags: uniqueTags(rssCategories.slice(1)),
       keywords: extractPostKeywords({ title, description, category })
     };
   });
+  const posts = await Promise.all(
+    basePosts.map(async (post) => {
+      try {
+        const htmlTags = await fetchNaverBlogPostTags(post.link);
+        return {
+          ...post,
+          tags: uniqueTags([...post.tags || [], ...htmlTags])
+        };
+      } catch (error) {
+        console.error("[Naver Blog Analysis] Failed to load post tags", {
+          link: post.link,
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
+        return post;
+      }
+    })
+  );
   return {
     success: true,
     blog: {

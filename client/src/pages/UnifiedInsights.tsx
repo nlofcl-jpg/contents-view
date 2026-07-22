@@ -45,6 +45,7 @@ type BlogAnalysisPost = {
   link: string;
   pubDate: string;
   category?: string;
+  tags?: string[];
   keywords?: string[];
 };
 
@@ -1081,7 +1082,22 @@ export default function UnifiedInsights() {
                       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
                         <span>{formatBlogDate(post.pubDate)}</span>
                         {post.category && <span>{post.category}</span>}
+                        {post.tags && post.tags.length > 0 && (
+                          <span className="text-slate-400">태그 {post.tags.length}개</span>
+                        )}
                       </div>
+                      {post.tags && post.tags.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {post.tags.map((tag) => (
+                            <span
+                              key={`${post.link}-tag-${tag}`}
+                              className="rounded-full border border-slate-600/40 bg-slate-800/45 px-2 py-0.5 text-[11px] text-slate-300"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       {post.keywords && post.keywords.length > 0 && (
                         <div className="mt-3 flex flex-wrap gap-1.5">
                           {post.keywords.map((keyword) => (
