@@ -121,8 +121,8 @@ type InsightTab = "content" | "seller";
 type SearchMode = "analysis" | "rank";
 
 const SEARCH_MODE_OPTIONS: Array<{ value: SearchMode; label: string }> = [
-  { value: "analysis", label: "통합 분석" },
-  { value: "rank", label: "블로그 분석" },
+  { value: "analysis", label: "키워드 분석" },
+  { value: "rank", label: "블로그 순위" },
 ];
 
 type TabSearchState = {
