@@ -1034,7 +1034,7 @@ export default function UnifiedInsights() {
             disabled={isLoading || isBlogLoading}
             className="h-12 rounded-[22px] bg-blue-600 px-7 font-semibold text-white transition-colors hover:bg-blue-500 disabled:bg-slate-300 disabled:text-slate-500 md:w-28"
           >
-            검색
+            분석
           </button>
         </div>
         {queryError && !isLoading && !isBlogLoading && !querySuccess && !chartData && !blogAnalysisData && (
