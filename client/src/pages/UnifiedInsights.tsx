@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { UnifiedChart } from "@/components/UnifiedChart";
-import { ChevronDown, CircleAlert, ExternalLink, ListFilter } from "lucide-react";
+import { ChevronDown, CircleAlert, ExternalLink, ListFilter, Loader2 } from "lucide-react";
 
 type InsightPoint = {
   period: string;
@@ -1156,9 +1156,14 @@ export default function UnifiedInsights() {
                             type="button"
                             onClick={() => runBlogPostAnalysis(post, keywordInputValue)}
                             disabled={isPostLoading || !keywordInputValue.trim()}
-                            className="h-9 rounded-lg border border-blue-500/30 px-3 text-sm text-blue-100 transition-colors hover:border-blue-400 hover:text-white disabled:border-slate-700 disabled:text-slate-500"
+                            className="inline-flex h-9 min-w-14 items-center justify-center gap-1.5 rounded-lg border border-blue-500/30 px-3 text-sm text-blue-100 transition-colors hover:border-blue-400 hover:text-white disabled:border-slate-700 disabled:text-slate-500"
                           >
-                            추가
+                            {isPostLoading ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                                분석 중
+                              </>
+                            ) : "추가"}
                           </button>
                         </div>
                       </div>
