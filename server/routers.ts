@@ -194,6 +194,23 @@ function normalizeBlogUrlInput(value: string) {
   return `https://${trimmed}`;
 }
 
+function normalizeNaverBlogProfileImageUrl(value: string) {
+  if (!value) return null;
+
+  try {
+    const url = new URL(value);
+    // RSS still returns Naver's legacy HTTP-only thumbnail host. The same
+    // image path is served from pstatic over HTTPS, which browsers can load.
+    if (url.hostname === "blogpfthumb.phinf.naver.net") {
+      url.protocol = "https:";
+      url.hostname = "blogpfthumb-phinf.pstatic.net";
+    }
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+
 function extractNaverBlogId(value: string) {
   const normalized = normalizeBlogUrlInput(value);
   try {
@@ -615,7 +632,7 @@ async function fetchNaverBlogRss(blogUrl: string) {
       title: getXmlText($, channel, "title") || blogId,
       link: getXmlText($, channel, "link") || `https://blog.naver.com/${blogId}`,
       description: stripHtmlText(getXmlText($, channel, "description")),
-      profileImageUrl: getXmlText($, channel, "image > url").replace(/^http:/i, "https:") || null,
+      profileImageUrl: normalizeNaverBlogProfileImageUrl(getXmlText($, channel, "image > url")),
       rssUrl,
     },
     posts,

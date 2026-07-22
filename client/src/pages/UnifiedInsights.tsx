@@ -1042,7 +1042,7 @@ export default function UnifiedInsights() {
                       <ExternalLink className="h-4 w-4" aria-hidden="true" />
                     </a>
                   </div>
-                  <p className="mt-2 line-clamp-2 text-sm leading-5 text-slate-300 sm:text-base">
+                  <p className="mt-2 line-clamp-2 text-xs font-normal leading-5 text-slate-400 sm:text-sm">
                     {blogAnalysisData.blog.description || "블로그 설명 정보가 없습니다."}
                   </p>
                   <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 sm:text-sm">
