@@ -2609,8 +2609,22 @@ function decodeNaverTagValue(value) {
     return value;
   }
 }
+function extractNaverMobilePostTags(html) {
+  const match = html.match(/var\s+gsTagName\s*=\s*["']([^"']*)["']/i);
+  return match ? uniqueTags(match[1].split(",")) : [];
+}
 async function fetchNaverBlogPostTags(postUrl) {
   if (!postUrl) return [];
+  const fetchHtml = async (url) => {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; ContentsView/1.0)",
+        Accept: "text/html,application/xhtml+xml"
+      }
+    });
+    if (!response.ok) return "";
+    return response.text();
+  };
   const postIdentifier = getNaverBlogPostIdentifier(postUrl);
   if (postIdentifier) {
     const query = new URLSearchParams({
@@ -2640,17 +2654,19 @@ async function fetchNaverBlogPostTags(postUrl) {
         error: error instanceof Error ? error.message : "Unknown error"
       });
     }
+    try {
+      const mobileHtml = await fetchHtml(
+        `https://m.blog.naver.com/${encodeURIComponent(postIdentifier.blogId)}/${encodeURIComponent(postIdentifier.logNo)}`
+      );
+      const mobileTags = extractNaverMobilePostTags(mobileHtml);
+      if (mobileTags.length > 0) return mobileTags;
+    } catch (error) {
+      console.warn("[Naver Blog Analysis] Mobile tag fallback failed", {
+        postUrl,
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
   }
-  const fetchHtml = async (url) => {
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; ContentsView/1.0)",
-        Accept: "text/html,application/xhtml+xml"
-      }
-    });
-    if (!response.ok) return "";
-    return response.text();
-  };
   const initialHtml = await fetchHtml(normalizeBlogUrlInput(postUrl));
   if (!initialHtml) return [];
   const initialTags = extractNaverPostTagsFromHtml(initialHtml);
