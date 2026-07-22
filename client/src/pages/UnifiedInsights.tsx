@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { UnifiedChart } from "@/components/UnifiedChart";
-import { ChevronDown, CircleAlert, ExternalLink, FileText, Heart, Image, ListFilter, Loader2, MessageCircle, Video } from "lucide-react";
+import { ChevronDown, CircleAlert, ExternalLink, Heart, ListFilter, Loader2, MessageCircle } from "lucide-react";
 
 type InsightPoint = {
   period: string;
@@ -1190,6 +1190,11 @@ export default function UnifiedInsights() {
                       </span>
                     )}
                     <div className="min-w-0 flex-1">
+                      {searchMode === "postRank" && (
+                        <p className="mb-1 text-xs text-slate-500">
+                          블로그 주제 <span className="ml-1 text-slate-300">{post.category || "미분류"}</span>
+                        </p>
+                      )}
                       <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                         <a
                           href={post.link}
@@ -1201,36 +1206,41 @@ export default function UnifiedInsights() {
                         </a>
                       </div>
                       {searchMode === "postRank" ? (
-                        <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                          <div className="rounded-lg border border-slate-700/70 bg-slate-950/40 px-3 py-2.5">
-                            <p className="text-[11px] text-slate-500">기본 정보</p>
-                            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-300">
-                              <span>{formatBlogDate(post.pubDate)}</span>
-                              {post.category && <span>{post.category}</span>}
+                        <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(270px,360px)] lg:items-stretch">
+                          <div className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-950/40 px-3.5 py-3">
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                              <span className="text-slate-500">발행일</span>
+                              <span className="text-slate-300">{formatBlogDate(post.pubDate)}</span>
                             </div>
-                          </div>
-                          <div className="rounded-lg border border-slate-700/70 bg-slate-950/40 px-3 py-2.5 sm:col-span-1 lg:col-span-1">
-                            <p className="text-[11px] text-slate-500">태그 {post.tags?.length || 0}개</p>
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              {(post.tags || []).map((tag) => (
-                                <span key={`${post.link}-tag-${tag}`} className="text-[11px] text-slate-300">#{tag}</span>
-                              ))}
-                              {(!post.tags || post.tags.length === 0) && <span className="text-xs text-slate-500">등록된 태그 없음</span>}
+                            <div className="flex flex-wrap items-start gap-x-3 gap-y-1.5 text-xs">
+                              <span className="pt-0.5 text-slate-500">태그</span>
+                              <div className="flex flex-1 flex-wrap gap-1.5">
+                                {(post.tags || []).map((tag) => <span key={`${post.link}-tag-${tag}`} className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] text-slate-300">#{tag}</span>)}
+                                {(!post.tags || post.tags.length === 0) && <span className="text-slate-500">등록된 태그 없음</span>}
+                              </div>
                             </div>
-                          </div>
-                          <div className="rounded-lg border border-slate-700/70 bg-slate-950/40 px-3 py-2.5 sm:col-span-2 lg:col-span-1">
-                            <p className="text-[11px] text-slate-500">반응 및 콘텐츠 구성</p>
                             {postEngagement ? (
-                              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-slate-300">
+                              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-300">
                                 {postEngagement.likeCount !== null && <span className="inline-flex items-center gap-1"><Heart className="h-3.5 w-3.5 text-rose-300" aria-hidden="true" />공감 {formatNumber(postEngagement.likeCount)}</span>}
                                 {postEngagement.commentCount !== null && <span className="inline-flex items-center gap-1"><MessageCircle className="h-3.5 w-3.5 text-sky-300" aria-hidden="true" />댓글 {formatNumber(postEngagement.commentCount)}</span>}
-                                {postEngagement.characterCount !== null && <span className="inline-flex items-center gap-1"><FileText className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />{formatNumber(postEngagement.characterCount)}자</span>}
-                                {postEngagement.imageCount !== null && <span className="inline-flex items-center gap-1"><Image className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />이미지 {formatNumber(postEngagement.imageCount)}</span>}
-                                {postEngagement.videoCount !== null && <span className="inline-flex items-center gap-1"><Video className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />영상 {formatNumber(postEngagement.videoCount)}</span>}
                               </div>
                             ) : (
-                              <div className="mt-1 inline-flex items-center gap-1.5 text-xs text-slate-500"><Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />정보 확인 중</div>
+                              <div className="inline-flex items-center gap-1.5 text-xs text-slate-500"><Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />공감·댓글 확인 중</div>
                             )}
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="flex min-w-0 flex-col items-center justify-center rounded-lg border border-slate-700/70 bg-slate-950/40 px-2 py-3 text-center">
+                              <span className="text-[11px] text-slate-500">글자 수</span>
+                              <span className="mt-1 text-base font-medium text-slate-100">{formatNumber(postEngagement?.characterCount)}</span>
+                            </div>
+                            <div className="flex min-w-0 flex-col items-center justify-center rounded-lg border border-slate-700/70 bg-slate-950/40 px-2 py-3 text-center">
+                              <span className="text-[11px] text-slate-500">이미지 수</span>
+                              <span className="mt-1 text-base font-medium text-slate-100">{formatNumber(postEngagement?.imageCount)}</span>
+                            </div>
+                            <div className="flex min-w-0 flex-col items-center justify-center rounded-lg border border-slate-700/70 bg-slate-950/40 px-2 py-3 text-center">
+                              <span className="text-[11px] text-slate-500">영상 수</span>
+                              <span className="mt-1 text-base font-medium text-slate-100">{formatNumber(postEngagement?.videoCount)}</span>
+                            </div>
                           </div>
                         </div>
                       ) : (
