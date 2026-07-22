@@ -2696,7 +2696,10 @@ async function fetchNaverBlogPostEngagement(postUrl) {
   if (!postIdentifier) return null;
   const contentId = `${postIdentifier.blogId}_${postIdentifier.logNo}`;
   const likeQuery = new URLSearchParams({
-    pool: "blog",
+    // Naver Blog's public post page uses the blogserver API with the
+    // `blogid` pool. The generic blog.like host can return an empty
+    // reactions list even when the post has visible sympathy counts.
+    pool: "blogid",
     q: `blog[${contentId}]`,
     isDuplication: "false"
   });
@@ -2707,10 +2710,11 @@ async function fetchNaverBlogPostEngagement(postUrl) {
         Accept: "text/html,application/xhtml+xml"
       }
     }),
-    fetch(`https://blog.like.naver.com/v1/search/contents?${likeQuery.toString()}`, {
+    fetch(`https://apis.naver.com/blogserver/like/v1/search/contents?${likeQuery.toString()}`, {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; ContentsView/1.0)",
-        Accept: "application/json, text/javascript, */*; q=0.01"
+        Accept: "application/json, text/javascript, */*; q=0.01",
+        Referer: `https://blog.naver.com/${encodeURIComponent(postIdentifier.blogId)}/${encodeURIComponent(postIdentifier.logNo)}`
       }
     })
   ]);
