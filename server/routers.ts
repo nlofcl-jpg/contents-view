@@ -296,8 +296,70 @@ function extractNaverPostTagsFromHtml(html: string) {
   return uniqueTags(candidates).filter((tag) => !blockedLabels.has(tag));
 }
 
+function getNaverBlogPostIdentifier(postUrl: string) {
+  try {
+    const url = new URL(normalizeBlogUrlInput(postUrl));
+    const blogId = url.searchParams.get("blogId")?.trim();
+    const logNo = url.searchParams.get("logNo")?.trim();
+    if (blogId && logNo) return { blogId, logNo };
+
+    const host = url.hostname.replace(/^m\./, "");
+    const pathParts = url.pathname.split("/").filter(Boolean);
+    if (host === "blog.naver.com" && pathParts.length >= 2) {
+      return { blogId: pathParts[0], logNo: pathParts[1] };
+    }
+  } catch {
+    // The HTML fallback below handles malformed or non-Naver post URLs.
+  }
+
+  return null;
+}
+
+function decodeNaverTagValue(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 async function fetchNaverBlogPostTags(postUrl: string) {
   if (!postUrl) return [];
+
+  const postIdentifier = getNaverBlogPostIdentifier(postUrl);
+  if (postIdentifier) {
+    const query = new URLSearchParams({
+      blogId: postIdentifier.blogId,
+      logNoList: postIdentifier.logNo,
+      logType: "mylog",
+    });
+
+    try {
+      const response = await fetch(`https://blog.naver.com/BlogTagListInfo.naver?${query.toString()}`, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; ContentsView/1.0)",
+          Accept: "application/json, text/javascript, */*; q=0.01",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      });
+
+      if (response.ok) {
+        const payload = await response.json() as {
+          taglist?: Array<{ logno?: string | number; tagName?: string }>;
+        };
+        const tagName = payload.taglist?.find((item) => String(item.logno) === postIdentifier.logNo)?.tagName;
+        if (tagName) {
+          const tags = uniqueTags(decodeNaverTagValue(tagName).split(","));
+          if (tags.length > 0) return tags;
+        }
+      }
+    } catch (error) {
+      console.warn("[Naver Blog Analysis] Tag API request failed", {
+        postUrl,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
 
   const fetchHtml = async (url: string) => {
     const response = await fetch(url, {
