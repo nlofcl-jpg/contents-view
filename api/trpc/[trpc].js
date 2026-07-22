@@ -2719,10 +2719,22 @@ async function fetchNaverBlogPostEngagement(postUrl) {
     })
   ]);
   let commentCount = null;
+  let characterCount = null;
+  let imageCount = null;
+  let videoCount = null;
   if (mobileResult.status === "fulfilled" && mobileResult.value.ok) {
     const mobileHtml = await mobileResult.value.text();
     const commentMatch = mobileHtml.match(/commentCount="(\d+)"/i);
     commentCount = commentMatch ? Number(commentMatch[1]) : null;
+    const $ = cheerio.load(mobileHtml);
+    const postBody = $(".se-main-container").first();
+    const contentRoot = postBody.length > 0 ? postBody : $("#postView, .post_ct").first();
+    if (contentRoot.length > 0) {
+      characterCount = contentRoot.text().replace(/\s+/g, "").length;
+      const smartEditorImageCount = contentRoot.find(".se-module-image").length;
+      imageCount = smartEditorImageCount > 0 ? smartEditorImageCount : contentRoot.find("img").length;
+      videoCount = contentRoot.find(".se-module-video, video, iframe[src*='tv.naver.com'], iframe[src*='youtube.com'], iframe[src*='youtu.be']").length;
+    }
   }
   let likeCount = null;
   if (likeResult.status === "fulfilled" && likeResult.value.ok) {
@@ -2735,8 +2747,8 @@ async function fetchNaverBlogPostEngagement(postUrl) {
       }, 0);
     }
   }
-  if (likeCount === null && commentCount === null) return null;
-  return { likeCount, commentCount };
+  if (likeCount === null && commentCount === null && characterCount === null) return null;
+  return { likeCount, commentCount, characterCount, imageCount, videoCount };
 }
 function normalizeBlogPostUrlForMatch(value) {
   try {

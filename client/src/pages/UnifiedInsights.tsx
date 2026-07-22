@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { UnifiedChart } from "@/components/UnifiedChart";
-import { ChevronDown, CircleAlert, ExternalLink, Heart, ListFilter, Loader2, MessageCircle } from "lucide-react";
+import { ChevronDown, CircleAlert, ExternalLink, FileText, Heart, Image, ListFilter, Loader2, MessageCircle, Video } from "lucide-react";
 
 type InsightPoint = {
   period: string;
@@ -93,6 +93,9 @@ type BlogPostAnalysisData = {
 type BlogPostEngagement = {
   likeCount: number | null;
   commentCount: number | null;
+  characterCount: number | null;
+  imageCount: number | null;
+  videoCount: number | null;
 };
 
 const PERIOD_OPTIONS = [
@@ -1215,20 +1218,42 @@ export default function UnifiedInsights() {
                         </div>
                       )}
                       {postEngagement && (
-                        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-400">
-                          {postEngagement.likeCount !== null && (
-                            <span className="inline-flex items-center gap-1">
-                              <Heart className="h-3.5 w-3.5 text-rose-300" aria-hidden="true" />
-                              공감 {formatNumber(postEngagement.likeCount)}
-                            </span>
-                          )}
-                          {postEngagement.commentCount !== null && (
-                            <span className="inline-flex items-center gap-1">
-                              <MessageCircle className="h-3.5 w-3.5 text-sky-300" aria-hidden="true" />
-                              댓글 {formatNumber(postEngagement.commentCount)}
-                            </span>
-                          )}
-                        </div>
+                        <>
+                          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                            {postEngagement.likeCount !== null && (
+                              <span className="inline-flex items-center gap-1">
+                                <Heart className="h-3.5 w-3.5 text-rose-300" aria-hidden="true" />
+                                공감 {formatNumber(postEngagement.likeCount)}
+                              </span>
+                            )}
+                            {postEngagement.commentCount !== null && (
+                              <span className="inline-flex items-center gap-1">
+                                <MessageCircle className="h-3.5 w-3.5 text-sky-300" aria-hidden="true" />
+                                댓글 {formatNumber(postEngagement.commentCount)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                            {postEngagement.characterCount !== null && (
+                              <span className="inline-flex items-center gap-1">
+                                <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+                                글자 수 {formatNumber(postEngagement.characterCount)}자
+                              </span>
+                            )}
+                            {postEngagement.imageCount !== null && (
+                              <span className="inline-flex items-center gap-1">
+                                <Image className="h-3.5 w-3.5" aria-hidden="true" />
+                                이미지 {formatNumber(postEngagement.imageCount)}개
+                              </span>
+                            )}
+                            {postEngagement.videoCount !== null && (
+                              <span className="inline-flex items-center gap-1">
+                                <Video className="h-3.5 w-3.5" aria-hidden="true" />
+                                영상 {formatNumber(postEngagement.videoCount)}개
+                              </span>
+                            )}
+                          </div>
+                        </>
                       )}
                       {isEngagementLoading && !postEngagement && (
                         <div className="mt-2 inline-flex items-center gap-1.5 text-xs text-slate-500">
