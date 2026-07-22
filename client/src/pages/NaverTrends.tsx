@@ -6,7 +6,7 @@ export default function NaverTrends() {
       <div className="pageHeader">
         <h1 className="pageTitle">네이버 트렌드</h1>
         <p className="pageDescription">
-          검색어 하나로 네이버 검색 수요와 쇼핑 반응을 한 페이지에서 확인하세요.
+          키워드, 블로그, 쇼핑 데이터를 한곳에서 분석하세요.
         </p>
       </div>
 
