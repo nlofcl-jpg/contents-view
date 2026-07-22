@@ -253,15 +253,18 @@ function uniqueTags(values: string[]) {
 function extractNaverPostTagsFromHtml(html: string) {
   const $ = cheerio.load(html);
   const candidates: string[] = [];
+  // Naver Blog reuses generic tag-like class names in editor controls, so only
+  // accept links from the rendered post body or links with a tag query value.
   const selectors = [
     "meta[property='article:tag']",
-    "meta[name='keywords']",
-    ".post_tag a",
-    ".wrap_tag a",
-    ".tag_area a",
-    ".se-hash-tag",
-    "a[href*='postTagName=']",
-    "a[href*='PostList.naver'][href*='tagName=']",
+    "#postView .se-hash-tag",
+    ".se-main-container .se-hash-tag",
+    "#postView a[href*='postTagName=']",
+    ".se-main-container a[href*='postTagName=']",
+    "#postView a[href*='tagName=']",
+    ".se-main-container a[href*='tagName=']",
+    "#postView a[href*='PostList.naver'][href*='query=']",
+    ".se-main-container a[href*='PostList.naver'][href*='query=']",
   ];
 
   selectors.forEach((selector) => {
@@ -272,7 +275,7 @@ function extractNaverPostTagsFromHtml(html: string) {
 
       if (content) {
         candidates.push(...content.split(","));
-      } else {
+      } else if (node.is("a")) {
         candidates.push(node.text());
       }
 
@@ -289,14 +292,8 @@ function extractNaverPostTagsFromHtml(html: string) {
     });
   });
 
-  const inlineTagRegex = /postTagName=([^"'&#<\s]+)/g;
-  let match = inlineTagRegex.exec(html);
-  while (match) {
-    candidates.push(decodeURIComponent(match[1].replace(/\+/g, " ")));
-    match = inlineTagRegex.exec(html);
-  }
-
-  return uniqueTags(candidates);
+  const blockedLabels = new Set(["취소", "확인", "닫기", "공유", "저장", "수정", "삭제", "더보기"]);
+  return uniqueTags(candidates).filter((tag) => !blockedLabels.has(tag));
 }
 
 async function fetchNaverBlogPostTags(postUrl: string) {

@@ -2554,13 +2554,14 @@ function extractNaverPostTagsFromHtml(html) {
   const candidates = [];
   const selectors = [
     "meta[property='article:tag']",
-    "meta[name='keywords']",
-    ".post_tag a",
-    ".wrap_tag a",
-    ".tag_area a",
-    ".se-hash-tag",
-    "a[href*='postTagName=']",
-    "a[href*='PostList.naver'][href*='tagName=']"
+    "#postView .se-hash-tag",
+    ".se-main-container .se-hash-tag",
+    "#postView a[href*='postTagName=']",
+    ".se-main-container a[href*='postTagName=']",
+    "#postView a[href*='tagName=']",
+    ".se-main-container a[href*='tagName=']",
+    "#postView a[href*='PostList.naver'][href*='query=']",
+    ".se-main-container a[href*='PostList.naver'][href*='query=']"
   ];
   selectors.forEach((selector) => {
     $(selector).each((_, element) => {
@@ -2569,7 +2570,7 @@ function extractNaverPostTagsFromHtml(html) {
       const href = node.attr("href");
       if (content) {
         candidates.push(...content.split(","));
-      } else {
+      } else if (node.is("a")) {
         candidates.push(node.text());
       }
       if (href) {
@@ -2583,13 +2584,8 @@ function extractNaverPostTagsFromHtml(html) {
       }
     });
   });
-  const inlineTagRegex = /postTagName=([^"'&#<\s]+)/g;
-  let match = inlineTagRegex.exec(html);
-  while (match) {
-    candidates.push(decodeURIComponent(match[1].replace(/\+/g, " ")));
-    match = inlineTagRegex.exec(html);
-  }
-  return uniqueTags(candidates);
+  const blockedLabels = /* @__PURE__ */ new Set(["\uCDE8\uC18C", "\uD655\uC778", "\uB2EB\uAE30", "\uACF5\uC720", "\uC800\uC7A5", "\uC218\uC815", "\uC0AD\uC81C", "\uB354\uBCF4\uAE30"]);
+  return uniqueTags(candidates).filter((tag) => !blockedLabels.has(tag));
 }
 async function fetchNaverBlogPostTags(postUrl) {
   if (!postUrl) return [];
