@@ -1249,37 +1249,30 @@ export default function UnifiedInsights() {
                           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
                             <span>{formatBlogDate(post.pubDate)}</span>
                             {post.category && <span>{post.category}</span>}
-                            {post.tags && post.tags.length > 0 && <span className="text-slate-400">태그 {post.tags.length}개</span>}
                           </div>
                           {post.tags && post.tags.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-1.5">
                               {post.tags.map((tag) => <span key={`${post.link}-tag-${tag}`} className="rounded-full border border-slate-600/40 bg-slate-800/45 px-2 py-0.5 text-[11px] text-slate-300">#{tag}</span>)}
                             </div>
                           )}
-                          {postEngagement && (
-                            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-400">
-                              {postEngagement.likeCount !== null && <span className="inline-flex items-center gap-1"><Heart className="h-3.5 w-3.5 text-rose-300" aria-hidden="true" />공감 {formatNumber(postEngagement.likeCount)}</span>}
-                              {postEngagement.commentCount !== null && <span className="inline-flex items-center gap-1"><MessageCircle className="h-3.5 w-3.5 text-sky-300" aria-hidden="true" />댓글 {formatNumber(postEngagement.commentCount)}</span>}
-                              {postEngagement.characterCount !== null && <span>글자 수 {formatNumber(postEngagement.characterCount)}자</span>}
-                              {postEngagement.imageCount !== null && <span>이미지 {formatNumber(postEngagement.imageCount)}개</span>}
-                              {postEngagement.videoCount !== null && <span>영상 {formatNumber(postEngagement.videoCount)}개</span>}
-                            </div>
-                          )}
-                          {isEngagementLoading && !postEngagement && <div className="mt-2 inline-flex items-center gap-1.5 text-xs text-slate-500"><Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />공감·댓글 확인 중</div>}
                         </>
                       )}
                     </div>
                     </div>
-                    {searchMode !== "postRank" && <button
+                    {searchMode === "rank" && <button
                       type="button"
                       onClick={() => {
-                        setBlogPostAnalysisOpen(prev => ({ ...prev, [post.link]: true }));
-                        setBlogPostAnalysisErrors(prev => ({ ...prev, [post.link]: "" }));
-                        runBlogPostEngagement(post);
+                        setSearchMode("postRank");
+                        setKeywordInput(post.link);
+                        setIsSearchModeOpen(false);
+                        setBlogAnalysisData(null);
+                        setQuerySuccess(false);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                        runBlogPostRankAnalysis(post.link);
                       }}
                       className="h-9 shrink-0 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-500 md:self-center"
                     >
-                      분석 하기
+                      순위 확인
                     </button>}
                   </div>
                   {postError && (
@@ -1287,7 +1280,7 @@ export default function UnifiedInsights() {
                       {postError}
                     </div>
                   )}
-                  {isPostAnalysisOpen && (
+                  {searchMode === "postRank" && isPostAnalysisOpen && (
                     <div className="mt-4 rounded-lg border border-blue-500/15 bg-slate-950/45 p-4">
                       <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                         <div>
