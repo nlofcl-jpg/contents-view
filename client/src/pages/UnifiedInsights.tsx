@@ -118,11 +118,12 @@ const AGE_OPTIONS = [
 
 type TrendFilterMenu = "period" | "unit" | "device" | "gender" | "age" | null;
 type InsightTab = "content" | "seller";
-type SearchMode = "analysis" | "rank";
+type SearchMode = "analysis" | "rank" | "postRank";
 
 const SEARCH_MODE_OPTIONS: Array<{ value: SearchMode; label: string }> = [
   { value: "analysis", label: "키워드 분석" },
-  { value: "rank", label: "블로그 순위" },
+  { value: "rank", label: "블로그 분석" },
+  { value: "postRank", label: "블로그 순위" },
 ];
 
 type TabSearchState = {
@@ -172,6 +173,7 @@ export default function UnifiedInsights() {
   const [isLoading, setIsLoading] = useState(false);
   const [isBlogLoading, setIsBlogLoading] = useState(false);
   const [blogAnalysisData, setBlogAnalysisData] = useState<BlogAnalysisData | null>(null);
+  const [blogPostRankUrl, setBlogPostRankUrl] = useState("");
   const [blogPostAnalysisData, setBlogPostAnalysisData] = useState<Record<string, BlogPostAnalysisData>>({});
   const [blogPostAnalysisErrors, setBlogPostAnalysisErrors] = useState<Record<string, string>>({});
   const [blogPostAnalysisLoading, setBlogPostAnalysisLoading] = useState<string | null>(null);
@@ -684,12 +686,25 @@ export default function UnifiedInsights() {
   const handleSearch = () => {
     const trimmed = keywordInput.trim();
     if (!trimmed) {
-      setQueryError(searchMode === "rank" ? "블로그 주소를 입력해주세요." : "검색어를 입력해주세요.");
+      setQueryError(
+        searchMode === "rank"
+          ? "블로그 주소를 입력해주세요."
+          : searchMode === "postRank"
+            ? "블로그 게시글 URL을 입력해주세요."
+            : "검색어를 입력해주세요."
+      );
       setQuerySuccess(false);
       return;
     }
     if (searchMode === "rank") {
       runBlogAnalysis(trimmed);
+      return;
+    }
+    if (searchMode === "postRank") {
+      setBlogPostRankUrl(trimmed);
+      setQueryError("");
+      setQuerySuccess(false);
+      setBlogAnalysisData(null);
       return;
     }
     setBlogAnalysisData(null);
@@ -969,6 +984,8 @@ export default function UnifiedInsights() {
                 ? ""
                 : searchMode === "rank"
                   ? "블로그 주소를 입력하세요."
+                  : searchMode === "postRank"
+                    ? "블로그 게시글 URL을 입력하세요."
                   : "분석할 검색어를 입력하세요."
             }
             autoComplete="off"
@@ -1025,6 +1042,20 @@ export default function UnifiedInsights() {
           <p className="text-slate-400">
             블로그 메인 주소를 입력하고 검색 버튼을 눌러주세요.
           </p>
+        </div>
+      )}
+
+      {searchMode === "postRank" && (
+        <div className="mt-8 flex min-h-[260px] items-center justify-center rounded-lg border border-slate-700 bg-slate-900/30 p-8 text-center sm:min-h-[320px] lg:min-h-[380px]">
+          <div className="max-w-md">
+            <h2 className="text-lg font-medium text-slate-100">블로그 게시글 순위</h2>
+            <p className="mt-2 text-sm text-slate-400">
+              블로그 게시글 URL을 입력해 키워드별 검색 노출 순위를 분석합니다.
+            </p>
+            {blogPostRankUrl && (
+              <p className="mt-4 truncate text-xs text-blue-200">{blogPostRankUrl}</p>
+            )}
+          </div>
         </div>
       )}
 
