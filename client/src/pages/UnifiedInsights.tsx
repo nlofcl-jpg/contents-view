@@ -968,45 +968,49 @@ export default function UnifiedInsights() {
       {/* Search Card */}
       <div className="mb-8 w-full max-w-full min-w-0 overflow-visible rounded-[28px] border border-white/35 bg-white p-2 shadow-[0_18px_48px_rgba(21,140,255,0.24),0_0_70px_rgba(21,140,255,0.14)]">
         <div className="relative flex items-center gap-0">
-          <div className="relative shrink-0">
-            <button
-              type="button"
-              onClick={() => setIsSearchModeOpen((open) => !open)}
-              className="flex h-12 w-[7.5rem] items-center justify-center gap-2 rounded-[22px] text-sm font-semibold text-blue-600 transition-colors hover:bg-slate-100 md:w-36 md:text-base"
-              aria-haspopup="listbox"
-              aria-expanded={isSearchModeOpen}
-            >
-              <span>{SEARCH_MODE_OPTIONS.find((option) => option.value === searchMode)?.label}</span>
-              <ChevronDown
-                className={`h-4 w-4 text-slate-500 transition-transform ${isSearchModeOpen ? "rotate-180" : ""}`}
-                aria-hidden="true"
-              />
-            </button>
-            {isSearchModeOpen && (
-              <div className="absolute left-0 top-[3.35rem] z-40 w-40 overflow-hidden rounded-2xl border border-slate-200 bg-white py-1 shadow-xl shadow-blue-950/20" role="listbox">
-                {SEARCH_MODE_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => {
-                      setSearchMode(option.value);
-                      setIsSearchModeOpen(false);
-                    }}
-                    className={`block w-full px-4 py-2.5 text-left text-sm transition-colors ${
-                      searchMode === option.value
-                        ? "bg-blue-50 text-blue-600"
-                        : "text-slate-700 hover:bg-slate-50"
-                    }`}
-                    role="option"
-                    aria-selected={searchMode === option.value}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+          {activeInsightTab !== "seller" && (
+            <>
+              <div className="relative shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsSearchModeOpen((open) => !open)}
+                  className="flex h-12 w-[7.5rem] items-center justify-center gap-2 rounded-[22px] text-sm font-semibold text-blue-600 transition-colors hover:bg-slate-100 md:w-36 md:text-base"
+                  aria-haspopup="listbox"
+                  aria-expanded={isSearchModeOpen}
+                >
+                  <span>{SEARCH_MODE_OPTIONS.find((option) => option.value === searchMode)?.label}</span>
+                  <ChevronDown
+                    className={`h-4 w-4 text-slate-500 transition-transform ${isSearchModeOpen ? "rotate-180" : ""}`}
+                    aria-hidden="true"
+                  />
+                </button>
+                {isSearchModeOpen && (
+                  <div className="absolute left-0 top-[3.35rem] z-40 w-40 overflow-hidden rounded-2xl border border-slate-200 bg-white py-1 shadow-xl shadow-blue-950/20" role="listbox">
+                    {SEARCH_MODE_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => {
+                          setSearchMode(option.value);
+                          setIsSearchModeOpen(false);
+                        }}
+                        className={`block w-full px-4 py-2.5 text-left text-sm transition-colors ${
+                          searchMode === option.value
+                            ? "bg-blue-50 text-blue-600"
+                            : "text-slate-700 hover:bg-slate-50"
+                        }`}
+                        role="option"
+                        aria-selected={searchMode === option.value}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          <div className="h-6 w-px shrink-0 bg-slate-200" aria-hidden="true" />
+              <div className="h-6 w-px shrink-0 bg-slate-200" aria-hidden="true" />
+            </>
+          )}
           <input
             id="keyword"
             type="text"

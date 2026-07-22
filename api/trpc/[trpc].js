@@ -2508,6 +2508,9 @@ function normalizeBlogUrlInput(value) {
   const trimmed = value.trim();
   if (!trimmed) return "";
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (/^[a-zA-Z0-9._-]+$/.test(trimmed)) {
+    return `https://blog.naver.com/${encodeURIComponent(trimmed)}`;
+  }
   return `https://${trimmed}`;
 }
 function normalizeNaverBlogProfileImageUrl(value) {
