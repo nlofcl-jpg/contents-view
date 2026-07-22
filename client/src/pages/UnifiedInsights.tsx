@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { UnifiedChart } from "@/components/UnifiedChart";
-import { ChevronDown, CircleAlert, ExternalLink, ListFilter, Loader2 } from "lucide-react";
+import { ChevronDown, CircleAlert, ExternalLink, Heart, ListFilter, Loader2, MessageCircle } from "lucide-react";
 
 type InsightPoint = {
   period: string;
@@ -82,6 +82,11 @@ type BlogPostAnalysisData = {
   results?: BlogPostKeywordResult[];
   searchedAt?: string;
   searchVolumeAvailable?: boolean;
+};
+
+type BlogPostEngagement = {
+  likeCount: number | null;
+  commentCount: number | null;
 };
 
 const PERIOD_OPTIONS = [
@@ -172,6 +177,8 @@ export default function UnifiedInsights() {
   const [blogPostAnalysisLoading, setBlogPostAnalysisLoading] = useState<string | null>(null);
   const [blogPostAnalysisOpen, setBlogPostAnalysisOpen] = useState<Record<string, boolean>>({});
   const [blogPostKeywordInputs, setBlogPostKeywordInputs] = useState<Record<string, string>>({});
+  const [blogPostEngagementData, setBlogPostEngagementData] = useState<Record<string, BlogPostEngagement>>({});
+  const [blogPostEngagementLoading, setBlogPostEngagementLoading] = useState<string | null>(null);
   const [queryError, setQueryError] = useState("");
   const [querySuccess, setQuerySuccess] = useState(false);
   const [chartData, setChartData] = useState<any>(null);
@@ -534,6 +541,7 @@ export default function UnifiedInsights() {
   });
 
   const { mutateAsync: queryBlogPostAnalysis } = trpc.naver.blogPostAnalysis.useMutation();
+  const { mutateAsync: queryBlogPostEngagement } = trpc.naver.blogPostEngagement.useMutation();
 
   const runBlogAnalysis = (blogUrl: string) => {
     setIsBlogLoading(true);
@@ -548,7 +556,29 @@ export default function UnifiedInsights() {
     setBlogPostAnalysisErrors({});
     setBlogPostAnalysisOpen({});
     setBlogPostKeywordInputs({});
+    setBlogPostEngagementData({});
+    setBlogPostEngagementLoading(null);
     queryBlogAnalysis({ blogUrl });
+  };
+
+  const runBlogPostEngagement = async (post: BlogAnalysisPost) => {
+    if (blogPostEngagementData[post.link]) return;
+
+    setBlogPostEngagementLoading(post.link);
+    try {
+      const data = await queryBlogPostEngagement({ postUrl: post.link }) as {
+        success: boolean;
+        engagement: BlogPostEngagement | null;
+      };
+      const engagement = data.engagement;
+      if (data.success && engagement) {
+        setBlogPostEngagementData(prev => ({ ...prev, [post.link]: engagement }));
+      }
+    } catch {
+      // Engagement counts are supplementary, so keyword analysis remains usable.
+    } finally {
+      setBlogPostEngagementLoading(null);
+    }
   };
 
   const runBlogPostAnalysis = async (post: BlogAnalysisPost, extraKeyword?: string) => {
@@ -1020,7 +1050,7 @@ export default function UnifiedInsights() {
       {searchMode === "rank" && !isBlogLoading && blogAnalysisData?.blog && (
         <div className="mt-8 space-y-6">
           <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-5">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start">
               <div className="flex min-w-0 items-stretch gap-4 sm:gap-5">
                 {blogAnalysisData.blog.profileImageUrl && (
                   <img
@@ -1051,12 +1081,6 @@ export default function UnifiedInsights() {
                   </div>
                 </div>
               </div>
-              <button
-                type="button"
-                className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-500"
-              >
-                블로그 분석
-              </button>
             </div>
           </div>
 
@@ -1072,6 +1096,8 @@ export default function UnifiedInsights() {
                 const isPostLoading = blogPostAnalysisLoading === post.link;
                 const isPostAnalysisOpen = Boolean(blogPostAnalysisOpen[post.link]);
                 const keywordInputValue = blogPostKeywordInputs[post.link] || "";
+                const postEngagement = blogPostEngagementData[post.link];
+                const isEngagementLoading = blogPostEngagementLoading === post.link;
 
                 return (
                 <article
@@ -1113,6 +1139,28 @@ export default function UnifiedInsights() {
                           ))}
                         </div>
                       )}
+                      {postEngagement && (
+                        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                          {postEngagement.likeCount !== null && (
+                            <span className="inline-flex items-center gap-1">
+                              <Heart className="h-3.5 w-3.5 text-rose-300" aria-hidden="true" />
+                              공감 {formatNumber(postEngagement.likeCount)}
+                            </span>
+                          )}
+                          {postEngagement.commentCount !== null && (
+                            <span className="inline-flex items-center gap-1">
+                              <MessageCircle className="h-3.5 w-3.5 text-sky-300" aria-hidden="true" />
+                              댓글 {formatNumber(postEngagement.commentCount)}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {isEngagementLoading && !postEngagement && (
+                        <div className="mt-2 inline-flex items-center gap-1.5 text-xs text-slate-500">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                          공감·댓글 확인 중
+                        </div>
+                      )}
                     </div>
                     </div>
                     <button
@@ -1120,6 +1168,7 @@ export default function UnifiedInsights() {
                       onClick={() => {
                         setBlogPostAnalysisOpen(prev => ({ ...prev, [post.link]: true }));
                         setBlogPostAnalysisErrors(prev => ({ ...prev, [post.link]: "" }));
+                        runBlogPostEngagement(post);
                       }}
                       className="h-9 shrink-0 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-500 md:self-center"
                     >

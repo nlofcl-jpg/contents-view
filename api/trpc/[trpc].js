@@ -2691,6 +2691,49 @@ async function fetchNaverBlogPostTags(postUrl) {
   const iframeHtml = await fetchHtml(iframeUrl);
   return iframeHtml ? extractNaverPostTagsFromHtml(iframeHtml) : [];
 }
+async function fetchNaverBlogPostEngagement(postUrl) {
+  const postIdentifier = getNaverBlogPostIdentifier(postUrl);
+  if (!postIdentifier) return null;
+  const contentId = `${postIdentifier.blogId}_${postIdentifier.logNo}`;
+  const likeQuery = new URLSearchParams({
+    pool: "blog",
+    q: `blog[${contentId}]`,
+    isDuplication: "false"
+  });
+  const [mobileResult, likeResult] = await Promise.allSettled([
+    fetch(`https://m.blog.naver.com/${encodeURIComponent(postIdentifier.blogId)}/${encodeURIComponent(postIdentifier.logNo)}`, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; ContentsView/1.0)",
+        Accept: "text/html,application/xhtml+xml"
+      }
+    }),
+    fetch(`https://blog.like.naver.com/v1/search/contents?${likeQuery.toString()}`, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; ContentsView/1.0)",
+        Accept: "application/json, text/javascript, */*; q=0.01"
+      }
+    })
+  ]);
+  let commentCount = null;
+  if (mobileResult.status === "fulfilled" && mobileResult.value.ok) {
+    const mobileHtml = await mobileResult.value.text();
+    const commentMatch = mobileHtml.match(/commentCount="(\d+)"/i);
+    commentCount = commentMatch ? Number(commentMatch[1]) : null;
+  }
+  let likeCount = null;
+  if (likeResult.status === "fulfilled" && likeResult.value.ok) {
+    const likeData = await likeResult.value.json().catch(() => null);
+    const reactions = likeData?.contents?.[0]?.reactions;
+    if (Array.isArray(reactions)) {
+      likeCount = reactions.reduce((total, reaction) => {
+        const count = Number(reaction?.count);
+        return total + (Number.isFinite(count) ? count : 0);
+      }, 0);
+    }
+  }
+  if (likeCount === null && commentCount === null) return null;
+  return { likeCount, commentCount };
+}
 function normalizeBlogPostUrlForMatch(value) {
   try {
     const url = new URL(normalizeBlogUrlInput(value));
@@ -4081,6 +4124,26 @@ var appRouter = router({
         return {
           success: false,
           error: "\uBE14\uB85C\uADF8 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694."
+        };
+      }
+    }),
+    blogPostEngagement: publicProcedure.input(z3.object({
+      postUrl: z3.string().min(1)
+    })).mutation(async ({ input }) => {
+      try {
+        const engagement = await fetchNaverBlogPostEngagement(input.postUrl);
+        return {
+          success: Boolean(engagement),
+          engagement
+        };
+      } catch (error) {
+        console.error("[Naver Blog Post Engagement] Failed", {
+          postUrl: input.postUrl,
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
+        return {
+          success: false,
+          engagement: null
         };
       }
     }),
