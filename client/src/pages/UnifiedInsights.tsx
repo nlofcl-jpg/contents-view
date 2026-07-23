@@ -974,7 +974,7 @@ export default function UnifiedInsights() {
                 <button
                   type="button"
                   onClick={() => setIsSearchModeOpen((open) => !open)}
-                  className="flex h-10 w-24 items-center justify-center gap-1.5 rounded-[18px] text-xs font-semibold text-blue-600 transition-colors hover:bg-slate-100 md:h-12 md:w-36 md:gap-2 md:rounded-[22px] md:text-base"
+                  className="flex h-10 w-[5.5rem] items-center justify-center gap-1 rounded-[18px] whitespace-nowrap text-[11px] font-semibold text-blue-600 transition-colors hover:bg-slate-100 md:h-12 md:w-36 md:gap-2 md:text-base"
                   aria-haspopup="listbox"
                   aria-expanded={isSearchModeOpen}
                 >
@@ -985,7 +985,7 @@ export default function UnifiedInsights() {
                   />
                 </button>
                 {isSearchModeOpen && (
-                  <div className="absolute left-0 top-[2.8rem] z-40 w-32 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl shadow-blue-950/20 md:top-[3.35rem] md:w-40 md:rounded-2xl" role="listbox">
+                  <div className="absolute left-0 top-[2.8rem] z-40 w-28 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl shadow-blue-950/20 md:top-[3.35rem] md:w-40 md:rounded-2xl" role="listbox">
                     {SEARCH_MODE_OPTIONS.map((option) => (
                       <button
                         key={option.value}
