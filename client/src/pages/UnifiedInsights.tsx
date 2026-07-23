@@ -974,18 +974,18 @@ export default function UnifiedInsights() {
                 <button
                   type="button"
                   onClick={() => setIsSearchModeOpen((open) => !open)}
-                  className="flex h-10 w-[4.5rem] items-center justify-center gap-0.5 rounded-[18px] whitespace-nowrap text-[10px] font-semibold text-blue-600 transition-colors hover:bg-slate-100 md:h-12 md:w-36 md:gap-2 md:text-base"
+                  className="flex h-10 w-16 items-center justify-center gap-0.5 rounded-[18px] whitespace-nowrap text-[9px] font-semibold text-blue-600 transition-colors hover:bg-slate-100 lg:h-12 lg:w-36 lg:gap-2 lg:text-base"
                   aria-haspopup="listbox"
                   aria-expanded={isSearchModeOpen}
                 >
                   <span>{SEARCH_MODE_OPTIONS.find((option) => option.value === searchMode)?.label}</span>
                   <ChevronDown
-                    className={`h-3 w-3 text-slate-500 transition-transform md:h-4 md:w-4 ${isSearchModeOpen ? "rotate-180" : ""}`}
+                    className={`h-3.5 w-3.5 text-slate-500 transition-transform lg:h-4 lg:w-4 ${isSearchModeOpen ? "rotate-180" : ""}`}
                     aria-hidden="true"
                   />
                 </button>
                 {isSearchModeOpen && (
-                  <div className="absolute left-0 top-[2.8rem] z-40 w-28 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl shadow-blue-950/20 md:top-[3.35rem] md:w-40 md:rounded-2xl" role="listbox">
+                  <div className="absolute left-0 top-[2.8rem] z-40 w-28 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl shadow-blue-950/20 lg:top-[3.35rem] lg:w-40 lg:rounded-2xl" role="listbox">
                     {SEARCH_MODE_OPTIONS.map((option) => (
                       <button
                         key={option.value}
