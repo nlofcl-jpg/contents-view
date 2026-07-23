@@ -171,23 +171,6 @@ export default function News() {
         <p className="pageDescription">오늘 주목받는 이슈를 빠르게 확인하고 콘텐츠 아이디어로 연결해보세요.</p>
       </div>
 
-      {/* Search Area */}
-      <section className="newsSearchSection" aria-labelledby="news-search-title">
-        <h2 id="news-search-title" className="newsSearchTitle">키워드 이슈 검색</h2>
-        <form onSubmit={handleSearch} className="newsSearchForm">
-          <input
-            type="text"
-            placeholder="관심 키워드를 검색해보세요."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="newsSearchInput"
-          />
-          <button type="submit" className="newsSearchIconButton" aria-label="검색">
-            <Search size={19} strokeWidth={2.1} />
-          </button>
-        </form>
-      </section>
-
       {/* Featured News Cards - 4 Categories */}
       {isLoadingFeatured ? (
         <div className="mb-12 text-center text-gray-400">뉴스를 불러오는 중...</div>
@@ -254,6 +237,23 @@ export default function News() {
           </div>
         </div>
       )}
+
+      {/* News Search */}
+      <section className="newsSearchSection" aria-labelledby="news-search-title">
+        <h2 id="news-search-title" className="newsSearchTitle">뉴스 검색</h2>
+        <form onSubmit={handleSearch} className="newsSearchForm">
+          <input
+            type="text"
+            placeholder="관심 키워드를 검색해보세요."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="newsSearchInput"
+          />
+          <button type="submit" className="newsSearchIconButton" aria-label="검색">
+            <Search size={19} strokeWidth={2.1} />
+          </button>
+        </form>
+      </section>
 
       {/* Latest News List */}
       <div>
