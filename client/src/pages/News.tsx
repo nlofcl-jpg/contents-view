@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Search } from "lucide-react";
 import { useLocation } from "wouter";
@@ -19,11 +19,44 @@ interface FeaturedNewsGroup {
   items: NewsItem[];
 }
 
+interface NewsSessionCache {
+  latest: NewsItem[];
+  nation: NewsItem[];
+  business: NewsItem[];
+  technology: NewsItem[];
+  entertainment: NewsItem[];
+}
+
+const NEWS_SESSION_CACHE_KEY = "contents-view-news-page-cache-v1";
+
+function readNewsSessionCache(): NewsSessionCache | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const stored = window.sessionStorage.getItem(NEWS_SESSION_CACHE_KEY);
+    if (!stored) return null;
+
+    const cache = JSON.parse(stored) as NewsSessionCache;
+    return Array.isArray(cache.latest)
+      && Array.isArray(cache.nation)
+      && Array.isArray(cache.business)
+      && Array.isArray(cache.technology)
+      && Array.isArray(cache.entertainment)
+      ? cache
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function News() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [activeContentTab, setActiveContentTab] = useState<"news" | "issues">("news");
+  const [newsSessionCache, setNewsSessionCache] = useState<NewsSessionCache | null>(readNewsSessionCache);
+  const shouldFetchLatestNews = !newsSessionCache || selectedCategory !== "all";
+  const shouldFetchFeaturedNews = !newsSessionCache;
 
   // Category definitions
   const categories = [
@@ -46,34 +79,74 @@ export default function News() {
   ];
 
   // Fetch latest news for selected category
-  const { data: latestNewsData, isLoading: isLoadingLatest } = trpc.news.getLatestNews.useQuery(
+  const { data: latestNewsResponse, isLoading: isLoadingLatest } = trpc.news.getLatestNews.useQuery(
     { limit: 30, category: selectedCategory },
     {
+      enabled: shouldFetchLatestNews,
       retry: 1,
       refetchOnWindowFocus: false,
     }
   );
 
   // Fetch featured news for 4 categories
-  const { data: nationNewsData } = trpc.news.getLatestNews.useQuery(
+  const { data: nationNewsResponse } = trpc.news.getLatestNews.useQuery(
     { limit: 2, category: 'nation' },
-    { retry: 1, refetchOnWindowFocus: false }
+    { enabled: shouldFetchFeaturedNews, retry: 1, refetchOnWindowFocus: false }
   );
 
-  const { data: businessNewsData } = trpc.news.getLatestNews.useQuery(
+  const { data: businessNewsResponse } = trpc.news.getLatestNews.useQuery(
     { limit: 2, category: 'business' },
-    { retry: 1, refetchOnWindowFocus: false }
+    { enabled: shouldFetchFeaturedNews, retry: 1, refetchOnWindowFocus: false }
   );
 
-  const { data: technologyNewsData } = trpc.news.getLatestNews.useQuery(
+  const { data: technologyNewsResponse } = trpc.news.getLatestNews.useQuery(
     { limit: 2, category: 'technology' },
-    { retry: 1, refetchOnWindowFocus: false }
+    { enabled: shouldFetchFeaturedNews, retry: 1, refetchOnWindowFocus: false }
   );
 
-  const { data: entertainmentNewsData } = trpc.news.getLatestNews.useQuery(
+  const { data: entertainmentNewsResponse } = trpc.news.getLatestNews.useQuery(
     { limit: 2, category: 'entertainment' },
-    { retry: 1, refetchOnWindowFocus: false }
+    { enabled: shouldFetchFeaturedNews, retry: 1, refetchOnWindowFocus: false }
   );
+
+  const latestNewsData = selectedCategory === "all"
+    ? newsSessionCache?.latest ?? latestNewsResponse
+    : latestNewsResponse;
+  const nationNewsData = newsSessionCache?.nation ?? nationNewsResponse;
+  const businessNewsData = newsSessionCache?.business ?? businessNewsResponse;
+  const technologyNewsData = newsSessionCache?.technology ?? technologyNewsResponse;
+  const entertainmentNewsData = newsSessionCache?.entertainment ?? entertainmentNewsResponse;
+
+  useEffect(() => {
+    if (
+      newsSessionCache
+      || !Array.isArray(latestNewsResponse)
+      || !Array.isArray(nationNewsResponse)
+      || !Array.isArray(businessNewsResponse)
+      || !Array.isArray(technologyNewsResponse)
+      || !Array.isArray(entertainmentNewsResponse)
+    ) {
+      return;
+    }
+
+    const nextCache: NewsSessionCache = {
+      latest: latestNewsResponse as NewsItem[],
+      nation: nationNewsResponse as NewsItem[],
+      business: businessNewsResponse as NewsItem[],
+      technology: technologyNewsResponse as NewsItem[],
+      entertainment: entertainmentNewsResponse as NewsItem[],
+    };
+
+    window.sessionStorage.setItem(NEWS_SESSION_CACHE_KEY, JSON.stringify(nextCache));
+    setNewsSessionCache(nextCache);
+  }, [
+    businessNewsResponse,
+    entertainmentNewsResponse,
+    latestNewsResponse,
+    nationNewsResponse,
+    newsSessionCache,
+    technologyNewsResponse,
+  ]);
 
   // Combine featured news into category columns.
   const featuredNewsGroups = useMemo<FeaturedNewsGroup[]>(() => {
