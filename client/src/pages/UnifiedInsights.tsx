@@ -974,13 +974,13 @@ export default function UnifiedInsights() {
                 <button
                   type="button"
                   onClick={() => setIsSearchModeOpen((open) => !open)}
-                  className="flex h-10 w-[5.5rem] items-center justify-center gap-1 rounded-[18px] whitespace-nowrap text-[11px] font-semibold text-blue-600 transition-colors hover:bg-slate-100 md:h-12 md:w-36 md:gap-2 md:text-base"
+                  className="flex h-10 w-[4.5rem] items-center justify-center gap-0.5 rounded-[18px] whitespace-nowrap text-[10px] font-semibold text-blue-600 transition-colors hover:bg-slate-100 md:h-12 md:w-36 md:gap-2 md:text-base"
                   aria-haspopup="listbox"
                   aria-expanded={isSearchModeOpen}
                 >
                   <span>{SEARCH_MODE_OPTIONS.find((option) => option.value === searchMode)?.label}</span>
                   <ChevronDown
-                    className={`h-3.5 w-3.5 text-slate-500 transition-transform md:h-4 md:w-4 ${isSearchModeOpen ? "rotate-180" : ""}`}
+                    className={`h-3 w-3 text-slate-500 transition-transform md:h-4 md:w-4 ${isSearchModeOpen ? "rotate-180" : ""}`}
                     aria-hidden="true"
                   />
                 </button>
