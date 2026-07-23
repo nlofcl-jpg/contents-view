@@ -12,8 +12,14 @@ type Program = {
   sourceUrl?: string;
 };
 
-// Download files and their original source links can be added here as they are prepared.
-const programs: Program[] = [];
+const programs: Program[] = [
+  {
+    id: "flow-automation",
+    name: "Google Flow 오토메이션",
+    summary: "Google Flow에서 프롬프트 작업과 결과 다운로드를 자동화하는 Chrome 확장프로그램입니다.",
+    category: "Chrome 확장프로그램",
+  },
+];
 
 export default function AIStudio() {
   const [activeTab, setActiveTab] = useState<StudioTab>("programs");
@@ -59,10 +65,16 @@ export default function AIStudio() {
                   <p>{program.summary}</p>
                   <div className="aiStudioProgramActions">
                     {program.downloadUrl && (
-                      <a href={program.downloadUrl} download>
+                      <a className="aiStudioPrimaryAction" href={program.downloadUrl} download>
                         <Download aria-hidden="true" />
                         다운로드
                       </a>
+                    )}
+                    {!program.downloadUrl && (
+                      <button type="button" className="aiStudioPrimaryAction" disabled>
+                        <Download aria-hidden="true" />
+                        다운로드
+                      </button>
                     )}
                     {program.sourceUrl && (
                       <a href={program.sourceUrl} target="_blank" rel="noreferrer">

@@ -7120,7 +7120,8 @@ input[type="date"].youtubeSelect {
   padding-top: 20px;
 }
 
-.aiStudioProgramActions a {
+.aiStudioProgramActions a,
+.aiStudioProgramActions button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -7132,6 +7133,25 @@ input[type="date"].youtubeSelect {
 
 .aiStudioProgramActions a:hover {
   color: #9bc7ff;
+}
+
+.aiStudioProgramActions .aiStudioPrimaryAction {
+  padding: 9px 13px;
+  border: 1px solid #287de8;
+  border-radius: 6px;
+  background: #1d6fda;
+  color: #ffffff;
+}
+
+.aiStudioProgramActions button.aiStudioPrimaryAction:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.aiStudioProgramActions .aiStudioPrimaryAction:hover {
+  border-color: #4597ff;
+  background: #287dea;
+  color: #ffffff;
 }
 
 .aiStudioProgramActions svg {
