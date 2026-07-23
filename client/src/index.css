@@ -667,6 +667,53 @@ a {
   z-index: 1;
 }
 
+.flowDownloadBanner {
+  display: flex;
+  width: 100%;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(55, 133, 240, 0.2);
+  background: rgba(17, 62, 127, 0.42);
+  color: #a8ccff;
+  text-decoration: none;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.flowDownloadBanner:hover {
+  background: rgba(25, 89, 177, 0.52);
+  color: #d9ebff;
+}
+
+.flowDownloadBannerContent {
+  display: flex;
+  max-width: 1280px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 1rem;
+}
+
+.flowDownloadBannerContent > svg {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+}
+
+.flowDownloadBannerMarquee {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.flowDownloadBannerMarquee span + span {
+  display: none;
+}
+
 .headerContentWrapper {
   width: 100%;
   max-width: 1280px;
@@ -785,6 +832,56 @@ a {
 .headerBrandText strong {
   color: var(--blue);
   font-weight: 800;
+}
+
+@media (max-width: 768px) {
+  .flowDownloadBanner {
+    min-height: 27px;
+    justify-content: flex-start;
+  }
+
+  .flowDownloadBannerContent {
+    width: 100%;
+    gap: 5px;
+    padding: 0;
+  }
+
+  .flowDownloadBannerContent > svg {
+    width: 11px;
+    height: 11px;
+    margin-left: 12px;
+  }
+
+  .flowDownloadBannerMarquee {
+    flex: 1;
+    font-size: 10px;
+    font-weight: 300;
+  }
+
+  .flowDownloadBannerMarquee span {
+    flex: 0 0 auto;
+    padding-right: 36px;
+    animation: flow-banner-scroll 13s linear infinite;
+  }
+
+  .flowDownloadBannerMarquee span + span {
+    display: inline;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flowDownloadBannerMarquee span {
+    animation: none;
+  }
+}
+
+@keyframes flow-banner-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-100% - 36px));
+  }
 }
 
 .headerNavMenu {
