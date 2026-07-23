@@ -23,6 +23,7 @@ export default function News() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [activeContentTab, setActiveContentTab] = useState<"news" | "issues">("news");
 
   // Category definitions
   const categories = [
@@ -169,8 +170,30 @@ export default function News() {
       <div className="pageHeader">
         <h1 className="pageTitle">뉴스 & 이슈</h1>
         <p className="pageDescription">오늘 주목받는 이슈를 빠르게 확인하고 콘텐츠 아이디어로 연결해보세요.</p>
+        <div className="newsContentTabs" role="tablist" aria-label="뉴스 및 이슈 분류">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeContentTab === "news"}
+            className={`newsContentTab ${activeContentTab === "news" ? "active" : ""}`}
+            onClick={() => setActiveContentTab("news")}
+          >
+            뉴스
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeContentTab === "issues"}
+            className={`newsContentTab ${activeContentTab === "issues" ? "active" : ""}`}
+            onClick={() => setActiveContentTab("issues")}
+          >
+            이슈
+          </button>
+        </div>
       </div>
 
+      {activeContentTab === "news" ? (
+        <>
       {/* Featured News Cards - 4 Categories */}
       {isLoadingFeatured ? (
         <div className="mb-12 text-center text-gray-400">뉴스를 불러오는 중...</div>
@@ -317,6 +340,12 @@ export default function News() {
           <div className="text-center text-gray-400">뉴스를 불러올 수 없습니다.</div>
         )}
       </div>
+        </>
+      ) : (
+        <section className="newsIssuesPlaceholder" role="tabpanel">
+          <p>이슈를 준비하고 있습니다.</p>
+        </section>
+      )}
     </div>
   );
 }
