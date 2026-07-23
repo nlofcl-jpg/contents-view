@@ -674,16 +674,16 @@ a {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border-bottom: 1px solid rgba(55, 133, 240, 0.2);
-  background: rgba(17, 62, 127, 0.42);
-  color: #a8ccff;
+  border-bottom: 1px solid #4ea0ff;
+  background: #1768d3;
+  color: #f7fbff;
   text-decoration: none;
   transition: background 0.18s ease, color 0.18s ease;
 }
 
 .flowDownloadBanner:hover {
-  background: rgba(25, 89, 177, 0.52);
-  color: #d9ebff;
+  background: #2981f0;
+  color: #ffffff;
 }
 
 .flowDownloadBannerContent {
