@@ -16,7 +16,7 @@ const programs: Program[] = [
   {
     id: "flow-automation",
     name: "Google Flow 오토메이션",
-    summary: "Google Flow에서 프롬프트 작업과 결과 다운로드를 자동화하는 Chrome 확장프로그램입니다.",
+    summary: "Google Flow에서 이미지 작업을 자동화하여 빠르게 작업하세요.",
     category: "Chrome 확장프로그램",
   },
 ];

@@ -7085,11 +7085,12 @@ input[type="date"].youtubeSelect {
   display: flex;
   min-height: 220px;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   padding: 22px;
   border: 1px solid rgba(64, 130, 235, 0.25);
   border-radius: 8px;
   background: rgba(8, 19, 38, 0.6);
+  text-align: center;
 }
 
 .aiStudioProgramCategory {
@@ -7111,6 +7112,8 @@ input[type="date"].youtubeSelect {
   font-size: 14px;
   font-weight: 400;
   line-height: 1.6;
+  overflow-wrap: normal;
+  word-break: keep-all;
 }
 
 .aiStudioProgramActions {
