@@ -2314,46 +2314,40 @@ a {
 }
 
 .newsContentTabs {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 26px;
-  width: 100%;
+  align-self: center;
+  gap: 0;
+  width: auto;
   margin-top: 24px;
+  padding: 4px;
+  border: 1px solid rgba(71, 85, 105, 0.8);
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.55);
 }
 
 .newsContentTab {
-  position: relative;
-  height: 34px;
-  padding: 0 2px;
+  height: 36px;
+  min-width: 92px;
+  padding: 0 20px;
   border: 0;
-  border-radius: 0;
+  border-radius: 999px;
   background: transparent;
   color: #8391a7;
   font-size: 14px;
   font-weight: 400;
   cursor: pointer;
-  transition: color 0.18s ease;
-}
-
-.newsContentTab::after {
-  position: absolute;
-  right: 0;
-  bottom: -1px;
-  left: 0;
-  height: 2px;
-  background: transparent;
-  content: "";
-  transition: background 0.18s ease;
+  transition: background 0.18s ease, color 0.18s ease;
 }
 
 .newsContentTab:hover,
 .newsContentTab.active {
-  color: #f4f8ff;
+  color: #ffffff;
 }
 
-.newsContentTab.active::after {
-  background: #328dff;
+.newsContentTab.active {
+  background: #2563eb;
+  box-shadow: 0 8px 18px rgba(15, 62, 150, 0.32);
 }
 
 .newsIssuesPlaceholder {
@@ -2544,12 +2538,14 @@ a {
 
 @media (max-width: 640px) {
   .newsContentTabs {
-    gap: 22px;
     margin-top: 18px;
+    padding: 3px;
   }
 
   .newsContentTab {
-    height: 30px;
+    height: 32px;
+    min-width: 78px;
+    padding: 0 16px;
     font-size: 13px;
   }
 
