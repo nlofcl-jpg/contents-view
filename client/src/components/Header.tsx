@@ -306,18 +306,28 @@ export default function Header({
         {/* 오른쪽 영역 */}
         <div className="headerRight">
           {/* 데스크톡: YouTube API 상태 표시 */}
-          {youtubeStatus && (
-          <button
-            className="youtubeApiStatus desktopOnly"
-            onClick={handleYouTubeApiStatusClick}
-            type="button"
-            title="YouTube API 상태"
-          >
-            <span className={`youtubeApiStatusDot ${youtubeStatus.status}`}></span>
-            <span className={`youtubeApiStatusText ${youtubeStatus.color}`}>
-              {youtubeStatus.text}
-            </span>
-          </button>
+          {youtubeStatus ? (
+            <button
+              className="youtubeApiStatus desktopOnly"
+              onClick={handleYouTubeApiStatusClick}
+              type="button"
+              title="YouTube API 상태"
+            >
+              <span className={`youtubeApiStatusDot ${youtubeStatus.status}`}></span>
+              <span className={`youtubeApiStatusText ${youtubeStatus.color}`}>
+                {youtubeStatus.text}
+              </span>
+            </button>
+          ) : (
+            <button
+              className="youtubeApiStatus desktopOnly"
+              onClick={() => setLocation(getLoginUrl())}
+              type="button"
+              title="YouTube API 연결하기"
+            >
+              <span className="youtubeApiStatusDot untested"></span>
+              <span className="youtubeApiStatusText text-blue-400">YouTube API 연결 하기</span>
+            </button>
           )}
 
           {/* 데스크톡: 알림 아이콘 */}
