@@ -1,5 +1,6 @@
 import { Download, ExternalLink, FolderDown, Sparkles } from "lucide-react";
 import { useState } from "react";
+import { Link } from "wouter";
 
 type StudioTab = "programs" | "upcoming";
 
@@ -8,6 +9,7 @@ type Program = {
   name: string;
   summary: string;
   category: string;
+  detailPath?: string;
   downloadUrl?: string;
   sourceUrl?: string;
 };
@@ -18,6 +20,7 @@ const programs: Program[] = [
     name: "Google Flow 오토메이션",
     summary: "Google Flow에서 이미지 작업을 자동화하여 빠르게 작업하세요.",
     category: "Chrome 확장프로그램",
+    detailPath: "/ai-studio/flow-automation",
     downloadUrl: "/downloads/contents-view-flow-automation.zip",
   },
 ];
@@ -65,13 +68,17 @@ export default function AIStudio() {
                   <h2>{program.name}</h2>
                   <p>{program.summary}</p>
                   <div className="aiStudioProgramActions">
-                    {program.downloadUrl && (
+                    {program.detailPath ? (
+                      <Link className="aiStudioPrimaryAction" href={program.detailPath}>
+                        <Download aria-hidden="true" />
+                        다운로드
+                      </Link>
+                    ) : program.downloadUrl ? (
                       <a className="aiStudioPrimaryAction" href={program.downloadUrl} download>
                         <Download aria-hidden="true" />
                         다운로드
                       </a>
-                    )}
-                    {!program.downloadUrl && (
+                    ) : (
                       <button type="button" className="aiStudioPrimaryAction" disabled>
                         <Download aria-hidden="true" />
                         다운로드

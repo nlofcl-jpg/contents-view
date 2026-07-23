@@ -13,6 +13,7 @@ import SavedContents from "@/pages/SavedContents";
 import News from "@/pages/News";
 import NewsSearchResults from "@/pages/NewsSearchResults";
 import AIStudio from "@/pages/AIStudio";
+import FlowAutomation from "@/pages/FlowAutomation";
 import Login from "@/pages/Login";
 import Admin from "@/pages/Admin";
 import MyPageModal from "@/components/MyPageModal";
@@ -36,6 +37,7 @@ function Router() {
       <Route path={"/saved-contents"} component={SavedContents} />
       <Route path={"/news/search"} component={NewsSearchResults} />
       <Route path={"/news"} component={News} />
+      <Route path={"/ai-studio/flow-automation"} component={FlowAutomation} />
       <Route path={"/ai-studio"} component={AIStudio} />
       <Route path={"/login"} component={Login} />
       <Route path={"/admin"} component={Admin} />
