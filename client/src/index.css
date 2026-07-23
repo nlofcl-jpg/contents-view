@@ -7026,6 +7026,167 @@ input[type="date"].youtubeSelect {
   }
 }
 
+.aiStudioTabs {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  width: 100%;
+  border-bottom: 1px solid rgba(120, 151, 204, 0.18);
+}
+
+.aiStudioTab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 42px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #8492aa;
+  font-size: 15px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: color 0.18s ease;
+}
+
+.aiStudioTab::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: transparent;
+  content: "";
+  transition: background 0.18s ease;
+}
+
+.aiStudioTab:hover,
+.aiStudioTab.active {
+  color: #f2f7ff;
+}
+
+.aiStudioTab.active::after {
+  background: #2586ff;
+}
+
+.aiStudioPanel {
+  width: 100%;
+}
+
+.aiStudioProgramGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.aiStudioProgramCard {
+  display: flex;
+  min-height: 220px;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 22px;
+  border: 1px solid rgba(64, 130, 235, 0.25);
+  border-radius: 8px;
+  background: rgba(8, 19, 38, 0.6);
+}
+
+.aiStudioProgramCategory {
+  color: #69a8ff;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.aiStudioProgramCard h2 {
+  margin: 14px 0 8px;
+  color: #f2f6ff;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.aiStudioProgramCard p {
+  margin: 0;
+  color: #9ba9bf;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.aiStudioProgramActions {
+  display: flex;
+  gap: 14px;
+  margin-top: auto;
+  padding-top: 20px;
+}
+
+.aiStudioProgramActions a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #69a8ff;
+  font-size: 13px;
+  font-weight: 400;
+  text-decoration: none;
+}
+
+.aiStudioProgramActions a:hover {
+  color: #9bc7ff;
+}
+
+.aiStudioProgramActions svg {
+  width: 14px;
+  height: 14px;
+}
+
+.aiStudioEmptyState {
+  display: flex;
+  min-height: 260px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  border: 1px solid rgba(64, 130, 235, 0.18);
+  border-radius: 8px;
+  color: #8390a5;
+}
+
+.aiStudioEmptyState svg {
+  width: 30px;
+  height: 30px;
+  color: #5786c7;
+  stroke-width: 1.5;
+}
+
+.aiStudioEmptyState p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.aiStudioUpcomingState {
+  min-height: 300px;
+}
+
+@media (max-width: 639px) {
+  .aiStudioTabs {
+    gap: 22px;
+  }
+
+  .aiStudioTab {
+    height: 38px;
+    font-size: 14px;
+  }
+
+  .aiStudioProgramGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .aiStudioEmptyState {
+    min-height: 210px;
+  }
+}
+
 /* Pagination */
 .communityPagination {
   display: flex;
