@@ -89,6 +89,7 @@ function IssuesPanel() {
   const { user } = useAuth();
   const [issues, setIssues] = useState<IssueRecord[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [articleUrl, setArticleUrl] = useState("");
@@ -127,6 +128,7 @@ function IssuesPanel() {
     setThumbnailUrl("");
     setSourceName("");
     setIsPublished(false);
+    setIsFormOpen(false);
   };
 
   const handleEdit = (issue: IssueRecord) => {
@@ -137,8 +139,16 @@ function IssuesPanel() {
     setThumbnailUrl(issue.thumbnail_url ?? "");
     setSourceName(issue.source_name ?? "");
     setIsPublished(issue.is_published);
+    setIsFormOpen(true);
     setError(null);
     setMessage(null);
+  };
+
+  const handleCreate = () => {
+    resetForm();
+    setMessage(null);
+    setError(null);
+    setIsFormOpen(true);
   };
 
   const handleSave = async () => {
@@ -178,13 +188,60 @@ function IssuesPanel() {
     await loadIssues();
   };
 
+  const handleDelete = async (issue: IssueRecord) => {
+    if (!supabase || !window.confirm(`'${issue.title}' 이슈를 삭제할까요?`)) return;
+
+    setError(null);
+    setMessage(null);
+    const { error: deleteError } = await supabase.from("issues").delete().eq("id", issue.id);
+
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
+
+    if (editingId === issue.id) resetForm();
+    setMessage("이슈 삭제 완료");
+    await loadIssues();
+  };
+
+  const formatCreatedAt = (value: string) => {
+    try {
+      return new Date(value).toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+    } catch {
+      return "-";
+    }
+  };
+
   return (
     <section className="space-y-6 rounded-lg border border-blue-500/20 bg-slate-900/60 p-5">
-      <div>
+      <div className="flex items-center justify-between gap-4">
         <h2 className="text-xl font-semibold text-white">이슈 관리</h2>
+        <button type="button" className="primaryButton" onClick={handleCreate}>
+          새 이슈 등록
+          <span>→</span>
+        </button>
       </div>
 
-      <div className="space-y-4 border-b border-slate-800 pb-6">
+      {message && <p className="text-sm text-emerald-300">{message}</p>}
+      {error && <p className="text-sm text-red-300">{error}</p>}
+
+      {isFormOpen && (
+      <div className="space-y-4 border-y border-slate-800 py-6">
+        <div className="flex items-center justify-between gap-4">
+          <h3 className="text-base font-medium text-slate-100">{editingId ? "이슈 수정" : "새 이슈 등록"}</h3>
+          <button
+            type="button"
+            className="text-xs text-slate-400 hover:text-slate-100"
+            onClick={resetForm}
+          >
+            닫기
+          </button>
+        </div>
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-slate-300">제목</span>
           <input
@@ -240,8 +297,6 @@ function IssuesPanel() {
           />
           공개
         </label>
-        {message && <p className="text-sm text-emerald-300">{message}</p>}
-        {error && <p className="text-sm text-red-300">{error}</p>}
         <div className="flex flex-wrap gap-2">
           <button type="button" className="primaryButton" onClick={handleSave} disabled={isSaving}>
             {isSaving ? "저장 중" : editingId ? "수정 저장" : "등록"}
@@ -258,24 +313,39 @@ function IssuesPanel() {
           )}
         </div>
       </div>
+      )}
 
       <div>
-        <h3 className="mb-3 text-sm font-semibold text-slate-200">등록 이슈</h3>
         {issues.length > 0 ? (
-          <div className="space-y-2">
+          <div className="overflow-hidden rounded-md border border-slate-800">
+            <div className="grid grid-cols-[minmax(0,1fr)_92px_128px] gap-3 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs text-slate-500">
+              <span>제목</span>
+              <span>생성일</span>
+              <span className="text-right">관리</span>
+            </div>
             {issues.map(issue => (
-              <article key={issue.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-800 bg-slate-950/50 px-4 py-3">
+              <article key={issue.id} className="grid grid-cols-[minmax(0,1fr)_92px_128px] items-center gap-3 border-b border-slate-800/80 px-4 py-3 last:border-b-0">
                 <div className="min-w-0">
                   <p className="truncate text-sm text-slate-100">{issue.title}</p>
                   <p className="mt-1 text-xs text-slate-500">{issue.is_published ? "공개" : "비공개"}</p>
                 </div>
-                <button
-                  type="button"
-                  className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:border-blue-400 hover:text-white"
-                  onClick={() => handleEdit(issue)}
-                >
-                  수정
-                </button>
+                <span className="text-xs text-slate-400">{formatCreatedAt(issue.created_at)}</span>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:border-blue-400 hover:text-white"
+                    onClick={() => handleEdit(issue)}
+                  >
+                    수정
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-400 hover:border-red-400 hover:text-red-300"
+                    onClick={() => handleDelete(issue)}
+                  >
+                    삭제
+                  </button>
+                </div>
               </article>
             ))}
           </div>
