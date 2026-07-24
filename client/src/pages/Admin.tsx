@@ -92,12 +92,9 @@ type ManagementToolbarProps = {
   title: string;
   description: string;
   createLabel: string;
-  searchPlaceholder: string;
-  searchQuery: string;
   visibility: VisibilityFilter;
   sortDirection: SortDirection;
   onCreate: () => void;
-  onSearchChange: (value: string) => void;
   onVisibilityChange: (value: VisibilityFilter) => void;
   onSortChange: (value: SortDirection) => void;
   onReset: () => void;
@@ -107,36 +104,30 @@ function ManagementToolbar({
   title,
   description,
   createLabel,
-  searchPlaceholder,
-  searchQuery,
   visibility,
   sortDirection,
   onCreate,
-  onSearchChange,
   onVisibilityChange,
   onSortChange,
   onReset,
 }: ManagementToolbarProps) {
   return (
-    <header className="border-b border-slate-800 pb-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <header className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-2xl font-medium text-white">{title}</h2>
           <p className="mt-2 text-sm font-normal text-slate-400">{description}</p>
         </div>
-        <button type="button" className="primaryButton" onClick={onCreate}>
-          <span aria-hidden="true">+</span>
-          {createLabel}
+        <button
+          type="button"
+          className="inline-flex h-9 items-center gap-1 rounded-md border border-blue-400/60 bg-blue-500/15 px-3 text-sm font-normal text-blue-100 transition hover:bg-blue-500/25"
+          onClick={onCreate}
+        >
+          <span aria-hidden="true">+</span> {createLabel}
         </button>
       </div>
 
-      <div className="mt-6 grid gap-3 rounded-lg border border-slate-800 bg-slate-950/45 p-4 md:grid-cols-[minmax(0,1fr)_150px_150px_150px]">
-        <input
-          className="h-10 min-w-0 rounded-md border border-slate-700 bg-slate-950/80 px-3 text-sm font-normal text-slate-100 outline-none placeholder:text-slate-500 focus:border-blue-400"
-          placeholder={searchPlaceholder}
-          value={searchQuery}
-          onChange={event => onSearchChange(event.target.value)}
-        />
+      <div className="grid gap-3 rounded-lg border border-slate-800 bg-slate-950/45 p-4 md:grid-cols-[180px_180px_minmax(0,1fr)]">
         <select
           className="h-10 rounded-md border border-slate-700 bg-slate-950/80 px-3 text-sm font-normal text-slate-200 outline-none focus:border-blue-400"
           value={visibility}
@@ -180,7 +171,6 @@ function IssuesPanel() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
   const [visibility, setVisibility] = useState<VisibilityFilter>("all");
   const [sortDirection, setSortDirection] = useState<SortDirection>("newest");
 
@@ -302,32 +292,26 @@ function IssuesPanel() {
   };
 
   const filteredIssues = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
     return [...issues]
-      .filter(issue => !normalizedQuery || issue.title.toLowerCase().includes(normalizedQuery))
       .filter(issue => visibility === "all" || (visibility === "published" ? issue.is_published : !issue.is_published))
       .sort((left, right) => {
         const difference = new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
         return sortDirection === "newest" ? difference : -difference;
       });
-  }, [issues, searchQuery, sortDirection, visibility]);
+  }, [issues, sortDirection, visibility]);
 
   return (
-    <section className="space-y-6 rounded-lg border border-blue-500/20 bg-slate-900/60 p-5">
+    <section className="space-y-6">
       <ManagementToolbar
         title="이슈 관리"
         description="등록된 이슈를 관리하세요."
         createLabel="새 이슈 등록"
-        searchPlaceholder="이슈 제목으로 검색..."
-        searchQuery={searchQuery}
         visibility={visibility}
         sortDirection={sortDirection}
         onCreate={handleCreate}
-        onSearchChange={setSearchQuery}
         onVisibilityChange={setVisibility}
         onSortChange={setSortDirection}
         onReset={() => {
-          setSearchQuery("");
           setVisibility("all");
           setSortDirection("newest");
         }}
@@ -337,7 +321,7 @@ function IssuesPanel() {
       {error && <p className="text-sm text-red-300">{error}</p>}
 
       {isFormOpen && (
-      <div className="space-y-4 border-y border-slate-800 py-6">
+      <div className="space-y-4 rounded-lg border border-slate-800 bg-slate-900/60 p-5">
         <div className="flex items-center justify-between gap-4">
           <h3 className="text-base font-medium text-slate-100">{editingId ? "이슈 수정" : "새 이슈 등록"}</h3>
           <button
@@ -473,7 +457,6 @@ function NoticePanel() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
   const [visibility, setVisibility] = useState<VisibilityFilter>("all");
   const [sortDirection, setSortDirection] = useState<SortDirection>("newest");
 
@@ -579,33 +562,27 @@ function NoticePanel() {
   };
 
   const filteredNotices = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
     return [...notices]
-      .filter(notice => !normalizedQuery || notice.title.toLowerCase().includes(normalizedQuery))
       // Current notices are all published, but keeping this filter prepares private notices.
       .filter(() => visibility !== "private")
       .sort((left, right) => {
         const difference = new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
         return sortDirection === "newest" ? difference : -difference;
       });
-  }, [notices, searchQuery, sortDirection, visibility]);
+  }, [notices, sortDirection, visibility]);
 
   return (
-    <section className="space-y-6 rounded-lg border border-blue-500/20 bg-slate-900/60 p-5">
+    <section className="space-y-6">
       <ManagementToolbar
         title="공지 관리"
         description="등록된 공지를 관리하세요."
         createLabel="새 공지 등록"
-        searchPlaceholder="공지 제목으로 검색..."
-        searchQuery={searchQuery}
         visibility={visibility}
         sortDirection={sortDirection}
         onCreate={handleCreate}
-        onSearchChange={setSearchQuery}
         onVisibilityChange={setVisibility}
         onSortChange={setSortDirection}
         onReset={() => {
-          setSearchQuery("");
           setVisibility("all");
           setSortDirection("newest");
         }}
@@ -615,7 +592,7 @@ function NoticePanel() {
       {error && <p className="text-sm text-red-300">{error}</p>}
 
       {isFormOpen && (
-      <div className="space-y-4 border-y border-slate-800 py-6">
+      <div className="space-y-4 rounded-lg border border-slate-800 bg-slate-900/60 p-5">
         <div className="flex items-center justify-between gap-4">
           <h3 className="text-base font-medium text-slate-100">{editingId ? "공지 수정" : "새 공지 등록"}</h3>
           <button
