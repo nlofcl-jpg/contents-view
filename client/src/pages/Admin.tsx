@@ -8,9 +8,9 @@ type AdminTab = "notices" | "issues" | "users" | "apiKeys";
 
 const adminTabs: Array<{ id: AdminTab; label: string }> = [
   { id: "notices", label: "공지" },
-  { id: "issues", label: "이슈" },
   { id: "users", label: "사용자" },
   { id: "apiKeys", label: "API 키" },
+  { id: "issues", label: "이슈" },
 ];
 
 export default function Admin() {
@@ -82,7 +82,6 @@ type IssueRecord = {
   thumbnail_url: string | null;
   source_name: string | null;
   is_published: boolean;
-  display_order: number;
   created_at: string;
 };
 
@@ -95,7 +94,6 @@ function IssuesPanel() {
   const [articleUrl, setArticleUrl] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [sourceName, setSourceName] = useState("");
-  const [displayOrder, setDisplayOrder] = useState("0");
   const [isPublished, setIsPublished] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -106,8 +104,7 @@ function IssuesPanel() {
 
     const { data, error: loadError } = await supabase
       .from("issues")
-      .select("id,title,summary,article_url,thumbnail_url,source_name,is_published,display_order,created_at")
-      .order("display_order", { ascending: true })
+      .select("id,title,summary,article_url,thumbnail_url,source_name,is_published,created_at")
       .order("created_at", { ascending: false });
 
     if (loadError) {
@@ -129,7 +126,6 @@ function IssuesPanel() {
     setArticleUrl("");
     setThumbnailUrl("");
     setSourceName("");
-    setDisplayOrder("0");
     setIsPublished(false);
   };
 
@@ -140,7 +136,6 @@ function IssuesPanel() {
     setArticleUrl(issue.article_url ?? "");
     setThumbnailUrl(issue.thumbnail_url ?? "");
     setSourceName(issue.source_name ?? "");
-    setDisplayOrder(String(issue.display_order));
     setIsPublished(issue.is_published);
     setError(null);
     setMessage(null);
@@ -164,7 +159,6 @@ function IssuesPanel() {
       article_url: articleUrl.trim() || null,
       thumbnail_url: thumbnailUrl.trim() || null,
       source_name: sourceName.trim() || null,
-      display_order: Number.parseInt(displayOrder, 10) || 0,
       is_published: isPublished,
     };
 
@@ -220,15 +214,6 @@ function IssuesPanel() {
             />
           </label>
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-300">썸네일 이미지 주소</span>
-            <input
-              className="w-full rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-400"
-              placeholder="https://"
-              value={thumbnailUrl}
-              onChange={event => setThumbnailUrl(event.target.value)}
-            />
-          </label>
-          <label className="block">
             <span className="mb-2 block text-sm font-medium text-slate-300">언론사</span>
             <input
               className="w-full rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-400"
@@ -237,16 +222,16 @@ function IssuesPanel() {
               onChange={event => setSourceName(event.target.value)}
             />
           </label>
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-300">정렬 순서</span>
-            <input
-              type="number"
-              className="w-full rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-400"
-              value={displayOrder}
-              onChange={event => setDisplayOrder(event.target.value)}
-            />
-          </label>
         </div>
+        <label className="block">
+          <span className="mb-2 block text-sm font-medium text-slate-300">썸네일 이미지 주소</span>
+          <input
+            className="w-full rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-400"
+            placeholder="https://"
+            value={thumbnailUrl}
+            onChange={event => setThumbnailUrl(event.target.value)}
+          />
+        </label>
         <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-slate-200">
           <input
             type="checkbox"
@@ -282,7 +267,7 @@ function IssuesPanel() {
               <article key={issue.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-800 bg-slate-950/50 px-4 py-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm text-slate-100">{issue.title}</p>
-                  <p className="mt-1 text-xs text-slate-500">{issue.is_published ? "공개" : "비공개"} · 순서 {issue.display_order}</p>
+                  <p className="mt-1 text-xs text-slate-500">{issue.is_published ? "공개" : "비공개"}</p>
                 </div>
                 <button
                   type="button"

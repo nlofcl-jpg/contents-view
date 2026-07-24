@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 
@@ -67,6 +67,7 @@ export default function News() {
   const [activeContentTab, setActiveContentTab] = useState<"news" | "issues">("news");
   const [newsSessionCache, setNewsSessionCache] = useState<NewsSessionCache | null>(readNewsSessionCache);
   const [issues, setIssues] = useState<PublishedIssue[]>([]);
+  const [issuesPage, setIssuesPage] = useState(1);
   const [isLoadingIssues, setIsLoadingIssues] = useState(false);
   const [issuesError, setIssuesError] = useState<string | null>(null);
   const shouldFetchLatestNews = !newsSessionCache || selectedCategory !== "all";
@@ -173,7 +174,6 @@ export default function News() {
       .from("issues")
       .select("id,title,summary,article_url,thumbnail_url,source_name,created_at")
       .eq("is_published", true)
-      .order("display_order", { ascending: true })
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
         if (cancelled) return;
@@ -182,6 +182,7 @@ export default function News() {
           setIssues([]);
         } else {
           setIssues((data ?? []) as PublishedIssue[]);
+          setIssuesPage(1);
         }
         setIsLoadingIssues(false);
       });
@@ -243,6 +244,13 @@ export default function News() {
   };
 
   const isLoadingFeatured = !nationNewsData || !businessNewsData || !technologyNewsData || !entertainmentNewsData;
+  const featuredIssues = useMemo(() => issues.slice(0, 3), [issues]);
+  const issueList = useMemo(() => issues.slice(3), [issues]);
+  const issuePageCount = Math.max(1, Math.ceil(issueList.length / 10));
+  const visibleIssueList = useMemo(
+    () => issueList.slice((issuesPage - 1) * 10, issuesPage * 10),
+    [issueList, issuesPage],
+  );
 
   // Get the most recent update time from all news data
   const getLatestUpdateTime = useMemo(() => {
@@ -466,28 +474,75 @@ export default function News() {
           ) : issues.length === 0 ? (
             <p className="issuesStatus">공개된 이슈가 아직 없습니다.</p>
           ) : (
-            <div className="issuesGrid">
-              {issues.map((issue) => (
-                <button
-                  key={issue.id}
-                  type="button"
-                  className="issueCard"
-                  onClick={() => setLocation(`/news/issues/${issue.id}`)}
-                >
-                  {issue.thumbnail_url ? (
-                    <img className="issueCardImage" src={issue.thumbnail_url} alt="" />
-                  ) : (
-                    <div className="issueCardImage issueCardImageFallback" aria-hidden="true" />
-                  )}
-                  <div className="issueCardBody">
-                    <span className="issueCardSource">{issue.source_name || "이슈"}</span>
-                    <h2>{issue.title}</h2>
-                    {issue.summary && <p>{issue.summary}</p>}
-                    <span className="issueCardMore">자세히 보기 <span aria-hidden="true">→</span></span>
-                  </div>
-                </button>
-              ))}
-            </div>
+            <>
+              <div className="issuesFeaturedGrid">
+                {featuredIssues.map((issue) => (
+                  <button
+                    key={issue.id}
+                    type="button"
+                    className="issueFeaturedCard"
+                    onClick={() => setLocation(`/news/issues/${issue.id}`)}
+                  >
+                    {issue.thumbnail_url ? (
+                      <img className="issueFeaturedImage" src={issue.thumbnail_url} alt="" />
+                    ) : (
+                      <div className="issueFeaturedImage issueCardImageFallback" aria-hidden="true" />
+                    )}
+                    <div className="issueFeaturedOverlay">
+                      <span className="issueCardSource">{issue.source_name || "이슈"}</span>
+                      <h2>{issue.title}</h2>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {visibleIssueList.length > 0 && (
+                <div className="issueList" aria-label="이슈 목록">
+                  {visibleIssueList.map((issue) => (
+                    <button
+                      key={issue.id}
+                      type="button"
+                      className="issueListItem"
+                      onClick={() => setLocation(`/news/issues/${issue.id}`)}
+                    >
+                      {issue.thumbnail_url ? (
+                        <img className="issueListImage" src={issue.thumbnail_url} alt="" />
+                      ) : (
+                        <div className="issueListImage issueCardImageFallback" aria-hidden="true" />
+                      )}
+                      <div className="issueListBody">
+                        <span className="issueCardSource">{issue.source_name || "이슈"}</span>
+                        <h2>{issue.title}</h2>
+                        {issue.summary && <p>{issue.summary}</p>}
+                      </div>
+                      <span className="issueListMore" aria-hidden="true">→</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {issueList.length > 10 && (
+                <nav className="issuePagination" aria-label="이슈 페이지 이동">
+                  <button
+                    type="button"
+                    aria-label="이전 이슈 페이지"
+                    disabled={issuesPage === 1}
+                    onClick={() => setIssuesPage(page => Math.max(1, page - 1))}
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <span>{issuesPage} / {issuePageCount}</span>
+                  <button
+                    type="button"
+                    aria-label="다음 이슈 페이지"
+                    disabled={issuesPage === issuePageCount}
+                    onClick={() => setIssuesPage(page => Math.min(issuePageCount, page + 1))}
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </nav>
+              )}
+            </>
           )}
         </section>
       )}

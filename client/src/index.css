@@ -2364,15 +2364,14 @@ a {
   text-align: center;
 }
 
-.issuesGrid {
+.issuesFeaturedGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
 }
 
-.issueCard {
-  display: flex;
-  min-width: 0;
+.issueFeaturedCard {
+  position: relative;
   overflow: hidden;
   padding: 0;
   border: 1px solid rgba(76, 113, 170, 0.35);
@@ -2384,15 +2383,17 @@ a {
   transition: border-color 0.18s ease, transform 0.18s ease, background 0.18s ease;
 }
 
-.issueCard:hover {
+.issueFeaturedCard:hover,
+.issueListItem:hover {
   border-color: rgba(96, 165, 250, 0.75);
   background: rgba(12, 28, 55, 0.9);
   transform: translateY(-2px);
 }
 
-.issueCardImage {
-  width: 112px;
-  min-height: 148px;
+.issueFeaturedImage {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1.22 / 1;
   object-fit: cover;
   background: #101c31;
 }
@@ -2401,12 +2402,17 @@ a {
   background: linear-gradient(145deg, #15325e, #0a1221 72%);
 }
 
-.issueCardBody {
+.issueFeaturedOverlay {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
   display: flex;
-  min-width: 0;
-  flex: 1;
   flex-direction: column;
-  padding: 18px 16px;
+  justify-content: flex-end;
+  min-height: 58%;
+  padding: 36px 18px 17px;
+  background: linear-gradient(180deg, transparent, rgba(2, 8, 20, 0.96));
 }
 
 .issueCardSource {
@@ -2415,19 +2421,64 @@ a {
   font-weight: 400;
 }
 
-.issueCardBody h2 {
+.issueFeaturedOverlay h2 {
   display: -webkit-box;
-  margin: 8px 0 7px;
+  margin: 8px 0 0;
   overflow: hidden;
   color: #f1f5ff;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 500;
   line-height: 1.45;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
 
-.issueCardBody p {
+.issueList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.issueListItem {
+  display: flex;
+  min-height: 104px;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid rgba(76, 113, 170, 0.3);
+  border-radius: 8px;
+  background: rgba(7, 17, 35, 0.66);
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.18s ease, transform 0.18s ease, background 0.18s ease;
+}
+
+.issueListImage {
+  width: 148px;
+  flex: 0 0 auto;
+  object-fit: cover;
+  background: #101c31;
+}
+
+.issueListBody {
+  min-width: 0;
+  padding: 16px 18px;
+}
+
+.issueListBody h2 {
+  display: -webkit-box;
+  margin: 6px 0;
+  overflow: hidden;
+  color: #edf4ff;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.issueListBody p {
   display: -webkit-box;
   margin: 0;
   overflow: hidden;
@@ -2439,12 +2490,41 @@ a {
   -webkit-line-clamp: 2;
 }
 
-.issueCardMore {
-  margin-top: auto;
-  padding-top: 13px;
-  color: #72a9ff;
+.issueListMore {
+  display: grid;
+  width: 52px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: #76aaf8;
+  font-size: 20px;
+}
+
+.issuePagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 22px;
+  color: #90a1ba;
   font-size: 12px;
-  font-weight: 400;
+}
+
+.issuePagination button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(96, 135, 196, 0.4);
+  border-radius: 6px;
+  background: transparent;
+  color: #d4e4ff;
+  cursor: pointer;
+}
+
+.issuePagination button:disabled {
+  cursor: default;
+  opacity: 0.35;
 }
 
 .issueDetailPage {
@@ -2708,18 +2788,39 @@ a {
     padding-top: 14px;
   }
 
-  .issuesGrid {
+  .issuesFeaturedGrid {
     grid-template-columns: 1fr;
     gap: 12px;
   }
 
-  .issueCardImage {
-    width: 100px;
-    min-height: 132px;
+  .issueFeaturedImage {
+    aspect-ratio: 1.55 / 1;
   }
 
-  .issueCardBody {
-    padding: 14px;
+  .issueListItem {
+    min-height: 90px;
+  }
+
+  .issueListImage {
+    width: 102px;
+  }
+
+  .issueListBody {
+    padding: 12px 11px;
+  }
+
+  .issueListBody h2 {
+    font-size: 14px;
+  }
+
+  .issueListBody p {
+    font-size: 12px;
+    -webkit-line-clamp: 2;
+  }
+
+  .issueListMore {
+    width: 35px;
+    font-size: 16px;
   }
 
   .issueDetailContent {
