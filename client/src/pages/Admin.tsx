@@ -4,14 +4,13 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
 
-type AdminTab = "notices" | "issues" | "users" | "apiKeys" | "collections";
+type AdminTab = "notices" | "issues" | "users" | "apiKeys";
 
 const adminTabs: Array<{ id: AdminTab; label: string }> = [
   { id: "notices", label: "공지" },
   { id: "issues", label: "이슈" },
   { id: "users", label: "사용자" },
   { id: "apiKeys", label: "API 키" },
-  { id: "collections", label: "수집 상태" },
 ];
 
 export default function Admin() {
@@ -71,7 +70,6 @@ export default function Admin() {
       {activeTab === "issues" && <IssuesPanel />}
       {activeTab === "users" && <UsersPanel adminEmail={user?.email ?? ""} />}
       {activeTab === "apiKeys" && <ApiKeysPanel />}
-      {activeTab === "collections" && <CollectionsPanel />}
     </div>
   );
 }
@@ -444,26 +442,5 @@ function ApiKeysPanel() {
         </div>
       </div>
     </section>
-  );
-}
-
-function CollectionsPanel() {
-  return (
-    <section className="rounded-lg border border-blue-500/20 bg-slate-900/60 p-5">
-      <h2 className="mb-5 text-xl font-semibold text-white">수집 상태</h2>
-      <div className="grid gap-3 md:grid-cols-2">
-        <StatusCard title="뉴스" value="직접 조회" />
-        <StatusCard title="커뮤니티" value="직접 조회" />
-      </div>
-    </section>
-  );
-}
-
-function StatusCard({ title, value }: { title: string; value: string }) {
-  return (
-    <div className="rounded-md border border-slate-800 bg-slate-950/50 p-4">
-      <div className="text-sm font-semibold text-slate-200">{title}</div>
-      <div className="mt-2 text-sm text-slate-400">{value}</div>
-    </div>
   );
 }
