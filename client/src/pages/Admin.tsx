@@ -1,6 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
 
@@ -85,6 +85,87 @@ type IssueRecord = {
   created_at: string;
 };
 
+type VisibilityFilter = "all" | "published" | "private";
+type SortDirection = "newest" | "oldest";
+
+type ManagementToolbarProps = {
+  title: string;
+  description: string;
+  createLabel: string;
+  searchPlaceholder: string;
+  searchQuery: string;
+  visibility: VisibilityFilter;
+  sortDirection: SortDirection;
+  onCreate: () => void;
+  onSearchChange: (value: string) => void;
+  onVisibilityChange: (value: VisibilityFilter) => void;
+  onSortChange: (value: SortDirection) => void;
+  onReset: () => void;
+};
+
+function ManagementToolbar({
+  title,
+  description,
+  createLabel,
+  searchPlaceholder,
+  searchQuery,
+  visibility,
+  sortDirection,
+  onCreate,
+  onSearchChange,
+  onVisibilityChange,
+  onSortChange,
+  onReset,
+}: ManagementToolbarProps) {
+  return (
+    <header className="border-b border-slate-800 pb-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-medium text-white">{title}</h2>
+          <p className="mt-2 text-sm font-normal text-slate-400">{description}</p>
+        </div>
+        <button type="button" className="primaryButton" onClick={onCreate}>
+          <span aria-hidden="true">+</span>
+          {createLabel}
+        </button>
+      </div>
+
+      <div className="mt-6 grid gap-3 rounded-lg border border-slate-800 bg-slate-950/45 p-4 md:grid-cols-[minmax(0,1fr)_150px_150px_150px]">
+        <input
+          className="h-10 min-w-0 rounded-md border border-slate-700 bg-slate-950/80 px-3 text-sm font-normal text-slate-100 outline-none placeholder:text-slate-500 focus:border-blue-400"
+          placeholder={searchPlaceholder}
+          value={searchQuery}
+          onChange={event => onSearchChange(event.target.value)}
+        />
+        <select
+          className="h-10 rounded-md border border-slate-700 bg-slate-950/80 px-3 text-sm font-normal text-slate-200 outline-none focus:border-blue-400"
+          value={visibility}
+          onChange={event => onVisibilityChange(event.target.value as VisibilityFilter)}
+        >
+          <option value="all">전체 상태</option>
+          <option value="published">공개</option>
+          <option value="private">비공개</option>
+        </select>
+        <select
+          className="h-10 rounded-md border border-slate-700 bg-slate-950/80 px-3 text-sm font-normal text-slate-200 outline-none focus:border-blue-400"
+          value={sortDirection}
+          onChange={event => onSortChange(event.target.value as SortDirection)}
+        >
+          <option value="newest">최신 등록순</option>
+          <option value="oldest">오래된 등록순</option>
+        </select>
+        <button
+          type="button"
+          className="h-10 rounded-md border border-slate-700 px-3 text-sm font-normal text-slate-300 transition hover:border-slate-500 hover:text-white"
+          onClick={onReset}
+        >
+          필터 초기화
+        </button>
+      </div>
+    </header>
+  );
+}
+
 function IssuesPanel() {
   const { user } = useAuth();
   const [issues, setIssues] = useState<IssueRecord[]>([]);
@@ -99,6 +180,9 @@ function IssuesPanel() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [visibility, setVisibility] = useState<VisibilityFilter>("all");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("newest");
 
   const loadIssues = async () => {
     if (!supabase) return;
@@ -217,15 +301,37 @@ function IssuesPanel() {
     }
   };
 
+  const filteredIssues = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    return [...issues]
+      .filter(issue => !normalizedQuery || issue.title.toLowerCase().includes(normalizedQuery))
+      .filter(issue => visibility === "all" || (visibility === "published" ? issue.is_published : !issue.is_published))
+      .sort((left, right) => {
+        const difference = new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
+        return sortDirection === "newest" ? difference : -difference;
+      });
+  }, [issues, searchQuery, sortDirection, visibility]);
+
   return (
     <section className="space-y-6 rounded-lg border border-blue-500/20 bg-slate-900/60 p-5">
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="text-xl font-semibold text-white">이슈 관리</h2>
-        <button type="button" className="primaryButton" onClick={handleCreate}>
-          새 이슈 등록
-          <span>→</span>
-        </button>
-      </div>
+      <ManagementToolbar
+        title="이슈 관리"
+        description="등록된 이슈를 관리하세요."
+        createLabel="새 이슈 등록"
+        searchPlaceholder="이슈 제목으로 검색..."
+        searchQuery={searchQuery}
+        visibility={visibility}
+        sortDirection={sortDirection}
+        onCreate={handleCreate}
+        onSearchChange={setSearchQuery}
+        onVisibilityChange={setVisibility}
+        onSortChange={setSortDirection}
+        onReset={() => {
+          setSearchQuery("");
+          setVisibility("all");
+          setSortDirection("newest");
+        }}
+      />
 
       {message && <p className="text-sm text-emerald-300">{message}</p>}
       {error && <p className="text-sm text-red-300">{error}</p>}
@@ -316,14 +422,14 @@ function IssuesPanel() {
       )}
 
       <div>
-        {issues.length > 0 ? (
+        {filteredIssues.length > 0 ? (
           <div className="overflow-hidden rounded-md border border-slate-800">
             <div className="grid grid-cols-[minmax(0,1fr)_92px_128px] gap-3 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs text-slate-500">
               <span>제목</span>
               <span>생성일</span>
               <span className="text-right">관리</span>
             </div>
-            {issues.map(issue => (
+            {filteredIssues.map(issue => (
               <article key={issue.id} className="grid grid-cols-[minmax(0,1fr)_92px_128px] items-center gap-3 border-b border-slate-800/80 px-4 py-3 last:border-b-0">
                 <div className="min-w-0">
                   <p className="truncate text-sm text-slate-100">{issue.title}</p>
@@ -350,7 +456,7 @@ function IssuesPanel() {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-slate-500">등록된 이슈가 없습니다.</p>
+          <p className="text-sm text-slate-500">조건에 맞는 이슈가 없습니다.</p>
         )}
       </div>
     </section>
@@ -367,6 +473,9 @@ function NoticePanel() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [visibility, setVisibility] = useState<VisibilityFilter>("all");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("newest");
 
   const loadNotices = async () => {
     if (!supabase) return;
@@ -469,15 +578,38 @@ function NoticePanel() {
     }
   };
 
+  const filteredNotices = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    return [...notices]
+      .filter(notice => !normalizedQuery || notice.title.toLowerCase().includes(normalizedQuery))
+      // Current notices are all published, but keeping this filter prepares private notices.
+      .filter(() => visibility !== "private")
+      .sort((left, right) => {
+        const difference = new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
+        return sortDirection === "newest" ? difference : -difference;
+      });
+  }, [notices, searchQuery, sortDirection, visibility]);
+
   return (
     <section className="space-y-6 rounded-lg border border-blue-500/20 bg-slate-900/60 p-5">
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="text-xl font-semibold text-white">공지 관리</h2>
-        <button type="button" className="primaryButton" onClick={handleCreate}>
-          새 공지 등록
-          <span>→</span>
-        </button>
-      </div>
+      <ManagementToolbar
+        title="공지 관리"
+        description="등록된 공지를 관리하세요."
+        createLabel="새 공지 등록"
+        searchPlaceholder="공지 제목으로 검색..."
+        searchQuery={searchQuery}
+        visibility={visibility}
+        sortDirection={sortDirection}
+        onCreate={handleCreate}
+        onSearchChange={setSearchQuery}
+        onVisibilityChange={setVisibility}
+        onSortChange={setSortDirection}
+        onReset={() => {
+          setSearchQuery("");
+          setVisibility("all");
+          setSortDirection("newest");
+        }}
+      />
 
       {message && <p className="text-sm text-emerald-300">{message}</p>}
       {error && <p className="text-sm text-red-300">{error}</p>}
@@ -531,14 +663,14 @@ function NoticePanel() {
       )}
 
       <div>
-        {notices.length > 0 ? (
+        {filteredNotices.length > 0 ? (
           <div className="overflow-hidden rounded-md border border-slate-800">
             <div className="grid grid-cols-[minmax(0,1fr)_92px_128px] gap-3 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs text-slate-500">
               <span>제목</span>
               <span>생성일</span>
               <span className="text-right">관리</span>
             </div>
-            {notices.map(notice => (
+            {filteredNotices.map(notice => (
               <article key={notice.id} className="grid grid-cols-[minmax(0,1fr)_92px_128px] items-center gap-3 border-b border-slate-800/80 px-4 py-3 last:border-b-0">
                 <p className="truncate text-sm text-slate-100">{notice.title}</p>
                 <span className="text-xs text-slate-400">{formatCreatedAt(notice.created_at)}</span>
@@ -562,7 +694,7 @@ function NoticePanel() {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-slate-500">등록된 공지가 없습니다.</p>
+          <p className="text-sm text-slate-500">조건에 맞는 공지가 없습니다.</p>
         )}
       </div>
     </section>
