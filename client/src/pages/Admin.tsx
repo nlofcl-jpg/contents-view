@@ -127,9 +127,9 @@ function ManagementToolbar({
         </button>
       </div>
 
-      <div className="grid gap-3 rounded-lg border border-slate-800 bg-slate-950/45 p-4 md:grid-cols-[180px_180px_minmax(0,1fr)]">
+      <div className="flex flex-wrap gap-3 rounded-lg border border-slate-800 bg-slate-950/45 p-5">
         <select
-          className="h-10 rounded-md border border-slate-700 bg-slate-950/80 px-3 text-sm font-normal text-slate-200 outline-none focus:border-blue-400"
+          className="h-10 w-[180px] rounded-md border border-slate-700 bg-slate-950/80 px-3 text-sm font-normal text-slate-200 outline-none focus:border-blue-400"
           value={visibility}
           onChange={event => onVisibilityChange(event.target.value as VisibilityFilter)}
         >
@@ -138,7 +138,7 @@ function ManagementToolbar({
           <option value="private">비공개</option>
         </select>
         <select
-          className="h-10 rounded-md border border-slate-700 bg-slate-950/80 px-3 text-sm font-normal text-slate-200 outline-none focus:border-blue-400"
+          className="h-10 w-[180px] rounded-md border border-slate-700 bg-slate-950/80 px-3 text-sm font-normal text-slate-200 outline-none focus:border-blue-400"
           value={sortDirection}
           onChange={event => onSortChange(event.target.value as SortDirection)}
         >
@@ -147,7 +147,7 @@ function ManagementToolbar({
         </select>
         <button
           type="button"
-          className="h-10 rounded-md border border-slate-700 px-3 text-sm font-normal text-slate-300 transition hover:border-slate-500 hover:text-white"
+          className="h-10 w-[180px] rounded-md border border-slate-700 px-3 text-sm font-normal text-slate-300 transition hover:border-slate-500 hover:text-white"
           onClick={onReset}
         >
           필터 초기화
