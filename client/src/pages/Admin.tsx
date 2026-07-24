@@ -147,7 +147,7 @@ function ManagementToolbar({
         </select>
         <button
           type="button"
-          className="h-10 w-[180px] rounded-md border border-slate-700 px-3 text-sm font-normal text-slate-300 transition hover:border-slate-500 hover:text-white"
+          className="h-10 w-[180px] rounded-md border border-slate-700 px-3 text-sm font-normal text-slate-300 transition hover:border-slate-500 hover:text-white md:ml-auto"
           onClick={onReset}
         >
           필터 초기화
