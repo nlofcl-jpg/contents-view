@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Search } from "lucide-react";
 import { useLocation } from "wouter";
+import { supabase } from "@/lib/supabase";
 
 interface NewsItem {
   title: string;
@@ -17,6 +18,16 @@ interface FeaturedNewsGroup {
   categoryId: string;
   categoryLabel: string;
   items: NewsItem[];
+}
+
+interface PublishedIssue {
+  id: string;
+  title: string;
+  summary: string;
+  article_url: string | null;
+  thumbnail_url: string | null;
+  source_name: string | null;
+  created_at: string;
 }
 
 interface NewsSessionCache {
@@ -55,6 +66,9 @@ export default function News() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [activeContentTab, setActiveContentTab] = useState<"news" | "issues">("news");
   const [newsSessionCache, setNewsSessionCache] = useState<NewsSessionCache | null>(readNewsSessionCache);
+  const [issues, setIssues] = useState<PublishedIssue[]>([]);
+  const [isLoadingIssues, setIsLoadingIssues] = useState(false);
+  const [issuesError, setIssuesError] = useState<string | null>(null);
   const shouldFetchLatestNews = !newsSessionCache || selectedCategory !== "all";
   const shouldFetchFeaturedNews = !newsSessionCache;
 
@@ -147,6 +161,35 @@ export default function News() {
     newsSessionCache,
     technologyNewsResponse,
   ]);
+
+  useEffect(() => {
+    if (activeContentTab !== "issues" || !supabase) return;
+
+    let cancelled = false;
+    setIsLoadingIssues(true);
+    setIssuesError(null);
+
+    supabase
+      .from("issues")
+      .select("id,title,summary,article_url,thumbnail_url,source_name,created_at")
+      .eq("is_published", true)
+      .order("display_order", { ascending: true })
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          setIssuesError(error.message);
+          setIssues([]);
+        } else {
+          setIssues((data ?? []) as PublishedIssue[]);
+        }
+        setIsLoadingIssues(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeContentTab]);
 
   // Combine featured news into category columns.
   const featuredNewsGroups = useMemo<FeaturedNewsGroup[]>(() => {
@@ -415,8 +458,37 @@ export default function News() {
       </div>
         </>
       ) : (
-        <section className="newsIssuesPlaceholder" role="tabpanel">
-          <p>이슈를 준비하고 있습니다.</p>
+        <section className="issuesSection" role="tabpanel" aria-label="이슈 목록">
+          {isLoadingIssues ? (
+            <p className="issuesStatus">이슈를 불러오는 중입니다.</p>
+          ) : issuesError ? (
+            <p className="issuesStatus">이슈를 불러오지 못했습니다.</p>
+          ) : issues.length === 0 ? (
+            <p className="issuesStatus">공개된 이슈가 아직 없습니다.</p>
+          ) : (
+            <div className="issuesGrid">
+              {issues.map((issue) => (
+                <button
+                  key={issue.id}
+                  type="button"
+                  className="issueCard"
+                  onClick={() => setLocation(`/news/issues/${issue.id}`)}
+                >
+                  {issue.thumbnail_url ? (
+                    <img className="issueCardImage" src={issue.thumbnail_url} alt="" />
+                  ) : (
+                    <div className="issueCardImage issueCardImageFallback" aria-hidden="true" />
+                  )}
+                  <div className="issueCardBody">
+                    <span className="issueCardSource">{issue.source_name || "이슈"}</span>
+                    <h2>{issue.title}</h2>
+                    {issue.summary && <p>{issue.summary}</p>}
+                    <span className="issueCardMore">자세히 보기 <span aria-hidden="true">→</span></span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </section>
       )}
     </div>

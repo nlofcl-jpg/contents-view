@@ -12,6 +12,7 @@ import Community from "@/pages/Community";
 import SavedContents from "@/pages/SavedContents";
 import News from "@/pages/News";
 import NewsSearchResults from "@/pages/NewsSearchResults";
+import IssueDetail from "@/pages/IssueDetail";
 import AIStudio from "@/pages/AIStudio";
 import FlowAutomation from "@/pages/FlowAutomation";
 import Login from "@/pages/Login";
@@ -36,6 +37,7 @@ function Router() {
       <Route path={"/community"} component={Community} />
       <Route path={"/saved-contents"} component={SavedContents} />
       <Route path={"/news/search"} component={NewsSearchResults} />
+      <Route path={"/news/issues/:id"} component={IssueDetail} />
       <Route path={"/news"} component={News} />
       <Route path={"/ai-studio/flow-automation"} component={FlowAutomation} />
       <Route path={"/ai-studio"} component={AIStudio} />
