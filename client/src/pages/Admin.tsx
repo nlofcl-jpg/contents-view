@@ -359,11 +359,57 @@ function IssuesPanel() {
 
 function NoticePanel() {
   const { user } = useAuth();
+  const [notices, setNotices] = useState<Array<{ id: string; title: string; body: string; created_at: string }>>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const loadNotices = async () => {
+    if (!supabase) return;
+
+    const { data, error: loadError } = await supabase
+      .from("notices")
+      .select("id,title,body,created_at")
+      .order("created_at", { ascending: false });
+
+    if (loadError) {
+      setError(loadError.message);
+      return;
+    }
+
+    setNotices(data ?? []);
+  };
+
+  useEffect(() => {
+    loadNotices();
+  }, []);
+
+  const resetForm = () => {
+    setEditingId(null);
+    setTitle("");
+    setBody("");
+    setIsFormOpen(false);
+  };
+
+  const handleCreate = () => {
+    resetForm();
+    setMessage(null);
+    setError(null);
+    setIsFormOpen(true);
+  };
+
+  const handleEdit = (notice: { id: string; title: string; body: string }) => {
+    setEditingId(notice.id);
+    setTitle(notice.title);
+    setBody(notice.body);
+    setMessage(null);
+    setError(null);
+    setIsFormOpen(true);
+  };
 
   const handleSave = async () => {
     if (!supabase || !user) return;
@@ -377,29 +423,77 @@ function NoticePanel() {
     setError(null);
     setMessage(null);
 
-    const { error: insertError } = await supabase.from("notices").insert({
-      title: title.trim(),
-      body: body.trim(),
-      created_by: user.id,
-      is_published: true,
-    });
+    const values = { title: title.trim(), body: body.trim(), is_published: true };
+    const { error: saveError } = editingId
+      ? await supabase.from("notices").update(values).eq("id", editingId)
+      : await supabase.from("notices").insert({ ...values, created_by: user.id });
 
     setIsSaving(false);
 
-    if (insertError) {
-      setError(insertError.message);
+    if (saveError) {
+      setError(saveError.message);
       return;
     }
 
-    setTitle("");
-    setBody("");
-    setMessage("공지 저장 완료");
+    resetForm();
+    setMessage(editingId ? "공지 수정 완료" : "공지 등록 완료");
+    await loadNotices();
+  };
+
+  const handleDelete = async (notice: { id: string; title: string }) => {
+    if (!supabase || !window.confirm(`'${notice.title}' 공지를 삭제할까요?`)) return;
+
+    setError(null);
+    setMessage(null);
+    const { error: deleteError } = await supabase.from("notices").delete().eq("id", notice.id);
+
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
+
+    if (editingId === notice.id) resetForm();
+    setMessage("공지 삭제 완료");
+    await loadNotices();
+  };
+
+  const formatCreatedAt = (value: string) => {
+    try {
+      return new Date(value).toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+    } catch {
+      return "-";
+    }
   };
 
   return (
-    <section className="rounded-lg border border-blue-500/20 bg-slate-900/60 p-5">
-      <h2 className="mb-5 text-xl font-semibold text-white">공지 등록</h2>
-      <div className="space-y-4">
+    <section className="space-y-6 rounded-lg border border-blue-500/20 bg-slate-900/60 p-5">
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-xl font-semibold text-white">공지 관리</h2>
+        <button type="button" className="primaryButton" onClick={handleCreate}>
+          새 공지 등록
+          <span>→</span>
+        </button>
+      </div>
+
+      {message && <p className="text-sm text-emerald-300">{message}</p>}
+      {error && <p className="text-sm text-red-300">{error}</p>}
+
+      {isFormOpen && (
+      <div className="space-y-4 border-y border-slate-800 py-6">
+        <div className="flex items-center justify-between gap-4">
+          <h3 className="text-base font-medium text-slate-100">{editingId ? "공지 수정" : "새 공지 등록"}</h3>
+          <button
+            type="button"
+            className="text-xs text-slate-400 hover:text-slate-100"
+            onClick={resetForm}
+          >
+            닫기
+          </button>
+        </div>
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-slate-300">제목</span>
           <input
@@ -418,20 +512,58 @@ function NoticePanel() {
             onChange={event => setBody(event.target.value)}
           />
         </label>
-        {message && <p className="text-sm text-emerald-300">{message}</p>}
-        {error && <p className="text-sm text-red-300">{error}</p>}
         <div className="flex flex-wrap gap-2">
           <button type="button" className="primaryButton" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? "저장 중" : "저장"}
+            {isSaving ? "저장 중" : editingId ? "수정 저장" : "등록"}
             <span>→</span>
           </button>
-          <button
-            type="button"
-            className="rounded-md border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-slate-500"
-          >
-            미리보기
-          </button>
+          {editingId && (
+            <button
+              type="button"
+              className="rounded-md border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-slate-500"
+              onClick={resetForm}
+            >
+              취소
+            </button>
+          )}
         </div>
+      </div>
+      )}
+
+      <div>
+        {notices.length > 0 ? (
+          <div className="overflow-hidden rounded-md border border-slate-800">
+            <div className="grid grid-cols-[minmax(0,1fr)_92px_128px] gap-3 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs text-slate-500">
+              <span>제목</span>
+              <span>생성일</span>
+              <span className="text-right">관리</span>
+            </div>
+            {notices.map(notice => (
+              <article key={notice.id} className="grid grid-cols-[minmax(0,1fr)_92px_128px] items-center gap-3 border-b border-slate-800/80 px-4 py-3 last:border-b-0">
+                <p className="truncate text-sm text-slate-100">{notice.title}</p>
+                <span className="text-xs text-slate-400">{formatCreatedAt(notice.created_at)}</span>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:border-blue-400 hover:text-white"
+                    onClick={() => handleEdit(notice)}
+                  >
+                    수정
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-400 hover:border-red-400 hover:text-red-300"
+                    onClick={() => handleDelete(notice)}
+                  >
+                    삭제
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">등록된 공지가 없습니다.</p>
+        )}
       </div>
     </section>
   );
