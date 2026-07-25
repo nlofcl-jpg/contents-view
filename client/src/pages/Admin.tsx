@@ -129,9 +129,11 @@ type ManagementToolbarProps = {
   title: string;
   description: string;
   createLabel: string;
+  secondaryCreateLabel?: string;
   visibility: VisibilityFilter;
   sortDirection: SortDirection;
   onCreate: () => void;
+  onSecondaryCreate?: () => void;
   onVisibilityChange: (value: VisibilityFilter) => void;
   onSortChange: (value: SortDirection) => void;
   onReset: () => void;
@@ -141,9 +143,11 @@ function ManagementToolbar({
   title,
   description,
   createLabel,
+  secondaryCreateLabel,
   visibility,
   sortDirection,
   onCreate,
+  onSecondaryCreate,
   onVisibilityChange,
   onSortChange,
   onReset,
@@ -155,13 +159,24 @@ function ManagementToolbar({
           <h2 className="text-2xl font-medium text-white">{title}</h2>
           <p className="mt-2 text-sm font-normal text-slate-400">{description}</p>
         </div>
-        <button
-          type="button"
-          className="inline-flex h-9 items-center gap-1 rounded-md border border-blue-400/60 bg-blue-500/15 px-3 text-sm font-normal text-blue-100 transition hover:bg-blue-500/25"
-          onClick={onCreate}
-        >
-          <span aria-hidden="true">+</span> {createLabel}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {secondaryCreateLabel && onSecondaryCreate && (
+            <button
+              type="button"
+              className="inline-flex h-9 items-center gap-1 rounded-md border border-slate-600 bg-slate-900/70 px-3 text-sm font-normal text-slate-200 transition hover:border-slate-400 hover:text-white"
+              onClick={onSecondaryCreate}
+            >
+              <span aria-hidden="true">+</span> {secondaryCreateLabel}
+            </button>
+          )}
+          <button
+            type="button"
+            className="inline-flex h-9 items-center gap-1 rounded-md border border-blue-400/60 bg-blue-500/15 px-3 text-sm font-normal text-blue-100 transition hover:bg-blue-500/25"
+            onClick={onCreate}
+          >
+            <span aria-hidden="true">+</span> {createLabel}
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3 rounded-lg border border-slate-800 bg-slate-950/45 p-5">
@@ -211,7 +226,6 @@ function IssuesPanel() {
   const [error, setError] = useState<string | null>(null);
   const [visibility, setVisibility] = useState<VisibilityFilter>("all");
   const [sortDirection, setSortDirection] = useState<SortDirection>("newest");
-  const [clippingUrl, setClippingUrl] = useState("");
   const [clippingContent, setClippingContent] = useState("");
   const [isClippingSaving, setIsClippingSaving] = useState(false);
 
@@ -273,6 +287,7 @@ function IssuesPanel() {
     setMessage(null);
     setError(null);
     setRegistrationMode("clipping");
+    setClippingContent("");
     setIsFormOpen(true);
   };
 
@@ -369,7 +384,7 @@ function IssuesPanel() {
       clippingEntries.map(entry => ({
         title: entry.title,
         summary: entry.summary,
-        article_url: clippingUrl.trim() || null,
+        article_url: null,
         source_name: "아이보스 뉴스클리핑",
         is_published: false,
         created_by: user.id,
@@ -383,7 +398,6 @@ function IssuesPanel() {
       return;
     }
 
-    setClippingUrl("");
     setClippingContent("");
     setIsFormOpen(false);
     setRegistrationMode("manual");
@@ -397,9 +411,11 @@ function IssuesPanel() {
         title="이슈 관리"
         description="등록된 이슈를 관리하세요."
         createLabel="새 이슈 등록"
+        secondaryCreateLabel="새 클리핑 등록"
         visibility={visibility}
         sortDirection={sortDirection}
         onCreate={handleCreate}
+        onSecondaryCreate={handleClippingCreate}
         onVisibilityChange={setVisibility}
         onSortChange={setSortDirection}
         onReset={() => {
@@ -407,23 +423,6 @@ function IssuesPanel() {
           setSortDirection("newest");
         }}
       />
-
-      <div className="flex border-b border-slate-800">
-        <button
-          type="button"
-          className={`border-b-2 px-4 py-3 text-sm font-normal transition ${registrationMode === "manual" ? "border-blue-400 text-white" : "border-transparent text-slate-500 hover:text-slate-200"}`}
-          onClick={handleCreate}
-        >
-          새 이슈 등록
-        </button>
-        <button
-          type="button"
-          className={`border-b-2 px-4 py-3 text-sm font-normal transition ${registrationMode === "clipping" ? "border-blue-400 text-white" : "border-transparent text-slate-500 hover:text-slate-200"}`}
-          onClick={handleClippingCreate}
-        >
-          클리핑 등록
-        </button>
-      </div>
 
       {message && <p className="text-sm text-emerald-300">{message}</p>}
       {error && <p className="text-sm text-red-300">{error}</p>}
@@ -524,15 +523,6 @@ function IssuesPanel() {
               닫기
             </button>
           </div>
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-300">클리핑 원문 주소</span>
-            <input
-              className="w-full rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-400"
-              placeholder="https://www.i-boss.co.kr/..."
-              value={clippingUrl}
-              onChange={event => setClippingUrl(event.target.value)}
-            />
-          </label>
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-slate-300">번호별 뉴스 요약</span>
             <textarea
