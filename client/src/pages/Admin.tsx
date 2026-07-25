@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
 
@@ -84,12 +84,14 @@ type IssueRecord = {
   source_name: string | null;
   is_published: boolean;
   registration_status: "connecting" | "complete" | "failed";
+  registration_type: "manual" | "clipping";
   created_at: string;
 };
 
 type VisibilityFilter = "all" | "published" | "private";
 type SortDirection = "newest" | "oldest";
 type IssueRegistrationMode = "manual" | "clipping";
+type IssueListMode = "manual" | "clipping";
 
 type ClippingEntry = {
   title: string;
@@ -139,6 +141,8 @@ type ManagementToolbarProps = {
   onVisibilityChange: (value: VisibilityFilter) => void;
   onSortChange: (value: SortDirection) => void;
   onReset: () => void;
+  headerRight?: ReactNode;
+  placeCreateActionsInFilters?: boolean;
 };
 
 function ManagementToolbar({
@@ -153,7 +157,30 @@ function ManagementToolbar({
   onVisibilityChange,
   onSortChange,
   onReset,
+  headerRight,
+  placeCreateActionsInFilters = false,
 }: ManagementToolbarProps) {
+  const createActions = (
+    <div className="flex flex-wrap items-center gap-2">
+      {secondaryCreateLabel && onSecondaryCreate && (
+        <button
+          type="button"
+          className="inline-flex h-9 items-center gap-1 rounded-md border border-slate-600 bg-slate-900/70 px-3 text-sm font-normal text-slate-200 transition hover:border-slate-400 hover:text-white"
+          onClick={onSecondaryCreate}
+        >
+          <span aria-hidden="true">+</span> {secondaryCreateLabel}
+        </button>
+      )}
+      <button
+        type="button"
+        className="inline-flex h-9 items-center gap-1 rounded-md border border-blue-400/60 bg-blue-500/15 px-3 text-sm font-normal text-blue-100 transition hover:bg-blue-500/25"
+        onClick={onCreate}
+      >
+        <span aria-hidden="true">+</span> {createLabel}
+      </button>
+    </div>
+  );
+
   return (
     <header className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -161,24 +188,7 @@ function ManagementToolbar({
           <h2 className="text-2xl font-medium text-white">{title}</h2>
           <p className="mt-2 text-sm font-normal text-slate-400">{description}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {secondaryCreateLabel && onSecondaryCreate && (
-            <button
-              type="button"
-              className="inline-flex h-9 items-center gap-1 rounded-md border border-slate-600 bg-slate-900/70 px-3 text-sm font-normal text-slate-200 transition hover:border-slate-400 hover:text-white"
-              onClick={onSecondaryCreate}
-            >
-              <span aria-hidden="true">+</span> {secondaryCreateLabel}
-            </button>
-          )}
-          <button
-            type="button"
-            className="inline-flex h-9 items-center gap-1 rounded-md border border-blue-400/60 bg-blue-500/15 px-3 text-sm font-normal text-blue-100 transition hover:bg-blue-500/25"
-            onClick={onCreate}
-          >
-            <span aria-hidden="true">+</span> {createLabel}
-          </button>
-        </div>
+        {headerRight ?? (!placeCreateActionsInFilters && createActions)}
       </div>
 
       <div className="flex flex-wrap gap-3 rounded-lg border border-slate-800 bg-slate-950/45 p-5">
@@ -201,11 +211,12 @@ function ManagementToolbar({
         </select>
         <button
           type="button"
-          className="h-10 w-[180px] rounded-md border border-slate-700 px-3 text-sm font-normal text-slate-300 transition hover:border-slate-500 hover:text-white md:ml-auto"
+          className="h-10 w-[180px] rounded-md border border-slate-700 px-3 text-sm font-normal text-slate-300 transition hover:border-slate-500 hover:text-white"
           onClick={onReset}
         >
           필터 초기화
         </button>
+        {placeCreateActionsInFilters && <div className="md:ml-auto">{createActions}</div>}
       </div>
     </header>
   );
@@ -217,6 +228,7 @@ function IssuesPanel() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [registrationMode, setRegistrationMode] = useState<IssueRegistrationMode>("manual");
+  const [issueListMode, setIssueListMode] = useState<IssueListMode>("manual");
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [articleUrl, setArticleUrl] = useState("");
@@ -239,7 +251,7 @@ function IssuesPanel() {
 
     const { data, error: loadError } = await supabase
       .from("issues")
-      .select("id,title,summary,article_url,thumbnail_url,source_name,is_published,registration_status,created_at")
+      .select("id,title,summary,article_url,thumbnail_url,source_name,is_published,registration_status,registration_type,created_at")
       .order("created_at", { ascending: false });
 
     if (loadError) {
@@ -284,6 +296,8 @@ function IssuesPanel() {
     resetForm();
     setMessage(null);
     setError(null);
+    setIssueListMode("manual");
+    setRegistrationMode("manual");
     setIsFormOpen(true);
   };
 
@@ -292,6 +306,7 @@ function IssuesPanel() {
     setMessage(null);
     setError(null);
     setRegistrationMode("clipping");
+    setIssueListMode("clipping");
     setClippingContent("");
     setIsFormOpen(true);
   };
@@ -320,7 +335,7 @@ function IssuesPanel() {
 
     const { error: saveError } = editingId
       ? await supabase.from("issues").update(values).eq("id", editingId)
-      : await supabase.from("issues").insert({ ...values, created_by: user.id });
+      : await supabase.from("issues").insert({ ...values, registration_type: "manual", created_by: user.id });
 
     setIsSaving(false);
 
@@ -403,12 +418,13 @@ function IssuesPanel() {
 
   const filteredIssues = useMemo(() => {
     return [...issues]
+      .filter(issue => issue.registration_type === issueListMode)
       .filter(issue => visibility === "all" || (visibility === "published" ? issue.is_published : !issue.is_published))
       .sort((left, right) => {
         const difference = new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
         return sortDirection === "newest" ? difference : -difference;
       });
-  }, [issues, sortDirection, visibility]);
+  }, [issueListMode, issues, sortDirection, visibility]);
 
   const isAllFilteredSelected = filteredIssues.length > 0 && filteredIssues.every(issue => selectedIssueIds.has(issue.id));
 
@@ -465,6 +481,7 @@ function IssuesPanel() {
         source_name: null,
         is_published: false,
         registration_status: "connecting",
+        registration_type: "clipping",
         created_by: user.id,
       })))
       .select("id,title");
@@ -521,8 +538,8 @@ function IssuesPanel() {
   return (
     <section className="space-y-6">
       <ManagementToolbar
-        title="이슈 관리"
-        description="등록된 이슈를 관리하세요."
+        title={issueListMode === "clipping" ? "클리핑 관리" : "이슈 관리"}
+        description={issueListMode === "clipping" ? "등록된 뉴스 클리핑 초안을 관리하세요." : "수동으로 등록한 이슈를 관리하세요."}
         createLabel="새 이슈 등록"
         secondaryCreateLabel="새 클리핑 등록"
         visibility={visibility}
@@ -535,6 +552,25 @@ function IssuesPanel() {
           setVisibility("all");
           setSortDirection("newest");
         }}
+        placeCreateActionsInFilters
+        headerRight={
+          <div className="flex items-center gap-1 border-b border-slate-800">
+            <button
+              type="button"
+              className={`border-b-2 px-3 py-2 text-sm transition ${issueListMode === "clipping" ? "border-blue-400 text-white" : "border-transparent text-slate-400 hover:text-slate-100"}`}
+              onClick={() => setIssueListMode("clipping")}
+            >
+              클리핑 목록
+            </button>
+            <button
+              type="button"
+              className={`border-b-2 px-3 py-2 text-sm transition ${issueListMode === "manual" ? "border-blue-400 text-white" : "border-transparent text-slate-400 hover:text-slate-100"}`}
+              onClick={() => setIssueListMode("manual")}
+            >
+              이슈 목록
+            </button>
+          </div>
+        }
       />
 
       {message && <p className="text-sm text-emerald-300">{message}</p>}
