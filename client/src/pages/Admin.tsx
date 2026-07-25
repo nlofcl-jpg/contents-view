@@ -87,6 +87,43 @@ type IssueRecord = {
 
 type VisibilityFilter = "all" | "published" | "private";
 type SortDirection = "newest" | "oldest";
+type IssueRegistrationMode = "manual" | "clipping";
+
+type ClippingEntry = {
+  title: string;
+  summary: string;
+};
+
+function parseClippingEntries(value: string): ClippingEntry[] {
+  const numberedEntryPattern = /^\s*(?:\d{1,2}[.)]|[-*])\s+(.+)$/;
+  const entries: Array<{ title: string; lines: string[] }> = [];
+  let current: { title: string; lines: string[] } | null = null;
+
+  for (const rawLine of value.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    const match = line.match(numberedEntryPattern);
+
+    if (match) {
+      if (current) entries.push(current);
+      current = { title: match[1].trim(), lines: [] };
+      continue;
+    }
+
+    if (current && line) current.lines.push(line);
+  }
+
+  if (current) entries.push(current);
+
+  return entries
+    .map(entry => ({
+      title: entry.title.replace(/\s+/g, " ").trim(),
+      summary: entry.lines.join(" ").replace(/\s+/g, " ").trim(),
+    }))
+    .filter(entry => entry.title.length > 1)
+    .filter((entry, index, all) => all.findIndex(item => item.title === entry.title) === index)
+    .slice(0, 20)
+    .map(entry => ({ ...entry, summary: entry.summary || entry.title }));
+}
 
 type ManagementToolbarProps = {
   title: string;
@@ -162,6 +199,7 @@ function IssuesPanel() {
   const [issues, setIssues] = useState<IssueRecord[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [registrationMode, setRegistrationMode] = useState<IssueRegistrationMode>("manual");
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [articleUrl, setArticleUrl] = useState("");
@@ -173,6 +211,9 @@ function IssuesPanel() {
   const [error, setError] = useState<string | null>(null);
   const [visibility, setVisibility] = useState<VisibilityFilter>("all");
   const [sortDirection, setSortDirection] = useState<SortDirection>("newest");
+  const [clippingUrl, setClippingUrl] = useState("");
+  const [clippingContent, setClippingContent] = useState("");
+  const [isClippingSaving, setIsClippingSaving] = useState(false);
 
   const loadIssues = async () => {
     if (!supabase) return;
@@ -203,6 +244,7 @@ function IssuesPanel() {
     setSourceName("");
     setIsPublished(false);
     setIsFormOpen(false);
+    setRegistrationMode("manual");
   };
 
   const handleEdit = (issue: IssueRecord) => {
@@ -214,6 +256,7 @@ function IssuesPanel() {
     setSourceName(issue.source_name ?? "");
     setIsPublished(issue.is_published);
     setIsFormOpen(true);
+    setRegistrationMode("manual");
     setError(null);
     setMessage(null);
   };
@@ -222,6 +265,14 @@ function IssuesPanel() {
     resetForm();
     setMessage(null);
     setError(null);
+    setIsFormOpen(true);
+  };
+
+  const handleClippingCreate = () => {
+    resetForm();
+    setMessage(null);
+    setError(null);
+    setRegistrationMode("clipping");
     setIsFormOpen(true);
   };
 
@@ -300,6 +351,46 @@ function IssuesPanel() {
       });
   }, [issues, sortDirection, visibility]);
 
+  const clippingEntries = useMemo(() => parseClippingEntries(clippingContent), [clippingContent]);
+
+  const handleClippingSave = async () => {
+    if (!supabase || !user) return;
+    if (clippingEntries.length === 0) {
+      setError("번호별 이슈 제목을 붙여넣어 주세요.");
+      setMessage(null);
+      return;
+    }
+
+    setIsClippingSaving(true);
+    setError(null);
+    setMessage(null);
+
+    const { error: saveError } = await supabase.from("issues").insert(
+      clippingEntries.map(entry => ({
+        title: entry.title,
+        summary: entry.summary,
+        article_url: clippingUrl.trim() || null,
+        source_name: "아이보스 뉴스클리핑",
+        is_published: false,
+        created_by: user.id,
+      })),
+    );
+
+    setIsClippingSaving(false);
+
+    if (saveError) {
+      setError(saveError.message);
+      return;
+    }
+
+    setClippingUrl("");
+    setClippingContent("");
+    setIsFormOpen(false);
+    setRegistrationMode("manual");
+    setMessage(`${clippingEntries.length}개 이슈 초안 등록 완료`);
+    await loadIssues();
+  };
+
   return (
     <section className="space-y-6">
       <ManagementToolbar
@@ -317,10 +408,27 @@ function IssuesPanel() {
         }}
       />
 
+      <div className="flex border-b border-slate-800">
+        <button
+          type="button"
+          className={`border-b-2 px-4 py-3 text-sm font-normal transition ${registrationMode === "manual" ? "border-blue-400 text-white" : "border-transparent text-slate-500 hover:text-slate-200"}`}
+          onClick={handleCreate}
+        >
+          새 이슈 등록
+        </button>
+        <button
+          type="button"
+          className={`border-b-2 px-4 py-3 text-sm font-normal transition ${registrationMode === "clipping" ? "border-blue-400 text-white" : "border-transparent text-slate-500 hover:text-slate-200"}`}
+          onClick={handleClippingCreate}
+        >
+          클리핑 등록
+        </button>
+      </div>
+
       {message && <p className="text-sm text-emerald-300">{message}</p>}
       {error && <p className="text-sm text-red-300">{error}</p>}
 
-      {isFormOpen && (
+      {isFormOpen && registrationMode === "manual" && (
       <div className="space-y-4 rounded-lg border border-slate-800 bg-slate-900/60 p-5">
         <div className="flex items-center justify-between gap-4">
           <h3 className="text-base font-medium text-slate-100">{editingId ? "이슈 수정" : "새 이슈 등록"}</h3>
@@ -403,6 +511,59 @@ function IssuesPanel() {
           )}
         </div>
       </div>
+      )}
+
+      {isFormOpen && registrationMode === "clipping" && (
+        <div className="space-y-4 rounded-lg border border-slate-800 bg-slate-900/60 p-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h3 className="text-base font-medium text-slate-100">뉴스 클리핑 등록</h3>
+              <p className="mt-1 text-xs font-normal text-slate-400">번호별 이슈 제목과 요약을 붙여넣으면 항목마다 비공개 이슈 초안으로 등록됩니다.</p>
+            </div>
+            <button type="button" className="text-xs text-slate-400 hover:text-slate-100" onClick={resetForm}>
+              닫기
+            </button>
+          </div>
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-300">클리핑 원문 주소</span>
+            <input
+              className="w-full rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-400"
+              placeholder="https://www.i-boss.co.kr/..."
+              value={clippingUrl}
+              onChange={event => setClippingUrl(event.target.value)}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-300">번호별 뉴스 요약</span>
+            <textarea
+              className="min-h-52 w-full resize-y rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm leading-6 text-slate-100 outline-none focus:border-blue-400"
+              placeholder={"1. 첫 번째 이슈 제목\n핵심 요약 내용\n\n2. 두 번째 이슈 제목\n핵심 요약 내용"}
+              value={clippingContent}
+              onChange={event => setClippingContent(event.target.value)}
+            />
+          </label>
+          {clippingContent.trim() && (
+            <div className="rounded-md border border-slate-800 bg-slate-950/45 p-4">
+              <p className="text-xs text-slate-400">등록 예정 이슈 {clippingEntries.length}개</p>
+              {clippingEntries.length > 0 && (
+                <ol className="mt-3 space-y-2 text-sm text-slate-200">
+                  {clippingEntries.map((entry, index) => (
+                    <li key={`${entry.title}-${index}`} className="truncate">{index + 1}. {entry.title}</li>
+                  ))}
+                </ol>
+              )}
+            </div>
+          )}
+          <button
+            type="button"
+            className="primaryButton"
+            onClick={handleClippingSave}
+            disabled={isClippingSaving || clippingEntries.length === 0}
+          >
+            {isClippingSaving ? "초안 등록 중" : `${clippingEntries.length}개 이슈 초안 등록`}
+            <span>→</span>
+          </button>
+        </div>
       )}
 
       <div>
