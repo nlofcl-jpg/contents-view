@@ -95,6 +95,8 @@ type SortDirection = "newest" | "oldest";
 type IssueRegistrationMode = "manual" | "clipping";
 type IssueListMode = "manual" | "clipping";
 
+const CLIPPING_NEWS_SEARCH_INTERVAL_MS = 60_000;
+
 type ClippingEntry = {
   title: string;
   summary: string;
@@ -497,16 +499,20 @@ function IssuesPanel() {
     }
 
     await loadIssues();
-    setMessage(`${draftData.length}개 이슈 초안 등록 중`);
+    setClippingContent("");
+    setIsFormOpen(false);
+    setRegistrationMode("manual");
+    let completedCount = 0;
+    let failedCount = 0;
 
-    try {
-      const matches = await matchClippingNewsMutation.mutateAsync({
-        titles: clippingEntries.map(entry => entry.title),
-      });
-      const matchByTitle = new Map(matches.map(match => [match.title, match]));
-      const updates = await Promise.all(draftData.map(async draft => {
-        const match = matchByTitle.get(draft.title);
-        return supabase!.from("issues").update(
+    for (let index = 0; index < draftData.length; index += 1) {
+      const draft = draftData[index];
+      setMessage(`${draftData.length}개 중 ${index + 1}번째 뉴스 원문 확인 중`);
+
+      try {
+        const matches = await matchClippingNewsMutation.mutateAsync({ titles: [draft.title] });
+        const match = matches[0];
+        const { error: updateError } = await supabase!.from("issues").update(
           match
             ? {
                 article_url: match.articleUrl,
@@ -517,28 +523,29 @@ function IssuesPanel() {
               }
             : { registration_status: "failed" },
         ).eq("id", draft.id);
-      }));
 
-      const updateError = updates.find(result => result.error)?.error;
-      if (updateError) throw updateError;
+        if (updateError) throw updateError;
+        if (match) completedCount += 1;
+        else failedCount += 1;
+      } catch (matchError) {
+        failedCount += 1;
+        await supabase!.from("issues").update({ registration_status: "failed" }).eq("id", draft.id);
+        console.error("[Issue Clipping] Sequential news match failed", matchError);
+      }
 
-      const matchedCount = draftData.filter(draft => matchByTitle.has(draft.title)).length;
-      const unmatchedCount = draftData.length - matchedCount;
-      setMessage(
-        unmatchedCount > 0
-          ? `${matchedCount}개 등록 완료 · ${unmatchedCount}개 뉴스 미연결`
-          : `${matchedCount}개 이슈 등록 완료`,
-      );
-    } catch (matchError) {
-      await supabase.from("issues").update({ registration_status: "failed" }).in("id", draftData.map(draft => draft.id));
-      setError(matchError instanceof Error ? matchError.message : "네이버 뉴스 연결 중 오류가 발생했습니다.");
+      await loadIssues();
+
+      if (index < draftData.length - 1) {
+        await new Promise(resolve => window.setTimeout(resolve, CLIPPING_NEWS_SEARCH_INTERVAL_MS));
+      }
     }
 
-    setClippingContent("");
-    setIsFormOpen(false);
-    setRegistrationMode("manual");
+    setMessage(
+      failedCount > 0
+        ? `${completedCount}개 등록 완료 · ${failedCount}개 뉴스 미연결`
+        : `${completedCount}개 이슈 등록 완료`,
+    );
     setIsClippingSaving(false);
-    await loadIssues();
   };
 
   return (
