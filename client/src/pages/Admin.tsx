@@ -411,14 +411,14 @@ function IssuesPanel() {
     }
   };
 
-  const handlePublicationToggle = async (issue: IssueRecord) => {
+  const handlePublicationChange = async (issue: IssueRecord, nextPublished: boolean) => {
     if (!supabase) return;
+    if (issue.is_published === nextPublished) return;
 
     setPublicationChangingIssueId(issue.id);
     setError(null);
     setMessage(null);
 
-    const nextPublished = !issue.is_published;
     const { error: updateError } = await supabase
       .from("issues")
       .update({ is_published: nextPublished })
@@ -795,18 +795,16 @@ function IssuesPanel() {
                   <span>{formatCreatedAt(issue.created_at)}</span>
                 </span>
                 <div className="flex justify-end gap-2 whitespace-nowrap">
-                  <button
-                    type="button"
-                    className={`whitespace-nowrap rounded-md border px-3 py-1.5 text-xs transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                      issue.is_published
-                        ? "border-amber-400/60 text-amber-200 hover:bg-amber-400/10"
-                        : "border-emerald-400/60 text-emerald-200 hover:bg-emerald-400/10"
-                    }`}
+                  <select
+                    aria-label={`${issue.title} 공개 상태`}
+                    className="h-8 w-20 rounded-md border border-slate-700 bg-slate-950/80 px-2 text-xs text-slate-200 outline-none transition focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={publicationChangingIssueId === issue.id}
-                    onClick={() => handlePublicationToggle(issue)}
+                    value={issue.is_published ? "published" : "private"}
+                    onChange={event => handlePublicationChange(issue, event.target.value === "published")}
                   >
-                    {publicationChangingIssueId === issue.id ? "변경 중" : issue.is_published ? "비공개" : "공개"}
-                  </button>
+                    <option value="private">비공개</option>
+                    <option value="published">공개</option>
+                  </select>
                   <button
                     type="button"
                     className="whitespace-nowrap rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-blue-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
