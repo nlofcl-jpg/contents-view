@@ -59,12 +59,15 @@ export default function IssueDetail() {
         <p className="issuesStatus">이슈를 찾을 수 없습니다.</p>
       ) : (
         <article className="issueDetail">
+          <header className="issueDetailHeader">
+            <span className="issueCardSource">{issue.source_name || "이슈"}</span>
+            <h1>{issue.article_title || issue.title}</h1>
+          </header>
+          <div className="issueDetailArticle">
           {issue.thumbnail_url && (
             <img className="issueDetailImage" src={issue.thumbnail_url} alt="" />
           )}
           <div className="issueDetailContent">
-            <span className="issueCardSource">{issue.source_name || "이슈"}</span>
-            <h1>{issue.article_title || issue.title}</h1>
             {(issue.article_summary || issue.summary) && (
               <p className="issueDetailSummary">{issue.article_summary || issue.summary}</p>
             )}
@@ -79,6 +82,7 @@ export default function IssueDetail() {
                 <ExternalLink size={15} aria-hidden="true" />
               </a>
             )}
+          </div>
           </div>
         </article>
       )}

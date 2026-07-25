@@ -2548,29 +2548,37 @@ a {
 }
 
 .issueDetail {
-  overflow: hidden;
-  border: 1px solid rgba(76, 113, 170, 0.35);
-  border-radius: 8px;
-  background: rgba(7, 17, 35, 0.72);
+  border-top: 1px solid rgba(76, 113, 170, 0.35);
+  border-bottom: 1px solid rgba(76, 113, 170, 0.28);
+}
+
+.issueDetailHeader {
+  padding: 28px 0 24px;
+}
+
+.issueDetailHeader h1 {
+  margin: 10px 0 0;
+  color: #f8fbff;
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.issueDetailArticle {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.5fr);
+  gap: 28px;
+  align-items: start;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  padding: 28px 0 32px;
 }
 
 .issueDetailImage {
   display: block;
   width: 100%;
-  max-height: 420px;
+  aspect-ratio: 1.42 / 1;
+  border-radius: 6px;
   object-fit: cover;
-}
-
-.issueDetailContent {
-  padding: 34px;
-}
-
-.issueDetailContent h1 {
-  margin: 10px 0 18px;
-  color: #f8fbff;
-  font-size: 28px;
-  font-weight: 500;
-  line-height: 1.35;
 }
 
 .issueDetailSummary {
@@ -2847,12 +2855,18 @@ a {
     font-size: 16px;
   }
 
-  .issueDetailContent {
-    padding: 22px 18px;
+  .issueDetailHeader {
+    padding: 22px 0 18px;
   }
 
-  .issueDetailContent h1 {
+  .issueDetailHeader h1 {
     font-size: 22px;
+  }
+
+  .issueDetailArticle {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding: 20px 0 24px;
   }
 
   .newsSearchSection {
