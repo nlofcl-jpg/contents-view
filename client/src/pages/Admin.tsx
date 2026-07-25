@@ -230,6 +230,7 @@ function IssuesPanel() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("newest");
   const [clippingContent, setClippingContent] = useState("");
   const [isClippingSaving, setIsClippingSaving] = useState(false);
+  const [reconnectingIssueId, setReconnectingIssueId] = useState<string | null>(null);
   const [selectedIssueIds, setSelectedIssueIds] = useState<Set<string>>(() => new Set());
   const matchClippingNewsMutation = trpc.news.matchClippingNews.useMutation();
 
@@ -353,6 +354,39 @@ function IssuesPanel() {
     });
     setMessage("이슈 삭제 완료");
     await loadIssues();
+  };
+
+  const handleReconnectIssue = async (issue: IssueRecord) => {
+    if (!supabase) return;
+
+    setReconnectingIssueId(issue.id);
+    setError(null);
+    setMessage(null);
+    await supabase.from("issues").update({ registration_status: "connecting" }).eq("id", issue.id);
+    await loadIssues();
+
+    try {
+      const matches = await matchClippingNewsMutation.mutateAsync({ titles: [issue.title] });
+      const match = matches[0];
+      const { error: updateError } = await supabase.from("issues").update(
+        match
+          ? {
+              article_url: match.articleUrl,
+              source_name: match.sourceName,
+              registration_status: "complete",
+            }
+          : { registration_status: "failed" },
+      ).eq("id", issue.id);
+
+      if (updateError) throw updateError;
+      setMessage(match ? `'${issue.title}' 뉴스 연결 완료` : `'${issue.title}'에 맞는 뉴스 결과가 없습니다.`);
+    } catch (reconnectError) {
+      await supabase.from("issues").update({ registration_status: "failed" }).eq("id", issue.id);
+      setError(reconnectError instanceof Error ? reconnectError.message : "뉴스 다시 연결 중 오류가 발생했습니다.");
+    } finally {
+      setReconnectingIssueId(null);
+      await loadIssues();
+    }
   };
 
   const formatCreatedAt = (value: string) => {
@@ -660,14 +694,14 @@ function IssuesPanel() {
         )}
         {filteredIssues.length > 0 ? (
           <div className="overflow-hidden rounded-md border border-slate-800">
-            <div className="grid grid-cols-[28px_minmax(0,1fr)_148px_128px] gap-3 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs text-slate-500">
+            <div className="grid grid-cols-[28px_minmax(0,1fr)_148px_196px] gap-3 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs text-slate-500">
               <span aria-hidden="true" />
               <span>제목</span>
               <span>등록 상태 · 생성일</span>
               <span className="text-right">관리</span>
             </div>
             {filteredIssues.map(issue => (
-              <article key={issue.id} className="grid grid-cols-[28px_minmax(0,1fr)_148px_128px] items-center gap-3 border-b border-slate-800/80 px-4 py-3 last:border-b-0">
+              <article key={issue.id} className="grid grid-cols-[28px_minmax(0,1fr)_148px_196px] items-center gap-3 border-b border-slate-800/80 px-4 py-3 last:border-b-0">
                 <input
                   type="checkbox"
                   className="h-4 w-4 accent-blue-500"
@@ -690,6 +724,14 @@ function IssuesPanel() {
                   <span>{formatCreatedAt(issue.created_at)}</span>
                 </span>
                 <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-blue-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={reconnectingIssueId === issue.id}
+                    onClick={() => handleReconnectIssue(issue)}
+                  >
+                    {reconnectingIssueId === issue.id ? "연결 중" : "뉴스 다시 연결"}
+                  </button>
                   <button
                     type="button"
                     className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:border-blue-400 hover:text-white"

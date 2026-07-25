@@ -4657,13 +4657,37 @@ export const appRouter = router({
         const stripNaverHtml = (value: string) =>
           cheerio.load(value || "").text().replace(/\s+/g, " ").trim();
 
+        const getSearchTokens = (value: string) =>
+          Array.from(new Set(
+            stripNaverHtml(value)
+              .toLocaleLowerCase("ko-KR")
+              .match(/[가-힣a-z0-9]+/gi)
+              ?.filter(token => token.length >= 2) ?? [],
+          ));
+
+        const scoreNewsMatch = (query: string, articleTitle: string) => {
+          const queryTokens = getSearchTokens(query);
+          const titleTokens = new Set(getSearchTokens(articleTitle));
+          const normalizedQuery = queryTokens.join("");
+          const normalizedArticleTitle = getSearchTokens(articleTitle).join("");
+          const matchedTokenCount = queryTokens.filter(token => titleTokens.has(token)).length;
+          const phraseMatched = normalizedQuery.length >= 4 && normalizedArticleTitle.includes(normalizedQuery);
+          const minimumMatchedTokens = queryTokens.length <= 1 ? 1 : Math.ceil(queryTokens.length / 2);
+          const isRelevant = phraseMatched || matchedTokenCount >= minimumMatchedTokens;
+
+          return {
+            isRelevant,
+            score: matchedTokenCount / Math.max(queryTokens.length, 1) + (phraseMatched ? 1 : 0),
+          };
+        };
+
         const matches = await Promise.all(input.titles.map(async title => {
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 8_000);
 
           try {
             const response = await fetch(
-              `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(title)}&display=1&sort=date`,
+              `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(title)}&display=10&sort=date`,
               {
                 signal: controller.signal,
                 headers: {
@@ -4679,8 +4703,12 @@ export const appRouter = router({
               link?: string;
               originallink?: string;
               title?: string;
+              description?: string;
             }> };
-            const item = data.items?.[0];
+            const item = (data.items ?? [])
+              .map(item => ({ item, match: scoreNewsMatch(title, item.title || "") }))
+              .filter(({ match }) => match.isRelevant)
+              .sort((left, right) => right.match.score - left.match.score)[0]?.item;
             const articleUrl = item?.originallink || item?.link;
             if (!articleUrl) return null;
 
@@ -4695,7 +4723,7 @@ export const appRouter = router({
               title,
               articleUrl,
               sourceName,
-              matchedTitle: stripNaverHtml(item?.title || ""),
+              matchedTitle: stripNaverHtml(item.title || ""),
             };
           } catch (error) {
             console.error("[Issue Clipping] Naver news match failed", { title, error });
