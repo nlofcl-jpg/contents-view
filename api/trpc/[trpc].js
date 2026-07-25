@@ -6037,6 +6037,49 @@ var appRouter = router({
         console.error("[News Search] Error:", error);
         return [];
       }
+    }),
+    matchClippingNews: adminProcedure.input(z3.object({
+      titles: z3.array(z3.string().trim().min(2).max(160)).min(1).max(20)
+    })).mutation(async ({ input }) => {
+      const clientId = process.env.NAVER_CLIENT_ID || "";
+      const clientSecret = process.env.NAVER_CLIENT_SECRET || "";
+      if (!clientId || !clientSecret) {
+        throw new Error("\uB124\uC774\uBC84 \uB274\uC2A4 API \uD658\uACBD \uBCC0\uC218\uAC00 \uC124\uC815\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+      }
+      const stripNaverHtml = (value) => cheerio.load(value || "").text().replace(/\s+/g, " ").trim();
+      const matches = await Promise.all(input.titles.map(async (title) => {
+        try {
+          const response = await fetch(
+            `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(title)}&display=1&sort=date`,
+            {
+              headers: {
+                "X-Naver-Client-Id": clientId,
+                "X-Naver-Client-Secret": clientSecret
+              }
+            }
+          );
+          if (!response.ok) return null;
+          const data = await response.json();
+          const item = data.items?.[0];
+          const articleUrl = item?.originallink || item?.link;
+          if (!articleUrl) return null;
+          let sourceName = "\uB124\uC774\uBC84 \uB274\uC2A4";
+          try {
+            sourceName = new URL(articleUrl).hostname.replace(/^www\./, "");
+          } catch {
+          }
+          return {
+            title,
+            articleUrl,
+            sourceName,
+            matchedTitle: stripNaverHtml(item?.title || "")
+          };
+        } catch (error) {
+          console.error("[Issue Clipping] Naver news match failed", { title, error });
+          return null;
+        }
+      }));
+      return matches.filter((match) => Boolean(match));
     })
   })
 });

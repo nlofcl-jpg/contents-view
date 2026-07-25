@@ -4641,6 +4641,66 @@ export const appRouter = router({
           return [];
         }
       }),
+
+    matchClippingNews: adminProcedure
+      .input(z.object({
+        titles: z.array(z.string().trim().min(2).max(160)).min(1).max(20),
+      }))
+      .mutation(async ({ input }) => {
+        const clientId = process.env.NAVER_CLIENT_ID || "";
+        const clientSecret = process.env.NAVER_CLIENT_SECRET || "";
+
+        if (!clientId || !clientSecret) {
+          throw new Error("네이버 뉴스 API 환경 변수가 설정되지 않았습니다.");
+        }
+
+        const stripNaverHtml = (value: string) =>
+          cheerio.load(value || "").text().replace(/\s+/g, " ").trim();
+
+        const matches = await Promise.all(input.titles.map(async title => {
+          try {
+            const response = await fetch(
+              `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(title)}&display=1&sort=date`,
+              {
+                headers: {
+                  "X-Naver-Client-Id": clientId,
+                  "X-Naver-Client-Secret": clientSecret,
+                },
+              },
+            );
+
+            if (!response.ok) return null;
+
+            const data = await response.json() as { items?: Array<{
+              link?: string;
+              originallink?: string;
+              title?: string;
+            }> };
+            const item = data.items?.[0];
+            const articleUrl = item?.originallink || item?.link;
+            if (!articleUrl) return null;
+
+            let sourceName = "네이버 뉴스";
+            try {
+              sourceName = new URL(articleUrl).hostname.replace(/^www\./, "");
+            } catch {
+              // Keep the neutral source label if a provider returns a malformed link.
+            }
+
+            return {
+              title,
+              articleUrl,
+              sourceName,
+              matchedTitle: stripNaverHtml(item?.title || ""),
+            };
+          } catch (error) {
+            console.error("[Issue Clipping] Naver news match failed", { title, error });
+            return null;
+          }
+        }));
+
+        return matches.filter((match): match is NonNullable<typeof match> => Boolean(match));
+      }),
   }),
 });
 

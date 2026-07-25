@@ -1,5 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
+import { trpc } from "@/lib/trpc";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
@@ -95,7 +96,7 @@ type ClippingEntry = {
 };
 
 function parseClippingEntries(value: string): ClippingEntry[] {
-  const numberedEntryPattern = /^\s*(?:\d{1,2}[.)]|[-*])\s+(.+)$/;
+  const numberedEntryPattern = /^\s*\d{1,2}[.)]\s+(.+)$/;
   const entries: Array<{ title: string; lines: string[] }> = [];
   let current: { title: string; lines: string[] } | null = null;
 
@@ -228,6 +229,7 @@ function IssuesPanel() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("newest");
   const [clippingContent, setClippingContent] = useState("");
   const [isClippingSaving, setIsClippingSaving] = useState(false);
+  const matchClippingNewsMutation = trpc.news.matchClippingNews.useMutation();
 
   const loadIssues = async () => {
     if (!supabase) return;
@@ -380,12 +382,35 @@ function IssuesPanel() {
     setError(null);
     setMessage(null);
 
+    let matchedEntries: Array<ClippingEntry & { articleUrl: string; sourceName: string }> = [];
+
+    try {
+      const matches = await matchClippingNewsMutation.mutateAsync({
+        titles: clippingEntries.map(entry => entry.title),
+      });
+      const matchByTitle = new Map(matches.map(match => [match.title, match]));
+      matchedEntries = clippingEntries.flatMap(entry => {
+        const match = matchByTitle.get(entry.title);
+        return match ? [{ ...entry, articleUrl: match.articleUrl, sourceName: match.sourceName }] : [];
+      });
+    } catch (matchError) {
+      setIsClippingSaving(false);
+      setError(matchError instanceof Error ? matchError.message : "네이버 뉴스 검색 중 오류가 발생했습니다.");
+      return;
+    }
+
+    if (matchedEntries.length === 0) {
+      setIsClippingSaving(false);
+      setError("연결할 네이버 뉴스 검색 결과가 없습니다. 이슈 제목을 조금 더 구체적으로 입력해 주세요.");
+      return;
+    }
+
     const { error: saveError } = await supabase.from("issues").insert(
-      clippingEntries.map(entry => ({
+      matchedEntries.map(entry => ({
         title: entry.title,
         summary: entry.summary,
-        article_url: null,
-        source_name: "아이보스 뉴스클리핑",
+        article_url: entry.articleUrl,
+        source_name: entry.sourceName,
         is_published: false,
         created_by: user.id,
       })),
@@ -401,7 +426,12 @@ function IssuesPanel() {
     setClippingContent("");
     setIsFormOpen(false);
     setRegistrationMode("manual");
-    setMessage(`${clippingEntries.length}개 이슈 초안 등록 완료`);
+    const unmatchedCount = clippingEntries.length - matchedEntries.length;
+    setMessage(
+      unmatchedCount > 0
+        ? `${matchedEntries.length}개 이슈 초안 등록 완료 · ${unmatchedCount}개 뉴스 미연결`
+        : `${matchedEntries.length}개 이슈 초안 등록 완료`,
+    );
     await loadIssues();
   };
 
@@ -517,7 +547,7 @@ function IssuesPanel() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <h3 className="text-base font-medium text-slate-100">뉴스 클리핑 등록</h3>
-              <p className="mt-1 text-xs font-normal text-slate-400">번호별 이슈 제목과 요약을 붙여넣으면 항목마다 비공개 이슈 초안으로 등록됩니다.</p>
+              <p className="mt-1 text-xs font-normal text-slate-400">번호별 이슈 제목으로 네이버 뉴스 원문을 연결한 뒤, 검색 성공 항목만 비공개 이슈 초안으로 등록합니다.</p>
             </div>
             <button type="button" className="text-xs text-slate-400 hover:text-slate-100" onClick={resetForm}>
               닫기
@@ -550,7 +580,7 @@ function IssuesPanel() {
             onClick={handleClippingSave}
             disabled={isClippingSaving || clippingEntries.length === 0}
           >
-            {isClippingSaving ? "초안 등록 중" : `${clippingEntries.length}개 이슈 초안 등록`}
+            {isClippingSaving ? "뉴스 검색 및 초안 등록 중" : `${clippingEntries.length}개 이슈 초안 등록`}
             <span>→</span>
           </button>
         </div>
