@@ -5,6 +5,17 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/news/issues/:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|Twitterbot|Slackbot|Discordbot|LinkedInBot|WhatsApp|TelegramBot|KakaoTalk|KAKAOTALK|naverbot|Googlebot|bingbot|Baiduspider|Yeti|bot).*"
+        }
+      ],
+      "destination": "/api/issue-preview?id=:id"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
