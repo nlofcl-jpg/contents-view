@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useLocation } from "wouter";
@@ -48,6 +48,37 @@ function getIssueDisplayTitle(issue: PublishedIssue) {
 
 function getIssueDisplaySummary(issue: PublishedIssue) {
   return issue.article_summary || issue.summary;
+}
+
+function IssueCardTitle({ title, variant }: { title: string; variant: "featured" | "list" }) {
+  const titleRef = useRef<HTMLHeadingElement>(null);
+
+  useLayoutEffect(() => {
+    const element = titleRef.current;
+    if (!element) return;
+
+    const maxFontSize = variant === "featured" ? 18 : 16;
+    const minFontSize = 11;
+    const fitTitle = () => {
+      let fontSize = maxFontSize;
+      element.style.fontSize = `${fontSize}px`;
+
+      while (element.scrollHeight > element.clientHeight + 1 && fontSize > minFontSize) {
+        fontSize -= 1;
+        element.style.fontSize = `${fontSize}px`;
+      }
+    };
+
+    fitTitle();
+    window.addEventListener("resize", fitTitle);
+    return () => window.removeEventListener("resize", fitTitle);
+  }, [title, variant]);
+
+  return (
+    <h2 ref={titleRef} className={variant === "featured" ? "issueFeaturedTitle" : "issueListTitle"}>
+      {title}
+    </h2>
+  );
 }
 
 function readNewsSessionCache(): NewsSessionCache | null {
@@ -500,7 +531,7 @@ export default function News() {
                     )}
                     <div className="issueFeaturedOverlay">
                       <span className="issueCardSource">{issue.source_name || "이슈"}</span>
-                      <h2>{getIssueDisplayTitle(issue)}</h2>
+                      <IssueCardTitle title={getIssueDisplayTitle(issue)} variant="featured" />
                     </div>
                   </button>
                 ))}
@@ -522,7 +553,7 @@ export default function News() {
                       )}
                       <div className="issueListBody">
                         <span className="issueCardSource">{issue.source_name || "이슈"}</span>
-                        <h2>{getIssueDisplayTitle(issue)}</h2>
+                        <IssueCardTitle title={getIssueDisplayTitle(issue)} variant="list" />
                         {getIssueDisplaySummary(issue) && <p>{getIssueDisplaySummary(issue)}</p>}
                       </div>
                       <span className="issueListMore" aria-hidden="true">→</span>

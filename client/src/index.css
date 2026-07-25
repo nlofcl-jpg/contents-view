@@ -2421,16 +2421,15 @@ a {
   font-weight: 400;
 }
 
-.issueFeaturedOverlay h2 {
-  display: -webkit-box;
+.issueFeaturedOverlay .issueFeaturedTitle {
+  display: block;
+  height: 2.9em;
   margin: 8px 0 0;
   overflow: hidden;
   color: #f1f5ff;
   font-size: 18px;
   font-weight: 500;
   line-height: 1.45;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 
 .issueList {
@@ -2466,16 +2465,15 @@ a {
   padding: 16px 18px;
 }
 
-.issueListBody h2 {
-  display: -webkit-box;
+.issueListBody .issueListTitle {
+  display: block;
+  height: 2.9em;
   margin: 6px 0;
   overflow: hidden;
   color: #edf4ff;
   font-size: 16px;
   font-weight: 500;
   line-height: 1.45;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
 }
 
 .issueListBody p {
