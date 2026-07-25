@@ -247,6 +247,7 @@ function IssuesPanel() {
   const [clippingContent, setClippingContent] = useState("");
   const [isClippingSaving, setIsClippingSaving] = useState(false);
   const [reconnectingIssueId, setReconnectingIssueId] = useState<string | null>(null);
+  const [publicationChangingIssueId, setPublicationChangingIssueId] = useState<string | null>(null);
   const [selectedIssueIds, setSelectedIssueIds] = useState<Set<string>>(() => new Set());
   const matchClippingNewsMutation = trpc.news.matchClippingNews.useMutation();
 
@@ -408,6 +409,30 @@ function IssuesPanel() {
       setReconnectingIssueId(null);
       await loadIssues();
     }
+  };
+
+  const handlePublicationToggle = async (issue: IssueRecord) => {
+    if (!supabase) return;
+
+    setPublicationChangingIssueId(issue.id);
+    setError(null);
+    setMessage(null);
+
+    const nextPublished = !issue.is_published;
+    const { error: updateError } = await supabase
+      .from("issues")
+      .update({ is_published: nextPublished })
+      .eq("id", issue.id);
+
+    setPublicationChangingIssueId(null);
+
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+
+    setMessage(nextPublished ? `'${issue.title}' 공개 완료` : `'${issue.title}' 비공개 전환 완료`);
+    await loadIssues();
   };
 
   const formatCreatedAt = (value: string) => {
@@ -736,15 +761,15 @@ function IssuesPanel() {
         )}
         {filteredIssues.length > 0 ? (
           <div className="overflow-x-auto rounded-md border border-slate-800">
-            <div className="min-w-[820px]">
-            <div className="grid grid-cols-[28px_minmax(260px,1fr)_180px_230px] gap-3 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs text-slate-500">
+            <div className="min-w-[900px]">
+            <div className="grid grid-cols-[28px_minmax(260px,1fr)_180px_298px] gap-3 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs text-slate-500">
               <span aria-hidden="true" />
               <span>제목</span>
               <span>등록 상태 · 생성일</span>
               <span className="text-right">관리</span>
             </div>
             {filteredIssues.map(issue => (
-              <article key={issue.id} className="grid grid-cols-[28px_minmax(260px,1fr)_180px_230px] items-center gap-3 border-b border-slate-800/80 px-4 py-3 last:border-b-0">
+              <article key={issue.id} className="grid grid-cols-[28px_minmax(260px,1fr)_180px_298px] items-center gap-3 border-b border-slate-800/80 px-4 py-3 last:border-b-0">
                 <input
                   type="checkbox"
                   className="h-4 w-4 accent-blue-500"
@@ -767,6 +792,18 @@ function IssuesPanel() {
                   <span>{formatCreatedAt(issue.created_at)}</span>
                 </span>
                 <div className="flex justify-end gap-2 whitespace-nowrap">
+                  <button
+                    type="button"
+                    className={`whitespace-nowrap rounded-md border px-3 py-1.5 text-xs transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                      issue.is_published
+                        ? "border-amber-400/60 text-amber-200 hover:bg-amber-400/10"
+                        : "border-emerald-400/60 text-emerald-200 hover:bg-emerald-400/10"
+                    }`}
+                    disabled={publicationChangingIssueId === issue.id}
+                    onClick={() => handlePublicationToggle(issue)}
+                  >
+                    {publicationChangingIssueId === issue.id ? "변경 중" : issue.is_published ? "비공개" : "공개"}
+                  </button>
                   <button
                     type="button"
                     className="whitespace-nowrap rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-blue-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
