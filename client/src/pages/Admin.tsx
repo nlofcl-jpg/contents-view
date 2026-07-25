@@ -628,12 +628,23 @@ function IssuesPanel() {
         </div>
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-slate-300">제목</span>
-          <input
-            className="w-full rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-400"
-            placeholder="이슈 제목"
-            value={title}
-            onChange={event => setTitle(event.target.value)}
-          />
+          <div className="flex gap-2">
+            <input
+              className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-400"
+              placeholder="이슈 제목"
+              value={title}
+              onChange={event => setTitle(event.target.value)}
+            />
+            <select
+              aria-label="공개 상태"
+              className="w-24 rounded-md border border-slate-700 bg-slate-950/80 px-2 text-sm text-slate-200 outline-none focus:border-blue-400"
+              value={isPublished ? "published" : "private"}
+              onChange={event => setIsPublished(event.target.value === "published")}
+            >
+              <option value="private">비공개</option>
+              <option value="published">공개</option>
+            </select>
+          </div>
         </label>
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-slate-300">핵심 요약</span>
@@ -672,14 +683,6 @@ function IssuesPanel() {
             value={thumbnailUrl}
             onChange={event => setThumbnailUrl(event.target.value)}
           />
-        </label>
-        <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-slate-200">
-          <input
-            type="checkbox"
-            checked={isPublished}
-            onChange={event => setIsPublished(event.target.checked)}
-          />
-          공개
         </label>
         <div className="flex flex-wrap gap-2">
           <button type="button" className="primaryButton" onClick={handleSave} disabled={isSaving}>
