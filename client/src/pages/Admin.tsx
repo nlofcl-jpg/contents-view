@@ -83,6 +83,7 @@ type IssueRecord = {
   thumbnail_url: string | null;
   source_name: string | null;
   is_published: boolean;
+  registration_status: "connecting" | "complete" | "failed";
   created_at: string;
 };
 
@@ -229,6 +230,7 @@ function IssuesPanel() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("newest");
   const [clippingContent, setClippingContent] = useState("");
   const [isClippingSaving, setIsClippingSaving] = useState(false);
+  const [selectedIssueIds, setSelectedIssueIds] = useState<Set<string>>(() => new Set());
   const matchClippingNewsMutation = trpc.news.matchClippingNews.useMutation();
 
   const loadIssues = async () => {
@@ -236,7 +238,7 @@ function IssuesPanel() {
 
     const { data, error: loadError } = await supabase
       .from("issues")
-      .select("id,title,summary,article_url,thumbnail_url,source_name,is_published,created_at")
+      .select("id,title,summary,article_url,thumbnail_url,source_name,is_published,registration_status,created_at")
       .order("created_at", { ascending: false });
 
     if (loadError) {
@@ -312,6 +314,7 @@ function IssuesPanel() {
       thumbnail_url: thumbnailUrl.trim() || null,
       source_name: sourceName.trim() || null,
       is_published: isPublished,
+      registration_status: "complete" as const,
     };
 
     const { error: saveError } = editingId
@@ -343,6 +346,11 @@ function IssuesPanel() {
     }
 
     if (editingId === issue.id) resetForm();
+    setSelectedIssueIds(current => {
+      const next = new Set(current);
+      next.delete(issue.id);
+      return next;
+    });
     setMessage("이슈 삭제 완료");
     await loadIssues();
   };
@@ -368,6 +376,40 @@ function IssuesPanel() {
       });
   }, [issues, sortDirection, visibility]);
 
+  const isAllFilteredSelected = filteredIssues.length > 0 && filteredIssues.every(issue => selectedIssueIds.has(issue.id));
+
+  const toggleAllIssues = () => {
+    setSelectedIssueIds(current => {
+      const next = new Set(current);
+      if (isAllFilteredSelected) {
+        filteredIssues.forEach(issue => next.delete(issue.id));
+      } else {
+        filteredIssues.forEach(issue => next.add(issue.id));
+      }
+      return next;
+    });
+  };
+
+  const deleteIssues = async (ids: string[], confirmation: string) => {
+    if (!supabase || ids.length === 0 || !window.confirm(confirmation)) return;
+
+    setError(null);
+    setMessage(null);
+    const { error: deleteError } = await supabase.from("issues").delete().in("id", ids);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
+
+    setSelectedIssueIds(current => {
+      const next = new Set(current);
+      ids.forEach(id => next.delete(id));
+      return next;
+    });
+    setMessage(`${ids.length}개 이슈 삭제 완료`);
+    await loadIssues();
+  };
+
   const clippingEntries = useMemo(() => parseClippingEntries(clippingContent), [clippingContent]);
 
   const handleClippingSave = async () => {
@@ -380,58 +422,65 @@ function IssuesPanel() {
 
     setIsClippingSaving(true);
     setError(null);
-    setMessage(`${clippingEntries.length}개 이슈의 네이버 뉴스 검색 중`);
+    const { data: draftData, error: draftError } = await supabase
+      .from("issues")
+      .insert(clippingEntries.map(entry => ({
+        title: entry.title,
+        summary: entry.summary,
+        article_url: null,
+        source_name: null,
+        is_published: false,
+        registration_status: "connecting",
+        created_by: user.id,
+      })))
+      .select("id,title");
 
-    let matchedEntries: Array<ClippingEntry & { articleUrl: string; sourceName: string }> = [];
+    if (draftError || !draftData) {
+      setIsClippingSaving(false);
+      setError(draftError?.message ?? "이슈 초안을 저장하지 못했습니다.");
+      return;
+    }
+
+    await loadIssues();
+    setMessage(`${draftData.length}개 이슈 초안 등록 중`);
 
     try {
       const matches = await matchClippingNewsMutation.mutateAsync({
         titles: clippingEntries.map(entry => entry.title),
       });
       const matchByTitle = new Map(matches.map(match => [match.title, match]));
-      matchedEntries = clippingEntries.flatMap(entry => {
-        const match = matchByTitle.get(entry.title);
-        return match ? [{ ...entry, articleUrl: match.articleUrl, sourceName: match.sourceName }] : [];
-      });
+      const updates = await Promise.all(draftData.map(async draft => {
+        const match = matchByTitle.get(draft.title);
+        return supabase!.from("issues").update(
+          match
+            ? {
+                article_url: match.articleUrl,
+                source_name: match.sourceName,
+                registration_status: "complete",
+              }
+            : { registration_status: "failed" },
+        ).eq("id", draft.id);
+      }));
+
+      const updateError = updates.find(result => result.error)?.error;
+      if (updateError) throw updateError;
+
+      const matchedCount = draftData.filter(draft => matchByTitle.has(draft.title)).length;
+      const unmatchedCount = draftData.length - matchedCount;
+      setMessage(
+        unmatchedCount > 0
+          ? `${matchedCount}개 등록 완료 · ${unmatchedCount}개 뉴스 미연결`
+          : `${matchedCount}개 이슈 등록 완료`,
+      );
     } catch (matchError) {
-      setIsClippingSaving(false);
-      setError(matchError instanceof Error ? matchError.message : "네이버 뉴스 검색 중 오류가 발생했습니다.");
-      return;
-    }
-
-    if (matchedEntries.length === 0) {
-      setIsClippingSaving(false);
-      setError("연결할 네이버 뉴스 검색 결과가 없습니다. 이슈 제목을 조금 더 구체적으로 입력해 주세요.");
-      return;
-    }
-
-    const { error: saveError } = await supabase.from("issues").insert(
-      matchedEntries.map(entry => ({
-        title: entry.title,
-        summary: entry.summary,
-        article_url: entry.articleUrl,
-        source_name: entry.sourceName,
-        is_published: false,
-        created_by: user.id,
-      })),
-    );
-
-    setIsClippingSaving(false);
-
-    if (saveError) {
-      setError(saveError.message);
-      return;
+      await supabase.from("issues").update({ registration_status: "failed" }).in("id", draftData.map(draft => draft.id));
+      setError(matchError instanceof Error ? matchError.message : "네이버 뉴스 연결 중 오류가 발생했습니다.");
     }
 
     setClippingContent("");
     setIsFormOpen(false);
     setRegistrationMode("manual");
-    const unmatchedCount = clippingEntries.length - matchedEntries.length;
-    setMessage(
-      unmatchedCount > 0
-        ? `${matchedEntries.length}개 이슈 초안 등록 완료 · ${unmatchedCount}개 뉴스 미연결`
-        : `${matchedEntries.length}개 이슈 초안 등록 완료`,
-    );
+    setIsClippingSaving(false);
     await loadIssues();
   };
 
@@ -587,20 +636,59 @@ function IssuesPanel() {
       )}
 
       <div>
+        {filteredIssues.length > 0 && (
+          <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+            <button type="button" className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-slate-500 hover:text-white" onClick={toggleAllIssues}>
+              {isAllFilteredSelected ? "전체 선택 해제" : "전체 선택"}
+            </button>
+            <button
+              type="button"
+              className="rounded-md border border-red-400/50 px-3 py-1.5 text-xs text-red-200 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={selectedIssueIds.size === 0}
+              onClick={() => deleteIssues(Array.from(selectedIssueIds), `선택한 ${selectedIssueIds.size}개 이슈를 삭제할까요?`)}
+            >
+              선택 삭제{selectedIssueIds.size > 0 ? ` (${selectedIssueIds.size})` : ""}
+            </button>
+            <button
+              type="button"
+              className="rounded-md border border-red-500/70 px-3 py-1.5 text-xs text-red-200 transition hover:bg-red-500/10"
+              onClick={() => deleteIssues(filteredIssues.map(issue => issue.id), `현재 목록의 ${filteredIssues.length}개 이슈를 모두 삭제할까요?`)}
+            >
+              전체 삭제
+            </button>
+          </div>
+        )}
         {filteredIssues.length > 0 ? (
           <div className="overflow-hidden rounded-md border border-slate-800">
-            <div className="grid grid-cols-[minmax(0,1fr)_92px_128px] gap-3 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs text-slate-500">
+            <div className="grid grid-cols-[28px_minmax(0,1fr)_148px_128px] gap-3 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs text-slate-500">
+              <span aria-hidden="true" />
               <span>제목</span>
-              <span>생성일</span>
+              <span>등록 상태 · 생성일</span>
               <span className="text-right">관리</span>
             </div>
             {filteredIssues.map(issue => (
-              <article key={issue.id} className="grid grid-cols-[minmax(0,1fr)_92px_128px] items-center gap-3 border-b border-slate-800/80 px-4 py-3 last:border-b-0">
+              <article key={issue.id} className="grid grid-cols-[28px_minmax(0,1fr)_148px_128px] items-center gap-3 border-b border-slate-800/80 px-4 py-3 last:border-b-0">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-blue-500"
+                  checked={selectedIssueIds.has(issue.id)}
+                  onChange={() => setSelectedIssueIds(current => {
+                    const next = new Set(current);
+                    next.has(issue.id) ? next.delete(issue.id) : next.add(issue.id);
+                    return next;
+                  })}
+                  aria-label={`${issue.title} 선택`}
+                />
                 <div className="min-w-0">
                   <p className="truncate text-sm text-slate-100">{issue.title}</p>
                   <p className="mt-1 text-xs text-slate-500">{issue.is_published ? "공개" : "비공개"}</p>
                 </div>
-                <span className="text-xs text-slate-400">{formatCreatedAt(issue.created_at)}</span>
+                <span className="flex items-center gap-2 text-xs text-slate-400">
+                  <span className={`h-2 w-2 rounded-full ${issue.registration_status === "connecting" ? "animate-pulse bg-blue-400" : issue.registration_status === "failed" ? "bg-amber-400" : "bg-emerald-400"}`} aria-hidden="true" />
+                  <span>{issue.registration_status === "connecting" ? "등록 중" : issue.registration_status === "failed" ? "연결 실패" : "등록 완료"}</span>
+                  <span className="text-slate-600">·</span>
+                  <span>{formatCreatedAt(issue.created_at)}</span>
+                </span>
                 <div className="flex justify-end gap-2">
                   <button
                     type="button"
