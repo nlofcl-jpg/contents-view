@@ -27,6 +27,8 @@ interface PublishedIssue {
   article_url: string | null;
   thumbnail_url: string | null;
   source_name: string | null;
+  article_title: string | null;
+  article_summary: string | null;
   created_at: string;
 }
 
@@ -39,6 +41,14 @@ interface NewsSessionCache {
 }
 
 const NEWS_SESSION_CACHE_KEY = "contents-view-news-page-cache-v1";
+
+function getIssueDisplayTitle(issue: PublishedIssue) {
+  return issue.article_title || issue.title;
+}
+
+function getIssueDisplaySummary(issue: PublishedIssue) {
+  return issue.article_summary || issue.summary;
+}
 
 function readNewsSessionCache(): NewsSessionCache | null {
   if (typeof window === "undefined") return null;
@@ -172,7 +182,7 @@ export default function News() {
 
     supabase
       .from("issues")
-      .select("id,title,summary,article_url,thumbnail_url,source_name,created_at")
+      .select("id,title,summary,article_url,thumbnail_url,source_name,article_title,article_summary,created_at")
       .eq("is_published", true)
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
@@ -490,7 +500,7 @@ export default function News() {
                     )}
                     <div className="issueFeaturedOverlay">
                       <span className="issueCardSource">{issue.source_name || "이슈"}</span>
-                      <h2>{issue.title}</h2>
+                      <h2>{getIssueDisplayTitle(issue)}</h2>
                     </div>
                   </button>
                 ))}
@@ -512,8 +522,8 @@ export default function News() {
                       )}
                       <div className="issueListBody">
                         <span className="issueCardSource">{issue.source_name || "이슈"}</span>
-                        <h2>{issue.title}</h2>
-                        {issue.summary && <p>{issue.summary}</p>}
+                        <h2>{getIssueDisplayTitle(issue)}</h2>
+                        {getIssueDisplaySummary(issue) && <p>{getIssueDisplaySummary(issue)}</p>}
                       </div>
                       <span className="issueListMore" aria-hidden="true">→</span>
                     </button>

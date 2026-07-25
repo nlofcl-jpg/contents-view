@@ -64,14 +64,9 @@ export default function IssueDetail() {
           )}
           <div className="issueDetailContent">
             <span className="issueCardSource">{issue.source_name || "이슈"}</span>
-            <h1>{issue.title}</h1>
-            {issue.summary && <p className="issueDetailSummary">{issue.summary}</p>}
-            {(issue.article_title || issue.article_summary) && (
-              <section className="issueArticleReference">
-                <span>관련 원문 기사</span>
-                {issue.article_title && <h2>{issue.article_title}</h2>}
-                {issue.article_summary && <p>{issue.article_summary}</p>}
-              </section>
+            <h1>{issue.article_title || issue.title}</h1>
+            {(issue.article_summary || issue.summary) && (
+              <p className="issueDetailSummary">{issue.article_summary || issue.summary}</p>
             )}
             {issue.article_url && (
               <a
