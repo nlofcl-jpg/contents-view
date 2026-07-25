@@ -68,8 +68,8 @@ export default function IssueDetail() {
             <img className="issueDetailImage" src={issue.thumbnail_url} alt="" />
           )}
           <div className="issueDetailContent">
-            {(issue.article_summary || issue.summary) && (
-              <p className="issueDetailSummary">{issue.article_summary || issue.summary}</p>
+            {(issue.summary || issue.article_summary) && (
+              <p className="issueDetailSummary">{issue.summary || issue.article_summary}</p>
             )}
             {issue.article_url && (
               <a
