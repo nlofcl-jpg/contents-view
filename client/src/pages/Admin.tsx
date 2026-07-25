@@ -719,25 +719,19 @@ function IssuesPanel() {
             >
               선택 삭제{selectedIssueIds.size > 0 ? ` (${selectedIssueIds.size})` : ""}
             </button>
-            <button
-              type="button"
-              className="rounded-md border border-red-500/70 px-3 py-1.5 text-xs text-red-200 transition hover:bg-red-500/10"
-              onClick={() => deleteIssues(filteredIssues.map(issue => issue.id), `현재 목록의 ${filteredIssues.length}개 이슈를 모두 삭제할까요?`)}
-            >
-              전체 삭제
-            </button>
           </div>
         )}
         {filteredIssues.length > 0 ? (
-          <div className="overflow-hidden rounded-md border border-slate-800">
-            <div className="grid grid-cols-[28px_minmax(0,1fr)_148px_196px] gap-3 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs text-slate-500">
+          <div className="overflow-x-auto rounded-md border border-slate-800">
+            <div className="min-w-[820px]">
+            <div className="grid grid-cols-[28px_minmax(260px,1fr)_180px_230px] gap-3 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs text-slate-500">
               <span aria-hidden="true" />
               <span>제목</span>
               <span>등록 상태 · 생성일</span>
               <span className="text-right">관리</span>
             </div>
             {filteredIssues.map(issue => (
-              <article key={issue.id} className="grid grid-cols-[28px_minmax(0,1fr)_148px_196px] items-center gap-3 border-b border-slate-800/80 px-4 py-3 last:border-b-0">
+              <article key={issue.id} className="grid grid-cols-[28px_minmax(260px,1fr)_180px_230px] items-center gap-3 border-b border-slate-800/80 px-4 py-3 last:border-b-0">
                 <input
                   type="checkbox"
                   className="h-4 w-4 accent-blue-500"
@@ -753,31 +747,31 @@ function IssuesPanel() {
                   <p className="truncate text-sm text-slate-100">{issue.title}</p>
                   <p className="mt-1 text-xs text-slate-500">{issue.is_published ? "공개" : "비공개"}</p>
                 </div>
-                <span className="flex items-center gap-2 text-xs text-slate-400">
+                <span className="flex items-center gap-2 whitespace-nowrap text-xs text-slate-400">
                   <span className={`h-2 w-2 rounded-full ${issue.registration_status === "connecting" ? "animate-pulse bg-blue-400" : issue.registration_status === "failed" ? "bg-amber-400" : "bg-emerald-400"}`} aria-hidden="true" />
                   <span>{issue.registration_status === "connecting" ? "등록 중" : issue.registration_status === "failed" ? "연결 실패" : "등록 완료"}</span>
                   <span className="text-slate-600">·</span>
                   <span>{formatCreatedAt(issue.created_at)}</span>
                 </span>
-                <div className="flex justify-end gap-2">
+                <div className="flex justify-end gap-2 whitespace-nowrap">
                   <button
                     type="button"
-                    className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-blue-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    className="whitespace-nowrap rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-blue-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={reconnectingIssueId === issue.id}
                     onClick={() => handleReconnectIssue(issue)}
                   >
-                    {reconnectingIssueId === issue.id ? "연결 중" : "뉴스 다시 연결"}
+                    {reconnectingIssueId === issue.id ? "연결 중" : "재연결"}
                   </button>
                   <button
                     type="button"
-                    className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:border-blue-400 hover:text-white"
+                    className="whitespace-nowrap rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:border-blue-400 hover:text-white"
                     onClick={() => handleEdit(issue)}
                   >
                     수정
                   </button>
                   <button
                     type="button"
-                    className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-400 hover:border-red-400 hover:text-red-300"
+                    className="whitespace-nowrap rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-400 hover:border-red-400 hover:text-red-300"
                     onClick={() => handleDelete(issue)}
                   >
                     삭제
@@ -785,6 +779,7 @@ function IssuesPanel() {
                 </div>
               </article>
             ))}
+            </div>
           </div>
         ) : (
           <p className="text-sm text-slate-500">조건에 맞는 이슈가 없습니다.</p>
