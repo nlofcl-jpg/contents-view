@@ -2584,6 +2584,32 @@ a {
   line-height: 1.8;
 }
 
+.issueArticleReference {
+  margin-top: 24px;
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
+  padding-top: 20px;
+}
+
+.issueArticleReference > span {
+  color: #7f9ec9;
+  font-size: 12px;
+}
+
+.issueArticleReference h2 {
+  margin: 8px 0 0;
+  color: #e5edf9;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.issueArticleReference p {
+  margin: 10px 0 0;
+  color: #9eabc1;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
 .issueOriginalLink {
   display: inline-flex;
   align-items: center;

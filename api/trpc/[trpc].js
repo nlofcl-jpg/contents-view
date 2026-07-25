@@ -6092,7 +6092,9 @@ var appRouter = router({
             title,
             articleUrl,
             sourceName,
-            matchedTitle: stripNaverHtml(item.title || "")
+            matchedTitle: stripNaverHtml(item.title || ""),
+            articleTitle: stripNaverHtml(item.title || ""),
+            articleSummary: stripNaverHtml(item.description || "")
           };
         } catch (error) {
           console.error("[Issue Clipping] Naver news match failed", { title, error });

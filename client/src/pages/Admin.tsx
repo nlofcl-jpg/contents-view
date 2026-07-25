@@ -82,6 +82,8 @@ type IssueRecord = {
   article_url: string | null;
   thumbnail_url: string | null;
   source_name: string | null;
+  article_title: string | null;
+  article_summary: string | null;
   is_published: boolean;
   registration_status: "connecting" | "complete" | "failed";
   registration_type: "manual" | "clipping";
@@ -251,7 +253,7 @@ function IssuesPanel() {
 
     const { data, error: loadError } = await supabase
       .from("issues")
-      .select("id,title,summary,article_url,thumbnail_url,source_name,is_published,registration_status,registration_type,created_at")
+      .select("id,title,summary,article_url,thumbnail_url,source_name,article_title,article_summary,is_published,registration_status,registration_type,created_at")
       .order("created_at", { ascending: false });
 
     if (loadError) {
@@ -388,6 +390,8 @@ function IssuesPanel() {
           ? {
               article_url: match.articleUrl,
               source_name: match.sourceName,
+              article_title: match.articleTitle,
+              article_summary: match.articleSummary,
               registration_status: "complete",
             }
           : { registration_status: "failed" },
@@ -507,6 +511,8 @@ function IssuesPanel() {
             ? {
                 article_url: match.articleUrl,
                 source_name: match.sourceName,
+                article_title: match.articleTitle,
+                article_summary: match.articleSummary,
                 registration_status: "complete",
               }
             : { registration_status: "failed" },
