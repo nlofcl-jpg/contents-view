@@ -6048,10 +6048,13 @@ var appRouter = router({
       }
       const stripNaverHtml = (value) => cheerio.load(value || "").text().replace(/\s+/g, " ").trim();
       const matches = await Promise.all(input.titles.map(async (title) => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8e3);
         try {
           const response = await fetch(
             `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(title)}&display=1&sort=date`,
             {
+              signal: controller.signal,
               headers: {
                 "X-Naver-Client-Id": clientId,
                 "X-Naver-Client-Secret": clientSecret
@@ -6077,6 +6080,8 @@ var appRouter = router({
         } catch (error) {
           console.error("[Issue Clipping] Naver news match failed", { title, error });
           return null;
+        } finally {
+          clearTimeout(timeout);
         }
       }));
       return matches.filter((match) => Boolean(match));

@@ -96,7 +96,7 @@ type ClippingEntry = {
 };
 
 function parseClippingEntries(value: string): ClippingEntry[] {
-  const numberedEntryPattern = /^\s*\d{1,2}[.)]\s+(.+)$/;
+  const numberedEntryPattern = /^\s*\d{1,2}[.)]\s*(.+)$/;
   const entries: Array<{ title: string; lines: string[] }> = [];
   let current: { title: string; lines: string[] } | null = null;
 
@@ -380,7 +380,7 @@ function IssuesPanel() {
 
     setIsClippingSaving(true);
     setError(null);
-    setMessage(null);
+    setMessage(`${clippingEntries.length}개 이슈의 네이버 뉴스 검색 중`);
 
     let matchedEntries: Array<ClippingEntry & { articleUrl: string; sourceName: string }> = [];
 
