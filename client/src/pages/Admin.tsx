@@ -399,6 +399,7 @@ function IssuesPanel() {
               article_title: match.articleTitle,
               article_summary: match.articleSummary,
               registration_status: "complete",
+              registration_type: "manual",
             }
           : { registration_status: "complete" },
       ).eq("id", issue.id);
@@ -548,6 +549,7 @@ function IssuesPanel() {
                 article_title: match.articleTitle,
                 article_summary: match.articleSummary,
                 registration_status: "complete",
+                registration_type: "manual",
               }
             : { registration_status: "failed" },
         ).eq("id", draft.id);
