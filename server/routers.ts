@@ -4682,6 +4682,82 @@ export const appRouter = router({
           };
         };
 
+        const outletNames: Record<string, string> = {
+          "ajunews.com": "아주경제",
+          "asiae.co.kr": "아시아경제",
+          "bizwatch.co.kr": "비즈워치",
+          "bloter.net": "블로터",
+          "chosun.com": "조선일보",
+          "dailian.co.kr": "데일리안",
+          "ddaily.co.kr": "디지털데일리",
+          "donga.com": "동아일보",
+          "edaily.co.kr": "이데일리",
+          "etnews.com": "전자신문",
+          "etoday.co.kr": "이투데이",
+          "fnnews.com": "파이낸셜뉴스",
+          "hankyung.com": "한국경제",
+          "hankooki.com": "한국일보",
+          "hani.co.kr": "한겨레",
+          "imbc.com": "MBC",
+          "jtbc.co.kr": "JTBC",
+          "kbs.co.kr": "KBS",
+          "kbanker.co.kr": "한국금융신문",
+          "khan.co.kr": "경향신문",
+          "kukinews.com": "쿠키뉴스",
+          "mk.co.kr": "매일경제",
+          "mt.co.kr": "머니투데이",
+          "munhwa.com": "문화일보",
+          "naver.com": "네이버 뉴스",
+          "news1.kr": "뉴스1",
+          "newsis.com": "뉴시스",
+          "newspim.com": "뉴스핌",
+          "nocutnews.co.kr": "노컷뉴스",
+          "ohmynews.com": "오마이뉴스",
+          "platum.kr": "플래텀",
+          "pressian.com": "프레시안",
+          "sbs.co.kr": "SBS",
+          "sedaily.com": "서울경제",
+          "seoul.co.kr": "서울신문",
+          "thefirstmedia.net": "더퍼스트미디어",
+          "yna.co.kr": "연합뉴스",
+          "zdnet.co.kr": "지디넷코리아",
+        };
+
+        const getOutletName = async (articleUrl: string) => {
+          let hostname = "";
+          try {
+            hostname = new URL(articleUrl).hostname.toLowerCase().replace(/^www\./, "");
+            const mappedOutlet = Object.entries(outletNames).find(([domain]) =>
+              hostname === domain || hostname.endsWith(`.${domain}`),
+            )?.[1];
+            if (mappedOutlet) return mappedOutlet;
+          } catch {
+            return "네이버 뉴스";
+          }
+
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 2_500);
+          try {
+            const response = await fetch(articleUrl, {
+              signal: controller.signal,
+              headers: { "User-Agent": "Mozilla/5.0 (compatible; ContentsView/1.0)" },
+            });
+            if (!response.ok) return hostname;
+
+            const html = await response.text();
+            const $ = cheerio.load(html);
+            const metaName =
+              $("meta[property='og:site_name']").attr("content") ||
+              $("meta[name='application-name']").attr("content") ||
+              $("meta[name='twitter:site']").attr("content");
+            return stripNaverHtml(metaName || hostname) || hostname;
+          } catch {
+            return hostname;
+          } finally {
+            clearTimeout(timeout);
+          }
+        };
+
         const excludedArticleUrls = new Set(input.excludeArticleUrls ?? []);
         const matches = await Promise.all(input.titles.map(async title => {
           const controller = new AbortController();
@@ -4719,12 +4795,7 @@ export const appRouter = router({
             const articleUrl = item?.articleUrl;
             if (!articleUrl) return null;
 
-            let sourceName = "네이버 뉴스";
-            try {
-              sourceName = new URL(articleUrl).hostname.replace(/^www\./, "");
-            } catch {
-              // Keep the neutral source label if a provider returns a malformed link.
-            }
+            const sourceName = await getOutletName(articleUrl);
 
             return {
               title,

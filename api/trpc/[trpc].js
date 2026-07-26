@@ -6065,6 +6065,75 @@ var appRouter = router({
           score: matchedTokenCount / Math.max(queryTokens.length, 1) + (phraseMatched ? 1 : 0)
         };
       };
+      const outletNames = {
+        "ajunews.com": "\uC544\uC8FC\uACBD\uC81C",
+        "asiae.co.kr": "\uC544\uC2DC\uC544\uACBD\uC81C",
+        "bizwatch.co.kr": "\uBE44\uC988\uC6CC\uCE58",
+        "bloter.net": "\uBE14\uB85C\uD130",
+        "chosun.com": "\uC870\uC120\uC77C\uBCF4",
+        "dailian.co.kr": "\uB370\uC77C\uB9AC\uC548",
+        "ddaily.co.kr": "\uB514\uC9C0\uD138\uB370\uC77C\uB9AC",
+        "donga.com": "\uB3D9\uC544\uC77C\uBCF4",
+        "edaily.co.kr": "\uC774\uB370\uC77C\uB9AC",
+        "etnews.com": "\uC804\uC790\uC2E0\uBB38",
+        "etoday.co.kr": "\uC774\uD22C\uB370\uC774",
+        "fnnews.com": "\uD30C\uC774\uB0B8\uC15C\uB274\uC2A4",
+        "hankyung.com": "\uD55C\uAD6D\uACBD\uC81C",
+        "hankooki.com": "\uD55C\uAD6D\uC77C\uBCF4",
+        "hani.co.kr": "\uD55C\uACA8\uB808",
+        "imbc.com": "MBC",
+        "jtbc.co.kr": "JTBC",
+        "kbs.co.kr": "KBS",
+        "kbanker.co.kr": "\uD55C\uAD6D\uAE08\uC735\uC2E0\uBB38",
+        "khan.co.kr": "\uACBD\uD5A5\uC2E0\uBB38",
+        "kukinews.com": "\uCFE0\uD0A4\uB274\uC2A4",
+        "mk.co.kr": "\uB9E4\uC77C\uACBD\uC81C",
+        "mt.co.kr": "\uBA38\uB2C8\uD22C\uB370\uC774",
+        "munhwa.com": "\uBB38\uD654\uC77C\uBCF4",
+        "naver.com": "\uB124\uC774\uBC84 \uB274\uC2A4",
+        "news1.kr": "\uB274\uC2A41",
+        "newsis.com": "\uB274\uC2DC\uC2A4",
+        "newspim.com": "\uB274\uC2A4\uD54C",
+        "nocutnews.co.kr": "\uB178\uCEF7\uB274\uC2A4",
+        "ohmynews.com": "\uC624\uB9C8\uC774\uB274\uC2A4",
+        "platum.kr": "\uD50C\uB798\uD140",
+        "pressian.com": "\uD504\uB808\uC2DC\uC548",
+        "sbs.co.kr": "SBS",
+        "sedaily.com": "\uC11C\uC6B8\uACBD\uC81C",
+        "seoul.co.kr": "\uC11C\uC6B8\uC2E0\uBB38",
+        "thefirstmedia.net": "\uB354\uD37C\uC2A4\uD2B8\uBBF8\uB514\uC5B4",
+        "yna.co.kr": "\uC5F0\uD569\uB274\uC2A4",
+        "zdnet.co.kr": "\uC9C0\uB514\uB137\uCF54\uB9AC\uC544"
+      };
+      const getOutletName = async (articleUrl) => {
+        let hostname = "";
+        try {
+          hostname = new URL(articleUrl).hostname.toLowerCase().replace(/^www\./, "");
+          const mappedOutlet = Object.entries(outletNames).find(
+            ([domain]) => hostname === domain || hostname.endsWith(`.${domain}`)
+          )?.[1];
+          if (mappedOutlet) return mappedOutlet;
+        } catch {
+          return "\uB124\uC774\uBC84 \uB274\uC2A4";
+        }
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 2500);
+        try {
+          const response = await fetch(articleUrl, {
+            signal: controller.signal,
+            headers: { "User-Agent": "Mozilla/5.0 (compatible; ContentsView/1.0)" }
+          });
+          if (!response.ok) return hostname;
+          const html = await response.text();
+          const $ = cheerio.load(html);
+          const metaName = $("meta[property='og:site_name']").attr("content") || $("meta[name='application-name']").attr("content") || $("meta[name='twitter:site']").attr("content");
+          return stripNaverHtml(metaName || hostname) || hostname;
+        } catch {
+          return hostname;
+        } finally {
+          clearTimeout(timeout);
+        }
+      };
       const excludedArticleUrls = new Set(input.excludeArticleUrls ?? []);
       const matches = await Promise.all(input.titles.map(async (title) => {
         const controller = new AbortController();
@@ -6089,11 +6158,7 @@ var appRouter = router({
           })).filter(({ articleUrl: articleUrl2 }) => articleUrl2 && !excludedArticleUrls.has(articleUrl2)).filter(({ match }) => match.isRelevant).sort((left, right) => right.match.score - left.match.score)[0];
           const articleUrl = item?.articleUrl;
           if (!articleUrl) return null;
-          let sourceName = "\uB124\uC774\uBC84 \uB274\uC2A4";
-          try {
-            sourceName = new URL(articleUrl).hostname.replace(/^www\./, "");
-          } catch {
-          }
+          const sourceName = await getOutletName(articleUrl);
           return {
             title,
             articleUrl,
