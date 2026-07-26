@@ -578,12 +578,10 @@ function IssuesPanel() {
       <ManagementToolbar
         title={issueListMode === "clipping" ? "클리핑 관리" : "이슈 관리"}
         description={issueListMode === "clipping" ? "등록된 뉴스 클리핑 초안을 관리하세요." : "수동으로 등록한 이슈를 관리하세요."}
-        createLabel="새 이슈 등록"
-        secondaryCreateLabel="새 클리핑 등록"
+        createLabel={issueListMode === "clipping" ? "새 클리핑 등록" : "새 이슈 등록"}
         visibility={visibility}
         sortDirection={sortDirection}
-        onCreate={handleCreate}
-        onSecondaryCreate={handleClippingCreate}
+        onCreate={issueListMode === "clipping" ? handleClippingCreate : handleCreate}
         onVisibilityChange={setVisibility}
         onSortChange={setSortDirection}
         onReset={() => {
