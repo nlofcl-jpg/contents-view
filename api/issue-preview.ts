@@ -26,6 +26,17 @@ function getQueryValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+function getIssueId(req: any) {
+  const queryId = getQueryValue(req.query?.id);
+  if (queryId) return queryId;
+
+  try {
+    return new URL(req.url ?? "", "https://contents-view-chi.vercel.app").searchParams.get("id");
+  } catch {
+    return null;
+  }
+}
+
 function renderPreviewHtml({ title, description, imageUrl, pageUrl, sourceName }: {
   title: string;
   description: string;
@@ -65,7 +76,7 @@ function renderPreviewHtml({ title, description, imageUrl, pageUrl, sourceName }
 }
 
 export default async function handler(req: any, res: any) {
-  const issueId = getQueryValue(req.query?.id);
+  const issueId = getIssueId(req);
   const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
   const supabaseKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY ??
@@ -73,6 +84,7 @@ export default async function handler(req: any, res: any) {
     process.env.VITE_SUPABASE_ANON_KEY;
 
   if (!issueId || !supabaseUrl || !supabaseKey) {
+    res.setHeader("X-Issue-Preview-Status", !issueId ? "missing-id" : "missing-config");
     res.status(404).send("Not found");
     return;
   }
@@ -88,6 +100,11 @@ export default async function handler(req: any, res: any) {
     .maybeSingle();
 
   if (error || !data) {
+    console.error("[Issue preview] Failed to load issue", {
+      issueId,
+      error: error?.message ?? null,
+    });
+    res.setHeader("X-Issue-Preview-Status", error ? "query-failed" : "issue-not-found");
     res.status(404).send("Not found");
     return;
   }
@@ -104,6 +121,7 @@ export default async function handler(req: any, res: any) {
 
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=600");
+  res.setHeader("X-Issue-Preview-Status", "ready");
   res.status(200).send(
     renderPreviewHtml({
       title,
