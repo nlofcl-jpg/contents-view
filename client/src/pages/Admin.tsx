@@ -767,15 +767,16 @@ function IssuesPanel() {
         )}
         {filteredIssues.length > 0 ? (
           <div className="overflow-x-auto rounded-md border border-slate-800">
-            <div className="min-w-[900px]">
-            <div className="grid grid-cols-[28px_minmax(260px,1fr)_180px_298px] gap-3 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs text-slate-500">
+            <div className="min-w-[940px]">
+            <div className="grid grid-cols-[28px_minmax(260px,1fr)_112px_120px_298px] gap-4 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs text-slate-500">
               <span aria-hidden="true" />
               <span>제목</span>
-              <span>등록 상태 · 생성일</span>
+              <span>등록 상태</span>
+              <span>생성일</span>
               <span className="text-right">관리</span>
             </div>
             {filteredIssues.map(issue => (
-              <article key={issue.id} className="grid grid-cols-[28px_minmax(260px,1fr)_180px_298px] items-center gap-3 border-b border-slate-800/80 px-4 py-3 last:border-b-0">
+              <article key={issue.id} className="grid grid-cols-[28px_minmax(260px,1fr)_112px_120px_298px] items-center gap-4 border-b border-slate-800/80 px-4 py-3 last:border-b-0">
                 <input
                   type="checkbox"
                   className="h-4 w-4 accent-blue-500"
@@ -794,9 +795,8 @@ function IssuesPanel() {
                 <span className="flex items-center gap-2 whitespace-nowrap text-xs text-slate-400">
                   <span className={`h-2 w-2 rounded-full ${issue.registration_status === "connecting" ? "animate-pulse bg-blue-400" : issue.registration_status === "failed" ? "bg-amber-400" : "bg-emerald-400"}`} aria-hidden="true" />
                   <span>{issue.registration_status === "connecting" ? "등록 중" : issue.registration_status === "failed" ? "연결 실패" : "등록 완료"}</span>
-                  <span className="text-slate-600">·</span>
-                  <span>{formatCreatedAt(issue.created_at)}</span>
                 </span>
+                <span className="whitespace-nowrap text-xs text-slate-400">{formatCreatedAt(issue.created_at)}</span>
                 <div className="flex justify-end gap-2 whitespace-nowrap">
                   <select
                     aria-label={`${issue.title} 공개 상태`}
