@@ -386,7 +386,10 @@ function IssuesPanel() {
     await loadIssues();
 
     try {
-      const matches = await matchClippingNewsMutation.mutateAsync({ titles: [issue.title] });
+      const matches = await matchClippingNewsMutation.mutateAsync({
+        titles: [issue.title],
+        excludeArticleUrls: issue.article_url ? [issue.article_url] : [],
+      });
       const match = matches[0];
       const { error: updateError } = await supabase.from("issues").update(
         match
@@ -397,11 +400,11 @@ function IssuesPanel() {
               article_summary: match.articleSummary,
               registration_status: "complete",
             }
-          : { registration_status: "failed" },
+          : { registration_status: "complete" },
       ).eq("id", issue.id);
 
       if (updateError) throw updateError;
-      setMessage(match ? `'${issue.title}' 뉴스 연결 완료` : `'${issue.title}'에 맞는 뉴스 결과가 없습니다.`);
+      setMessage(match ? `'${issue.title}' 뉴스 재연결 완료` : `'${issue.title}'에 맞는 다른 뉴스 결과가 없어 기존 연결을 유지했습니다.`);
     } catch (reconnectError) {
       await supabase.from("issues").update({ registration_status: "failed" }).eq("id", issue.id);
       setError(reconnectError instanceof Error ? reconnectError.message : "뉴스 다시 연결 중 오류가 발생했습니다.");

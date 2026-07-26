@@ -4645,6 +4645,7 @@ export const appRouter = router({
     matchClippingNews: adminProcedure
       .input(z.object({
         titles: z.array(z.string().trim().min(2).max(160)).min(1).max(20),
+        excludeArticleUrls: z.array(z.string().url()).max(20).optional(),
       }))
       .mutation(async ({ input }) => {
         const clientId = process.env.NAVER_CLIENT_ID || "";
@@ -4681,6 +4682,7 @@ export const appRouter = router({
           };
         };
 
+        const excludedArticleUrls = new Set(input.excludeArticleUrls ?? []);
         const matches = await Promise.all(input.titles.map(async title => {
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 8_000);
@@ -4706,10 +4708,15 @@ export const appRouter = router({
               description?: string;
             }> };
             const item = (data.items ?? [])
-              .map(item => ({ item, match: scoreNewsMatch(title, item.title || "") }))
+              .map(item => ({
+                item,
+                articleUrl: item.originallink || item.link || "",
+                match: scoreNewsMatch(title, item.title || ""),
+              }))
+              .filter(({ articleUrl }) => articleUrl && !excludedArticleUrls.has(articleUrl))
               .filter(({ match }) => match.isRelevant)
-              .sort((left, right) => right.match.score - left.match.score)[0]?.item;
-            const articleUrl = item?.originallink || item?.link;
+              .sort((left, right) => right.match.score - left.match.score)[0];
+            const articleUrl = item?.articleUrl;
             if (!articleUrl) return null;
 
             let sourceName = "네이버 뉴스";
@@ -4723,9 +4730,9 @@ export const appRouter = router({
               title,
               articleUrl,
               sourceName,
-              matchedTitle: stripNaverHtml(item.title || ""),
-              articleTitle: stripNaverHtml(item.title || ""),
-              articleSummary: stripNaverHtml(item.description || ""),
+              matchedTitle: stripNaverHtml(item.item.title || ""),
+              articleTitle: stripNaverHtml(item.item.title || ""),
+              articleSummary: stripNaverHtml(item.item.description || ""),
             };
           } catch (error) {
             console.error("[Issue Clipping] Naver news match failed", { title, error });
