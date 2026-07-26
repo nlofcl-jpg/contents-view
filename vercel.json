@@ -10,7 +10,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(facebookexternalhit|Facebot|Twitterbot|Slackbot|Discordbot|LinkedInBot|WhatsApp|TelegramBot|KakaoTalk|KAKAOTALK|naverbot|Googlebot|bingbot|Baiduspider|Yeti|bot).*"
+          "value": ".*(facebookexternalhit|Facebot|Twitterbot|Slackbot|Discordbot|LinkedInBot|WhatsApp|TelegramBot|KakaoTalk-Scrap|kakaotalk-scrap|naverbot|Googlebot|bingbot|Baiduspider|Yeti|Applebot).*"
         }
       ],
       "destination": "/api/issue-preview?id=:id"
