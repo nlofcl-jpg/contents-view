@@ -2647,6 +2647,14 @@ a {
   text-align: center;
 }
 
+.newsSearchTabPanel {
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-top: 28px;
+  padding-bottom: 36px;
+  border-top: 1px solid rgba(110, 147, 203, 0.18);
+}
+
 .newsSearchTitle {
   margin: 0;
   color: #f8fafc;
@@ -2810,8 +2818,8 @@ a {
 
   .newsContentTab {
     height: 32px;
-    min-width: 78px;
-    padding: 0 16px;
+    min-width: 72px;
+    padding: 0 14px;
     font-size: 13px;
   }
 
@@ -2880,6 +2888,12 @@ a {
   .newsSearchSection {
     max-width: none;
     margin-top: -24px;
+  }
+
+  .newsSearchTabPanel {
+    margin-top: 0;
+    padding-top: 22px;
+    padding-bottom: 28px;
   }
 
   .newsSearchTitle {

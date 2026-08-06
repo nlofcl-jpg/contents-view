@@ -105,7 +105,7 @@ export default function News() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [activeContentTab, setActiveContentTab] = useState<"news" | "issues">("news");
+  const [activeContentTab, setActiveContentTab] = useState<"news" | "issues" | "search">("news");
   const [newsSessionCache, setNewsSessionCache] = useState<NewsSessionCache | null>(readNewsSessionCache);
   const [issues, setIssues] = useState<PublishedIssue[]>([]);
   const [issuesPage, setIssuesPage] = useState(1);
@@ -354,6 +354,15 @@ export default function News() {
           >
             이슈
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeContentTab === "search"}
+            className={`newsContentTab ${activeContentTab === "search" ? "active" : ""}`}
+            onClick={() => setActiveContentTab("search")}
+          >
+            검색
+          </button>
         </div>
       </div>
 
@@ -426,23 +435,6 @@ export default function News() {
         </div>
       )}
 
-      {/* News Search */}
-      <section className="newsSearchSection" aria-labelledby="news-search-title">
-        <h2 id="news-search-title" className="newsSearchTitle">뉴스 검색</h2>
-        <form onSubmit={handleSearch} className="newsSearchForm">
-          <input
-            type="text"
-            placeholder="관심 키워드를 검색해보세요."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="newsSearchInput"
-          />
-          <button type="submit" className="newsSearchIconButton" aria-label="검색">
-            <Search size={19} strokeWidth={2.1} />
-          </button>
-        </form>
-      </section>
-
       {/* Latest News List */}
       <div>
         <h2 className="text-2xl font-bold text-white mb-6">최신 뉴스</h2>
@@ -506,7 +498,7 @@ export default function News() {
         )}
       </div>
         </>
-      ) : (
+      ) : activeContentTab === "issues" ? (
         <section className="issuesSection" role="tabpanel" aria-label="이슈 목록">
           {isLoadingIssues ? (
             <p className="issuesStatus">이슈를 불러오는 중입니다.</p>
@@ -585,6 +577,22 @@ export default function News() {
               )}
             </>
           )}
+        </section>
+      ) : (
+        <section className="newsSearchSection newsSearchTabPanel" role="tabpanel" aria-label="뉴스 검색">
+          <form onSubmit={handleSearch} className="newsSearchForm">
+            <input
+              type="text"
+              placeholder="관심 키워드를 검색해보세요."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="newsSearchInput"
+              autoFocus
+            />
+            <button type="submit" className="newsSearchIconButton" aria-label="검색">
+              <Search size={19} strokeWidth={2.1} />
+            </button>
+          </form>
         </section>
       )}
     </div>
