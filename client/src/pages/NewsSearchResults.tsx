@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, ChevronDown, Loader2, Search } from "lucide-react";
+import { ChevronDown, Loader2, Search } from "lucide-react";
 import { useLocation } from "wouter";
 
 interface NewsItem {
@@ -72,12 +72,40 @@ export default function NewsSearchResults() {
   return (
     <div className="pageContainer">
       <div className="pageHeader">
-        <h1 className="pageTitle">뉴스 검색</h1>
-        <p className="pageDescription">키워드 기반 네이버 뉴스 검색 결과를 확인하세요.</p>
+        <h1 className="pageTitle">뉴스 & 이슈</h1>
+        <p className="pageDescription">오늘 주목받는 이슈를 빠르게 확인하고 콘텐츠 아이디어로 연결해보세요.</p>
+        <div className="newsContentTabs" role="tablist" aria-label="뉴스 및 이슈 분류">
+          <button
+            type="button"
+            role="tab"
+            aria-selected="false"
+            className="newsContentTab"
+            onClick={() => setLocation("/news")}
+          >
+            뉴스
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected="false"
+            className="newsContentTab"
+            onClick={() => setLocation("/news?tab=issues")}
+          >
+            이슈
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected="true"
+            className="newsContentTab active"
+          >
+            검색
+          </button>
+        </div>
       </div>
 
       <section className="newsSearchSection" aria-labelledby="news-search-result-title">
-        <h2 id="news-search-result-title" className="newsSearchTitle">키워드 이슈 검색</h2>
+        <h2 id="news-search-result-title" className="newsSearchTitle">뉴스 검색</h2>
         <form onSubmit={handleSearch} className="newsSearchForm">
           <input
             type="text"
@@ -93,10 +121,6 @@ export default function NewsSearchResults() {
       </section>
 
       <section className="newsSearchResultsSection">
-        <a href="/news" className="newsSearchBackLink">
-          <ArrowLeft size={13} strokeWidth={1.8} aria-hidden="true" />
-          <span>뉴스이슈 바로가기</span>
-        </a>
         {keyword && <h2 className="newsSearchResultTitle">뉴스 검색결과: {keyword}</h2>}
 
         {isLoadingSearch ? (
