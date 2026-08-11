@@ -89,7 +89,7 @@ export default function NewsSearchResults() {
             role="tab"
             aria-selected="false"
             className="newsContentTab"
-            onClick={() => setLocation("/news?tab=issues")}
+            onClick={() => setLocation("/news/issues")}
           >
             이슈
           </button>

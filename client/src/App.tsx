@@ -37,6 +37,7 @@ function Router() {
       <Route path={"/community"} component={Community} />
       <Route path={"/saved-contents"} component={SavedContents} />
       <Route path={"/news/search"} component={NewsSearchResults} />
+      <Route path={"/news/issues"} component={News} />
       <Route path={"/news/issues/:id"} component={IssueDetail} />
       <Route path={"/news"} component={News} />
       <Route path={"/ai-studio/flow-automation"} component={FlowAutomation} />

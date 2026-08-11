@@ -44,7 +44,7 @@ const NEWS_SESSION_CACHE_KEY = "contents-view-news-page-cache-v1";
 
 function getInitialContentTab(): "news" | "issues" | "search" {
   if (typeof window === "undefined") return "news";
-  return new URLSearchParams(window.location.search).get("tab") === "issues" ? "issues" : "news";
+  return window.location.pathname === "/news/issues" ? "issues" : "news";
 }
 
 function getIssueDisplayTitle(issue: PublishedIssue) {
@@ -120,8 +120,7 @@ export default function News() {
   const shouldFetchFeaturedNews = !newsSessionCache;
 
   useEffect(() => {
-    const requestedTab = new URLSearchParams(window.location.search).get("tab");
-    setActiveContentTab(requestedTab === "issues" ? "issues" : "news");
+    setActiveContentTab(window.location.pathname === "/news/issues" ? "issues" : "news");
   }, [location]);
 
   // Category definitions
@@ -365,7 +364,7 @@ export default function News() {
             className={`newsContentTab ${activeContentTab === "issues" ? "active" : ""}`}
             onClick={() => {
               setActiveContentTab("issues");
-              setLocation("/news?tab=issues");
+              setLocation("/news/issues");
             }}
           >
             이슈
@@ -375,7 +374,7 @@ export default function News() {
             role="tab"
             aria-selected={activeContentTab === "search"}
             className={`newsContentTab ${activeContentTab === "search" ? "active" : ""}`}
-            onClick={() => setActiveContentTab("search")}
+            onClick={() => setLocation("/news/search")}
           >
             검색
           </button>

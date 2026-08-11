@@ -48,7 +48,7 @@ export default function IssueDetail() {
 
   return (
     <div className="pageContainer issueDetailPage">
-      <button type="button" className="issueBackButton" onClick={() => setLocation("/news")}>
+      <button type="button" className="issueBackButton" onClick={() => setLocation("/news/issues")}>
         <ArrowLeft size={15} aria-hidden="true" />
         뉴스 & 이슈
       </button>

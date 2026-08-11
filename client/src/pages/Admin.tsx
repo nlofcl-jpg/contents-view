@@ -16,9 +16,23 @@ const adminTabs: Array<{ id: AdminTab; label: string }> = [
 
 export default function Admin() {
   const { user, loading, isAuthenticated } = useAuth();
-  const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<AdminTab>("notices");
+  const [location, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState<AdminTab>(() => {
+    if (typeof window === "undefined") return "notices";
+    const requestedTab = new URLSearchParams(window.location.search).get("tab");
+    return adminTabs.some(tab => tab.id === requestedTab) ? requestedTab as AdminTab : "notices";
+  });
   const isAdmin = isAuthenticated && user?.role === "admin";
+
+  useEffect(() => {
+    const requestedTab = new URLSearchParams(window.location.search).get("tab");
+    setActiveTab(adminTabs.some(tab => tab.id === requestedTab) ? requestedTab as AdminTab : "notices");
+  }, [location]);
+
+  const handleAdminTabChange = (tab: AdminTab) => {
+    setActiveTab(tab);
+    setLocation(tab === "notices" ? "/admin" : `/admin?tab=${tab}`);
+  };
 
   if (loading) {
     return (
@@ -60,7 +74,7 @@ export default function Admin() {
                 ? "border-blue-400 text-white"
                 : "border-transparent text-slate-400 hover:text-slate-100"
             }`}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => handleAdminTabChange(tab.id)}
           >
             {tab.label}
           </button>

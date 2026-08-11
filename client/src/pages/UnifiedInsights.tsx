@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { UnifiedChart } from "@/components/UnifiedChart";
 import { ChevronDown, CircleAlert, ExternalLink, Heart, ListFilter, Loader2, MessageCircle } from "lucide-react";
+import { useLocation } from "wouter";
 
 type InsightPoint = {
   period: string;
@@ -166,13 +167,18 @@ const createEmptyTabSearchState = (): TabSearchState => ({
 
 export default function UnifiedInsights() {
   // State management
+  const [location, setLocation] = useLocation();
   const [keywords, setKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState("");
   const [isKeywordInputFocused, setIsKeywordInputFocused] = useState(false);
   const [searchMode, setSearchMode] = useState<SearchMode>("analysis");
   const [isSearchModeOpen, setIsSearchModeOpen] = useState(false);
   const [infoPopup, setInfoPopup] = useState<{ title: string; body: string } | null>(null);
-  const [activeInsightTab, setActiveInsightTab] = useState<InsightTab>("content");
+  const [activeInsightTab, setActiveInsightTab] = useState<InsightTab>(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "seller"
+      ? "seller"
+      : "content",
+  );
   const [tabSearchStates, setTabSearchStates] = useState<Record<InsightTab, TabSearchState>>({
     content: createEmptyTabSearchState(),
     seller: createEmptyTabSearchState(),
@@ -237,7 +243,7 @@ export default function UnifiedInsights() {
     setFilterLabelForChart(state.filterLabelForChart);
   };
 
-  const handleInsightTabChange = (nextTab: InsightTab) => {
+  const handleInsightTabChange = (nextTab: InsightTab, syncUrl = true) => {
     if (nextTab === activeInsightTab) return;
 
     const currentState = getCurrentTabSearchState();
@@ -255,7 +261,27 @@ export default function UnifiedInsights() {
     setIsKeywordGradeInfoOpen(false);
     setIsRelatedSortOpen(false);
     setActiveInsightTab(nextTab);
+
+    if (syncUrl) {
+      const params = new URLSearchParams(window.location.search);
+      if (nextTab === "content") {
+        params.delete("tab");
+      } else {
+        params.set("tab", nextTab);
+      }
+      const queryString = params.toString();
+      setLocation(`${window.location.pathname}${queryString ? `?${queryString}` : ""}`);
+    }
   };
+
+  useEffect(() => {
+    const requestedTab: InsightTab = new URLSearchParams(window.location.search).get("tab") === "seller"
+      ? "seller"
+      : "content";
+    if (requestedTab !== activeInsightTab) {
+      handleInsightTabChange(requestedTab, false);
+    }
+  }, [location]);
 
   const getInitialKeywordFromUrl = () => {
     if (typeof window === "undefined") return "";

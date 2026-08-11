@@ -1,6 +1,6 @@
 import { Download, ExternalLink, FolderDown, Sparkles } from "lucide-react";
-import { useState } from "react";
-import { Link } from "wouter";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "wouter";
 
 type StudioTab = "programs" | "upcoming";
 
@@ -26,7 +26,21 @@ const programs: Program[] = [
 ];
 
 export default function AIStudio() {
-  const [activeTab, setActiveTab] = useState<StudioTab>("programs");
+  const [location, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState<StudioTab>(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "upcoming"
+      ? "upcoming"
+      : "programs",
+  );
+
+  useEffect(() => {
+    setActiveTab(new URLSearchParams(window.location.search).get("tab") === "upcoming" ? "upcoming" : "programs");
+  }, [location]);
+
+  const handleTabChange = (tab: StudioTab) => {
+    setActiveTab(tab);
+    setLocation(tab === "programs" ? "/ai-studio" : "/ai-studio?tab=upcoming");
+  };
 
   return (
     <div className="aiStudioPageContainer">
@@ -42,7 +56,7 @@ export default function AIStudio() {
           aria-selected={activeTab === "programs"}
           aria-controls="ai-studio-programs"
           className={`aiStudioTab ${activeTab === "programs" ? "active" : ""}`}
-          onClick={() => setActiveTab("programs")}
+          onClick={() => handleTabChange("programs")}
         >
           프로그램
         </button>
@@ -52,7 +66,7 @@ export default function AIStudio() {
           aria-selected={activeTab === "upcoming"}
           aria-controls="ai-studio-upcoming"
           className={`aiStudioTab ${activeTab === "upcoming" ? "active" : ""}`}
-          onClick={() => setActiveTab("upcoming")}
+          onClick={() => handleTabChange("upcoming")}
         >
           준비중
         </button>

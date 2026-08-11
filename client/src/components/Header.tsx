@@ -46,7 +46,7 @@ export default function Header({
 
   const newsItems = [
     { name: "뉴스", path: "/news" },
-    { name: "이슈", path: "/news?tab=issues" },
+    { name: "이슈", path: "/news/issues" },
     { name: "검색", path: "/news/search" },
   ];
 

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useBookmark } from "@/contexts/BookmarkContext";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
 import { ChevronDown, Trash2, ExternalLink } from "lucide-react";
+import { useLocation } from "wouter";
 
 // Format view count (e.g., 74540 → 7.4만)
 const formatViewCount = (count: string): string => {
@@ -57,16 +58,43 @@ const VIDEO_PLATFORMS = [
 ];
 
 export default function SavedContents() {
+  const [location, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
   const { bookmarkedYouTubeVideos, removeYouTubeBookmark } = useBookmark();
-  const [activeSectionId, setActiveSectionId] = useState(SECTIONS[0].id);
-  const [selectedVideoPlatformId, setSelectedVideoPlatformId] = useState(VIDEO_PLATFORMS[0].id);
+  const [activeSectionId, setActiveSectionId] = useState(() => {
+    if (typeof window === "undefined") return SECTIONS[0].id;
+    const requestedSection = new URLSearchParams(window.location.search).get("tab");
+    return SECTIONS.some(section => section.id === requestedSection) ? requestedSection! : SECTIONS[0].id;
+  });
+  const [selectedVideoPlatformId, setSelectedVideoPlatformId] = useState(() => {
+    if (typeof window === "undefined") return VIDEO_PLATFORMS[0].id;
+    const requestedPlatform = new URLSearchParams(window.location.search).get("platform");
+    return VIDEO_PLATFORMS.some(platform => platform.id === requestedPlatform) ? requestedPlatform! : VIDEO_PLATFORMS[0].id;
+  });
   const [isVideoPlatformMenuOpen, setIsVideoPlatformMenuOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const activeSection = SECTIONS.find((section) => section.id === activeSectionId) || SECTIONS[0];
   const selectedVideoPlatform =
     VIDEO_PLATFORMS.find((platform) => platform.id === selectedVideoPlatformId) || VIDEO_PLATFORMS[0];
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedSection = params.get("tab");
+    const requestedPlatform = params.get("platform");
+    setActiveSectionId(SECTIONS.some(section => section.id === requestedSection) ? requestedSection! : SECTIONS[0].id);
+    setSelectedVideoPlatformId(
+      VIDEO_PLATFORMS.some(platform => platform.id === requestedPlatform) ? requestedPlatform! : VIDEO_PLATFORMS[0].id,
+    );
+  }, [location]);
+
+  const syncSavedContentsUrl = (sectionId: string, platformId = selectedVideoPlatformId) => {
+    const params = new URLSearchParams();
+    if (sectionId !== SECTIONS[0].id) params.set("tab", sectionId);
+    if (sectionId === "youtube" && platformId !== VIDEO_PLATFORMS[0].id) params.set("platform", platformId);
+    const queryString = params.toString();
+    setLocation(`/saved-contents${queryString ? `?${queryString}` : ""}`);
+  };
 
   const renderSectionContent = () => {
     if (
@@ -136,6 +164,7 @@ export default function SavedContents() {
   const handleSectionChange = (sectionId: string) => {
     setActiveSectionId(sectionId);
     setIsVideoPlatformMenuOpen(false);
+    syncSavedContentsUrl(sectionId);
   };
 
   return (
@@ -168,6 +197,7 @@ export default function SavedContents() {
                   className={`savedContentsTab savedContentsTabWithChevron ${activeSection.id === section.id ? "active" : ""}`}
                   onClick={() => {
                     setActiveSectionId(section.id);
+                    syncSavedContentsUrl(section.id);
                     setIsVideoPlatformMenuOpen((isOpen) => !isOpen);
                   }}
                 >
@@ -213,6 +243,7 @@ export default function SavedContents() {
                 onClick={() => {
                   setSelectedVideoPlatformId(platform.id);
                   setActiveSectionId("youtube");
+                  syncSavedContentsUrl("youtube", platform.id);
                   setIsVideoPlatformMenuOpen(false);
                 }}
               >

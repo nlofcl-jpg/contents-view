@@ -22,6 +22,12 @@ const TABS = [
   { id: "shorts", label: "쇼츠 트렌드" },
 ] as const;
 
+function getInitialYouTubeTab(): TabType {
+  if (typeof window === "undefined") return "trending";
+  const requestedTab = new URLSearchParams(window.location.search).get("tab");
+  return TABS.some(tab => tab.id === requestedTab) ? requestedTab as TabType : "trending";
+}
+
 const ANALYSIS_SORT_OPTIONS: { value: AnalysisSortType; label: string }[] = [
   { value: "relevance", label: "관련도순" },
   { value: "publishedAt", label: "최신순" },
@@ -177,10 +183,10 @@ function formatDate(dateString: string): string {
 }
 
 export default function YouTubeTrends() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { toggleYouTubeBookmark, isYouTubeVideoBookmarked, isBookmarkPending } = useBookmark();
-  const [activeTab, setActiveTab] = useState<TabType>("trending");
+  const [activeTab, setActiveTab] = useState<TabType>(getInitialYouTubeTab);
   const [isMobileTabMenuOpen, setIsMobileTabMenuOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -203,11 +209,14 @@ export default function YouTubeTrends() {
     const targetTab = searchParams.get("tab");
     const keywordFromUrl = searchParams.get("keyword")?.trim() || "";
 
-    if (targetTab !== "analysis" || !keywordFromUrl || isYouTubeUrl(keywordFromUrl)) {
+    if (!TABS.some(tab => tab.id === targetTab)) {
+      setActiveTab("trending");
       return;
     }
 
-    setActiveTab("analysis");
+    setActiveTab(targetTab as TabType);
+    if (targetTab !== "analysis" || !keywordFromUrl || isYouTubeUrl(keywordFromUrl)) return;
+
     setAnalysisInput(keywordFromUrl);
     setSubmittedAnalysisKeyword(keywordFromUrl);
     setAnalysisMode("keyword");
@@ -596,6 +605,7 @@ export default function YouTubeTrends() {
   const handleTabChange = (tabId: TabType) => {
     setActiveTab(tabId);
     setIsMobileTabMenuOpen(false);
+    setLocation(tabId === "trending" ? "/trends/youtube" : `/trends/youtube?tab=${tabId}`);
   };
 
   const handleAnalysisKeywordSearch = () => {
