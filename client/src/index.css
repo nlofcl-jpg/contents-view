@@ -7806,10 +7806,23 @@ input[type="date"].youtubeSelect {
   border-radius: 6px;
   background: #1e73dc;
   color: #ffffff;
+  cursor: pointer;
   font-size: 14px;
   font-weight: 400;
   text-decoration: none;
   transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.flowAutomationDownloadButton:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.flowAutomationDownloadError {
+  margin: 10px 0 0;
+  color: #ff9b9b;
+  font-size: 12px;
+  font-weight: 400;
 }
 
 .flowAutomationDownloadButton:hover {

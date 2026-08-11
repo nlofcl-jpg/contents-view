@@ -1,6 +1,7 @@
 import { Download, ExternalLink, FolderDown, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 type StudioTab = "programs" | "upcoming";
 
@@ -10,7 +11,6 @@ type Program = {
   summary: string;
   category: string;
   detailPath?: string;
-  downloadUrl?: string;
   sourceUrl?: string;
 };
 
@@ -21,12 +21,12 @@ const programs: Program[] = [
     summary: "Google Flow에서 이미지 작업을 자동화하여 빠르게 작업하세요.",
     category: "Chrome 확장프로그램",
     detailPath: "/ai-studio/flow-automation",
-    downloadUrl: "/downloads/contents-view-flow-automation.zip",
   },
 ];
 
 export default function AIStudio() {
   const [location, setLocation] = useLocation();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<StudioTab>(() =>
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "upcoming"
       ? "upcoming"
@@ -40,6 +40,19 @@ export default function AIStudio() {
   const handleTabChange = (tab: StudioTab) => {
     setActiveTab(tab);
     setLocation(tab === "programs" ? "/ai-studio" : "/ai-studio?tab=upcoming");
+  };
+
+  const handleProgramDownload = (program: Program) => {
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      const redirectPath = program.detailPath || "/ai-studio";
+      setLocation(`/login?redirect=${encodeURIComponent(redirectPath)}`);
+      return;
+    }
+
+    if (program.detailPath) {
+      setLocation(program.detailPath);
+    }
   };
 
   return (
@@ -83,15 +96,15 @@ export default function AIStudio() {
                   <p>{program.summary}</p>
                   <div className="aiStudioProgramActions">
                     {program.detailPath ? (
-                      <Link className="aiStudioPrimaryAction" href={program.detailPath}>
+                      <button
+                        type="button"
+                        className="aiStudioPrimaryAction"
+                        onClick={() => handleProgramDownload(program)}
+                        disabled={authLoading}
+                      >
                         <Download aria-hidden="true" />
                         다운로드
-                      </Link>
-                    ) : program.downloadUrl ? (
-                      <a className="aiStudioPrimaryAction" href={program.downloadUrl} download>
-                        <Download aria-hidden="true" />
-                        다운로드
-                      </a>
+                      </button>
                     ) : (
                       <button type="button" className="aiStudioPrimaryAction" disabled>
                         <Download aria-hidden="true" />

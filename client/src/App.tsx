@@ -23,8 +23,9 @@ import { Route, Switch, Router as WouterRouter } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { BookmarkProvider } from "./contexts/BookmarkContext";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -53,9 +54,22 @@ function Router() {
 
 function App() {
   const [, setLocation] = useLocation();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [isMyPageModalOpen, setIsMyPageModalOpen] = useState(false);
 
   const [mobilePanelType, setMobilePanelType] = useState<"account" | "menu" | null>(null);
+
+  useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
+
+    const redirectPath = window.localStorage.getItem("contents-view-auth-redirect");
+    if (!redirectPath) return;
+
+    window.localStorage.removeItem("contents-view-auth-redirect");
+    if (redirectPath.startsWith("/") && !redirectPath.startsWith("//")) {
+      setLocation(redirectPath);
+    }
+  }, [authLoading, isAuthenticated, setLocation]);
 
   return (
     <ErrorBoundary>

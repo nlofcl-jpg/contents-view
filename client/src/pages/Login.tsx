@@ -71,6 +71,11 @@ export default function Login() {
     setIsStarting(true);
     setError(null);
 
+    const redirectPath = new URLSearchParams(window.location.search).get("redirect");
+    if (redirectPath?.startsWith("/") && !redirectPath.startsWith("//")) {
+      window.localStorage.setItem("contents-view-auth-redirect", redirectPath);
+    }
+
     try {
       const { error: signInError } = await signInWithGoogle();
       if (signInError) {

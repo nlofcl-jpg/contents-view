@@ -1,7 +1,8 @@
 import { ArrowLeft, Check, Download, FolderOpen, Settings2 } from "lucide-react";
-import { Link } from "wouter";
-
-const downloadUrl = "/downloads/contents-view-flow-automation.zip";
+import { useState } from "react";
+import { Link, useLocation } from "wouter";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { downloadFlowAutomationFile } from "@/lib/protectedDownload";
 
 const installSteps = [
   {
@@ -22,6 +23,35 @@ const installSteps = [
 ];
 
 export default function FlowAutomation() {
+  const [, setLocation] = useLocation();
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  const handleDownload = async () => {
+    if (authLoading || isDownloading) return;
+    if (!isAuthenticated) {
+      setLocation("/login?redirect=/ai-studio/flow-automation");
+      return;
+    }
+
+    setIsDownloading(true);
+    setDownloadError(null);
+    try {
+      await downloadFlowAutomationFile();
+    } catch (error) {
+      if (error instanceof Error && error.message === "AUTH_REQUIRED") {
+        setLocation("/login?redirect=/ai-studio/flow-automation");
+        return;
+      }
+      setDownloadError(
+        error instanceof Error ? error.message : "다운로드를 시작하지 못했습니다.",
+      );
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="flowAutomationPage">
       <Link href="/ai-studio" className="flowAutomationBackLink">
@@ -36,10 +66,20 @@ export default function FlowAutomation() {
         <span className="flowAutomationCategory">Chrome 확장프로그램</span>
         <h1>Google Flow 오토메이션</h1>
         <p>Google Flow에서 이미지 작업을 자동화하여 빠르게 작업하세요.</p>
-        <a className="flowAutomationDownloadButton" href={downloadUrl} download>
+        <button
+          type="button"
+          className="flowAutomationDownloadButton"
+          onClick={handleDownload}
+          disabled={authLoading || isDownloading}
+        >
           <Download aria-hidden="true" />
-          확장프로그램 다운로드
-        </a>
+          {isDownloading ? "다운로드 준비 중" : "확장프로그램 다운로드"}
+        </button>
+        {downloadError && (
+          <p className="flowAutomationDownloadError" role="alert">
+            {downloadError}
+          </p>
+        )}
       </section>
 
       <section className="flowAutomationSection" aria-labelledby="flow-automation-about">
