@@ -30,15 +30,24 @@ export default function Header({
   const [isNoticeOpen, setIsNoticeOpen] = useState(false);
   const [notices, setNotices] = useState<NoticeItem[]>([]);
   const [openTrendMenu, setOpenTrendMenu] = useState(false);
+  const [openNewsMenu, setOpenNewsMenu] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const noticeRef = useRef<HTMLDivElement>(null);
   const trendMenuRef = useRef<HTMLDivElement>(null);
+  const newsMenuRef = useRef<HTMLDivElement>(null);
   const trendMenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const newsMenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const trendItems = [
     { name: "YouTube", path: "/trends/youtube" },
     { name: "네이버 트렌드", path: "/trends/naver" },
     { name: "Google Trends", path: "/trends/google" },
+  ];
+
+  const newsItems = [
+    { name: "뉴스", path: "/news" },
+    { name: "이슈", path: "/news?tab=issues" },
+    { name: "검색", path: "/news/search" },
   ];
 
   const latestNoticeId = notices[0]?.id ?? null;
@@ -81,6 +90,19 @@ export default function Header({
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [openTrendMenu]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (newsMenuRef.current && !newsMenuRef.current.contains(event.target as Node)) {
+        setOpenNewsMenu(false);
+      }
+    }
+
+    if (openNewsMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [openNewsMenu]);
 
   // Query to get YouTube API key status
   const { data: apiKeyData } = trpc.user.apiKey.getWithStatus.useQuery(
@@ -135,6 +157,26 @@ export default function Header({
       setLocation(path);
       setOpenTrendMenu(false);
     }
+  };
+
+  const handleNewsMenuHover = (isHovering: boolean) => {
+    if (newsMenuTimeoutRef.current) {
+      clearTimeout(newsMenuTimeoutRef.current);
+      newsMenuTimeoutRef.current = null;
+    }
+
+    if (isHovering) {
+      setOpenNewsMenu(true);
+    } else {
+      newsMenuTimeoutRef.current = setTimeout(() => {
+        setOpenNewsMenu(false);
+      }, 200);
+    }
+  };
+
+  const handleNewsItemClick = (path: string) => {
+    setLocation(path);
+    setOpenNewsMenu(false);
   };
 
   const handleLogout = async () => {
@@ -282,9 +324,42 @@ export default function Header({
           )}
         </div>
 
-        <Link href="/news" className={`headerNavItem headerNavLink ${location === "/news" ? "active" : ""}`}>
-          뉴스&이슈
-        </Link>
+        <div
+          className="headerNavItem"
+          ref={newsMenuRef}
+          onMouseEnter={() => handleNewsMenuHover(true)}
+          onMouseLeave={() => handleNewsMenuHover(false)}
+        >
+          <button
+            type="button"
+            className={`headerNavButton ${location.startsWith("/news") ? "active" : ""}`}
+            onClick={() => setOpenNewsMenu(!openNewsMenu)}
+          >
+            뉴스&이슈
+            <ChevronDown
+              className={`headerNavChevron ${openNewsMenu ? "open" : ""}`}
+              aria-hidden="true"
+            />
+          </button>
+          {openNewsMenu && (
+            <div
+              className="headerNavDropdown"
+              onMouseEnter={() => handleNewsMenuHover(true)}
+              onMouseLeave={() => handleNewsMenuHover(false)}
+            >
+              {newsItems.map((item) => (
+                <button
+                  key={item.name}
+                  type="button"
+                  className="headerNavDropdownItem"
+                  onClick={() => handleNewsItemClick(item.path)}
+                >
+                  {item.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         <a href="/community" className={`headerNavItem headerNavLink ${location === "/community" ? "active" : ""}`}>
           커뮤니티 반응

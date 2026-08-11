@@ -917,6 +917,10 @@ a {
   color: #ffffff;
 }
 
+.headerNavButton.active {
+  color: #158cff;
+}
+
 .headerNavChevron {
   width: 14px;
   height: 14px;

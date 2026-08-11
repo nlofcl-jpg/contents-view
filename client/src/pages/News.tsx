@@ -107,7 +107,7 @@ function readNewsSessionCache(): NewsSessionCache | null {
 }
 
 export default function News() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [activeContentTab, setActiveContentTab] = useState<"news" | "issues" | "search">(getInitialContentTab);
@@ -118,6 +118,11 @@ export default function News() {
   const [issuesError, setIssuesError] = useState<string | null>(null);
   const shouldFetchLatestNews = !newsSessionCache || selectedCategory !== "all";
   const shouldFetchFeaturedNews = !newsSessionCache;
+
+  useEffect(() => {
+    const requestedTab = new URLSearchParams(window.location.search).get("tab");
+    setActiveContentTab(requestedTab === "issues" ? "issues" : "news");
+  }, [location]);
 
   // Category definitions
   const categories = [
