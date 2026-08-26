@@ -4,7 +4,8 @@ import { trpc } from "@/lib/trpc";
 import { supabase } from "@/lib/supabase";
 import { useState, useRef, useEffect } from "react";
 import { useLocation, Link } from "wouter";
-import { ChevronDown, Download, Menu } from "lucide-react";
+import { ChevronDown, Download, Menu, Moon, Sun } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface HeaderProps {
   onOpenMyPageModal?: () => void;
@@ -25,6 +26,7 @@ export default function Header({
   onToggleMobileMenu,
 }: HeaderProps) {
   const { user, isAuthenticated, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [location, setLocation] = useLocation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNoticeOpen, setIsNoticeOpen] = useState(false);
@@ -236,6 +238,19 @@ export default function Header({
           <button
             className="mobileHeaderIconButton"
             type="button"
+            aria-label={theme === "dark" ? "밝은 모드로 변경" : "다크 모드로 변경"}
+            title={theme === "dark" ? "밝은 모드" : "다크 모드"}
+            onClick={toggleTheme}
+          >
+            {theme === "dark" ? (
+              <Sun size={19} aria-hidden="true" />
+            ) : (
+              <Moon size={19} aria-hidden="true" />
+            )}
+          </button>
+          <button
+            className="mobileHeaderIconButton"
+            type="button"
             aria-label="공지사항"
             onClick={handleNoticeClick}
           >
@@ -405,6 +420,20 @@ export default function Header({
               <span className="youtubeApiStatusText text-blue-400">YouTube API 연결 하기</span>
             </button>
           )}
+
+          <button
+            className="themeToggleButton desktopOnly"
+            type="button"
+            aria-label={theme === "dark" ? "밝은 모드로 변경" : "다크 모드로 변경"}
+            title={theme === "dark" ? "밝은 모드" : "다크 모드"}
+            onClick={toggleTheme}
+          >
+            {theme === "dark" ? (
+              <Sun aria-hidden="true" />
+            ) : (
+              <Moon aria-hidden="true" />
+            )}
+          </button>
 
           {/* 데스크톡: 알림 아이콘 */}
           <div className="notificationArea desktopOnly" ref={noticeRef}>
