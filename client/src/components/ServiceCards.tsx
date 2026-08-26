@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowRight, Newspaper, Play, Search, Users } from "lucide-react";
+import { ArrowRight, Newspaper, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
@@ -22,10 +22,46 @@ type TrendCard = {
   badge: string;
   href: string;
   icon: React.ReactNode;
+  brandIcon?: boolean;
   rows: TrendRow[];
   loading: boolean;
   emptyText: string;
 };
+
+function YouTubeLogo() {
+  return (
+    <svg className="h-7 w-7" viewBox="0 0 32 24" aria-hidden="true">
+      <path
+        fill="#FF0033"
+        d="M31.33 3.75A4.02 4.02 0 0 0 28.5.9C26 .23 16 .23 16 .23S6 .23 3.5.9A4.02 4.02 0 0 0 .67 3.75C0 6.27 0 12 0 12s0 5.73.67 8.25A4.02 4.02 0 0 0 3.5 23.1c2.5.67 12.5.67 12.5.67s10 0 12.5-.67a4.02 4.02 0 0 0 2.83-2.85C32 17.73 32 12 32 12s0-5.73-.67-8.25Z"
+      />
+      <path fill="#FFFFFF" d="m12.8 17.14 8.32-5.14-8.32-5.14v10.28Z" />
+    </svg>
+  );
+}
+
+function GoogleLogo() {
+  return (
+    <svg className="h-7 w-7" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M23.49 12.27c0-.82-.07-1.42-.22-2.04H12v4.05h6.62c-.13 1.01-.86 2.54-2.46 3.56l-.02.14 3.56 2.51.25.02c2.3-1.94 3.54-4.8 3.54-8.24Z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 23c3.29 0 6.05-.99 8.06-2.69l-3.84-2.71c-1.03.66-2.4 1.12-4.22 1.12a7.32 7.32 0 0 1-6.93-4.6l-.14.01-3.7 2.61-.05.13C3.23 20.5 7.28 23 12 23Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.07 14.12A6.6 6.6 0 0 1 4.68 12c0-.74.14-1.45.37-2.12l-.01-.14L1.3 7.1l-.12.05A10.26 10.26 0 0 0 0 12c0 1.74.46 3.38 1.25 4.83l3.82-2.71Z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 5.28c2.29 0 3.83.9 4.71 1.66l3.44-3.06C18.04 2.1 15.29 1 12 1 7.28 1 3.23 3.5 1.25 7.17l3.81 2.71A7.35 7.35 0 0 1 12 5.28Z"
+      />
+    </svg>
+  );
+}
 
 function compactCount(value?: number | string | null) {
   const numberValue = typeof value === "string" ? Number(value) : value;
@@ -82,7 +118,11 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
     <article className="group relative rounded-lg border border-blue-500/20 bg-slate-950/50 p-5 shadow-[0_22px_70px_rgba(0,0,0,0.22)] transition-colors hover:border-blue-400/40 hover:bg-slate-950/70">
       <div className="mb-5 flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-300">
+          <div
+            className={`flex h-10 w-10 shrink-0 items-center justify-center ${
+              card.brandIcon ? "" : "rounded-lg bg-blue-500/15 text-blue-300"
+            }`}
+          >
             {card.icon}
           </div>
           <h3 className="truncate text-lg font-semibold text-white">{card.title}</h3>
@@ -256,7 +296,8 @@ export default function ServiceCards() {
       title: "YouTube",
       badge: "실시간 인기",
       href: "/trends/youtube",
-      icon: <Play className="h-5 w-5" />,
+      icon: <YouTubeLogo />,
+      brandIcon: true,
       rows: youtubeRows,
       loading: canLoadYouTube && youtubeQuery.isLoading,
       emptyText: isAuthenticated ? "YouTube API key 연결 후 인기 영상을 표시합니다." : "로그인 후 YouTube API key를 연결하면 인기 영상을 표시합니다.",
@@ -266,7 +307,8 @@ export default function ServiceCards() {
       title: "검색 트렌드",
       badge: "검색량",
       href: "/trends/google",
-      icon: <Search className="h-5 w-5" />,
+      icon: <GoogleLogo />,
+      brandIcon: true,
       rows: searchRows,
       loading: googleTrendsQuery.isLoading,
       emptyText: "실시간 검색 트렌드를 불러오지 못했습니다.",
