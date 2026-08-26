@@ -178,7 +178,6 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
 }
 
 export default function ServiceCards() {
-  const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
 
@@ -297,7 +296,7 @@ export default function ServiceCards() {
   return (
     <section className="px-4 py-14 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mb-8">
           <div>
             <div className="mb-2 flex items-center gap-3">
               <span className="h-3 w-3 rounded-full bg-blue-500 shadow-[0_0_18px_rgba(59,130,246,0.9)]" />
@@ -307,14 +306,6 @@ export default function ServiceCards() {
               주요 플랫폼과 커뮤니티의 실시간 흐름을 빠르게 확인하세요.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setLocation("/trends/youtube")}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-slate-700/70 bg-slate-950/40 px-5 text-sm font-semibold text-slate-300 transition-colors hover:border-blue-400/50 hover:text-blue-200"
-          >
-            모든 지표 보기
-            <ArrowRight className="h-4 w-4" />
-          </button>
         </div>
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
