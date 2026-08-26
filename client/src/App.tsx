@@ -76,7 +76,6 @@ function App() {
       <BookmarkProvider>
         <ThemeProvider
           defaultTheme="dark"
-          switchable
         >
           <TooltipProvider>
             <Toaster />

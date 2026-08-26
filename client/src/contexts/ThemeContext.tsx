@@ -22,9 +22,9 @@ export function ThemeProvider({
   switchable = false,
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(() => {
-    if (switchable && typeof window !== "undefined") {
+    if (switchable) {
       const stored = localStorage.getItem("theme");
-      if (stored === "light" || stored === "dark") return stored;
+      return (stored as Theme) || defaultTheme;
     }
     return defaultTheme;
   });
@@ -36,11 +36,6 @@ export function ThemeProvider({
     } else {
       root.classList.remove("dark");
     }
-    root.dataset.theme = theme;
-    root.style.colorScheme = theme;
-    document
-      .querySelector('meta[name="theme-color"]')
-      ?.setAttribute("content", theme === "dark" ? "#07111f" : "#f4f7fb");
 
     if (switchable) {
       localStorage.setItem("theme", theme);

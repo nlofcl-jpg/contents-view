@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko" class="dark" data-theme="dark">
+<html lang="ko">
 
   <head>
     <meta charset="UTF-8" />
@@ -11,15 +11,6 @@
       name="description"
       content="실시간 트렌드, 뉴스와 이슈, 커뮤니티 반응, YouTube 인사이트를 한 곳에서 확인하는 CONTENTS VIEW" />
     <meta name="theme-color" content="#07111f" />
-    <script>
-      (() => {
-        const savedTheme = localStorage.getItem("theme");
-        const theme = savedTheme === "light" ? "light" : "dark";
-        document.documentElement.classList.toggle("dark", theme === "dark");
-        document.documentElement.dataset.theme = theme;
-        document.documentElement.style.colorScheme = theme;
-      })();
-    </script>
     <link rel="icon" type="image/png" href="/contents-view-symbol.png" />
     <link rel="apple-touch-icon" href="/contents-view-symbol.png" />
     <meta property="og:type" content="website" />

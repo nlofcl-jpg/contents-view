@@ -53,37 +53,37 @@
   --chart-4: var(--color-blue-700);
   --chart-5: var(--color-blue-800);
   --radius: 0.65rem;
-  --background: oklch(0.975 0.006 255);
-  --foreground: oklch(0.24 0.025 255);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.24 0.025 255);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.24 0.025 255);
-  --secondary: oklch(0.94 0.012 255);
-  --secondary-foreground: oklch(0.35 0.025 255);
-  --muted: oklch(0.94 0.012 255);
-  --muted-foreground: oklch(0.52 0.025 255);
-  --accent: oklch(0.92 0.025 255);
-  --accent-foreground: oklch(0.24 0.025 255);
+  --background: oklch(0.141 0.005 285.823);
+  --foreground: oklch(0.85 0.005 65);
+  --card: oklch(0.21 0.006 285.885);
+  --card-foreground: oklch(0.85 0.005 65);
+  --popover: oklch(0.21 0.006 285.885);
+  --popover-foreground: oklch(0.85 0.005 65);
+  --secondary: oklch(0.24 0.006 286.033);
+  --secondary-foreground: oklch(0.7 0.005 65);
+  --muted: oklch(0.274 0.006 286.033);
+  --muted-foreground: oklch(0.705 0.015 286.067);
+  --accent: oklch(0.274 0.006 286.033);
+  --accent-foreground: oklch(0.92 0.005 65);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.35 0.025 255 / 16%);
-  --input: oklch(0.35 0.025 255 / 18%);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.488 0.243 264.376);
-  --sidebar: oklch(0.985 0.005 255);
-  --sidebar-foreground: oklch(0.24 0.025 255);
-  --sidebar-accent: oklch(0.92 0.025 255);
-  --sidebar-accent-foreground: oklch(0.24 0.025 255);
-  --sidebar-border: oklch(0.35 0.025 255 / 14%);
+  --sidebar: oklch(0.21 0.006 285.885);
+  --sidebar-foreground: oklch(0.85 0.005 65);
+  --sidebar-accent: oklch(0.274 0.006 286.033);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.488 0.243 264.376);
 
   /* CONTENTS VIEW Design Tokens */
-  --bg: #f4f7fb;
-  --panel: #ffffff;
-  --panel-soft: #edf2f8;
-  --line: rgba(30, 41, 59, 0.13);
-  --text: #172033;
-  --muted: #64748b;
+  --bg: #070a11;
+  --panel: #0c1220;
+  --panel-soft: #101827;
+  --line: rgba(148, 163, 184, 0.16);
+  --text: #eef4ff;
+  --muted: #8b9ab5;
   --blue: #158cff;
   --blue-strong: #0077ff;
   --cyan: #21d4ff;
@@ -123,12 +123,6 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.488 0.243 264.376);
-  --bg: #070a11;
-  --panel: #0c1220;
-  --panel-soft: #101827;
-  --line: rgba(148, 163, 184, 0.16);
-  --text: #eef4ff;
-  --muted: #8b9ab5;
 }
 
 @layer base {
@@ -1040,30 +1034,6 @@ a {
   width: 20px;
   height: 20px;
   stroke: currentColor;
-}
-
-.themeToggleButton {
-  width: 32px;
-  height: 32px;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  padding: 0;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: #b7c5de;
-  transition: color 0.18s ease, background 0.18s ease;
-}
-
-.themeToggleButton:hover {
-  background: rgba(59, 130, 246, 0.12);
-  color: #ffffff;
-}
-
-.themeToggleButton svg {
-  width: 18px;
-  height: 18px;
 }
 
 .notificationUnreadDot {
@@ -8130,268 +8100,4 @@ input[type="date"].youtubeSelect {
 
 .relatedMoreArrow {
   animation: relatedMoreArrowFlow 1.35s linear infinite;
-}
-
-/* ============================================
-   CONTENTS VIEW - Light theme
-   ============================================ */
-
-html:not(.dark) body {
-  background:
-    radial-gradient(circle at 78% 12%, rgba(37, 99, 235, 0.08), transparent 30%),
-    radial-gradient(circle at 20% 0%, rgba(14, 165, 233, 0.07), transparent 28%),
-    var(--bg);
-}
-
-html:not(.dark) .mainContent {
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(241, 245, 249, 0.96));
-  color: #243047;
-}
-
-html:not(.dark) .hero h2 {
-  color: #eef4ff;
-}
-
-html:not(.dark) .header {
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
-}
-
-html:not(.dark) .headerBrandText,
-html:not(.dark) .siteFooterLogo,
-html:not(.dark) .noticePopoverHeader,
-html:not(.dark) .noticeItemTitle {
-  color: #172033;
-}
-
-html:not(.dark) .headerNavButton,
-html:not(.dark) .headerNavLink,
-html:not(.dark) .notificationButton,
-html:not(.dark) .themeToggleButton,
-html:not(.dark) .profileText,
-html:not(.dark) .headerAuthLink,
-html:not(.dark) .mobileHeaderIconButton,
-html:not(.dark) .mobileMenuButton {
-  color: #52617a;
-}
-
-html:not(.dark) .headerNavButton:hover,
-html:not(.dark) .headerNavLink:hover,
-html:not(.dark) .notificationButton:hover,
-html:not(.dark) .themeToggleButton:hover,
-html:not(.dark) .profileText:hover,
-html:not(.dark) .headerAuthLink:hover,
-html:not(.dark) .mobileHeaderIconButton:hover,
-html:not(.dark) .mobileMenuButton:hover {
-  color: #125fc9;
-}
-
-html:not(.dark) .headerNavDropdown,
-html:not(.dark) .noticePopover,
-html:not(.dark) .profileDropdown {
-  border-color: rgba(37, 99, 235, 0.18);
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.14);
-}
-
-html:not(.dark) .headerNavDropdownItem,
-html:not(.dark) .noticeItemBody,
-html:not(.dark) .dropdownItem {
-  color: #46556f;
-}
-
-html:not(.dark) .headerNavDropdownItem:hover,
-html:not(.dark) .dropdownItem:hover {
-  background: rgba(37, 99, 235, 0.08);
-  color: #125fc9;
-}
-
-html:not(.dark) .notificationUnreadDot {
-  box-shadow: 0 0 0 2px #ffffff;
-}
-
-html:not(.dark) .siteFooter {
-  border-color: rgba(30, 41, 59, 0.12);
-  color: #64748b;
-}
-
-html:not(.dark) .siteFooterDescription,
-html:not(.dark) .siteFooterNavGroup a {
-  color: #64748b;
-}
-
-html:not(.dark) .siteFooterNavGroup h2 {
-  color: #27364f;
-}
-
-html:not(.dark) .siteFooterNavGroup a:hover {
-  color: #125fc9;
-}
-
-html:not(.dark) .siteFooterBottom {
-  border-color: rgba(30, 41, 59, 0.09);
-  color: #7b879a;
-}
-
-html:not(.dark) .mobileMenuDrawer {
-  border-color: rgba(30, 41, 59, 0.12);
-  background: #f8fafc;
-  color: #26344c;
-}
-
-html:not(.dark) .mobileMenuClose,
-html:not(.dark) .mobileNavItem,
-html:not(.dark) .mobileMenuAction,
-html:not(.dark) .mobileMenuSectionTitle {
-  color: #46556f;
-}
-
-html:not(.dark) .mobileNavItem:hover,
-html:not(.dark) .mobileNavItem.active,
-html:not(.dark) .mobileMenuAction:hover {
-  background: rgba(37, 99, 235, 0.08);
-  color: #125fc9;
-}
-
-html:not(.dark) .mobileAccountCard,
-html:not(.dark) .mobileLoginPrompt {
-  border-color: rgba(30, 41, 59, 0.12);
-  background: #ffffff;
-}
-
-html:not(.dark) .mainContent :where(
-  [class~="bg-slate-950/50"],
-  [class~="bg-slate-950/55"],
-  [class~="bg-slate-950/70"],
-  [class~="bg-slate-950"],
-  [class~="bg-slate-900"],
-  [class~="bg-slate-900/25"],
-  [class~="bg-slate-900/35"],
-  [class~="bg-slate-900/55"],
-  [class~="bg-gray-950"],
-  [class~="bg-gray-900"],
-  [class~="bg-gray-800"],
-  [class~="bg-gray-700"]
-):not(.hero *) {
-  background-color: rgba(255, 255, 255, 0.92) !important;
-}
-
-html:not(.dark) .mainContent :where(
-  [class~="border-slate-800/70"],
-  [class~="border-slate-700/70"],
-  [class~="border-slate-700/80"],
-  [class~="border-slate-800"],
-  [class~="border-slate-700"],
-  [class~="border-gray-800"],
-  [class~="border-gray-700"]
-):not(.hero *) {
-  border-color: rgba(51, 65, 85, 0.16) !important;
-}
-
-html:not(.dark) .mainContent :where(
-  [class~="text-white"],
-  [class~="text-slate-50"],
-  [class~="text-slate-100"],
-  [class~="text-slate-200"],
-  [class~="text-gray-50"],
-  [class~="text-gray-100"],
-  [class~="text-gray-200"]
-):not(.hero *):not([class*="bg-blue"]):not([class*="bg-cyan"]):not([class*="bg-emerald"]):not([class*="bg-red"]) {
-  color: #172033 !important;
-}
-
-html:not(.dark) .mainContent :where(
-  [class~="text-slate-300"],
-  [class~="text-slate-400"],
-  [class~="text-slate-500"],
-  [class~="text-gray-300"],
-  [class~="text-gray-400"],
-  [class~="text-gray-500"]
-):not(.hero *) {
-  color: #64748b !important;
-}
-
-html:not(.dark) .mainContent :where(h1, h2, h3, h4):not(.hero *) {
-  color: #172033;
-}
-
-html:not(.dark) :where(.newsContentTabs, .savedContentsTabs) {
-  border-color: rgba(51, 65, 85, 0.16);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-}
-
-html:not(.dark) :where(.newsContentTab, .savedContentsTab, .aiStudioTab):not(.active) {
-  color: #64748b;
-}
-
-html:not(.dark) .mainContent :where(input, textarea, select):not(.hero *) {
-  border-color: rgba(51, 65, 85, 0.2);
-  background: #ffffff;
-  color: #172033;
-}
-
-html:not(.dark) .mainContent :where(input, textarea)::placeholder {
-  color: #94a3b8;
-}
-
-html:not(.dark) :where(
-  .youtubeContentCard,
-  .videoCard,
-  .channelCard,
-  .filterSection,
-  .infoCard,
-  .apiSetupCard,
-  .mypageCard,
-  .mypageModalContent,
-  .aiStudioProgramCard,
-  .flowAutomationSection,
-  .issueFeaturedCard,
-  .issueCard,
-  .newsCard,
-  .communityCard,
-  .savedContentsSection,
-  .unifiedCard,
-  .unifiedPanel,
-  .adminPanel,
-  .loginPanel
-) {
-  border-color: rgba(51, 65, 85, 0.15) !important;
-  background-color: #ffffff !important;
-  color: #26344c;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.07);
-}
-
-html:not(.dark) :where(
-  .mypageModalOverlay,
-  .youtubeVideoModalOverlay,
-  .sidebarOverlay,
-  .mobileMenuOverlay
-) {
-  background: rgba(15, 23, 42, 0.35);
-}
-
-html:not(.dark) :where(
-  .youtubeVideoModalContent,
-  .apiKeyModal,
-  [role="dialog"]
-) {
-  border-color: rgba(51, 65, 85, 0.16) !important;
-  background-color: #ffffff !important;
-  color: #26344c;
-}
-
-html:not(.dark) :where(table, thead, tbody, tr, th, td) {
-  border-color: rgba(51, 65, 85, 0.13);
-}
-
-html:not(.dark) thead,
-html:not(.dark) th {
-  background-color: #eef3f8;
-  color: #334155;
-}
-
-html:not(.dark) tbody,
-html:not(.dark) td {
-  color: #46556f;
 }
