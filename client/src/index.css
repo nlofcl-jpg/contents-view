@@ -2034,7 +2034,7 @@ a {
 }
 
 .mypageNicknameRow {
-  gap: 7px;
+  position: relative;
 }
 
 .mypageNickname {
@@ -2063,6 +2063,13 @@ a {
   color: #8290aa;
   cursor: pointer;
   transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.mypageNicknameEditButton {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 4px);
+  transform: translateY(-50%);
 }
 
 .mypageNicknameEditButton:hover,
