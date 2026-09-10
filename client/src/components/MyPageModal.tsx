@@ -2,7 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { X } from "lucide-react";
+import { Check, Pencil, X } from "lucide-react";
 import { YouTubeApiKeySettingsPanel } from "./YouTubeApiKeyModal";
 
 interface MyPageModalProps {
@@ -19,7 +19,6 @@ export default function MyPageModal({ isOpen, onClose }: MyPageModalProps) {
 
   const utils = trpc.useUtils();
   const updateNameMutation = trpc.user.updateName.useMutation();
-  const hasNameChanged = nameInput !== originalName;
 
   // user 변경 시 초기값 업데이트
   useEffect(() => {
@@ -34,7 +33,9 @@ export default function MyPageModal({ isOpen, onClose }: MyPageModalProps) {
     setIsEditingName(true);
     // focus on input after state update
     setTimeout(() => {
-      const input = document.querySelector(".mypageModalNameInput") as HTMLInputElement;
+      const input = document.querySelector(
+        ".mypageModalNameInput"
+      ) as HTMLInputElement;
       input?.focus();
     }, 0);
   };
@@ -71,17 +72,6 @@ export default function MyPageModal({ isOpen, onClose }: MyPageModalProps) {
     setIsEditingName(false);
   };
 
-  const handleNameAction = () => {
-    if (!isEditingName) {
-      handleEditClick();
-      return;
-    }
-
-    if (hasNameChanged) {
-      handleSaveName();
-    }
-  };
-
   if (!isOpen) {
     return null;
   }
@@ -94,14 +84,7 @@ export default function MyPageModal({ isOpen, onClose }: MyPageModalProps) {
       {/* Modal */}
       <div className="mypageModalContainer">
         <div className="mypageModalContent">
-          {/* Header */}
           <div className="mypageModalHeader">
-            <div>
-              <h2 className="mypageModalTitle">마이페이지</h2>
-              <p className="mypageModalDescription">
-                계정 정보를 확인하고 닉네임을 수정할 수 있습니다.
-              </p>
-            </div>
             <button
               className="mypageModalCloseButton"
               onClick={onClose}
@@ -114,56 +97,79 @@ export default function MyPageModal({ isOpen, onClose }: MyPageModalProps) {
 
           {/* Body */}
           <div className="mypageModalBody">
-            {/* Nickname Field */}
-            <div className="mypageModalField">
-              <label className="mypageModalLabel">닉네임</label>
-              <input
-                type="text"
-                className="mypageModalNameInput"
-                value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}
-                disabled={!isEditingName}
-                placeholder="닉네임을 입력해주세요"
-              />
-              <div className="mypageModalActionRow">
-                <button
-                  className="mypageModalEditButton mypageModalEditButtonSecondary"
-                  onClick={handleCancel}
-                  disabled={!isEditingName || isSaving}
-                  type="button"
-                >
-                  취소
-                </button>
-                <button
-                  className="mypageModalEditButton"
-                  onClick={handleNameAction}
-                  disabled={isSaving}
-                  type="button"
-                >
-                  {isEditingName
-                    ? isSaving
-                      ? "저장 중"
-                      : hasNameChanged
-                        ? "저장"
-                        : "수정"
-                    : "수정"}
-                </button>
+            <section className="mypageProfileSummary" aria-label="프로필 정보">
+              <div className="mypageProfileAvatar" aria-hidden="true">
+                {user?.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt=""
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span>
+                    {user?.name?.trim().charAt(0).toUpperCase() || "U"}
+                  </span>
+                )}
               </div>
-            </div>
 
-            {/* Email Field */}
-            <div className="mypageModalField">
-              <label className="mypageModalLabel">이메일</label>
-              <input
-                type="email"
-                className="mypageModalEmailInput"
-                value={user?.email || ""}
-                readOnly
-                disabled
-              />
-            </div>
+              {isEditingName ? (
+                <div className="mypageNicknameEditor">
+                  <input
+                    type="text"
+                    className="mypageModalNameInput"
+                    value={nameInput}
+                    onChange={e => setNameInput(e.target.value)}
+                    placeholder="닉네임을 입력해주세요"
+                    onKeyDown={event => {
+                      if (event.key === "Enter") handleSaveName();
+                      if (event.key === "Escape") handleCancel();
+                    }}
+                  />
+                  <button
+                    className="mypageNicknameIconButton mypageNicknameSaveButton"
+                    onClick={handleSaveName}
+                    disabled={isSaving}
+                    type="button"
+                    aria-label="닉네임 저장"
+                    title="저장"
+                  >
+                    <Check size={15} />
+                  </button>
+                  <button
+                    className="mypageNicknameIconButton"
+                    onClick={handleCancel}
+                    disabled={isSaving}
+                    type="button"
+                    aria-label="닉네임 수정 취소"
+                    title="취소"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+              ) : (
+                <div className="mypageNicknameRow">
+                  <strong className="mypageNickname">
+                    {nameInput || "사용자"}
+                  </strong>
+                  <button
+                    className="mypageNicknameEditButton"
+                    onClick={handleEditClick}
+                    type="button"
+                    aria-label="닉네임 수정"
+                    title="닉네임 수정"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                </div>
+              )}
 
-            <div className="mypageModalField">
+              <div className="mypageAccountEmail">
+                <span>이메일</span>
+                <strong>{user?.email || "가입 이메일 정보 없음"}</strong>
+              </div>
+            </section>
+
+            <div className="mypageModalField mypageApiField">
               <label className="mypageModalLabel">YouTube API key</label>
               <YouTubeApiKeySettingsPanel isActive={isOpen} compact />
             </div>

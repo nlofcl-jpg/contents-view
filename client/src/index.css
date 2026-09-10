@@ -1929,6 +1929,7 @@ a {
 }
 
 .mypageModalContent {
+  position: relative;
   background: rgba(12, 18, 32, 0.8);
   border: 1px solid rgba(59, 130, 246, 0.2);
   border-radius: 16px;
@@ -1941,12 +1942,10 @@ a {
 }
 
 .mypageModalHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 20px;
-  padding: 32px;
-  border-bottom: 1px solid rgba(59, 130, 246, 0.15);
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 2;
 }
 
 .mypageModalTitle {
@@ -1988,10 +1987,137 @@ a {
 }
 
 .mypageModalBody {
-  padding: 22px 28px 26px;
+  padding: 38px 28px 26px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
+}
+
+.mypageProfileSummary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  padding: 2px 20px 22px;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.15);
+}
+
+.mypageProfileAvatar {
+  width: 84px;
+  height: 84px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(96, 165, 250, 0.34);
+  border-radius: 50%;
+  background: linear-gradient(145deg, #158cff, #5b5ce2);
+  box-shadow: 0 10px 30px rgba(21, 140, 255, 0.2);
+  color: #ffffff;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.mypageProfileAvatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.mypageNicknameRow,
+.mypageNicknameEditor {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  margin-top: 14px;
+}
+
+.mypageNicknameRow {
+  gap: 7px;
+}
+
+.mypageNickname {
+  max-width: min(280px, 65vw);
+  overflow: hidden;
+  color: #f8fafc;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mypageNicknameEditButton,
+.mypageNicknameIconButton {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #8290aa;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.mypageNicknameEditButton:hover,
+.mypageNicknameIconButton:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.mypageNicknameEditor {
+  gap: 5px;
+}
+
+.mypageNicknameEditor .mypageModalNameInput {
+  width: min(250px, 56vw);
+  flex: 0 1 auto;
+  text-align: center;
+}
+
+.mypageNicknameSaveButton {
+  color: #60a5fa;
+}
+
+.mypageNicknameIconButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mypageAccountEmail {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  margin-top: 28px;
+}
+
+.mypageAccountEmail span {
+  color: #8290aa;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.mypageAccountEmail strong {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: #cbd5e1;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.mypageApiField {
+  padding: 0 2px;
 }
 
 .mypageModalField {
@@ -2222,8 +2348,8 @@ a {
   }
 
   .mypageModalHeader {
-    padding: 24px;
-    gap: 16px;
+    top: 14px;
+    right: 14px;
   }
 
   .mypageModalTitle {
@@ -2231,8 +2357,22 @@ a {
   }
 
   .mypageModalBody {
-    padding: 24px;
-    gap: 20px;
+    padding: 34px 20px 22px;
+    gap: 22px;
+  }
+
+  .mypageProfileSummary {
+    padding-inline: 10px;
+  }
+
+  .mypageProfileAvatar {
+    width: 72px;
+    height: 72px;
+    font-size: 22px;
+  }
+
+  .mypageNickname {
+    font-size: 16px;
   }
 
   .mypageModalFooter {
