@@ -3792,10 +3792,10 @@ a {
 }
 
 .unifiedMenuDropdown {
-  background: rgba(12, 18, 32, 0.99) !important;
-  border: 2px solid #3b82f6 !important;
+  background: #f8fafc !important;
+  border: 1px solid #d7e1ee !important;
   border-radius: 8px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 14px 36px rgba(2, 6, 23, 0.28);
   z-index: 9999;
   min-width: 200px;
   overflow: visible;
@@ -3810,7 +3810,7 @@ a {
   text-align: left;
   background: transparent;
   border: none;
-  color: #b7c5de;
+  color: #263449;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -3818,13 +3818,13 @@ a {
 }
 
 .unifiedMenuOption:hover {
-  background: rgba(59, 130, 246, 0.15);
-  color: #f8fafc;
+  background: #edf4fc;
+  color: #0f172a;
 }
 
 .unifiedMenuOption.selected {
-  background: rgba(59, 130, 246, 0.25);
-  color: #3b82f6;
+  background: #dbeafe;
+  color: #1768d3;
   font-weight: 600;
 }
 
