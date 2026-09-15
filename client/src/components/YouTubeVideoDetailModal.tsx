@@ -150,7 +150,6 @@ export function YouTubeVideoDetailModal({
 
           {/* Meta Info */}
           <div className="youtubeVideoModalMeta">
-            <span>{formatViewCount(video.viewCount)} 조회</span>
             <span>{formatDate(video.publishedAt)}</span>
             <span>{formatDuration(video.duration)}</span>
           </div>
