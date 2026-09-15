@@ -7180,11 +7180,13 @@ input[type="date"].youtubeSelect {
   padding: 12px 24px;
   width: 100%;
   box-sizing: border-box;
-  background: rgba(7, 10, 17, 0.5);
-  border-bottom: 1px solid rgba(59, 130, 246, 0.15);
+  background: rgba(38, 57, 88, 0.88);
+  border: 1px solid rgba(96, 165, 250, 0.24);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
   font-size: 12px;
   font-weight: 600;
-  color: #7a8ba8;
+  color: #d4deed;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -7192,6 +7194,10 @@ input[type="date"].youtubeSelect {
 @media (min-width: 1024px) {
   .communityListHeader {
     display: grid;
+  }
+
+  .communityListContainer {
+    border-radius: 0 0 8px 8px;
   }
 }
 
