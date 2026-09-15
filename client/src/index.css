@@ -7302,8 +7302,12 @@ input[type="date"].youtubeSelect {
   min-width: 0;
   box-sizing: border-box;
   border-bottom: 1px solid rgba(59, 130, 246, 0.08);
-  cursor: pointer;
+  cursor: default;
   transition: background-color 0.15s ease;
+}
+
+.communityPostRow .postTitleLink {
+  cursor: pointer;
 }
 
 .communityPostRow:hover {

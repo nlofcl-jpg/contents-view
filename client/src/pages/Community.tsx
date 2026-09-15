@@ -889,10 +889,6 @@ export default function Community() {
     setCurrentPage(1); // 필터 변경 시 첫 페이지로 이동
   };
 
-  const handlePostClick = (rank: number) => {
-    console.log(`Post clicked: ${rank}`);
-  };
-
   const handleBookmarkToggle = (e: React.MouseEvent, rank: number) => {
     e.stopPropagation();
     setBookmarkedPosts((prev) => {
@@ -1067,7 +1063,6 @@ export default function Community() {
               <div
                 key={post.id || `${post.community}-${post.rank}`}
                 className="communityPostRow"
-                onClick={() => handlePostClick(post.rank)}
               >
                 {/* Rank */}
                 <div className="colRank">
