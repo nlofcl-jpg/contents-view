@@ -3793,7 +3793,7 @@ a {
 
 .unifiedMenuDropdown {
   background: #f8fafc !important;
-  border: 1px solid #d7e1ee !important;
+  border: 1px solid rgba(59, 130, 246, 0.38) !important;
   border-radius: 8px;
   box-shadow: 0 14px 36px rgba(2, 6, 23, 0.28);
   z-index: 9999;
