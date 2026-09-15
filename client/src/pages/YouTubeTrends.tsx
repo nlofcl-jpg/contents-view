@@ -48,7 +48,6 @@ const COUNTRIES = [
   { value: "FR", label: "프랑스" },
   { value: "ES", label: "스페인" },
   { value: "DE", label: "독일" },
-  { value: "global", label: "글로벌" },
 ];
 
 const CATEGORIES = [
@@ -306,9 +305,7 @@ export default function YouTubeTrends() {
     }
   );
 
-  // Map country value to region code
-  const regionCode = country === "global" ? "US" : country;
-  const isGlobalSelected = country === "global";
+  const regionCode = country;
 
   // Map sort value to API sort parameter
   const apiSortBy =
@@ -359,7 +356,6 @@ export default function YouTubeTrends() {
       enabled:
         isAuthenticated &&
         (activeTab === "trending" || activeTab === "category") &&
-        !isGlobalSelected &&
         apiKeyData?.exists &&
         apiKeyData?.testStatus === "success" &&
         shouldCallAPI,
@@ -378,7 +374,6 @@ export default function YouTubeTrends() {
       enabled:
         isAuthenticated &&
         activeTab === "channels" &&
-        !isGlobalSelected &&
         apiKeyData?.exists &&
         apiKeyData?.testStatus === "success" &&
         shouldCallAPI,
@@ -396,7 +391,6 @@ export default function YouTubeTrends() {
       enabled:
         isAuthenticated &&
         activeTab === "shorts" &&
-        !isGlobalSelected &&
         apiKeyData?.exists &&
         apiKeyData?.testStatus === "success" &&
         shouldCallAPI,
@@ -856,17 +850,6 @@ export default function YouTubeTrends() {
   };
 
   const renderTrendingTab = () => {
-    if (isGlobalSelected) {
-      return (
-        <div className="emptyStateContainer">
-          <AlertCircle className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">
-            글로벌 통합 차트는 YouTube API에서 별도 제공되지 않아 국가를 선택해주세요.
-          </p>
-        </div>
-      );
-    }
-
     // Check API Key status first (highest priority)
     if (!apiKeyData?.exists || apiKeyData?.testStatus !== "success") {
       return (
@@ -1038,17 +1021,6 @@ export default function YouTubeTrends() {
 
   // Render channels tab
   const renderChannelsTab = () => {
-    if (isGlobalSelected) {
-      return (
-        <div className="emptyStateContainer">
-          <AlertCircle className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">
-            글로벌 통합 차트는 YouTube API에서 별도 제공되지 않아 국가를 선택해주세요.
-          </p>
-        </div>
-      );
-    }
-
     // Check API Key status first (highest priority)
     if (!apiKeyData?.exists || apiKeyData?.testStatus !== "success") {
       return (
@@ -1195,17 +1167,6 @@ export default function YouTubeTrends() {
 
   // Render shorts tab
   const renderShortsTab = () => {
-    if (isGlobalSelected) {
-      return (
-        <div className="emptyStateContainer">
-          <AlertCircle className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">
-            글로벌 통합 차트는 YouTube API에서 별도 제공되지 않아 국가를 선택해주세요.
-          </p>
-        </div>
-      );
-    }
-
     // Check API Key status first (highest priority)
     if (!apiKeyData?.exists || apiKeyData?.testStatus !== "success") {
       return (
