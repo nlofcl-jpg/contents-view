@@ -7445,6 +7445,32 @@ input[type="date"].youtubeSelect {
   text-align: center;
 }
 
+.communityRankingLoading {
+  min-height: 280px;
+  gap: 14px;
+}
+
+.communityRankingLoading .emptyStateTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.communityLoadingSpinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(122, 139, 168, 0.22);
+  border-top-color: #60a5fa;
+  border-radius: 50%;
+  animation: communityLoadingSpin 0.8s linear infinite;
+}
+
+@keyframes communityLoadingSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .emptyStateTitle {
   margin: 0 0 8px 0;
   font-size: 16px;

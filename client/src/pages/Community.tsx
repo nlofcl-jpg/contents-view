@@ -447,10 +447,9 @@ export default function Community() {
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodFilterType>("today");
   const [selectedSort, setSelectedSort] = useState<SortFilterType>("popular");
   const [openMenu, setOpenMenu] = useState<OpenMenuType>(null);
-  const [posts, setPosts] = useState<Post[]>(SAMPLE_POSTS);
-  const [bookmarkedPosts, setBookmarkedPosts] = useState<Set<number>>(
-    new Set(SAMPLE_POSTS.filter((p) => p.isBookmarked).map((p) => p.rank))
-  );
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [bookmarkedPosts, setBookmarkedPosts] = useState<Set<number>>(new Set());
+  const [hasCommittedRanking, setHasCommittedRanking] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState<DropdownPosition | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -492,8 +491,25 @@ export default function Community() {
   // Fetch HumorUniv posts
   const humorunivQuery = trpc.community.getHumorUniv.useQuery({ sort: sortParam as any }, { retry: 1, refetchOnWindowFocus: false });
 
+  const isCommunityRankingFetching = [
+    dcinsideQuery,
+    ppomppuQuery,
+    natepannQuery,
+    ruliwebQuery,
+    invenQuery,
+    bobaedreamQuery,
+    humorunivQuery,
+  ].some((query) => query.isPending || query.isFetching);
+
+  const isCommunityRankingLoading = isCommunityRankingFetching || !hasCommittedRanking;
+
   // Update posts when data is loaded
   useEffect(() => {
+    if (isCommunityRankingFetching) {
+      setHasCommittedRanking(false);
+      return;
+    }
+
     const allPosts: Post[] = [];
     let hasError = false;
     let errorMsg = '';
@@ -684,9 +700,15 @@ export default function Community() {
         setLastFetchedAt(latestAt);
       }
     } else if (hasError) {
+      setPosts([]);
       setError(errorMsg);
+    } else {
+      setPosts([]);
+      setError(null);
     }
-  }, [dcinsideQuery.data, ppomppuQuery.data, natepannQuery.data, ruliwebQuery.data, invenQuery.data, bobaedreamQuery.data, humorunivQuery.data, selectedSort]);
+
+    setHasCommittedRanking(true);
+  }, [dcinsideQuery.data, ppomppuQuery.data, natepannQuery.data, ruliwebQuery.data, invenQuery.data, bobaedreamQuery.data, humorunivQuery.data, selectedSort, isCommunityRankingFetching]);
 
     // 페이지네이션 설정
   const PAGE_SIZE = 10;
@@ -952,7 +974,12 @@ export default function Community() {
 
         {/* List Container */}
         <div className="communityListContainer">
-          {paginatedPosts.length > 0 ? (
+          {isCommunityRankingLoading ? (
+            <div className="communityEmptyState communityRankingLoading" role="status" aria-live="polite">
+              <span className="communityLoadingSpinner" aria-hidden="true" />
+              <p className="emptyStateTitle">커뮤니티 순위를 불러오는 중..</p>
+            </div>
+          ) : paginatedPosts.length > 0 ? (
             paginatedPosts.map((post, index) => (
               <div
                 key={post.id || `${post.community}-${post.rank}`}
@@ -1048,7 +1075,7 @@ export default function Community() {
           )}
 
           {/* Pagination */}
-          {totalPages > 1 && (() => {
+          {!isCommunityRankingLoading && totalPages > 1 && (() => {
             const PAGES_PER_GROUP = 10;
             const currentGroup = Math.floor((currentPage - 1) / PAGES_PER_GROUP);
             const startPage = currentGroup * PAGES_PER_GROUP + 1;
