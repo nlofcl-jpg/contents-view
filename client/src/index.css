@@ -7161,6 +7161,62 @@ input[type="date"].youtubeSelect {
    Community Posts List Styles
    ============================================ */
 
+.communityListToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+  padding: 4px 2px 8px;
+}
+
+.communityUpdateText {
+  font-size: 12px;
+  font-weight: 300;
+  color: #888;
+  letter-spacing: 0;
+}
+
+.communityRefreshButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgba(96, 165, 250, 0.26);
+  border-radius: 6px;
+  background: rgba(38, 57, 88, 0.5);
+  color: #cbd8eb;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.communityRefreshButton:hover:not(:disabled) {
+  border-color: rgba(96, 165, 250, 0.48);
+  background: rgba(48, 72, 108, 0.72);
+  color: #ffffff;
+}
+
+.communityRefreshButton:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.communityRefreshButton:focus-visible {
+  outline: 1px solid rgba(96, 165, 250, 0.75);
+  outline-offset: 2px;
+}
+
+.communityRefreshButton .isSpinning {
+  animation: communityRefreshSpin 0.85s linear infinite;
+}
+
+@keyframes communityRefreshSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .communityListContainer {
   width: 100%;
   border: 1px solid rgba(59, 130, 246, 0.2);

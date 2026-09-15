@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Bookmark, MessageCircle, ThumbsUp } from "lucide-react";
+import { ChevronDown, Bookmark, MessageCircle, RefreshCw, ThumbsUp } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { formatCommunityDateTime } from "@/lib/communityDateTime";
 
@@ -915,6 +915,18 @@ export default function Community() {
     }
   };
 
+  const handleRefresh = async () => {
+    await Promise.all([
+      dcinsideQuery.refetch(),
+      ppomppuQuery.refetch(),
+      natepannQuery.refetch(),
+      ruliwebQuery.refetch(),
+      invenQuery.refetch(),
+      bobaedreamQuery.refetch(),
+      humorunivQuery.refetch(),
+    ]);
+  };
+
   return (
     <div className="communityPage">
       {/* Page Header */}
@@ -1012,14 +1024,24 @@ export default function Community() {
         </div>
       </div>
 
-      {/* Last Updated Info */}
-      {lastFetchedAt && (
-        <div className="communityUpdateInfo" style={{ padding: '8px 0' }}>
-          <span className="updateText" style={{ fontSize: '12px', fontWeight: '300', color: '#888', letterSpacing: '-0.3px' }}>
+      {/* List toolbar */}
+      <div className="communityListToolbar">
+        {lastFetchedAt && (
+          <span className="communityUpdateText">
             마지막 업데이트: {new Date(lastFetchedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
           </span>
-        </div>
-      )}
+        )}
+        <button
+          type="button"
+          className="communityRefreshButton"
+          onClick={handleRefresh}
+          disabled={isCommunityRankingFetching}
+          aria-label={isCommunityRankingFetching ? "커뮤니티 순위 새로고침 중" : "커뮤니티 순위 새로고침"}
+          title={isCommunityRankingFetching ? "새로고침 중" : "새로고침"}
+        >
+          <RefreshCw size={16} className={isCommunityRankingFetching ? "isSpinning" : ""} />
+        </button>
+      </div>
 
       {/* Content List */}
       <div className="communityListWrapper">
