@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Bookmark, MessageCircle, ThumbsUp } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { formatCommunityDateTime } from "@/lib/communityDateTime";
 
 type CommunityFilterType = "all" | "dcinside" | "ppomppu" | "theqoo" | "instiz" | "natepon" | "ruliweb" | "inven" | "bobaedream" | "humoruniv" | "clien";
 type PeriodFilterType = "realtime" | "today" | "week";
@@ -1027,7 +1028,7 @@ export default function Community() {
 
                 {/* Time */}
                 <div className="colTime">
-                  <span className="timeText">{post.time}</span>
+                  <span className="timeText">{formatCommunityDateTime(post.time)}</span>
                 </div>
 
                 {/* Views */}
