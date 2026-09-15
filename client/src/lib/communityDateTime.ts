@@ -14,7 +14,8 @@ function formatDateParts(
   month: number,
   day: number,
   hour?: number,
-  minute?: number
+  minute?: number,
+  referenceDate = new Date()
 ) {
   if (!isValidDateParts(year, month, day)) return "-";
 
@@ -22,16 +23,22 @@ function formatDateParts(
   if (hour === undefined || minute === undefined) return date;
   if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return "-";
 
-  return `${date} ${pad(hour)}:${pad(minute)}`;
+  const isToday =
+    year === referenceDate.getFullYear() &&
+    month === referenceDate.getMonth() + 1 &&
+    day === referenceDate.getDate();
+
+  return isToday ? `${pad(hour)}:${pad(minute)}` : date;
 }
 
-function formatDate(date: Date) {
+function formatDate(date: Date, referenceDate: Date) {
   return formatDateParts(
     date.getFullYear(),
     date.getMonth() + 1,
     date.getDate(),
     date.getHours(),
-    date.getMinutes()
+    date.getMinutes(),
+    referenceDate
   );
 }
 
@@ -42,7 +49,7 @@ export function formatCommunityDateTime(
   const text = value?.replace(/\s+/g, " ").trim();
   if (!text || text === "-") return "-";
 
-  if (/^(방금|방금 전)$/.test(text)) return formatDate(referenceDate);
+  if (/^(방금|방금 전)$/.test(text)) return formatDate(referenceDate, referenceDate);
 
   const relativeMatch = text.match(/^(\d+)\s*(분|시간|일)\s*전$/);
   if (relativeMatch) {
@@ -53,7 +60,10 @@ export function formatCommunityDateTime(
         : relativeMatch[2] === "시간"
           ? 3_600_000
           : 86_400_000;
-    return formatDate(new Date(referenceDate.getTime() - amount * unitMs));
+    return formatDate(
+      new Date(referenceDate.getTime() - amount * unitMs),
+      referenceDate
+    );
   }
 
   const todayMatch = text.match(/^오늘\s+(\d{1,2}):(\d{2})/);
@@ -63,7 +73,8 @@ export function formatCommunityDateTime(
       referenceDate.getMonth() + 1,
       referenceDate.getDate(),
       Number(todayMatch[1]),
-      Number(todayMatch[2])
+      Number(todayMatch[2]),
+      referenceDate
     );
   }
 
@@ -76,7 +87,8 @@ export function formatCommunityDateTime(
       yesterday.getMonth() + 1,
       yesterday.getDate(),
       Number(yesterdayMatch[1]),
-      Number(yesterdayMatch[2])
+      Number(yesterdayMatch[2]),
+      referenceDate
     );
   }
 
@@ -89,7 +101,8 @@ export function formatCommunityDateTime(
       Number(fullDateMatch[2]),
       Number(fullDateMatch[3]),
       fullDateMatch[4] === undefined ? undefined : Number(fullDateMatch[4]),
-      fullDateMatch[5] === undefined ? undefined : Number(fullDateMatch[5])
+      fullDateMatch[5] === undefined ? undefined : Number(fullDateMatch[5]),
+      referenceDate
     );
   }
 
@@ -111,7 +124,8 @@ export function formatCommunityDateTime(
       month,
       day,
       shortDateMatch[3] === undefined ? undefined : Number(shortDateMatch[3]),
-      shortDateMatch[4] === undefined ? undefined : Number(shortDateMatch[4])
+      shortDateMatch[4] === undefined ? undefined : Number(shortDateMatch[4]),
+      referenceDate
     );
   }
 
@@ -122,7 +136,8 @@ export function formatCommunityDateTime(
       referenceDate.getMonth() + 1,
       referenceDate.getDate(),
       Number(timeMatch[1]),
-      Number(timeMatch[2])
+      Number(timeMatch[2]),
+      referenceDate
     );
   }
 
