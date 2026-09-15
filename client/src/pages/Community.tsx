@@ -391,6 +391,48 @@ interface Post {
   isBookmarked: boolean;
 }
 
+interface CommunityRankingCache {
+  posts: Post[];
+  lastFetchedAt: string | null;
+}
+
+const COMMUNITY_RANKING_CACHE_KEY = "contents-view-community-ranking";
+const COMMUNITY_REFRESH_INTERVAL = 10 * 60 * 1000;
+
+function readCommunityRankingCache(): CommunityRankingCache | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const cached = JSON.parse(
+      window.sessionStorage.getItem(COMMUNITY_RANKING_CACHE_KEY) || "null"
+    );
+    if (!cached || !Array.isArray(cached.posts) || cached.posts.length === 0) {
+      return null;
+    }
+
+    return {
+      posts: cached.posts,
+      lastFetchedAt:
+        typeof cached.lastFetchedAt === "string" ? cached.lastFetchedAt : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeCommunityRankingCache(cache: CommunityRankingCache) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.sessionStorage.setItem(
+      COMMUNITY_RANKING_CACHE_KEY,
+      JSON.stringify(cache)
+    );
+  } catch {
+    // The live list still works when session storage is unavailable.
+  }
+}
+
 interface DropdownPosition {
   top: number;
   left: number;
@@ -444,17 +486,22 @@ function DropdownPortal({
 }
 
 export default function Community() {
+  const cachedRanking = useMemo(() => readCommunityRankingCache(), []);
   const [selectedCommunity, setSelectedCommunity] = useState<CommunityFilterType>("all");
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodFilterType>("today");
   const [selectedSort, setSelectedSort] = useState<SortFilterType>("popular");
   const [openMenu, setOpenMenu] = useState<OpenMenuType>(null);
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<Post[]>(cachedRanking?.posts || []);
   const [bookmarkedPosts, setBookmarkedPosts] = useState<Set<number>>(new Set());
-  const [hasCommittedRanking, setHasCommittedRanking] = useState(false);
+  const [hasCommittedRanking, setHasCommittedRanking] = useState(
+    Boolean(cachedRanking?.posts.length)
+  );
   const [dropdownPosition, setDropdownPosition] = useState<DropdownPosition | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
-  const [lastFetchedAt, setLastFetchedAt] = useState<string | null>(null);
+  const [lastFetchedAt, setLastFetchedAt] = useState<string | null>(
+    cachedRanking?.lastFetchedAt || null
+  );
   const menuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const communityButtonRef = useRef<HTMLButtonElement | null>(null);
   const sortButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -471,26 +518,34 @@ export default function Community() {
     return sortMap[selectedSort] || "popular";
   }, [selectedSort]);
 
+  const communityQueryOptions = {
+    retry: 1,
+    staleTime: COMMUNITY_REFRESH_INTERVAL,
+    refetchInterval: COMMUNITY_REFRESH_INTERVAL,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
+  } as const;
+
   // Fetch DC Inside posts
-  const dcinsideQuery = trpc.community.getDcinside.useQuery({ sort: sortParam as any }, { retry: 1, refetchOnWindowFocus: false });
+  const dcinsideQuery = trpc.community.getDcinside.useQuery({ sort: sortParam as any }, communityQueryOptions);
   
   // Fetch Ppomppu posts
-  const ppomppuQuery = trpc.community.getPpomppu.useQuery();
+  const ppomppuQuery = trpc.community.getPpomppu.useQuery(undefined, communityQueryOptions);
   
   // Fetch Nate Pann posts
-  const natepannQuery = trpc.community.getNatePann.useQuery({ sort: sortParam as any }, { retry: 1, refetchOnWindowFocus: false });
+  const natepannQuery = trpc.community.getNatePann.useQuery({ sort: sortParam as any }, communityQueryOptions);
   
   // Fetch Ruliweb posts
-  const ruliwebQuery = trpc.community.getRuliweb.useQuery({ sort: sortParam as any }, { retry: 1, refetchOnWindowFocus: false });
+  const ruliwebQuery = trpc.community.getRuliweb.useQuery({ sort: sortParam as any }, communityQueryOptions);
   
   // Fetch Inven posts
-  const invenQuery = trpc.community.getInven.useQuery({ sort: sortParam as any }, { retry: 1, refetchOnWindowFocus: false });
+  const invenQuery = trpc.community.getInven.useQuery({ sort: sortParam as any }, communityQueryOptions);
   
   // Fetch Bobaedream posts
-  const bobaedreamQuery = trpc.community.getBobaedream.useQuery({ sort: sortParam as any }, { retry: 1, refetchOnWindowFocus: false });
+  const bobaedreamQuery = trpc.community.getBobaedream.useQuery({ sort: sortParam as any }, communityQueryOptions);
   
   // Fetch HumorUniv posts
-  const humorunivQuery = trpc.community.getHumorUniv.useQuery({ sort: sortParam as any }, { retry: 1, refetchOnWindowFocus: false });
+  const humorunivQuery = trpc.community.getHumorUniv.useQuery({ sort: sortParam as any }, communityQueryOptions);
 
   const isCommunityRankingFetching = [
     dcinsideQuery,
@@ -502,12 +557,11 @@ export default function Community() {
     humorunivQuery,
   ].some((query) => query.isPending || query.isFetching);
 
-  const isCommunityRankingLoading = isCommunityRankingFetching || !hasCommittedRanking;
+  const isCommunityRankingLoading = !hasCommittedRanking;
 
   // Update posts when data is loaded
   useEffect(() => {
     if (isCommunityRankingFetching) {
-      setHasCommittedRanking(false);
       return;
     }
 
@@ -700,10 +754,16 @@ export default function Community() {
       if (latestAt) {
         setLastFetchedAt(latestAt);
       }
+      writeCommunityRankingCache({
+        posts: allPosts,
+        lastFetchedAt: latestAt || null,
+      });
     } else if (hasError) {
-      setPosts([]);
-      setError(errorMsg);
-    } else {
+      if (!hasCommittedRanking) {
+        setPosts([]);
+        setError(errorMsg);
+      }
+    } else if (!hasCommittedRanking) {
       setPosts([]);
       setError(null);
     }
