@@ -18,7 +18,7 @@ function formatDateParts(
 ) {
   if (!isValidDateParts(year, month, day)) return "-";
 
-  const date = `${year}.${pad(month)}.${pad(day)}`;
+  const date = `${pad(month)}.${pad(day)}`;
   if (hour === undefined || minute === undefined) return date;
   if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return "-";
 
