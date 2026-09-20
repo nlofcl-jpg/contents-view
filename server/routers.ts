@@ -14,6 +14,7 @@ import { createRequire } from "module";
 import { createHmac } from "crypto";
 import { eq } from "drizzle-orm";
 import { users } from "../drizzle/schema";
+import { getStoredYouTubeRisingVideos } from "./youtubeRising";
 
 const require = createRequire(import.meta.url);
 
@@ -1737,7 +1738,7 @@ export const appRouter = router({
       .input(z.object({
         regionCode: z.string().min(2).max(2),
         videoCategoryId: z.number().optional(),
-        period: z.enum(["6h", "24h", "7d"]).default("24h"),
+        period: z.enum(["realtime", "1h", "6h", "24h"]).default("1h"),
         subscriberRange: z.enum(["all", "lt10k", "10k-100k", "100k-1m", "gt1m"]).default("all"),
         sortBy: z.enum(["score", "hourly", "outlier", "newest"]).default("score"),
         maxResults: z.number().min(1).max(50).default(30),
@@ -1745,13 +1746,16 @@ export const appRouter = router({
       .query(async ({ ctx, input }) => {
         if (!ctx.user) throw new Error("User not authenticated");
 
-        const apiKeyRecord = await userApiKeys.getUserApiKey(ctx.user, "youtube");
-        if (!apiKeyRecord || apiKeyRecord.testStatus !== "success") {
-          return { success: false, error: "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.", videos: [] };
-        }
-
         try {
-          const periodHours = input.period === "6h" ? 6 : input.period === "24h" ? 24 : 24 * 7;
+          const storedResult = await getStoredYouTubeRisingVideos(input);
+          if (storedResult) return storedResult;
+
+          const apiKeyRecord = await userApiKeys.getUserApiKey(ctx.user, "youtube");
+          if (!apiKeyRecord || apiKeyRecord.testStatus !== "success") {
+            return { success: false, error: "급상승 수집 데이터에 연결할 수 없습니다.", videos: [] };
+          }
+
+          const periodHours = input.period === "realtime" ? 6 : input.period === "1h" ? 12 : input.period === "6h" ? 24 : 24 * 7;
           const publishedAfter = new Date(Date.now() - periodHours * 60 * 60 * 1000).toISOString();
           const languageByRegion: Record<string, string> = {
             KR: "ko", US: "en", JP: "ja", GB: "en", FR: "fr", ES: "es", DE: "de",
@@ -1844,6 +1848,9 @@ export const appRouter = router({
               subscriberCount,
               hiddenSubscribers,
               averageHourlyViews,
+              velocityPerHour: null,
+              velocityAvailable: false,
+              acceleration: null,
               outlierScore: outlierScore === null ? null : Number(outlierScore.toFixed(2)),
               discoveryScore: Number(discoveryScore.toFixed(2)),
               elapsedHours: Number(elapsedHours.toFixed(1)),

@@ -6,6 +6,9 @@
   "functions": {
     "api/download-flow-automation.ts": {
       "includeFiles": "server/assets/contents-view-flow-automation.zip"
+    },
+    "api/cron/youtube-rising.ts": {
+      "maxDuration": 60
     }
   },
   "rewrites": [

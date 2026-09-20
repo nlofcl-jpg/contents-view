@@ -2394,14 +2394,124 @@ async function updateApiKeyTestStatus2(user, provider, testStatus, testError = n
 
 // server/routers.ts
 import * as cheerio from "cheerio";
-import { createClient as createClient4 } from "@supabase/supabase-js";
+import { createClient as createClient5 } from "@supabase/supabase-js";
 import { createRequire } from "module";
 import { createHmac as createHmac2 } from "crypto";
+
+// server/youtubeRising.ts
+import { createClient as createClient4 } from "@supabase/supabase-js";
+var supabaseAdmin3 = ENV.supabaseUrl && ENV.supabaseServiceRoleKey ? createClient4(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
+  auth: { persistSession: false, autoRefreshToken: false }
+}) : null;
+var periodHours = {
+  realtime: 0.5,
+  "1h": 1,
+  "6h": 6,
+  "24h": 24
+};
+function toIsoDuration(seconds) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor(seconds % 3600 / 60);
+  const remaining = seconds % 60;
+  return `PT${hours ? `${hours}H` : ""}${minutes ? `${minutes}M` : ""}${remaining || !hours && !minutes ? `${remaining}S` : ""}`;
+}
+function matchesSubscriberRange(count, hidden, range) {
+  if (range === "all") return true;
+  if (hidden) return false;
+  if (range === "lt10k") return count < 1e4;
+  if (range === "10k-100k") return count >= 1e4 && count < 1e5;
+  if (range === "100k-1m") return count >= 1e5 && count < 1e6;
+  return count >= 1e6;
+}
+async function getStoredYouTubeRisingVideos(input) {
+  if (!supabaseAdmin3) return null;
+  const { data, error } = await supabaseAdmin3.rpc("get_youtube_rising_metrics", {
+    p_region_code: input.regionCode,
+    p_period_hours: periodHours[input.period],
+    p_category_id: input.videoCategoryId ?? null
+  });
+  if (error) {
+    if (error.code === "PGRST202" || error.code === "42P01" || error.code === "42883") return null;
+    throw error;
+  }
+  if (!data || data.length === 0) {
+    return {
+      success: true,
+      videos: [],
+      collectedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      metricMode: "collecting"
+    };
+  }
+  const now = Date.now();
+  let videos = data.map((row) => {
+    const viewCount = Number(row.view_count || 0);
+    const subscriberCount = Number(row.subscriber_count || 0);
+    const elapsedHours = Math.max((now - new Date(row.published_at).getTime()) / 36e5, 0.1);
+    const averageHourlyViews = Math.round(viewCount / elapsedHours);
+    const velocityPerHour = row.velocity_per_hour === null ? null : Math.max(0, Math.round(Number(row.velocity_per_hour)));
+    const acceleration = row.acceleration === null ? null : Math.max(0, Number(Number(row.acceleration).toFixed(2)));
+    const outlierScore = row.outlier_score === null ? null : Math.max(0, Number(Number(row.outlier_score).toFixed(2)));
+    const rankingVelocity = velocityPerHour ?? averageHourlyViews;
+    const freshness = Math.max(0, 1 - elapsedHours / (24 * 7));
+    const discoveryScore = 0.4 * Math.log1p(outlierScore || 0) + 0.3 * Math.log1p(rankingVelocity) + 0.2 * Math.min(acceleration ?? 1, 5) + 0.1 * freshness;
+    return {
+      id: row.video_id,
+      title: row.title,
+      description: row.description || "",
+      thumbnail: row.thumbnail_url,
+      channelTitle: row.channel_title,
+      channelId: row.channel_id,
+      channelThumbnail: row.channel_thumbnail_url,
+      publishedAt: row.published_at,
+      viewCount,
+      commentCount: Number(row.comment_count || 0),
+      categoryId: String(row.category_id || ""),
+      tags: [],
+      duration: toIsoDuration(Number(row.duration_seconds || 0)),
+      subscriberCount,
+      hiddenSubscribers: Boolean(row.hidden_subscribers),
+      averageHourlyViews,
+      velocityPerHour,
+      velocityAvailable: velocityPerHour !== null,
+      acceleration,
+      outlierScore,
+      discoveryScore: Number(discoveryScore.toFixed(2)),
+      elapsedHours: Number(elapsedHours.toFixed(1)),
+      capturedAt: row.captured_at
+    };
+  }).filter(
+    (video) => video.viewCount >= 500 && video.elapsedHours >= 0.5 && matchesSubscriberRange(video.subscriberCount, video.hiddenSubscribers, input.subscriberRange)
+  );
+  if (input.sortBy === "hourly") videos.sort((a, b) => (b.velocityPerHour ?? b.averageHourlyViews) - (a.velocityPerHour ?? a.averageHourlyViews));
+  else if (input.sortBy === "outlier") videos.sort((a, b) => (b.outlierScore || 0) - (a.outlierScore || 0));
+  else if (input.sortBy === "newest") videos.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+  else videos.sort((a, b) => b.discoveryScore - a.discoveryScore);
+  const channelCounts = /* @__PURE__ */ new Map();
+  const categoryCounts = /* @__PURE__ */ new Map();
+  const categoryLimit = Math.ceil(input.maxResults / 2);
+  videos = videos.filter((video) => {
+    const channelCount = channelCounts.get(video.channelId) || 0;
+    const categoryCount = categoryCounts.get(video.categoryId) || 0;
+    if (channelCount >= 2) return false;
+    if (input.videoCategoryId === void 0 && categoryCount >= categoryLimit) return false;
+    channelCounts.set(video.channelId, channelCount + 1);
+    categoryCounts.set(video.categoryId, categoryCount + 1);
+    return true;
+  }).slice(0, input.maxResults);
+  return {
+    success: true,
+    videos,
+    collectedAt: videos[0]?.capturedAt || (/* @__PURE__ */ new Date()).toISOString(),
+    metricMode: videos.some((video) => video.velocityAvailable) ? "snapshot" : "collecting"
+  };
+}
+
+// server/routers.ts
 var require2 = createRequire(import.meta.url);
 var NAVER_SEARCH_AD_PROVIDER2 = "naver-search-ad";
 var BLOG_ANALYSIS_POST_LIMIT = 6;
 var BLOG_RANK_SEARCH_LIMIT = 100;
-var supabaseAdminForNaverKeys = ENV.supabaseUrl && ENV.supabaseServiceRoleKey ? createClient4(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
+var supabaseAdminForNaverKeys = ENV.supabaseUrl && ENV.supabaseServiceRoleKey ? createClient5(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
   auth: {
     persistSession: false,
     autoRefreshToken: false
@@ -3738,19 +3848,21 @@ var appRouter = router({
     getRisingVideos: protectedProcedure.input(z3.object({
       regionCode: z3.string().min(2).max(2),
       videoCategoryId: z3.number().optional(),
-      period: z3.enum(["6h", "24h", "7d"]).default("24h"),
+      period: z3.enum(["realtime", "1h", "6h", "24h"]).default("1h"),
       subscriberRange: z3.enum(["all", "lt10k", "10k-100k", "100k-1m", "gt1m"]).default("all"),
       sortBy: z3.enum(["score", "hourly", "outlier", "newest"]).default("score"),
       maxResults: z3.number().min(1).max(50).default(30)
     })).query(async ({ ctx, input }) => {
       if (!ctx.user) throw new Error("User not authenticated");
-      const apiKeyRecord = await getUserApiKey2(ctx.user, "youtube");
-      if (!apiKeyRecord || apiKeyRecord.testStatus !== "success") {
-        return { success: false, error: "YouTube API \uD0A4 \uC624\uB958\uC785\uB2C8\uB2E4.\nAPI \uD0A4 \uD655\uC778 \uD6C4 \uB2E4\uC2DC \uC785\uB825\uD574\uC8FC\uC138\uC694.", videos: [] };
-      }
       try {
-        const periodHours = input.period === "6h" ? 6 : input.period === "24h" ? 24 : 24 * 7;
-        const publishedAfter = new Date(Date.now() - periodHours * 60 * 60 * 1e3).toISOString();
+        const storedResult = await getStoredYouTubeRisingVideos(input);
+        if (storedResult) return storedResult;
+        const apiKeyRecord = await getUserApiKey2(ctx.user, "youtube");
+        if (!apiKeyRecord || apiKeyRecord.testStatus !== "success") {
+          return { success: false, error: "\uAE09\uC0C1\uC2B9 \uC218\uC9D1 \uB370\uC774\uD130\uC5D0 \uC5F0\uACB0\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.", videos: [] };
+        }
+        const periodHours2 = input.period === "realtime" ? 6 : input.period === "1h" ? 12 : input.period === "6h" ? 24 : 24 * 7;
+        const publishedAfter = new Date(Date.now() - periodHours2 * 60 * 60 * 1e3).toISOString();
         const languageByRegion = {
           KR: "ko",
           US: "en",
@@ -3821,7 +3933,7 @@ var appRouter = router({
           const elapsedHours = Math.max((now - new Date(item.snippet.publishedAt).getTime()) / 36e5, 0.1);
           const averageHourlyViews = Math.round(viewCount / elapsedHours);
           const outlierScore = subscriberCount > 0 ? viewCount / subscriberCount : null;
-          const freshness = Math.max(0, 1 - elapsedHours / periodHours);
+          const freshness = Math.max(0, 1 - elapsedHours / periodHours2);
           const discoveryScore = 0.55 * Math.log1p(outlierScore || 0) + 0.3 * Math.log1p(averageHourlyViews) + 0.15 * freshness;
           return {
             id: item.id,
@@ -3840,6 +3952,9 @@ var appRouter = router({
             subscriberCount,
             hiddenSubscribers,
             averageHourlyViews,
+            velocityPerHour: null,
+            velocityAvailable: false,
+            acceleration: null,
             outlierScore: outlierScore === null ? null : Number(outlierScore.toFixed(2)),
             discoveryScore: Number(discoveryScore.toFixed(2)),
             elapsedHours: Number(elapsedHours.toFixed(1))

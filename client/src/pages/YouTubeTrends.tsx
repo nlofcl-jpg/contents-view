@@ -116,9 +116,10 @@ const EMPTY_STATE_MESSAGES = {
 };
 
 const RISING_PERIOD_OPTIONS = [
-  { value: "6h", label: "최근 6시간" },
-  { value: "24h", label: "최근 24시간" },
-  { value: "7d", label: "최근 7일" },
+  { value: "realtime", label: "실시간" },
+  { value: "1h", label: "1시간" },
+  { value: "6h", label: "6시간" },
+  { value: "24h", label: "24시간" },
 ] as const;
 
 const SUBSCRIBER_RANGE_OPTIONS = [
@@ -276,7 +277,7 @@ export default function YouTubeTrends() {
       country: "KR",
       category: "all",
       sort: "score",
-      period: "24h",
+      period: "1h",
       subscribers: "all",
     },
   });
@@ -299,7 +300,7 @@ export default function YouTubeTrends() {
   const country = currentFilters.country;
   const sortBy = currentFilters.sort;
   const category = activeTab === "trending" ? "all" : (currentFilters as any).category || "all";
-  const risingPeriod = (currentFilters as any).period || "24h";
+  const risingPeriod = (currentFilters as any).period || "1h";
   const risingSubscriberRange = (currentFilters as any).subscribers || "all";
 
   // Query to get API key status
@@ -438,7 +439,7 @@ export default function YouTubeTrends() {
     {
       regionCode,
       videoCategoryId,
-      period: risingPeriod as "6h" | "24h" | "7d",
+      period: risingPeriod as "realtime" | "1h" | "6h" | "24h",
       subscriberRange: risingSubscriberRange as "all" | "lt10k" | "10k-100k" | "100k-1m" | "gt1m",
       sortBy: sortBy as "score" | "hourly" | "outlier" | "newest",
       maxResults: 30,
@@ -1245,11 +1246,12 @@ export default function YouTubeTrends() {
       );
     }
 
-    if (risingError || risingData?.error) {
+    const risingDataError = risingData && "error" in risingData ? risingData.error : null;
+    if (risingError || risingDataError) {
       return (
         <div className="emptyStateContainer">
           <AlertCircle className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">{risingData?.error || YOUTUBE_API_KEY_ERROR_MESSAGE}</p>
+          <p className="emptyStateText">{risingDataError || YOUTUBE_API_KEY_ERROR_MESSAGE}</p>
         </div>
       );
     }
@@ -1280,7 +1282,9 @@ export default function YouTubeTrends() {
               마지막 분석: {risingData?.collectedAt ? formatLastUpdateTime(new Date(risingData.collectedAt).getTime()) : "-"}
             </span>
             <span className="updateInfoDot">·</span>
-            <span className="updateInfoSubtext">업로드 이후 평균 속도 기준</span>
+            <span className="updateInfoSubtext">
+              {risingData?.metricMode === "snapshot" ? `${RISING_PERIOD_OPTIONS.find(option => option.value === risingPeriod)?.label} 증가 속도 기준` : "기준 스냅샷 수집 중"}
+            </span>
           </div>
           <button onClick={handleRefreshClick} disabled={isRefreshing || isRisingLoading} className="refreshButton" title="새로고침">
             <RotateCw size={16} className={isRefreshing ? "refreshIconSpinning" : ""} />
@@ -1313,7 +1317,10 @@ export default function YouTubeTrends() {
                   <span>{video.elapsedHours < 24 ? `${Math.max(1, Math.round(video.elapsedHours))}시간 전` : `${Math.round(video.elapsedHours / 24)}일 전`}</span>
                 </div>
                 <div className="risingMetrics">
-                  <span><small>평균 시간당</small><strong>{formatKoreanNumber(video.averageHourlyViews)}</strong></span>
+                  <span>
+                    <small>{video.velocityAvailable ? "구간 시간당" : "평균 시간당"}</small>
+                    <strong>{formatKoreanNumber(video.velocityPerHour ?? video.averageHourlyViews)}</strong>
+                  </span>
                   <span><small>채널 대비</small><strong>{video.outlierScore === null ? "-" : `${video.outlierScore}배`}</strong></span>
                   <span><small>발굴 점수</small><strong>{video.discoveryScore}</strong></span>
                 </div>
@@ -1577,7 +1584,7 @@ export default function YouTubeTrends() {
         {activeTab === "rising" && (
           <>
             <div className="filterGroup">
-              <label htmlFor="rising-period-select" className="filterLabel">업로드 기간</label>
+              <label htmlFor="rising-period-select" className="filterLabel">상승 구간</label>
               <div className="selectWrapper">
                 <select
                   id="rising-period-select"
