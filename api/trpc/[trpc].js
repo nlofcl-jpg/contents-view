@@ -3732,6 +3732,152 @@ var appRouter = router({
       }
     }),
     /**
+     * Discover recently published videos that are outperforming their channel size.
+     * This is an on-demand discovery score. Snapshot-based velocity is added separately.
+     */
+    getRisingVideos: protectedProcedure.input(z3.object({
+      regionCode: z3.string().min(2).max(2),
+      videoCategoryId: z3.number().optional(),
+      period: z3.enum(["6h", "24h", "7d"]).default("24h"),
+      subscriberRange: z3.enum(["all", "lt10k", "10k-100k", "100k-1m", "gt1m"]).default("all"),
+      sortBy: z3.enum(["score", "hourly", "outlier", "newest"]).default("score"),
+      maxResults: z3.number().min(1).max(50).default(30)
+    })).query(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("User not authenticated");
+      const apiKeyRecord = await getUserApiKey2(ctx.user, "youtube");
+      if (!apiKeyRecord || apiKeyRecord.testStatus !== "success") {
+        return { success: false, error: "YouTube API \uD0A4 \uC624\uB958\uC785\uB2C8\uB2E4.\nAPI \uD0A4 \uD655\uC778 \uD6C4 \uB2E4\uC2DC \uC785\uB825\uD574\uC8FC\uC138\uC694.", videos: [] };
+      }
+      try {
+        const periodHours = input.period === "6h" ? 6 : input.period === "24h" ? 24 : 24 * 7;
+        const publishedAfter = new Date(Date.now() - periodHours * 60 * 60 * 1e3).toISOString();
+        const languageByRegion = {
+          KR: "ko",
+          US: "en",
+          JP: "ja",
+          GB: "en",
+          FR: "fr",
+          ES: "es",
+          DE: "de"
+        };
+        const searchParams = new URLSearchParams({
+          part: "snippet",
+          type: "video",
+          regionCode: input.regionCode,
+          relevanceLanguage: languageByRegion[input.regionCode] || "en",
+          publishedAfter,
+          order: "viewCount",
+          maxResults: "50",
+          key: apiKeyRecord.apiKey
+        });
+        if (input.videoCategoryId !== void 0) {
+          searchParams.set("videoCategoryId", String(input.videoCategoryId));
+        }
+        const searchResponse = await fetch(`https://www.googleapis.com/youtube/v3/search?${searchParams.toString()}`);
+        if (!searchResponse.ok) {
+          const body = await searchResponse.json();
+          return { success: false, error: translateYouTubeError(body.error?.message || "Failed to discover videos"), videos: [] };
+        }
+        const searchData = await searchResponse.json();
+        const videoIds = (searchData.items || []).map((item) => item.id?.videoId).filter(Boolean);
+        if (videoIds.length === 0) {
+          return { success: true, videos: [], collectedAt: (/* @__PURE__ */ new Date()).toISOString(), metricMode: "average_since_publish" };
+        }
+        const videoParams = new URLSearchParams({
+          part: "snippet,statistics,contentDetails",
+          id: videoIds.join(","),
+          key: apiKeyRecord.apiKey
+        });
+        const videoResponse = await fetch(`https://www.googleapis.com/youtube/v3/videos?${videoParams.toString()}`);
+        if (!videoResponse.ok) {
+          const body = await videoResponse.json();
+          return { success: false, error: translateYouTubeError(body.error?.message || "Failed to fetch video details"), videos: [] };
+        }
+        const videoData = await videoResponse.json();
+        const channelIds = Array.from(new Set((videoData.items || []).map((item) => item.snippet?.channelId).filter(Boolean))).slice(0, 50);
+        const channelParams = new URLSearchParams({
+          part: "snippet,statistics",
+          id: channelIds.join(","),
+          key: apiKeyRecord.apiKey
+        });
+        const channelResponse = await fetch(`https://www.googleapis.com/youtube/v3/channels?${channelParams.toString()}`);
+        const channelData = channelResponse.ok ? await channelResponse.json() : { items: [] };
+        const channelMap = /* @__PURE__ */ new Map();
+        for (const channel of channelData.items || []) channelMap.set(channel.id, channel);
+        const inSubscriberRange = (count, hidden) => {
+          if (input.subscriberRange === "all") return true;
+          if (hidden) return false;
+          if (input.subscriberRange === "lt10k") return count < 1e4;
+          if (input.subscriberRange === "10k-100k") return count >= 1e4 && count < 1e5;
+          if (input.subscriberRange === "100k-1m") return count >= 1e5 && count < 1e6;
+          return count >= 1e6;
+        };
+        const now = Date.now();
+        let candidates = (videoData.items || []).map((item) => {
+          const channel = channelMap.get(item.snippet.channelId);
+          const hiddenSubscribers = !channel || Boolean(channel.statistics?.hiddenSubscriberCount);
+          const subscriberCount = hiddenSubscribers ? 0 : Number(channel?.statistics?.subscriberCount || 0);
+          const viewCount = Number(item.statistics?.viewCount || 0);
+          const elapsedHours = Math.max((now - new Date(item.snippet.publishedAt).getTime()) / 36e5, 0.1);
+          const averageHourlyViews = Math.round(viewCount / elapsedHours);
+          const outlierScore = subscriberCount > 0 ? viewCount / subscriberCount : null;
+          const freshness = Math.max(0, 1 - elapsedHours / periodHours);
+          const discoveryScore = 0.55 * Math.log1p(outlierScore || 0) + 0.3 * Math.log1p(averageHourlyViews) + 0.15 * freshness;
+          return {
+            id: item.id,
+            title: item.snippet.title,
+            description: item.snippet.description,
+            thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url,
+            channelTitle: item.snippet.channelTitle,
+            channelId: item.snippet.channelId,
+            channelThumbnail: channel?.snippet?.thumbnails?.medium?.url || channel?.snippet?.thumbnails?.default?.url || null,
+            publishedAt: item.snippet.publishedAt,
+            viewCount,
+            commentCount: Number(item.statistics?.commentCount || 0),
+            categoryId: item.snippet.categoryId,
+            tags: Array.isArray(item.snippet.tags) ? item.snippet.tags.slice(0, 12) : [],
+            duration: item.contentDetails?.duration || "PT0S",
+            subscriberCount,
+            hiddenSubscribers,
+            averageHourlyViews,
+            outlierScore: outlierScore === null ? null : Number(outlierScore.toFixed(2)),
+            discoveryScore: Number(discoveryScore.toFixed(2)),
+            elapsedHours: Number(elapsedHours.toFixed(1))
+          };
+        }).filter(
+          (video) => video.viewCount >= 500 && video.elapsedHours >= 0.5 && inSubscriberRange(video.subscriberCount, video.hiddenSubscribers)
+        );
+        if (input.sortBy === "hourly") candidates.sort((a, b) => b.averageHourlyViews - a.averageHourlyViews);
+        else if (input.sortBy === "outlier") candidates.sort((a, b) => (b.outlierScore || 0) - (a.outlierScore || 0));
+        else if (input.sortBy === "newest") candidates.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+        else candidates.sort((a, b) => b.discoveryScore - a.discoveryScore);
+        const channelCounts = /* @__PURE__ */ new Map();
+        const categoryCounts = /* @__PURE__ */ new Map();
+        const categoryLimit = Math.ceil(input.maxResults / 2);
+        const diverseVideos = candidates.filter((video) => {
+          const channelCount = channelCounts.get(video.channelId) || 0;
+          const categoryCount = categoryCounts.get(video.categoryId) || 0;
+          if (channelCount >= 2) return false;
+          if (input.videoCategoryId === void 0 && categoryCount >= categoryLimit) return false;
+          channelCounts.set(video.channelId, channelCount + 1);
+          categoryCounts.set(video.categoryId, categoryCount + 1);
+          return true;
+        }).slice(0, input.maxResults);
+        return {
+          success: true,
+          videos: diverseVideos,
+          collectedAt: (/* @__PURE__ */ new Date()).toISOString(),
+          metricMode: "average_since_publish"
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: translateYouTubeError(error instanceof Error ? error.message : "Connection failed"),
+          videos: []
+        };
+      }
+    }),
+    /**
      * Search popular YouTube videos by keyword
      */
     searchVideos: protectedProcedure.input(z3.object({

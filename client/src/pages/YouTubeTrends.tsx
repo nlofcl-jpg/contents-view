@@ -8,7 +8,7 @@ import { AlertCircle, Clock, Play, ChevronDown, RotateCw, Users, Bookmark, Searc
 import { useBookmark } from "@/contexts/BookmarkContext";
 import { useLocation } from "wouter";
 
-type TabType = "analysis" | "trending" | "category" | "channels" | "shorts";
+type TabType = "analysis" | "trending" | "category" | "channels" | "shorts" | "rising";
 type AnalysisSortType = "relevance" | "publishedAt" | "viewCount";
 type AnalysisDurationType = "all" | "shorts" | "long";
 
@@ -20,6 +20,7 @@ const TABS = [
   { id: "category", label: "카테고리별 인기" },
   { id: "channels", label: "인기 채널" },
   { id: "shorts", label: "쇼츠 트렌드" },
+  { id: "rising", label: "급상승 발굴" },
 ] as const;
 
 function getInitialYouTubeTab(): TabType {
@@ -88,6 +89,12 @@ const SORT_OPTIONS = {
     { value: "viewCount", label: "조회수순" },
     { value: "publishedAt", label: "최신순" },
   ],
+  rising: [
+    { value: "score", label: "발굴 점수순" },
+    { value: "hourly", label: "시간당 조회순" },
+    { value: "outlier", label: "채널 대비순" },
+    { value: "newest", label: "최신순" },
+  ],
 };
 
 const TAB_MESSAGES = {
@@ -96,6 +103,7 @@ const TAB_MESSAGES = {
   category: "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.",
   channels: "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.",
   shorts: "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.",
+  rising: "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.",
 };
 
 const EMPTY_STATE_MESSAGES = {
@@ -104,7 +112,22 @@ const EMPTY_STATE_MESSAGES = {
   category: "선택한 국가와 카테고리의 인기 영상을 찾을 수 없습니다.",
   channels: "선택한 조건에서 인기 채널을 찾을 수 없습니다.",
   shorts: "선택한 조건에서 쇼츠 영상을 찾을 수 없습니다.",
+  rising: "선택한 조건에서 새롭게 상승하는 영상을 찾을 수 없습니다.",
 };
+
+const RISING_PERIOD_OPTIONS = [
+  { value: "6h", label: "최근 6시간" },
+  { value: "24h", label: "최근 24시간" },
+  { value: "7d", label: "최근 7일" },
+] as const;
+
+const SUBSCRIBER_RANGE_OPTIONS = [
+  { value: "all", label: "전체 채널" },
+  { value: "lt10k", label: "1만 미만" },
+  { value: "10k-100k", label: "1만~10만" },
+  { value: "100k-1m", label: "10만~100만" },
+  { value: "gt1m", label: "100만 이상" },
+] as const;
 
 // ISO 8601 duration to readable format (e.g., PT10M30S -> 10:30)
 function formatDuration(duration: string): string {
@@ -249,6 +272,13 @@ export default function YouTubeTrends() {
       category: "all",
       sort: "trending",
     },
+    rising: {
+      country: "KR",
+      category: "all",
+      sort: "score",
+      period: "24h",
+      subscribers: "all",
+    },
   });
 
   // Get current tab's filters
@@ -269,6 +299,8 @@ export default function YouTubeTrends() {
   const country = currentFilters.country;
   const sortBy = currentFilters.sort;
   const category = activeTab === "trending" ? "all" : (currentFilters as any).category || "all";
+  const risingPeriod = (currentFilters as any).period || "24h";
+  const risingSubscriberRange = (currentFilters as any).subscribers || "all";
 
   // Query to get API key status
   const { data: apiKeyData } = trpc.user.apiKey.getWithStatus.useQuery(
@@ -394,6 +426,31 @@ export default function YouTubeTrends() {
         apiKeyData?.exists &&
         apiKeyData?.testStatus === "success" &&
         shouldCallAPI,
+    }
+  );
+
+  const {
+    data: risingData,
+    isLoading: isRisingLoading,
+    error: risingError,
+    refetch: refetchRising,
+  } = trpc.youtube.getRisingVideos.useQuery(
+    {
+      regionCode,
+      videoCategoryId,
+      period: risingPeriod as "6h" | "24h" | "7d",
+      subscriberRange: risingSubscriberRange as "all" | "lt10k" | "10k-100k" | "100k-1m" | "gt1m",
+      sortBy: sortBy as "score" | "hourly" | "outlier" | "newest",
+      maxResults: 30,
+    },
+    {
+      enabled:
+        isAuthenticated &&
+        activeTab === "rising" &&
+        apiKeyData?.exists &&
+        apiKeyData?.testStatus === "success",
+      staleTime: 15 * 60 * 1000,
+      refetchOnWindowFocus: false,
     }
   );
 
@@ -524,7 +581,9 @@ export default function YouTubeTrends() {
     setShouldForceRefresh(true);
     try {
       // Force refetch by invalidating cache and bypassing 1-hour check
-      if (activeTab === "channels") {
+      if (activeTab === "rising") {
+        await refetchRising();
+      } else if (activeTab === "channels") {
         const result = await refetchChannels();
         // Update time only if refetch was successful
         if (result.data?.success && result.data?.channels && result.data.channels.length > 0) {
@@ -594,6 +653,8 @@ export default function YouTubeTrends() {
   const handleCountryChange = (value: string) => updateCurrentFilter("country", value);
   const handleCategoryChange = (value: string) => updateCurrentFilter("category", value);
   const handleSortChange = (value: string) => updateCurrentFilter("sort", value);
+  const handleRisingPeriodChange = (value: string) => updateCurrentFilter("period", value);
+  const handleSubscriberRangeChange = (value: string) => updateCurrentFilter("subscribers", value);
   const activeTabLabel = TABS.find((tab) => tab.id === activeTab)?.label || "인기 급상승 영상";
 
   const handleTabChange = (tabId: TabType) => {
@@ -1165,6 +1226,105 @@ export default function YouTubeTrends() {
     );
   };
 
+  const renderRisingTab = () => {
+    if (!apiKeyData?.exists || apiKeyData?.testStatus !== "success") {
+      return (
+        <div className="emptyStateContainer">
+          <AlertCircle className="emptyStateIcon" size={48} />
+          <p className="emptyStateText">{YOUTUBE_API_KEY_ERROR_MESSAGE}</p>
+        </div>
+      );
+    }
+
+    if (isRisingLoading) {
+      return (
+        <div className="emptyStateContainer">
+          <Clock className="emptyStateIcon" size={48} />
+          <p className="emptyStateText">급상승 후보를 분석하는 중입니다...</p>
+        </div>
+      );
+    }
+
+    if (risingError || risingData?.error) {
+      return (
+        <div className="emptyStateContainer">
+          <AlertCircle className="emptyStateIcon" size={48} />
+          <p className="emptyStateText">{risingData?.error || YOUTUBE_API_KEY_ERROR_MESSAGE}</p>
+        </div>
+      );
+    }
+
+    const risingVideos = risingData?.success ? risingData.videos || [] : [];
+    if (risingVideos.length === 0) {
+      return (
+        <div className="emptyStateContainer">
+          <AlertCircle className="emptyStateIcon" size={48} />
+          <p className="emptyStateText">선택한 조건에서 새롭게 상승하는 영상을 찾을 수 없습니다.</p>
+        </div>
+      );
+    }
+
+    return (
+      <section className="risingDiscoverySection">
+        <div className="updateInfoSection updateInfoSectionMobile">
+          <span className="updateInfoText">
+            마지막 분석: {risingData?.collectedAt ? formatLastUpdateTime(new Date(risingData.collectedAt).getTime()) : "-"}
+          </span>
+          <button onClick={handleRefreshClick} disabled={isRefreshing || isRisingLoading} className="refreshButton refreshButtonIconOnly" title="새로고침">
+            <RotateCw size={16} className={isRefreshing ? "refreshIconSpinning" : ""} />
+          </button>
+        </div>
+        <div className="updateInfoSection updateInfoSectionDesktop">
+          <div className="updateInfoContent">
+            <span className="updateInfoText">
+              마지막 분석: {risingData?.collectedAt ? formatLastUpdateTime(new Date(risingData.collectedAt).getTime()) : "-"}
+            </span>
+            <span className="updateInfoDot">·</span>
+            <span className="updateInfoSubtext">업로드 이후 평균 속도 기준</span>
+          </div>
+          <button onClick={handleRefreshClick} disabled={isRefreshing || isRisingLoading} className="refreshButton" title="새로고침">
+            <RotateCw size={16} className={isRefreshing ? "refreshIconSpinning" : ""} />
+            {isRefreshing ? "분석 중..." : "새로고침"}
+          </button>
+        </div>
+
+        <div className="risingVideosGrid">
+          {risingVideos.map((video: any, index: number) => (
+            <button
+              key={video.id}
+              type="button"
+              className="risingVideoCard"
+              onClick={() => {
+                setSelectedVideo(video);
+                setIsModalOpen(true);
+              }}
+            >
+              <div className="risingRank">{index + 1}</div>
+              <div className="risingThumbnail">
+                <img src={video.thumbnail} alt="" />
+                <span className="videoDurationBadge">{formatDuration(video.duration)}</span>
+              </div>
+              <div className="risingVideoBody">
+                <h3>{video.title}</h3>
+                <p className="risingChannel">{video.channelTitle}</p>
+                <div className="risingPrimaryMeta">
+                  <span>조회 {formatKoreanNumber(video.viewCount)}</span>
+                  <span>구독자 {video.hiddenSubscribers ? "비공개" : formatKoreanNumber(video.subscriberCount)}</span>
+                  <span>{video.elapsedHours < 24 ? `${Math.max(1, Math.round(video.elapsedHours))}시간 전` : `${Math.round(video.elapsedHours / 24)}일 전`}</span>
+                </div>
+                <div className="risingMetrics">
+                  <span><small>평균 시간당</small><strong>{formatKoreanNumber(video.averageHourlyViews)}</strong></span>
+                  <span><small>채널 대비</small><strong>{video.outlierScore === null ? "-" : `${video.outlierScore}배`}</strong></span>
+                  <span><small>발굴 점수</small><strong>{video.discoveryScore}</strong></span>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </section>
+    );
+  };
+
   // Render shorts tab
   const renderShortsTab = () => {
     // Check API Key status first (highest priority)
@@ -1390,7 +1550,7 @@ export default function YouTubeTrends() {
           </div>
         </div>
 
-        {(activeTab === "category" || activeTab === "channels") && (
+        {(activeTab === "category" || activeTab === "channels" || activeTab === "rising") && (
           <div className="filterGroup">
             <label htmlFor="category-select" className="filterLabel">
               카테고리
@@ -1402,6 +1562,7 @@ export default function YouTubeTrends() {
                 onChange={(e) => handleCategoryChange(e.target.value)}
                 className="youtubeSelect"
               >
+                {activeTab === "rising" && <option value="all">전체</option>}
                 {CATEGORIES.map((cat) => (
                   <option key={cat.value} value={cat.value}>
                     {cat.label}
@@ -1411,6 +1572,44 @@ export default function YouTubeTrends() {
               <ChevronDown className="selectChevron" />
             </div>
           </div>
+        )}
+
+        {activeTab === "rising" && (
+          <>
+            <div className="filterGroup">
+              <label htmlFor="rising-period-select" className="filterLabel">업로드 기간</label>
+              <div className="selectWrapper">
+                <select
+                  id="rising-period-select"
+                  value={risingPeriod}
+                  onChange={(e) => handleRisingPeriodChange(e.target.value)}
+                  className="youtubeSelect"
+                >
+                  {RISING_PERIOD_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+                <ChevronDown className="selectChevron" />
+              </div>
+            </div>
+
+            <div className="filterGroup">
+              <label htmlFor="subscriber-range-select" className="filterLabel">채널 규모</label>
+              <div className="selectWrapper">
+                <select
+                  id="subscriber-range-select"
+                  value={risingSubscriberRange}
+                  onChange={(e) => handleSubscriberRangeChange(e.target.value)}
+                  className="youtubeSelect"
+                >
+                  {SUBSCRIBER_RANGE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+                <ChevronDown className="selectChevron" />
+              </div>
+            </div>
+          </>
         )}
 
         <div className="filterGroup">
@@ -1483,6 +1682,8 @@ export default function YouTubeTrends() {
         renderChannelsTab()
       ) : activeTab === "shorts" ? (
         renderShortsTab()
+      ) : activeTab === "rising" ? (
+        renderRisingTab()
       ) : null}
 
       {/* Video Detail Modal */}
