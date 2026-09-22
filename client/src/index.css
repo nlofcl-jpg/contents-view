@@ -1256,7 +1256,7 @@ a {
   z-index: 5;
   width: calc(100% + 144px);
   margin: -48px -72px 0;
-  min-height: clamp(430px, 58vh, 620px);
+  min-height: clamp(360px, 48vh, 500px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1542,7 +1542,7 @@ a {
 
   .hero {
     grid-template-columns: 1fr;
-    min-height: clamp(400px, 54vh, 560px);
+    min-height: clamp(360px, 48vh, 500px);
     padding: 24px 72px;
   }
 
