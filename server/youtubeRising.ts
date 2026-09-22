@@ -28,6 +28,10 @@ const periodHours: Record<RisingPeriod, number> = {
   "24h": 24,
 };
 
+export function isYouTubeTopicChannel(channelTitle: string | null | undefined) {
+  return /\s[-–—]\s*topic$/i.test(channelTitle?.trim() || "");
+}
+
 function parseDurationSeconds(duration: string) {
   const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
   if (!match) return 0;
@@ -152,21 +156,26 @@ export async function collectYouTubeRisingSnapshots() {
   }
 
   const capturedAt = new Date().toISOString();
-  const channelRows = Array.from(channelById.values()).map(channel => ({
-    channel_id: channel.id,
-    title: channel.snippet?.title || "",
-    thumbnail_url: channel.snippet?.thumbnails?.medium?.url || channel.snippet?.thumbnails?.default?.url || null,
-    subscriber_count: Number(channel.statistics?.subscriberCount || 0),
-    hidden_subscribers: Boolean(channel.statistics?.hiddenSubscriberCount),
-    country: channel.snippet?.country || null,
-    updated_at: capturedAt,
-  }));
+  const channelRows = Array.from(channelById.values())
+    .filter(channel => !isYouTubeTopicChannel(channel.snippet?.title))
+    .map(channel => ({
+      channel_id: channel.id,
+      title: channel.snippet?.title || "",
+      thumbnail_url: channel.snippet?.thumbnails?.medium?.url || channel.snippet?.thumbnails?.default?.url || null,
+      subscriber_count: Number(channel.statistics?.subscriberCount || 0),
+      hidden_subscribers: Boolean(channel.statistics?.hiddenSubscriberCount),
+      country: channel.snippet?.country || null,
+      updated_at: capturedAt,
+    }));
   if (channelRows.length > 0) {
     const { error } = await supabaseAdmin.from("youtube_rising_channels").upsert(channelRows, { onConflict: "channel_id" });
     if (error) throw error;
   }
 
-  const eligibleVideos = videos.filter(item => channelById.has(item.snippet?.channelId));
+  const eligibleVideos = videos.filter(item => {
+    const channel = channelById.get(item.snippet?.channelId);
+    return channel && !isYouTubeTopicChannel(channel.snippet?.title);
+  });
   const videoRows = eligibleVideos.map(item => ({
     video_id: item.id,
     channel_id: item.snippet.channelId,
@@ -295,6 +304,7 @@ export async function getStoredYouTubeRisingVideos(input: StoredRisingInput) {
   }).filter((video: any) =>
     video.viewCount >= 500 &&
     video.elapsedHours >= 0.5 &&
+    !isYouTubeTopicChannel(video.channelTitle) &&
     matchesSubscriberRange(video.subscriberCount, video.hiddenSubscribers, input.subscriberRange)
   );
 

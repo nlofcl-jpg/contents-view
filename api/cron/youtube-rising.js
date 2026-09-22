@@ -30,6 +30,9 @@ var ENV = {
 var supabaseAdmin = ENV.supabaseUrl && ENV.supabaseServiceRoleKey ? createClient(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
   auth: { persistSession: false, autoRefreshToken: false }
 }) : null;
+function isYouTubeTopicChannel(channelTitle) {
+  return /\s[-–—]\s*topic$/i.test(channelTitle?.trim() || "");
+}
 function parseDurationSeconds(duration) {
   const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
   if (!match) return 0;
@@ -125,7 +128,7 @@ async function collectYouTubeRisingSnapshots() {
     for (const channel of channelData.items || []) channelById.set(channel.id, channel);
   }
   const capturedAt = (/* @__PURE__ */ new Date()).toISOString();
-  const channelRows = Array.from(channelById.values()).map((channel) => ({
+  const channelRows = Array.from(channelById.values()).filter((channel) => !isYouTubeTopicChannel(channel.snippet?.title)).map((channel) => ({
     channel_id: channel.id,
     title: channel.snippet?.title || "",
     thumbnail_url: channel.snippet?.thumbnails?.medium?.url || channel.snippet?.thumbnails?.default?.url || null,
@@ -138,7 +141,10 @@ async function collectYouTubeRisingSnapshots() {
     const { error } = await supabaseAdmin.from("youtube_rising_channels").upsert(channelRows, { onConflict: "channel_id" });
     if (error) throw error;
   }
-  const eligibleVideos = videos.filter((item) => channelById.has(item.snippet?.channelId));
+  const eligibleVideos = videos.filter((item) => {
+    const channel = channelById.get(item.snippet?.channelId);
+    return channel && !isYouTubeTopicChannel(channel.snippet?.title);
+  });
   const videoRows = eligibleVideos.map((item) => ({
     video_id: item.id,
     channel_id: item.snippet.channelId,

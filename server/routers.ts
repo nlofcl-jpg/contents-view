@@ -14,7 +14,7 @@ import { createRequire } from "module";
 import { createHmac } from "crypto";
 import { eq } from "drizzle-orm";
 import { users } from "../drizzle/schema";
-import { getStoredYouTubeRisingVideos } from "./youtubeRising";
+import { getStoredYouTubeRisingVideos, isYouTubeTopicChannel } from "./youtubeRising";
 
 const require = createRequire(import.meta.url);
 
@@ -1858,6 +1858,7 @@ export const appRouter = router({
           }).filter((video: any) =>
             video.viewCount >= 500 &&
             video.elapsedHours >= 0.5 &&
+            !isYouTubeTopicChannel(video.channelTitle) &&
             inSubscriberRange(video.subscriberCount, video.hiddenSubscribers)
           );
 

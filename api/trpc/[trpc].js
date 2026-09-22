@@ -2409,6 +2409,9 @@ var periodHours = {
   "6h": 6,
   "24h": 24
 };
+function isYouTubeTopicChannel(channelTitle) {
+  return /\s[-–—]\s*topic$/i.test(channelTitle?.trim() || "");
+}
 function toIsoDuration(seconds) {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor(seconds % 3600 / 60);
@@ -2480,7 +2483,7 @@ async function getStoredYouTubeRisingVideos(input) {
       capturedAt: row.captured_at
     };
   }).filter(
-    (video) => video.viewCount >= 500 && video.elapsedHours >= 0.5 && matchesSubscriberRange(video.subscriberCount, video.hiddenSubscribers, input.subscriberRange)
+    (video) => video.viewCount >= 500 && video.elapsedHours >= 0.5 && !isYouTubeTopicChannel(video.channelTitle) && matchesSubscriberRange(video.subscriberCount, video.hiddenSubscribers, input.subscriberRange)
   );
   if (input.sortBy === "hourly") videos.sort((a, b) => (b.velocityPerHour ?? b.averageHourlyViews) - (a.velocityPerHour ?? a.averageHourlyViews));
   else if (input.sortBy === "outlier") videos.sort((a, b) => (b.outlierScore || 0) - (a.outlierScore || 0));
@@ -3960,7 +3963,7 @@ var appRouter = router({
             elapsedHours: Number(elapsedHours.toFixed(1))
           };
         }).filter(
-          (video) => video.viewCount >= 500 && video.elapsedHours >= 0.5 && inSubscriberRange(video.subscriberCount, video.hiddenSubscribers)
+          (video) => video.viewCount >= 500 && video.elapsedHours >= 0.5 && !isYouTubeTopicChannel(video.channelTitle) && inSubscriberRange(video.subscriberCount, video.hiddenSubscribers)
         );
         if (input.sortBy === "hourly") candidates.sort((a, b) => b.averageHourlyViews - a.averageHourlyViews);
         else if (input.sortBy === "outlier") candidates.sort((a, b) => (b.outlierScore || 0) - (a.outlierScore || 0));
