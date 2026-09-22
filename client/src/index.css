@@ -1282,13 +1282,19 @@ a {
 .hero::after {
   content: "";
   position: absolute;
-  inset: -24px 0 0;
+  inset: -24px 0 -72px;
   z-index: 0;
   pointer-events: none;
   background:
     radial-gradient(circle at 18% 48%, rgba(21, 140, 255, 0.14), transparent 28%),
     linear-gradient(90deg, rgba(7, 10, 17, 0.86) 0%, rgba(7, 10, 17, 0.54) 46%, rgba(7, 10, 17, 0.08) 100%),
-    linear-gradient(180deg, rgba(7, 10, 17, 0.64) 0%, rgba(7, 10, 17, 0.04) 34%, rgba(7, 10, 17, 0.9) 100%);
+    linear-gradient(
+      180deg,
+      rgba(7, 10, 17, 0.64) 0%,
+      rgba(7, 10, 17, 0.04) 34%,
+      rgba(7, 10, 17, 0.9) 82%,
+      #070a11 100%
+    );
 }
 
 .heroCopy {
