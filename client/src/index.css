@@ -1291,157 +1291,9 @@ a {
     linear-gradient(180deg, rgba(7, 10, 17, 0.64) 0%, rgba(7, 10, 17, 0.04) 34%, rgba(7, 10, 17, 0.9) 100%);
 }
 
-.heroRadar {
-  position: absolute;
-  top: -8%;
-  right: 1.5%;
-  z-index: 1;
-  width: clamp(340px, 30vw, 470px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  pointer-events: none;
-  overflow: hidden;
-  background: radial-gradient(
-    circle,
-    rgba(0, 31, 72, 0.99) 0%,
-    rgba(0, 22, 52, 0.98) 58%,
-    rgba(0, 16, 39, 0.94) 76%,
-    rgba(0, 12, 30, 0.28) 91%,
-    transparent 100%
-  );
-  filter: drop-shadow(0 0 34px rgba(0, 119, 255, 0.2));
-}
-
-.heroRadarGrid,
-.heroRadarSweep {
-  position: absolute;
-  inset: 6%;
-  border-radius: 50%;
-}
-
-.heroRadarGrid {
-  border: 1px solid rgba(43, 138, 255, 0.34);
-  background:
-    linear-gradient(90deg, transparent calc(50% - 0.5px), rgba(40, 128, 255, 0.28) 50%, transparent calc(50% + 0.5px)),
-    linear-gradient(0deg, transparent calc(50% - 0.5px), rgba(40, 128, 255, 0.28) 50%, transparent calc(50% + 0.5px)),
-    repeating-radial-gradient(
-      circle,
-      transparent 0,
-      transparent calc(10% - 1px),
-      rgba(37, 127, 255, 0.34) 10%,
-      transparent calc(10% + 1px),
-      transparent 20%
-    );
-  box-shadow:
-    inset 0 0 42px rgba(0, 94, 255, 0.14),
-    0 0 30px rgba(0, 119, 255, 0.14);
-}
-
-.heroRadarSweep {
-  overflow: hidden;
-  background: conic-gradient(
-    from -18deg,
-    transparent 0deg,
-    transparent 310deg,
-    rgba(0, 119, 255, 0.02) 320deg,
-    rgba(0, 174, 255, 0.2) 343deg,
-    rgba(74, 220, 255, 0.54) 356deg,
-    rgba(177, 246, 255, 0.84) 359deg,
-    transparent 360deg
-  );
-  animation: hero-radar-scan 7.2s linear infinite;
-  will-change: transform;
-}
-
-.heroRadarSweep::after {
-  content: "";
-  position: absolute;
-  top: calc(50% - 1px);
-  left: 50%;
-  width: 48%;
-  height: 2px;
-  transform: rotate(-90deg);
-  transform-origin: left center;
-  background: linear-gradient(90deg, #dcfbff 0%, #3ed8ff 28%, rgba(0, 157, 255, 0.08) 100%);
-  box-shadow:
-    0 0 7px rgba(101, 229, 255, 0.98),
-    0 0 18px rgba(0, 157, 255, 0.82);
-}
-
-.heroRadarCore,
-.heroRadarTarget {
-  position: absolute;
-  z-index: 2;
-  display: block;
-  border-radius: 50%;
-}
-
-.heroRadarCore {
-  top: 50%;
-  left: 50%;
-  width: 9px;
-  height: 9px;
-  transform: translate(-50%, -50%);
-  background: #e9feff;
-  box-shadow:
-    0 0 8px #baf8ff,
-    0 0 20px #24c8ff,
-    0 0 44px rgba(0, 119, 255, 0.9);
-}
-
-.heroRadarTarget {
-  width: 7px;
-  height: 7px;
-  background: #4ce7ff;
-  box-shadow:
-    0 0 6px #c5fbff,
-    0 0 15px #00a8ff;
-  animation: hero-radar-target 2.7s ease-in-out infinite;
-}
-
-.heroRadarTargetOne {
-  top: 24%;
-  left: 75%;
-  animation-delay: -0.4s;
-}
-
-.heroRadarTargetTwo {
-  top: 43%;
-  left: 31%;
-  animation-delay: -1.7s;
-}
-
-.heroRadarTargetThree {
-  top: 67%;
-  left: 69%;
-  background: #ff5a57;
-  box-shadow:
-    0 0 6px #ffd4cf,
-    0 0 16px #ff2f2f;
-  animation-delay: -2.2s;
-}
-
-@keyframes hero-radar-scan {
-  to {
-    transform: rotate(1turn);
-  }
-}
-
-@keyframes hero-radar-target {
-  0%,
-  100% {
-    opacity: 0.28;
-    transform: scale(0.72);
-  }
-  48% {
-    opacity: 1;
-    transform: scale(1.28);
-  }
-}
-
 .heroCopy {
   position: relative;
-  z-index: 2;
+  z-index: 1;
   width: min(100%, 1080px);
   max-width: 1080px;
   margin: 0 auto;
@@ -1699,12 +1551,6 @@ a {
     background-position: 72% 20%;
   }
 
-  .heroRadar {
-    top: -2%;
-    right: -7%;
-    width: clamp(320px, 39vw, 420px);
-  }
-
   .radarStage {
     min-height: 460px;
   }
@@ -1746,8 +1592,7 @@ a {
   }
 
   /* Hide radar on mobile */
-  .radarStage,
-  .heroRadar {
+  .radarStage {
     display: none;
   }
 
@@ -1908,13 +1753,6 @@ a {
 
   .radarStage {
     min-height: 330px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .heroRadarSweep,
-  .heroRadarTarget {
-    animation: none;
   }
 }
 
