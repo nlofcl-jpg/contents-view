@@ -2,7 +2,8 @@
 -- Replace the two placeholder values before executing.
 
 create extension if not exists pg_cron;
-create extension if not exists pg_net;
+create schema if not exists extensions;
+create extension if not exists pg_net with schema extensions;
 create extension if not exists supabase_vault;
 
 select vault.create_secret(
