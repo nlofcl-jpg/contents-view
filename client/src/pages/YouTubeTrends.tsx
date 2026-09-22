@@ -20,7 +20,7 @@ const TABS = [
   { id: "category", label: "카테고리별 인기" },
   { id: "channels", label: "인기 채널" },
   { id: "shorts", label: "쇼츠 트렌드" },
-  { id: "rising", label: "급상승 발굴" },
+  { id: "rising", label: "급상승 영상" },
 ] as const;
 
 function getInitialYouTubeTab(): TabType {
@@ -90,7 +90,7 @@ const SORT_OPTIONS = {
     { value: "publishedAt", label: "최신순" },
   ],
   rising: [
-    { value: "score", label: "발굴 점수순" },
+    { value: "score", label: "상승 지수순" },
     { value: "hourly", label: "시간당 조회순" },
     { value: "outlier", label: "채널 대비순" },
     { value: "newest", label: "최신순" },
@@ -1318,11 +1318,11 @@ export default function YouTubeTrends() {
                 </div>
                 <div className="risingMetrics">
                   <span>
-                    <small>{video.velocityAvailable ? "구간 시간당" : "평균 시간당"}</small>
+                    <small>시간당 증가량</small>
                     <strong>{formatKoreanNumber(video.velocityPerHour ?? video.averageHourlyViews)}</strong>
                   </span>
                   <span><small>채널 대비</small><strong>{video.outlierScore === null ? "-" : `${video.outlierScore}배`}</strong></span>
-                  <span><small>발굴 점수</small><strong>{video.discoveryScore}</strong></span>
+                  <span><small>상승 지수</small><strong>{video.discoveryScore}</strong></span>
                 </div>
               </div>
             </button>
