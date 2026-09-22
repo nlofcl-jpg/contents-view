@@ -39,6 +39,14 @@ export default function Hero() {
 
   return (
     <section className="hero">
+      <div className="heroRadar" aria-hidden="true">
+        <div className="heroRadarGrid" />
+        <div className="heroRadarSweep" />
+        <span className="heroRadarTarget heroRadarTargetOne" />
+        <span className="heroRadarTarget heroRadarTargetTwo" />
+        <span className="heroRadarTarget heroRadarTargetThree" />
+        <span className="heroRadarCore" />
+      </div>
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
         <div className="heroCopy">
           <p className="heroKicker">TRACK. ANALYZE. DISCOVER.</p>
