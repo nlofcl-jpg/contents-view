@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development tsx watch server/_core/index.ts",
-    "build:api": "esbuild server/vercel-trpc.ts --platform=node --packages=external --bundle --format=esm --outfile='api/trpc/[trpc].js'",
+    "build:api": "esbuild server/vercel-trpc.ts --platform=node --packages=external --bundle --format=esm --outfile='api/trpc/[trpc].js' && esbuild server/vercel-youtube-rising-cron.ts --platform=node --packages=external --bundle --format=esm --outfile='api/cron/youtube-rising.js'",
     "build": "pnpm run build:api && vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc --noEmit",
