@@ -336,7 +336,7 @@ export default function ServiceCards() {
   ];
 
   return (
-    <section className="px-4 py-14 sm:px-6 lg:px-8">
+    <section className="px-4 pb-14 pt-5 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8">
           <div>
