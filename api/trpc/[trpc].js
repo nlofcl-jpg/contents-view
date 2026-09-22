@@ -2418,6 +2418,39 @@ function toIsoDuration(seconds) {
   const remaining = seconds % 60;
   return `PT${hours ? `${hours}H` : ""}${minutes ? `${minutes}M` : ""}${remaining || !hours && !minutes ? `${remaining}S` : ""}`;
 }
+function selectBalancedRisingVideos(videos, maxResults, categoryIsFiltered, subscriberRange) {
+  const channelCounts = /* @__PURE__ */ new Map();
+  const categoryCounts = /* @__PURE__ */ new Map();
+  const categoryLimit = Math.ceil(maxResults / 2);
+  const diverseVideos = videos.filter((video) => {
+    const channelCount = channelCounts.get(video.channelId) || 0;
+    const categoryCount = categoryCounts.get(video.categoryId) || 0;
+    if (channelCount >= 2) return false;
+    if (!categoryIsFiltered && categoryCount >= categoryLimit) return false;
+    channelCounts.set(video.channelId, channelCount + 1);
+    categoryCounts.set(video.categoryId, categoryCount + 1);
+    return true;
+  });
+  if (subscriberRange !== "all") return diverseVideos.slice(0, maxResults);
+  const emerging = diverseVideos.filter((video) => !video.hiddenSubscribers && video.subscriberCount < 1e5);
+  const growing = diverseVideos.filter((video) => !video.hiddenSubscribers && video.subscriberCount >= 1e5 && video.subscriberCount < 1e6);
+  const major = diverseVideos.filter((video) => video.hiddenSubscribers || video.subscriberCount >= 1e6);
+  const quotas = [
+    { videos: emerging, limit: Math.ceil(maxResults * 0.4) },
+    { videos: growing, limit: Math.ceil(maxResults * 0.4) },
+    { videos: major, limit: Math.max(0, maxResults - Math.ceil(maxResults * 0.4) * 2) }
+  ];
+  const selected = quotas.flatMap((group) => group.videos.slice(0, group.limit));
+  const selectedVideos = new Set(selected);
+  for (const video of diverseVideos) {
+    if (selected.length >= maxResults) break;
+    if (!selectedVideos.has(video)) {
+      selected.push(video);
+      selectedVideos.add(video);
+    }
+  }
+  return selected.sort((a, b) => videos.indexOf(a) - videos.indexOf(b));
+}
 function matchesSubscriberRange(count, hidden, range) {
   if (range === "all") return true;
   if (hidden) return false;
@@ -2489,18 +2522,12 @@ async function getStoredYouTubeRisingVideos(input) {
   else if (input.sortBy === "outlier") videos.sort((a, b) => (b.outlierScore || 0) - (a.outlierScore || 0));
   else if (input.sortBy === "newest") videos.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
   else videos.sort((a, b) => b.discoveryScore - a.discoveryScore);
-  const channelCounts = /* @__PURE__ */ new Map();
-  const categoryCounts = /* @__PURE__ */ new Map();
-  const categoryLimit = Math.ceil(input.maxResults / 2);
-  videos = videos.filter((video) => {
-    const channelCount = channelCounts.get(video.channelId) || 0;
-    const categoryCount = categoryCounts.get(video.categoryId) || 0;
-    if (channelCount >= 2) return false;
-    if (input.videoCategoryId === void 0 && categoryCount >= categoryLimit) return false;
-    channelCounts.set(video.channelId, channelCount + 1);
-    categoryCounts.set(video.categoryId, categoryCount + 1);
-    return true;
-  }).slice(0, input.maxResults);
+  videos = selectBalancedRisingVideos(
+    videos,
+    input.maxResults,
+    input.videoCategoryId !== void 0,
+    input.subscriberRange
+  );
   return {
     success: true,
     videos,
@@ -3969,18 +3996,12 @@ var appRouter = router({
         else if (input.sortBy === "outlier") candidates.sort((a, b) => (b.outlierScore || 0) - (a.outlierScore || 0));
         else if (input.sortBy === "newest") candidates.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
         else candidates.sort((a, b) => b.discoveryScore - a.discoveryScore);
-        const channelCounts = /* @__PURE__ */ new Map();
-        const categoryCounts = /* @__PURE__ */ new Map();
-        const categoryLimit = Math.ceil(input.maxResults / 2);
-        const diverseVideos = candidates.filter((video) => {
-          const channelCount = channelCounts.get(video.channelId) || 0;
-          const categoryCount = categoryCounts.get(video.categoryId) || 0;
-          if (channelCount >= 2) return false;
-          if (input.videoCategoryId === void 0 && categoryCount >= categoryLimit) return false;
-          channelCounts.set(video.channelId, channelCount + 1);
-          categoryCounts.set(video.categoryId, categoryCount + 1);
-          return true;
-        }).slice(0, input.maxResults);
+        const diverseVideos = selectBalancedRisingVideos(
+          candidates,
+          input.maxResults,
+          input.videoCategoryId !== void 0,
+          input.subscriberRange
+        );
         return {
           success: true,
           videos: diverseVideos,

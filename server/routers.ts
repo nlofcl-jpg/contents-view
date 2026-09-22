@@ -14,7 +14,7 @@ import { createRequire } from "module";
 import { createHmac } from "crypto";
 import { eq } from "drizzle-orm";
 import { users } from "../drizzle/schema";
-import { getStoredYouTubeRisingVideos, isYouTubeTopicChannel } from "./youtubeRising";
+import { getStoredYouTubeRisingVideos, isYouTubeTopicChannel, selectBalancedRisingVideos } from "./youtubeRising";
 
 const require = createRequire(import.meta.url);
 
@@ -1867,18 +1867,12 @@ export const appRouter = router({
           else if (input.sortBy === "newest") candidates.sort((a: any, b: any) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
           else candidates.sort((a: any, b: any) => b.discoveryScore - a.discoveryScore);
 
-          const channelCounts = new Map<string, number>();
-          const categoryCounts = new Map<string, number>();
-          const categoryLimit = Math.ceil(input.maxResults / 2);
-          const diverseVideos = candidates.filter((video: any) => {
-            const channelCount = channelCounts.get(video.channelId) || 0;
-            const categoryCount = categoryCounts.get(video.categoryId) || 0;
-            if (channelCount >= 2) return false;
-            if (input.videoCategoryId === undefined && categoryCount >= categoryLimit) return false;
-            channelCounts.set(video.channelId, channelCount + 1);
-            categoryCounts.set(video.categoryId, categoryCount + 1);
-            return true;
-          }).slice(0, input.maxResults);
+          const diverseVideos = selectBalancedRisingVideos(
+            candidates,
+            input.maxResults,
+            input.videoCategoryId !== undefined,
+            input.subscriberRange,
+          );
 
           return {
             success: true,

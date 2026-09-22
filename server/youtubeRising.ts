@@ -51,6 +51,49 @@ function chunks<T>(items: T[], size: number) {
   return result;
 }
 
+export function selectBalancedRisingVideos<T extends { channelId: string; categoryId: string; subscriberCount: number; hiddenSubscribers: boolean }>(
+  videos: T[],
+  maxResults: number,
+  categoryIsFiltered: boolean,
+  subscriberRange: SubscriberRange,
+) {
+  const channelCounts = new Map<string, number>();
+  const categoryCounts = new Map<string, number>();
+  const categoryLimit = Math.ceil(maxResults / 2);
+  const diverseVideos = videos.filter(video => {
+    const channelCount = channelCounts.get(video.channelId) || 0;
+    const categoryCount = categoryCounts.get(video.categoryId) || 0;
+    if (channelCount >= 2) return false;
+    if (!categoryIsFiltered && categoryCount >= categoryLimit) return false;
+    channelCounts.set(video.channelId, channelCount + 1);
+    categoryCounts.set(video.categoryId, categoryCount + 1);
+    return true;
+  });
+
+  if (subscriberRange !== "all") return diverseVideos.slice(0, maxResults);
+
+  const emerging = diverseVideos.filter(video => !video.hiddenSubscribers && video.subscriberCount < 100_000);
+  const growing = diverseVideos.filter(video => !video.hiddenSubscribers && video.subscriberCount >= 100_000 && video.subscriberCount < 1_000_000);
+  const major = diverseVideos.filter(video => video.hiddenSubscribers || video.subscriberCount >= 1_000_000);
+  const quotas = [
+    { videos: emerging, limit: Math.ceil(maxResults * 0.4) },
+    { videos: growing, limit: Math.ceil(maxResults * 0.4) },
+    { videos: major, limit: Math.max(0, maxResults - Math.ceil(maxResults * 0.4) * 2) },
+  ];
+  const selected = quotas.flatMap(group => group.videos.slice(0, group.limit));
+  const selectedVideos = new Set(selected);
+
+  for (const video of diverseVideos) {
+    if (selected.length >= maxResults) break;
+    if (!selectedVideos.has(video)) {
+      selected.push(video);
+      selectedVideos.add(video);
+    }
+  }
+
+  return selected.sort((a, b) => videos.indexOf(a) - videos.indexOf(b));
+}
+
 async function fetchYouTube(path: string, params: Record<string, string>, apiKey: string) {
   const searchParams = new URLSearchParams({ ...params, key: apiKey });
   const response = await fetch(`https://www.googleapis.com/youtube/v3/${path}?${searchParams.toString()}`);
@@ -89,17 +132,32 @@ export async function collectYouTubeRisingSnapshots() {
     }
   }
 
-  const searchRegion = regions[Math.floor(Date.now() / 1_800_000) % regions.length];
-  const recentSearch = await fetchYouTube("search", {
-    part: "snippet",
-    type: "video",
-    regionCode: searchRegion,
-    publishedAfter: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-    order: "viewCount",
-    maxResults: "50",
-  }, apiKey);
-  const discoveredIds = (recentSearch.items || []).map((item: any) => item.id?.videoId).filter(Boolean);
-  for (const idBatch of chunks(discoveredIds, 50)) {
+  const collectionSlot = Math.floor(Date.now() / 1_800_000);
+  const hourlySlot = Math.floor(collectionSlot / 2);
+  const searchRegion = regions[hourlySlot % regions.length];
+  const discoveryCategories = ["1", "2", "10", "15", "17", "19", "20", "22", "23", "24", "25", "26", "27", "28"];
+  const discoveryCategory = discoveryCategories[hourlySlot % discoveryCategories.length];
+  const shouldDiscover = collectionSlot % 2 === 0;
+  const discoveryModes = shouldDiscover
+    ? [{ order: "date" }, { order: "viewCount", videoCategoryId: discoveryCategory }]
+    : [];
+  const discoveredIds = new Set<string>();
+  for (const mode of discoveryModes) {
+    const discoveryParams: Record<string, string> = {
+      part: "snippet",
+      type: "video",
+      regionCode: searchRegion,
+      publishedAfter: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+      order: mode.order,
+      maxResults: "50",
+    };
+    if (mode.videoCategoryId) discoveryParams.videoCategoryId = mode.videoCategoryId;
+    const recentSearch = await fetchYouTube("search", discoveryParams, apiKey);
+    for (const item of recentSearch.items || []) {
+      if (item.id?.videoId) discoveredIds.add(item.id.videoId);
+    }
+  }
+  for (const idBatch of chunks(Array.from(discoveredIds), 50)) {
     const details = await fetchYouTube("videos", {
       part: "snippet,statistics,contentDetails",
       id: idBatch.join(","),
@@ -224,6 +282,8 @@ export async function collectYouTubeRisingSnapshots() {
   return {
     regions,
     searchedRegion: searchRegion,
+    discoveryModes,
+    discoveryCategory,
     videoCount: eligibleVideos.length,
     snapshotCount: snapshotRows.length,
     capturedAt,
@@ -313,18 +373,12 @@ export async function getStoredYouTubeRisingVideos(input: StoredRisingInput) {
   else if (input.sortBy === "newest") videos.sort((a: any, b: any) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
   else videos.sort((a: any, b: any) => b.discoveryScore - a.discoveryScore);
 
-  const channelCounts = new Map<string, number>();
-  const categoryCounts = new Map<string, number>();
-  const categoryLimit = Math.ceil(input.maxResults / 2);
-  videos = videos.filter((video: any) => {
-    const channelCount = channelCounts.get(video.channelId) || 0;
-    const categoryCount = categoryCounts.get(video.categoryId) || 0;
-    if (channelCount >= 2) return false;
-    if (input.videoCategoryId === undefined && categoryCount >= categoryLimit) return false;
-    channelCounts.set(video.channelId, channelCount + 1);
-    categoryCounts.set(video.categoryId, categoryCount + 1);
-    return true;
-  }).slice(0, input.maxResults);
+  videos = selectBalancedRisingVideos(
+    videos,
+    input.maxResults,
+    input.videoCategoryId !== undefined,
+    input.subscriberRange,
+  );
 
   return {
     success: true as const,

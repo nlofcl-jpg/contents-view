@@ -74,17 +74,30 @@ async function collectYouTubeRisingSnapshots() {
       regionLinks.set(item.id, linkedRegions);
     }
   }
-  const searchRegion = regions[Math.floor(Date.now() / 18e5) % regions.length];
-  const recentSearch = await fetchYouTube("search", {
-    part: "snippet",
-    type: "video",
-    regionCode: searchRegion,
-    publishedAfter: new Date(Date.now() - 6 * 60 * 60 * 1e3).toISOString(),
-    order: "viewCount",
-    maxResults: "50"
-  }, apiKey);
-  const discoveredIds = (recentSearch.items || []).map((item) => item.id?.videoId).filter(Boolean);
-  for (const idBatch of chunks(discoveredIds, 50)) {
+  const collectionSlot = Math.floor(Date.now() / 18e5);
+  const hourlySlot = Math.floor(collectionSlot / 2);
+  const searchRegion = regions[hourlySlot % regions.length];
+  const discoveryCategories = ["1", "2", "10", "15", "17", "19", "20", "22", "23", "24", "25", "26", "27", "28"];
+  const discoveryCategory = discoveryCategories[hourlySlot % discoveryCategories.length];
+  const shouldDiscover = collectionSlot % 2 === 0;
+  const discoveryModes = shouldDiscover ? [{ order: "date" }, { order: "viewCount", videoCategoryId: discoveryCategory }] : [];
+  const discoveredIds = /* @__PURE__ */ new Set();
+  for (const mode of discoveryModes) {
+    const discoveryParams = {
+      part: "snippet",
+      type: "video",
+      regionCode: searchRegion,
+      publishedAfter: new Date(Date.now() - 6 * 60 * 60 * 1e3).toISOString(),
+      order: mode.order,
+      maxResults: "50"
+    };
+    if (mode.videoCategoryId) discoveryParams.videoCategoryId = mode.videoCategoryId;
+    const recentSearch = await fetchYouTube("search", discoveryParams, apiKey);
+    for (const item of recentSearch.items || []) {
+      if (item.id?.videoId) discoveredIds.add(item.id.videoId);
+    }
+  }
+  for (const idBatch of chunks(Array.from(discoveredIds), 50)) {
     const details = await fetchYouTube("videos", {
       part: "snippet,statistics,contentDetails",
       id: idBatch.join(",")
@@ -186,6 +199,8 @@ async function collectYouTubeRisingSnapshots() {
   return {
     regions,
     searchedRegion: searchRegion,
+    discoveryModes,
+    discoveryCategory,
     videoCount: eligibleVideos.length,
     snapshotCount: snapshotRows.length,
     capturedAt
