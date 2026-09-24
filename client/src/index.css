@@ -6008,9 +6008,27 @@ input[type="date"].youtubeSelect {
 }
 
 .youtubeVideoModalChannel {
+  min-width: 0;
   margin: 0;
+  overflow: hidden;
   font-size: 14px;
   color: #93c5fd;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.youtubeVideoModalChannelRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.youtubeVideoModalSubscribers {
+  flex: 0 0 auto;
+  color: #7f8ea6;
+  font-size: 12px;
   font-weight: 500;
 }
 

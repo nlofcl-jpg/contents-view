@@ -16,6 +16,8 @@ interface Video {
   averageHourlyViews?: number | null;
   outlierScore?: number | null;
   discoveryScore?: number | null;
+  subscriberCount?: number | null;
+  hiddenSubscribers?: boolean;
 }
 
 interface YouTubeVideoDetailModalProps {
@@ -162,7 +164,16 @@ export function YouTubeVideoDetailModal({
         {/* Video Info */}
         <div className="youtubeVideoModalInfo">
           <h2 className="youtubeVideoModalTitle">{video.title}</h2>
-          <p className="youtubeVideoModalChannel">{video.channelTitle}</p>
+          <div className="youtubeVideoModalChannelRow">
+            <p className="youtubeVideoModalChannel">{video.channelTitle}</p>
+            {(video.hiddenSubscribers || video.subscriberCount !== undefined) && (
+              <span className="youtubeVideoModalSubscribers">
+                {video.hiddenSubscribers
+                  ? "구독자 비공개"
+                  : `구독자 ${formatViewCount(video.subscriberCount || 0)}`}
+              </span>
+            )}
+          </div>
 
           {/* Meta Info */}
           <div className="youtubeVideoModalMeta">
