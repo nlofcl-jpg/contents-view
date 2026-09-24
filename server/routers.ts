@@ -14,7 +14,7 @@ import { createRequire } from "module";
 import { createHmac } from "crypto";
 import { eq } from "drizzle-orm";
 import { users } from "../drizzle/schema";
-import { getStoredYouTubeRisingVideos, isYouTubeTopicChannel, selectBalancedRisingVideos } from "./youtubeRising";
+import { getStoredYouTubeRisingVideos, isYouTubeTopicChannel, scoreRisingCandidates, selectBalancedRisingVideos } from "./youtubeRising";
 
 const require = createRequire(import.meta.url);
 
@@ -1826,10 +1826,6 @@ export const appRouter = router({
             const averageHourlyViews = Math.round(viewCount / elapsedHours);
             const outlierScore = subscriberCount > 0 ? viewCount / subscriberCount : null;
             const freshness = Math.max(0, 1 - elapsedHours / periodHours);
-            const discoveryScore =
-              0.55 * Math.log1p(outlierScore || 0) +
-              0.3 * Math.log1p(averageHourlyViews) +
-              0.15 * freshness;
 
             return {
               id: item.id,
@@ -1852,7 +1848,7 @@ export const appRouter = router({
               velocityAvailable: false,
               acceleration: null,
               outlierScore: outlierScore === null ? null : Number(outlierScore.toFixed(2)),
-              discoveryScore: Number(discoveryScore.toFixed(2)),
+              freshness,
               elapsedHours: Number(elapsedHours.toFixed(1)),
             };
           }).filter((video: any) =>
@@ -1861,6 +1857,8 @@ export const appRouter = router({
             !isYouTubeTopicChannel(video.channelTitle) &&
             inSubscriberRange(video.subscriberCount, video.hiddenSubscribers)
           );
+
+          candidates = scoreRisingCandidates(candidates);
 
           if (input.sortBy === "hourly") candidates.sort((a: any, b: any) => b.averageHourlyViews - a.averageHourlyViews);
           else if (input.sortBy === "outlier") candidates.sort((a: any, b: any) => (b.outlierScore || 0) - (a.outlierScore || 0));

@@ -2412,6 +2412,65 @@ var periodHours = {
 function isYouTubeTopicChannel(channelTitle) {
   return /\s[-–—]\s*topic$/i.test(channelTitle?.trim() || "");
 }
+function getSubscriberBand(subscriberCount, hiddenSubscribers) {
+  if (hiddenSubscribers || subscriberCount >= 1e6) return "major";
+  if (subscriberCount < 1e4) return "micro";
+  if (subscriberCount < 1e5) return "emerging";
+  return "growing";
+}
+function percentileRank(value, values) {
+  if (value === null || values.length === 0) return 0;
+  if (values.length === 1) return 0.5;
+  const sorted = [...values].sort((a, b) => a - b);
+  const lowerIndex = sorted.findIndex((candidate) => candidate >= value);
+  const upperIndex = sorted.findLastIndex((candidate) => candidate <= value);
+  const averageIndex = (Math.max(0, lowerIndex) + Math.max(0, upperIndex)) / 2;
+  return averageIndex / (sorted.length - 1);
+}
+function scoreRisingCandidates(videos) {
+  const bandGroups = /* @__PURE__ */ new Map();
+  const categoryBandGroups = /* @__PURE__ */ new Map();
+  for (const video of videos) {
+    const band = getSubscriberBand(video.subscriberCount, video.hiddenSubscribers);
+    const categoryBand = `${video.categoryId}:${band}`;
+    bandGroups.set(band, [...bandGroups.get(band) || [], video]);
+    categoryBandGroups.set(categoryBand, [...categoryBandGroups.get(categoryBand) || [], video]);
+  }
+  return videos.map((video) => {
+    const band = getSubscriberBand(video.subscriberCount, video.hiddenSubscribers);
+    const primaryCohort = categoryBandGroups.get(`${video.categoryId}:${band}`) || [];
+    const bandCohort = bandGroups.get(band) || [];
+    const cohort = primaryCohort.length >= 5 ? primaryCohort : bandCohort.length >= 5 ? bandCohort : videos;
+    const getVelocityRatio = (candidate) => {
+      if (candidate.hiddenSubscribers || candidate.subscriberCount <= 0) return null;
+      return (candidate.velocityPerHour ?? candidate.averageHourlyViews) / candidate.subscriberCount;
+    };
+    const velocityRatio = getVelocityRatio(video);
+    const outlierPercentile = percentileRank(
+      video.outlierScore,
+      cohort.map((candidate) => candidate.outlierScore).filter((value) => value !== null)
+    );
+    const velocityPercentile = percentileRank(
+      velocityRatio,
+      cohort.map(getVelocityRatio).filter((value) => value !== null)
+    );
+    const accelerationPercentile = percentileRank(
+      video.acceleration,
+      cohort.map((candidate) => candidate.acceleration).filter((value) => value !== null)
+    );
+    const discoveryScore = outlierPercentile * 0.4 + velocityPercentile * 0.3 + accelerationPercentile * 0.2 + video.freshness * 0.1;
+    return {
+      ...video,
+      velocityRatio: velocityRatio === null ? null : Number(velocityRatio.toFixed(6)),
+      scorePercentiles: {
+        outlier: Number(outlierPercentile.toFixed(4)),
+        velocity: Number(velocityPercentile.toFixed(4)),
+        acceleration: Number(accelerationPercentile.toFixed(4))
+      },
+      discoveryScore: Number((discoveryScore * 100).toFixed(2))
+    };
+  });
+}
 function toIsoDuration(seconds) {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor(seconds % 3600 / 60);
@@ -2425,29 +2484,38 @@ function selectBalancedRisingVideos(videos, maxResults, categoryIsFiltered, subs
   const diverseVideos = videos.filter((video) => {
     const channelCount = channelCounts.get(video.channelId) || 0;
     const categoryCount = categoryCounts.get(video.categoryId) || 0;
-    if (channelCount >= 2) return false;
+    if (channelCount >= 1) return false;
     if (!categoryIsFiltered && categoryCount >= categoryLimit) return false;
     channelCounts.set(video.channelId, channelCount + 1);
     categoryCounts.set(video.categoryId, categoryCount + 1);
     return true;
   });
   if (subscriberRange !== "all") return diverseVideos.slice(0, maxResults);
-  const emerging = diverseVideos.filter((video) => !video.hiddenSubscribers && video.subscriberCount < 1e5);
-  const growing = diverseVideos.filter((video) => !video.hiddenSubscribers && video.subscriberCount >= 1e5 && video.subscriberCount < 1e6);
-  const major = diverseVideos.filter((video) => video.hiddenSubscribers || video.subscriberCount >= 1e6);
+  const micro = diverseVideos.filter((video) => getSubscriberBand(video.subscriberCount, video.hiddenSubscribers) === "micro");
+  const emerging = diverseVideos.filter((video) => getSubscriberBand(video.subscriberCount, video.hiddenSubscribers) === "emerging");
+  const growing = diverseVideos.filter((video) => getSubscriberBand(video.subscriberCount, video.hiddenSubscribers) === "growing");
+  const major = diverseVideos.filter((video) => getSubscriberBand(video.subscriberCount, video.hiddenSubscribers) === "major");
+  const majorLimit = Math.floor(maxResults * 0.2);
+  const nonMajorSlots = maxResults - majorLimit;
+  const baseNonMajorLimit = Math.floor(nonMajorSlots / 3);
+  const remainingNonMajorSlots = nonMajorSlots % 3;
   const quotas = [
-    { videos: emerging, limit: Math.ceil(maxResults * 0.4) },
-    { videos: growing, limit: Math.ceil(maxResults * 0.4) },
-    { videos: major, limit: Math.max(0, maxResults - Math.ceil(maxResults * 0.4) * 2) }
+    { videos: micro, limit: baseNonMajorLimit + (remainingNonMajorSlots > 0 ? 1 : 0) },
+    { videos: emerging, limit: baseNonMajorLimit + (remainingNonMajorSlots > 1 ? 1 : 0) },
+    { videos: growing, limit: baseNonMajorLimit },
+    { videos: major, limit: majorLimit }
   ];
   const selected = quotas.flatMap((group) => group.videos.slice(0, group.limit));
   const selectedVideos = new Set(selected);
+  let selectedMajorCount = selected.filter((video) => getSubscriberBand(video.subscriberCount, video.hiddenSubscribers) === "major").length;
   for (const video of diverseVideos) {
     if (selected.length >= maxResults) break;
-    if (!selectedVideos.has(video)) {
-      selected.push(video);
-      selectedVideos.add(video);
-    }
+    if (selectedVideos.has(video)) continue;
+    const isMajor = getSubscriberBand(video.subscriberCount, video.hiddenSubscribers) === "major";
+    if (isMajor && selectedMajorCount >= majorLimit) continue;
+    selected.push(video);
+    selectedVideos.add(video);
+    if (isMajor) selectedMajorCount += 1;
   }
   return selected.sort((a, b) => videos.indexOf(a) - videos.indexOf(b));
 }
@@ -2487,9 +2555,7 @@ async function getStoredYouTubeRisingVideos(input) {
     const velocityPerHour = row.velocity_per_hour === null ? null : Math.max(0, Math.round(Number(row.velocity_per_hour)));
     const acceleration = row.acceleration === null ? null : Math.max(0, Number(Number(row.acceleration).toFixed(2)));
     const outlierScore = row.outlier_score === null ? null : Math.max(0, Number(Number(row.outlier_score).toFixed(2)));
-    const rankingVelocity = velocityPerHour ?? averageHourlyViews;
     const freshness = Math.max(0, 1 - elapsedHours / (24 * 7));
-    const discoveryScore = 0.4 * Math.log1p(outlierScore || 0) + 0.3 * Math.log1p(rankingVelocity) + 0.2 * Math.min(acceleration ?? 1, 5) + 0.1 * freshness;
     return {
       id: row.video_id,
       title: row.title,
@@ -2511,13 +2577,14 @@ async function getStoredYouTubeRisingVideos(input) {
       velocityAvailable: velocityPerHour !== null,
       acceleration,
       outlierScore,
-      discoveryScore: Number(discoveryScore.toFixed(2)),
+      freshness,
       elapsedHours: Number(elapsedHours.toFixed(1)),
       capturedAt: row.captured_at
     };
   }).filter(
     (video) => video.viewCount >= 500 && video.elapsedHours >= 0.5 && !isYouTubeTopicChannel(video.channelTitle) && matchesSubscriberRange(video.subscriberCount, video.hiddenSubscribers, input.subscriberRange)
   );
+  videos = scoreRisingCandidates(videos);
   if (input.sortBy === "hourly") videos.sort((a, b) => (b.velocityPerHour ?? b.averageHourlyViews) - (a.velocityPerHour ?? a.averageHourlyViews));
   else if (input.sortBy === "outlier") videos.sort((a, b) => (b.outlierScore || 0) - (a.outlierScore || 0));
   else if (input.sortBy === "newest") videos.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
@@ -3964,7 +4031,6 @@ var appRouter = router({
           const averageHourlyViews = Math.round(viewCount / elapsedHours);
           const outlierScore = subscriberCount > 0 ? viewCount / subscriberCount : null;
           const freshness = Math.max(0, 1 - elapsedHours / periodHours2);
-          const discoveryScore = 0.55 * Math.log1p(outlierScore || 0) + 0.3 * Math.log1p(averageHourlyViews) + 0.15 * freshness;
           return {
             id: item.id,
             title: item.snippet.title,
@@ -3986,12 +4052,13 @@ var appRouter = router({
             velocityAvailable: false,
             acceleration: null,
             outlierScore: outlierScore === null ? null : Number(outlierScore.toFixed(2)),
-            discoveryScore: Number(discoveryScore.toFixed(2)),
+            freshness,
             elapsedHours: Number(elapsedHours.toFixed(1))
           };
         }).filter(
           (video) => video.viewCount >= 500 && video.elapsedHours >= 0.5 && !isYouTubeTopicChannel(video.channelTitle) && inSubscriberRange(video.subscriberCount, video.hiddenSubscribers)
         );
+        candidates = scoreRisingCandidates(candidates);
         if (input.sortBy === "hourly") candidates.sort((a, b) => b.averageHourlyViews - a.averageHourlyViews);
         else if (input.sortBy === "outlier") candidates.sort((a, b) => (b.outlierScore || 0) - (a.outlierScore || 0));
         else if (input.sortBy === "newest") candidates.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());

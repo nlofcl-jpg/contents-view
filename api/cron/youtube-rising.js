@@ -43,6 +43,47 @@ function chunks(items, size) {
   for (let index = 0; index < items.length; index += size) result.push(items.slice(index, index + size));
   return result;
 }
+var DISCOVERY_STOP_WORDS = /* @__PURE__ */ new Set([
+  "official",
+  "video",
+  "music",
+  "shorts",
+  "short",
+  "live",
+  "full",
+  "episode",
+  "trailer",
+  "the",
+  "and",
+  "with",
+  "from",
+  "this",
+  "that",
+  "you",
+  "new",
+  "2026",
+  "\uACF5\uC2DD",
+  "\uC601\uC0C1",
+  "\uBBA4\uC9C1\uBE44\uB514\uC624",
+  "\uB77C\uC774\uBE0C",
+  "\uD558\uC774\uB77C\uC774\uD2B8",
+  "\uC608\uACE0\uD3B8",
+  "\uB2E4\uC2DC\uBCF4\uAE30",
+  "\uC624\uB298"
+]);
+function extractDiscoveryQuery(items) {
+  const frequencies = /* @__PURE__ */ new Map();
+  for (const item of items) {
+    const title = String(item.snippet?.title || "").toLowerCase();
+    const tokens = title.split(/[\s|/()[\]{}.,!?;:"'`~…·•<>+=_-]+/).filter(Boolean);
+    for (const rawToken of tokens) {
+      const token = rawToken.replace(/^#+/, "").trim();
+      if (token.length < 2 || token.length > 24 || /^\d+$/.test(token) || DISCOVERY_STOP_WORDS.has(token)) continue;
+      frequencies.set(token, (frequencies.get(token) || 0) + 1);
+    }
+  }
+  return Array.from(frequencies.entries()).sort((a, b) => b[1] - a[1] || b[0].length - a[0].length).map(([token]) => token)[0] || "";
+}
 async function fetchYouTube(path, params, apiKey) {
   const searchParams = new URLSearchParams({ ...params, key: apiKey });
   const response = await fetch(`https://www.googleapis.com/youtube/v3/${path}?${searchParams.toString()}`);
@@ -51,6 +92,62 @@ async function fetchYouTube(path, params, apiKey) {
     throw new Error(body.error?.message || `YouTube ${path} request failed`);
   }
   return body;
+}
+async function fetchEmergingChannelUploads(regionCode, apiKey) {
+  if (!supabaseAdmin) return [];
+  const { data: regionRows, error: regionError } = await supabaseAdmin.from("youtube_rising_video_regions").select("video_id").eq("region_code", regionCode).limit(600);
+  if (regionError || !regionRows?.length) return [];
+  const linkedChannelIds = /* @__PURE__ */ new Set();
+  for (const videoIdBatch of chunks(regionRows.map((row) => row.video_id), 200)) {
+    const { data: videoRows, error: videoError } = await supabaseAdmin.from("youtube_rising_videos").select("channel_id").in("video_id", videoIdBatch);
+    if (videoError) continue;
+    for (const row of videoRows || []) linkedChannelIds.add(row.channel_id);
+  }
+  if (linkedChannelIds.size === 0) return [];
+  const emergingChannels = [];
+  for (const channelIdBatch of chunks(Array.from(linkedChannelIds), 200)) {
+    const { data: channelRows, error: channelError } = await supabaseAdmin.from("youtube_rising_channels").select("channel_id,updated_at").in("channel_id", channelIdBatch).eq("hidden_subscribers", false).gte("subscriber_count", 1e3).lt("subscriber_count", 1e5);
+    if (channelError) continue;
+    emergingChannels.push(...channelRows || []);
+  }
+  const seedChannelIds = emergingChannels.sort((a, b) => {
+    const aUpdatedAt = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+    const bUpdatedAt = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+    return aUpdatedAt - bUpdatedAt;
+  }).slice(0, 12).map((channel) => channel.channel_id);
+  if (seedChannelIds.length === 0) return [];
+  const channelDetails = await fetchYouTube("channels", {
+    part: "contentDetails",
+    id: seedChannelIds.join(",")
+  }, apiKey);
+  const uploadPlaylists = (channelDetails.items || []).map(
+    (channel) => channel.contentDetails?.relatedPlaylists?.uploads
+  ).filter(Boolean);
+  const uploadResponses = await Promise.all(uploadPlaylists.map(
+    (playlistId) => fetchYouTube("playlistItems", {
+      part: "contentDetails",
+      playlistId,
+      maxResults: "3"
+    }, apiKey)
+  ));
+  const uploadVideoIds = /* @__PURE__ */ new Set();
+  for (const uploads of uploadResponses) {
+    for (const item of uploads.items || []) {
+      if (item.contentDetails?.videoId) uploadVideoIds.add(item.contentDetails.videoId);
+    }
+  }
+  const recentCutoff = Date.now() - 7 * 24 * 60 * 60 * 1e3;
+  const uploadVideos = [];
+  for (const videoIdBatch of chunks(Array.from(uploadVideoIds), 50)) {
+    const details = await fetchYouTube("videos", {
+      part: "snippet,statistics,contentDetails",
+      id: videoIdBatch.join(",")
+    }, apiKey);
+    uploadVideos.push(...(details.items || []).filter(
+      (item) => new Date(item.snippet?.publishedAt || 0).getTime() >= recentCutoff
+    ));
+  }
+  return uploadVideos;
 }
 async function collectYouTubeRisingSnapshots() {
   const apiKey = process.env.YOUTUBE_API_KEY?.trim();
@@ -80,21 +177,40 @@ async function collectYouTubeRisingSnapshots() {
   const discoveryCategories = ["1", "2", "10", "15", "17", "19", "20", "22", "23", "24", "25", "26", "27", "28"];
   const discoveryCategory = discoveryCategories[hourlySlot % discoveryCategories.length];
   const shouldDiscover = collectionSlot % 2 === 0;
-  const discoveryModes = shouldDiscover ? [{ order: "date" }, { order: "viewCount", videoCategoryId: discoveryCategory }] : [];
+  const regionalPopularVideos = Array.from(videoById.values()).filter((item) => regionLinks.get(item.id)?.has(searchRegion));
+  const discoveryQuery = extractDiscoveryQuery(regionalPopularVideos);
+  const discoveryModes = shouldDiscover ? [
+    { order: "date", lookbackHours: 6 },
+    discoveryQuery ? { order: "relevance", query: discoveryQuery, videoCategoryId: discoveryCategory, lookbackHours: 24 } : { order: "viewCount", videoCategoryId: discoveryCategory, lookbackHours: 24 }
+  ] : [];
   const discoveredIds = /* @__PURE__ */ new Set();
   for (const mode of discoveryModes) {
     const discoveryParams = {
       part: "snippet",
       type: "video",
       regionCode: searchRegion,
-      publishedAfter: new Date(Date.now() - 6 * 60 * 60 * 1e3).toISOString(),
+      publishedAfter: new Date(Date.now() - mode.lookbackHours * 60 * 60 * 1e3).toISOString(),
       order: mode.order,
       maxResults: "50"
     };
+    if (mode.query) discoveryParams.q = mode.query;
     if (mode.videoCategoryId) discoveryParams.videoCategoryId = mode.videoCategoryId;
     const recentSearch = await fetchYouTube("search", discoveryParams, apiKey);
     for (const item of recentSearch.items || []) {
       if (item.id?.videoId) discoveredIds.add(item.id.videoId);
+    }
+  }
+  if (shouldDiscover) {
+    try {
+      const emergingUploads = await fetchEmergingChannelUploads(searchRegion, apiKey);
+      for (const item of emergingUploads) {
+        videoById.set(item.id, item);
+        const linkedRegions = regionLinks.get(item.id) || /* @__PURE__ */ new Set();
+        linkedRegions.add(searchRegion);
+        regionLinks.set(item.id, linkedRegions);
+      }
+    } catch (error) {
+      console.error("[YouTube Rising] Emerging channel upload discovery failed:", error);
     }
   }
   for (const idBatch of chunks(Array.from(discoveredIds), 50)) {
