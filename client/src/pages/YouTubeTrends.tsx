@@ -1292,41 +1292,76 @@ export default function YouTubeTrends() {
           </button>
         </div>
 
-        <div className="risingVideosGrid">
-          {risingVideos.map((video: any, index: number) => (
-            <button
-              key={video.id}
-              type="button"
-              className="risingVideoCard"
-              onClick={() => {
-                setSelectedVideo(video);
-                setIsModalOpen(true);
-              }}
-            >
-              <div className="risingRank">{index + 1}</div>
-              <div className="risingThumbnail">
-                <img src={video.thumbnail} alt="" />
-                <span className="videoDurationBadge">{formatDuration(video.duration)}</span>
-              </div>
-              <div className="risingVideoBody">
-                <h3>{video.title}</h3>
-                <p className="risingChannel">{video.channelTitle}</p>
-                <div className="risingPrimaryMeta">
-                  <span>조회 {formatKoreanNumber(video.viewCount)}</span>
-                  <span>구독자 {video.hiddenSubscribers ? "비공개" : formatKoreanNumber(video.subscriberCount)}</span>
-                  <span>{video.elapsedHours < 24 ? `${Math.max(1, Math.round(video.elapsedHours))}시간 전` : `${Math.round(video.elapsedHours / 24)}일 전`}</span>
+        <div className="videosGrid">
+          {risingVideos.map((video: any) => {
+            const isBookmarked = isYouTubeVideoBookmarked(video.id);
+            return (
+              <article key={video.id} className="videoCardWrapper">
+                <div
+                  className="videoCard"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    setSelectedVideo(video);
+                    setIsModalOpen(true);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setSelectedVideo(video);
+                      setIsModalOpen(true);
+                    }
+                  }}
+                >
+                  <div className="videoThumbnail">
+                    <img src={video.thumbnail} alt={video.title} />
+                    <div className="videoDurationBadge">{formatDuration(video.duration)}</div>
+                    <div className="videoPlayIcon">
+                      <Play size={32} fill="currentColor" />
+                    </div>
+                  </div>
+                  <div className="videoInfo">
+                    <h3 className="videoTitle">{video.title}</h3>
+                    <div className="videoChannelRow">
+                      <div className="channelProfileImage">
+                        {video.channelThumbnail ? (
+                          <img src={video.channelThumbnail} alt={video.channelTitle} />
+                        ) : (
+                          <div className="channelProfilePlaceholder">{video.channelTitle.charAt(0).toUpperCase()}</div>
+                        )}
+                      </div>
+                      <p className="videoChannel">{video.channelTitle}</p>
+                    </div>
+                    <div className="videoMeta">
+                      <span>{formatViewCount(video.viewCount)} 조회 · {formatDate(video.publishedAt)}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="risingMetrics">
-                  <span>
-                    <small>시간당 증가량</small>
-                    <strong>{formatKoreanNumber(video.velocityPerHour ?? video.averageHourlyViews)}</strong>
-                  </span>
-                  <span><small>채널 대비</small><strong>{video.outlierScore === null ? "-" : `${video.outlierScore}배`}</strong></span>
-                  <span><small>상승 지수</small><strong>{video.discoveryScore}</strong></span>
-                </div>
-              </div>
-            </button>
-          ))}
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    toggleYouTubeBookmark({
+                      id: video.id,
+                      title: video.title,
+                      thumbnail: video.thumbnail,
+                      channelTitle: video.channelTitle,
+                      channelThumbnail: video.channelThumbnail,
+                      viewCount: video.viewCount,
+                      publishedAt: video.publishedAt,
+                      duration: video.duration,
+                    }, "video");
+                  }}
+                  disabled={isBookmarkPending(video.id)}
+                  className={`bookmarkButton ${isBookmarked ? "bookmarked" : ""} ${isBookmarkPending(video.id) ? "pending" : ""}`}
+                  title={isBookmarked ? "북마크 해제" : "북마크"}
+                >
+                  <Bookmark size={20} fill={isBookmarked ? "currentColor" : "none"} />
+                </button>
+              </article>
+            );
+          })}
         </div>
       </section>
     );

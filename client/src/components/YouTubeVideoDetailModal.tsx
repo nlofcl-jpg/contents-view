@@ -12,6 +12,10 @@ interface Video {
   tags?: string[];
   publishedAt: string;
   duration: string;
+  velocityPerHour?: number | null;
+  averageHourlyViews?: number | null;
+  outlierScore?: number | null;
+  discoveryScore?: number | null;
 }
 
 interface YouTubeVideoDetailModalProps {
@@ -80,14 +84,6 @@ function getCategoryName(categoryId?: string) {
   return YOUTUBE_CATEGORY_NAMES[categoryId] || `카테고리 ${categoryId}`;
 }
 
-function formatHourlyViews(viewCount: number, publishedAt: string) {
-  const publishedTime = new Date(publishedAt).getTime();
-  if (!viewCount || Number.isNaN(publishedTime)) return "계산 불가";
-
-  const elapsedHours = Math.max((Date.now() - publishedTime) / 3600000, 1);
-  return `${formatViewCount(Math.round(viewCount / elapsedHours))}/시간`;
-}
-
 export function YouTubeVideoDetailModal({
   video,
   isOpen,
@@ -112,10 +108,30 @@ export function YouTubeVideoDetailModal({
   const visibleTags = (video.tags || []).filter(Boolean).slice(0, 6);
   const insightItems = [
     { label: "조회수", value: `${formatViewCount(video.viewCount)}회` },
-    { label: "평균 시간당 조회수", value: formatHourlyViews(video.viewCount, video.publishedAt) },
     { label: "댓글 수", value: `${formatViewCount(video.commentCount || 0)}개` },
     { label: "카테고리", value: getCategoryName(video.categoryId) },
   ];
+  const risingVelocity = video.velocityPerHour ?? video.averageHourlyViews;
+  const risingInsightItems = video.discoveryScore === undefined
+    ? []
+    : [
+        {
+          label: "시간당 증가량",
+          value: risingVelocity === null || risingVelocity === undefined
+            ? "-"
+            : `${formatViewCount(risingVelocity)}회`,
+        },
+        {
+          label: "채널 대비",
+          value: video.outlierScore === null || video.outlierScore === undefined
+            ? "-"
+            : `${video.outlierScore}배`,
+        },
+        {
+          label: "상승 지수",
+          value: video.discoveryScore === null ? "-" : String(video.discoveryScore),
+        },
+      ];
 
   return (
     <div className="youtubeVideoModalOverlay" onClick={onClose}>
@@ -162,6 +178,17 @@ export function YouTubeVideoDetailModal({
               </div>
             ))}
           </div>
+
+          {risingInsightItems.length > 0 && (
+            <div className="youtubeVideoInsightGrid youtubeVideoRisingInsightGrid">
+              {risingInsightItems.map((item) => (
+                <div key={item.label} className="youtubeVideoInsightItem youtubeVideoRisingInsightItem">
+                  <span className="youtubeVideoInsightLabel">{item.label}</span>
+                  <strong>{item.value}</strong>
+                </div>
+              ))}
+            </div>
+          )}
 
           {visibleTags.length > 0 && (
             <div className="youtubeVideoTags">
