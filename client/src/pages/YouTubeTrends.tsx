@@ -372,7 +372,7 @@ export default function YouTubeTrends() {
   // v3: Force cache invalidation - channelThumbnail field must be present
   const cacheKey = activeTab === "shorts" 
     ? `youtube:${activeTab}:${regionCode}:${apiSortBy}:7d:v3`
-    : `youtube:${activeTab}:${regionCode}:${category}:${apiSortBy}:v4`;
+    : `youtube:${activeTab}:${regionCode}:${category}:${apiSortBy}:v5`;
   const lastUpdateTime = lastUpdateTimesByKey[cacheKey];
   const now = Date.now();
   
