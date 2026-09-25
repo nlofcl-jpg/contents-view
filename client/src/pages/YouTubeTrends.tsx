@@ -16,7 +16,7 @@ const YOUTUBE_API_KEY_ERROR_MESSAGE = "YouTube API 키 오류입니다.\nAPI 키
 
 const TABS = [
   { id: "analysis", label: "영상 분석" },
-  { id: "trending", label: "인기 급상승 영상" },
+  { id: "trending", label: "유튜브 추천 영상" },
   { id: "category", label: "카테고리별 인기" },
   { id: "channels", label: "인기 채널" },
   { id: "shorts", label: "쇼츠 트렌드" },
@@ -211,6 +211,7 @@ export default function YouTubeTrends() {
   const [analysisSort, setAnalysisSort] = useState<AnalysisSortType>("relevance");
   const [analysisDurationType, setAnalysisDurationType] = useState<AnalysisDurationType>("all");
   const [visibleAnalysisCount, setVisibleAnalysisCount] = useState(10);
+  const [visiblePreviousRisingCount, setVisiblePreviousRisingCount] = useState(0);
   const [lastUpdateTimesByKey, setLastUpdateTimesByKey] = useState<Record<string, number>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [videoCache, setVideoCache] = useState<Record<string, { data: any; fetchedAt: number }>>({});
@@ -639,11 +640,17 @@ export default function YouTubeTrends() {
   const tabMessage = TAB_MESSAGES[activeTab as keyof typeof TAB_MESSAGES];
 
   // Handler functions for current tab
-  const handleCountryChange = (value: string) => updateCurrentFilter("country", value);
+  const handleCountryChange = (value: string) => {
+    updateCurrentFilter("country", value);
+    setVisiblePreviousRisingCount(0);
+  };
   const handleCategoryChange = (value: string) => updateCurrentFilter("category", value);
   const handleSortChange = (value: string) => updateCurrentFilter("sort", value);
-  const handleRisingPeriodChange = (value: string) => updateCurrentFilter("period", value);
-  const activeTabLabel = TABS.find((tab) => tab.id === activeTab)?.label || "인기 급상승 영상";
+  const handleRisingPeriodChange = (value: string) => {
+    updateCurrentFilter("period", value);
+    setVisiblePreviousRisingCount(0);
+  };
+  const activeTabLabel = TABS.find((tab) => tab.id === activeTab)?.label || "유튜브 추천 영상";
 
   const handleTabChange = (tabId: TabType) => {
     setActiveTab(tabId);
@@ -1244,6 +1251,80 @@ export default function YouTubeTrends() {
     }
 
     const risingVideos = risingData?.success ? risingData.videos || [] : [];
+    const previousRisingVideos = risingData?.success && "previousVideos" in risingData
+      ? risingData.previousVideos || []
+      : [];
+    const renderRisingVideoCard = (video: any, isPrevious = false) => {
+      const isBookmarked = isYouTubeVideoBookmarked(video.id);
+      return (
+        <article key={`${isPrevious ? "previous" : "current"}-${video.id}`} className="videoCardWrapper">
+          <div
+            className="videoCard"
+            role="button"
+            tabIndex={0}
+            onClick={() => {
+              setSelectedVideo(video);
+              setIsModalOpen(true);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setSelectedVideo(video);
+                setIsModalOpen(true);
+              }
+            }}
+          >
+            <div className="videoThumbnail">
+              <img src={video.thumbnail} alt={video.title} />
+              {isPrevious && <span className="previousRisingBadge">이전 급상승</span>}
+              <div className="videoDurationBadge">{formatDuration(video.duration)}</div>
+              <div className="videoPlayIcon">
+                <Play size={32} fill="currentColor" />
+              </div>
+            </div>
+            <div className="videoInfo">
+              <h3 className="videoTitle">{video.title}</h3>
+              <div className="videoChannelRow">
+                <div className="channelProfileImage">
+                  {video.channelThumbnail ? (
+                    <img src={video.channelThumbnail} alt={video.channelTitle} />
+                  ) : (
+                    <div className="channelProfilePlaceholder">{video.channelTitle.charAt(0).toUpperCase()}</div>
+                  )}
+                </div>
+                <p className="videoChannel">{video.channelTitle}</p>
+              </div>
+              <div className="videoMeta">
+                <span>{formatViewCount(video.viewCount)} 조회 · {formatDate(video.publishedAt)}</span>
+                {isPrevious && video.peakRank ? <span>최고 {video.peakRank}위</span> : null}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              toggleYouTubeBookmark({
+                id: video.id,
+                title: video.title,
+                thumbnail: video.thumbnail,
+                channelTitle: video.channelTitle,
+                channelThumbnail: video.channelThumbnail,
+                viewCount: video.viewCount,
+                publishedAt: video.publishedAt,
+                duration: video.duration,
+              }, "video");
+            }}
+            disabled={isBookmarkPending(video.id)}
+            className={`bookmarkButton ${isBookmarked ? "bookmarked" : ""} ${isBookmarkPending(video.id) ? "pending" : ""}`}
+            title={isBookmarked ? "북마크 해제" : "북마크"}
+          >
+            <Bookmark size={20} fill={isBookmarked ? "currentColor" : "none"} />
+          </button>
+        </article>
+      );
+    };
     if (risingVideos.length === 0) {
       return (
         <div className="emptyStateContainer">
@@ -1280,76 +1361,43 @@ export default function YouTubeTrends() {
         </div>
 
         <div className="videosGrid">
-          {risingVideos.map((video: any) => {
-            const isBookmarked = isYouTubeVideoBookmarked(video.id);
-            return (
-              <article key={video.id} className="videoCardWrapper">
-                <div
-                  className="videoCard"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => {
-                    setSelectedVideo(video);
-                    setIsModalOpen(true);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      setSelectedVideo(video);
-                      setIsModalOpen(true);
-                    }
-                  }}
-                >
-                  <div className="videoThumbnail">
-                    <img src={video.thumbnail} alt={video.title} />
-                    <div className="videoDurationBadge">{formatDuration(video.duration)}</div>
-                    <div className="videoPlayIcon">
-                      <Play size={32} fill="currentColor" />
-                    </div>
-                  </div>
-                  <div className="videoInfo">
-                    <h3 className="videoTitle">{video.title}</h3>
-                    <div className="videoChannelRow">
-                      <div className="channelProfileImage">
-                        {video.channelThumbnail ? (
-                          <img src={video.channelThumbnail} alt={video.channelTitle} />
-                        ) : (
-                          <div className="channelProfilePlaceholder">{video.channelTitle.charAt(0).toUpperCase()}</div>
-                        )}
-                      </div>
-                      <p className="videoChannel">{video.channelTitle}</p>
-                    </div>
-                    <div className="videoMeta">
-                      <span>{formatViewCount(video.viewCount)} 조회 · {formatDate(video.publishedAt)}</span>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    toggleYouTubeBookmark({
-                      id: video.id,
-                      title: video.title,
-                      thumbnail: video.thumbnail,
-                      channelTitle: video.channelTitle,
-                      channelThumbnail: video.channelThumbnail,
-                      viewCount: video.viewCount,
-                      publishedAt: video.publishedAt,
-                      duration: video.duration,
-                    }, "video");
-                  }}
-                  disabled={isBookmarkPending(video.id)}
-                  className={`bookmarkButton ${isBookmarked ? "bookmarked" : ""} ${isBookmarkPending(video.id) ? "pending" : ""}`}
-                  title={isBookmarked ? "북마크 해제" : "북마크"}
-                >
-                  <Bookmark size={20} fill={isBookmarked ? "currentColor" : "none"} />
-                </button>
-              </article>
-            );
-          })}
+          {risingVideos.map((video: any) => renderRisingVideoCard(video))}
         </div>
+
+        {previousRisingVideos.length > 0 && visiblePreviousRisingCount === 0 ? (
+          <button
+            type="button"
+            className="previousRisingToggle"
+            onClick={() => setVisiblePreviousRisingCount(12)}
+          >
+            이전 급상승 영상 더보기
+            <ChevronDown size={18} aria-hidden="true" />
+          </button>
+        ) : null}
+
+        {visiblePreviousRisingCount > 0 && previousRisingVideos.length > 0 ? (
+          <section className="previousRisingSection">
+            <div className="previousRisingHeader">
+              <h2>이전 급상승 영상</h2>
+              <span>최근 3일 이내 목록</span>
+            </div>
+            <div className="videosGrid">
+              {previousRisingVideos
+                .slice(0, visiblePreviousRisingCount)
+                .map((video: any) => renderRisingVideoCard(video, true))}
+            </div>
+            {visiblePreviousRisingCount < previousRisingVideos.length ? (
+              <button
+                type="button"
+                className="previousRisingToggle"
+                onClick={() => setVisiblePreviousRisingCount(count => count + 12)}
+              >
+                더보기
+                <ChevronDown size={18} aria-hidden="true" />
+              </button>
+            ) : null}
+          </section>
+        ) : null}
       </section>
     );
   };
@@ -1560,7 +1608,7 @@ export default function YouTubeTrends() {
       {activeTab !== "analysis" && <div className="filterSection">
         <div className="filterGroup">
           <label htmlFor="country-select" className="filterLabel">
-            국가
+            {activeTab === "rising" ? "노출 국가" : "국가"}
           </label>
           <div className="selectWrapper">
             <select

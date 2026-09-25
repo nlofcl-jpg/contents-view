@@ -2477,6 +2477,11 @@ function toIsoDuration(seconds) {
   const remaining = seconds % 60;
   return `PT${hours ? `${hours}H` : ""}${minutes ? `${minutes}M` : ""}${remaining || !hours && !minutes ? `${remaining}S` : ""}`;
 }
+function chunks(items, size) {
+  const result = [];
+  for (let index = 0; index < items.length; index += size) result.push(items.slice(index, index + size));
+  return result;
+}
 function selectBalancedRisingVideos(videos, maxResults, categoryIsFiltered, subscriberRange) {
   const channelCounts = /* @__PURE__ */ new Map();
   const categoryCounts = /* @__PURE__ */ new Map();
@@ -2527,6 +2532,65 @@ function matchesSubscriberRange(count, hidden, range) {
   if (range === "100k-1m") return count >= 1e5 && count < 1e6;
   return count >= 1e6;
 }
+function isMissingRisingHistoryError(error) {
+  return error?.code === "42P01" || error?.code === "PGRST204" || error?.code === "PGRST205";
+}
+async function syncRisingRankHistory(input, currentVideos, candidateVideos) {
+  if (!supabaseAdmin3) return [];
+  const { data: historyRows, error: historyError } = await supabaseAdmin3.from("youtube_rising_rank_history").select("video_id,first_ranked_at,last_ranked_at,exited_at,peak_rank,peak_score,last_rank,last_score").eq("region_code", input.regionCode).eq("period", input.period).limit(2e3);
+  if (historyError) {
+    if (isMissingRisingHistoryError(historyError)) return [];
+    throw historyError;
+  }
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const existingByVideoId = new Map((historyRows || []).map((row) => [row.video_id, row]));
+  const currentVideoIds = new Set(currentVideos.map((video) => video.id));
+  const historyUpserts = currentVideos.map((video, index) => {
+    const rank = index + 1;
+    const previous = existingByVideoId.get(video.id);
+    return {
+      video_id: video.id,
+      region_code: input.regionCode,
+      period: input.period,
+      first_ranked_at: previous?.first_ranked_at || now,
+      last_ranked_at: now,
+      exited_at: null,
+      peak_rank: Math.min(Number(previous?.peak_rank || rank), rank),
+      peak_score: Math.max(Number(previous?.peak_score || 0), Number(video.discoveryScore || 0)),
+      last_rank: rank,
+      last_score: Number(video.discoveryScore || 0)
+    };
+  });
+  if (historyUpserts.length > 0) {
+    const { error } = await supabaseAdmin3.from("youtube_rising_rank_history").upsert(historyUpserts, { onConflict: "video_id,region_code,period" });
+    if (error && !isMissingRisingHistoryError(error)) throw error;
+  }
+  const exitingVideoIds = (historyRows || []).filter((row) => row.exited_at === null && !currentVideoIds.has(row.video_id)).map((row) => row.video_id);
+  for (const videoIdBatch of chunks(exitingVideoIds, 200)) {
+    const { error } = await supabaseAdmin3.from("youtube_rising_rank_history").update({ exited_at: now }).eq("region_code", input.regionCode).eq("period", input.period).in("video_id", videoIdBatch).is("exited_at", null);
+    if (error && !isMissingRisingHistoryError(error)) throw error;
+  }
+  const archiveCutoff = Date.now() - 3 * 24 * 60 * 60 * 1e3;
+  const candidateById = new Map(candidateVideos.map((video) => [video.id, video]));
+  return (historyRows || []).filter((row) => {
+    const exitedAt = row.exited_at || (exitingVideoIds.includes(row.video_id) ? now : null);
+    return Boolean(
+      exitedAt && new Date(exitedAt).getTime() >= archiveCutoff && !currentVideoIds.has(row.video_id) && candidateById.has(row.video_id)
+    );
+  }).map((row) => {
+    const video = candidateById.get(row.video_id);
+    const exitedAt = row.exited_at || now;
+    return {
+      ...video,
+      previousRising: true,
+      firstRankedAt: row.first_ranked_at,
+      lastRankedAt: row.last_ranked_at,
+      exitedAt,
+      peakRank: Number(row.peak_rank),
+      peakScore: Number(row.peak_score)
+    };
+  }).sort((a, b) => new Date(b.exitedAt).getTime() - new Date(a.exitedAt).getTime() || b.peakScore - a.peakScore);
+}
 async function getStoredYouTubeRisingVideos(input) {
   if (!supabaseAdmin3) return null;
   const { data, error } = await supabaseAdmin3.rpc("get_youtube_rising_metrics", {
@@ -2542,6 +2606,7 @@ async function getStoredYouTubeRisingVideos(input) {
     return {
       success: true,
       videos: [],
+      previousVideos: [],
       collectedAt: (/* @__PURE__ */ new Date()).toISOString(),
       metricMode: "collecting"
     };
@@ -2584,22 +2649,24 @@ async function getStoredYouTubeRisingVideos(input) {
   }).filter(
     (video) => video.viewCount >= 500 && video.elapsedHours >= 0.5 && !isYouTubeTopicChannel(video.channelTitle) && matchesSubscriberRange(video.subscriberCount, video.hiddenSubscribers, input.subscriberRange)
   );
-  videos = scoreRisingCandidates(videos);
-  if (input.sortBy === "hourly") videos.sort((a, b) => (b.velocityPerHour ?? b.averageHourlyViews) - (a.velocityPerHour ?? a.averageHourlyViews));
-  else if (input.sortBy === "outlier") videos.sort((a, b) => (b.outlierScore || 0) - (a.outlierScore || 0));
-  else if (input.sortBy === "newest") videos.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
-  else videos.sort((a, b) => b.discoveryScore - a.discoveryScore);
-  videos = selectBalancedRisingVideos(
-    videos,
+  const scoredCandidates = scoreRisingCandidates(videos);
+  const scoreRankedCandidates = [...scoredCandidates].sort((a, b) => b.discoveryScore - a.discoveryScore);
+  const currentVideos = selectBalancedRisingVideos(
+    scoreRankedCandidates,
     input.maxResults,
     input.videoCategoryId !== void 0,
     input.subscriberRange
   );
+  const previousVideos = await syncRisingRankHistory(input, currentVideos, scoreRankedCandidates);
+  if (input.sortBy === "hourly") currentVideos.sort((a, b) => (b.velocityPerHour ?? b.averageHourlyViews) - (a.velocityPerHour ?? a.averageHourlyViews));
+  else if (input.sortBy === "outlier") currentVideos.sort((a, b) => (b.outlierScore || 0) - (a.outlierScore || 0));
+  else if (input.sortBy === "newest") currentVideos.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
   return {
     success: true,
-    videos,
-    collectedAt: videos[0]?.capturedAt || (/* @__PURE__ */ new Date()).toISOString(),
-    metricMode: videos.some((video) => video.velocityAvailable) ? "snapshot" : "collecting"
+    videos: currentVideos,
+    previousVideos,
+    collectedAt: currentVideos[0]?.capturedAt || (/* @__PURE__ */ new Date()).toISOString(),
+    metricMode: currentVideos.some((video) => video.velocityAvailable) ? "snapshot" : "collecting"
   };
 }
 
@@ -3990,7 +4057,7 @@ var appRouter = router({
         const searchData = await searchResponse.json();
         const videoIds = (searchData.items || []).map((item) => item.id?.videoId).filter(Boolean);
         if (videoIds.length === 0) {
-          return { success: true, videos: [], collectedAt: (/* @__PURE__ */ new Date()).toISOString(), metricMode: "average_since_publish" };
+          return { success: true, videos: [], previousVideos: [], collectedAt: (/* @__PURE__ */ new Date()).toISOString(), metricMode: "average_since_publish" };
         }
         const videoParams = new URLSearchParams({
           part: "snippet,statistics,contentDetails",
@@ -4072,6 +4139,7 @@ var appRouter = router({
         return {
           success: true,
           videos: diverseVideos,
+          previousVideos: [],
           collectedAt: (/* @__PURE__ */ new Date()).toISOString(),
           metricMode: "average_since_publish"
         };

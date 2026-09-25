@@ -8390,6 +8390,81 @@ input[type="date"].youtubeSelect {
   width: 100%;
 }
 
+.previousRisingToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  margin: 34px auto 0;
+  padding: 0 16px;
+  border: 1px solid rgba(96, 165, 250, 0.28);
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.5);
+  color: #bfdbfe;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+}
+
+.previousRisingToggle:hover {
+  border-color: rgba(96, 165, 250, 0.55);
+  background: rgba(30, 41, 59, 0.72);
+  color: #ffffff;
+}
+
+.previousRisingSection {
+  margin-top: 36px;
+  padding-top: 28px;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.previousRisingHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.previousRisingHeader h2 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.previousRisingHeader span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.previousRisingBadge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  padding: 4px 7px;
+  border: 1px solid rgba(191, 219, 254, 0.3);
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.86);
+  color: #bfdbfe;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .previousRisingSection {
+    margin-top: 28px;
+    padding-top: 22px;
+  }
+
+  .previousRisingHeader h2 {
+    font-size: 16px;
+  }
+}
+
 .risingVideosGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -1782,7 +1782,7 @@ export const appRouter = router({
           const searchData = await searchResponse.json();
           const videoIds = (searchData.items || []).map((item: any) => item.id?.videoId).filter(Boolean);
           if (videoIds.length === 0) {
-            return { success: true, videos: [], collectedAt: new Date().toISOString(), metricMode: "average_since_publish" as const };
+            return { success: true, videos: [], previousVideos: [], collectedAt: new Date().toISOString(), metricMode: "average_since_publish" as const };
           }
 
           const videoParams = new URLSearchParams({
@@ -1875,6 +1875,7 @@ export const appRouter = router({
           return {
             success: true,
             videos: diverseVideos,
+            previousVideos: [],
             collectedAt: new Date().toISOString(),
             metricMode: "average_since_publish" as const,
           };
