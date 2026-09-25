@@ -213,13 +213,14 @@ export default function YouTubeTrends() {
   const [visibleAnalysisCount, setVisibleAnalysisCount] = useState(10);
   const [visiblePreviousRecommendedCount, setVisiblePreviousRecommendedCount] = useState(0);
   const [visiblePreviousRisingCount, setVisiblePreviousRisingCount] = useState(0);
+  const [visiblePreviousShortsCount, setVisiblePreviousShortsCount] = useState(0);
   const [isExposureCountryInfoOpen, setIsExposureCountryInfoOpen] = useState(false);
   const [lastUpdateTimesByKey, setLastUpdateTimesByKey] = useState<Record<string, number>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [videoCache, setVideoCache] = useState<Record<string, { data: any; previousData?: any[]; fetchedAt: number }>>({});
   const [channelProfileCache, setChannelProfileCache] = useState<Record<string, { url: string; title: string }>>({});
   const [channelCache, setChannelCache] = useState<Record<string, { data: any; fetchedAt: number }>>({});
-  const [shortsCache, setShortsCache] = useState<Record<string, { data: any; fetchedAt: number }>>({});
+  const [shortsCache, setShortsCache] = useState<Record<string, { data: any; previousData?: any[]; fetchedAt: number }>>({});
   const [shouldForceRefresh, setShouldForceRefresh] = useState(false);
 
   useEffect(() => {
@@ -483,7 +484,7 @@ export default function YouTubeTrends() {
 
   // Use cache if available and valid, otherwise use API response
   const displayShortsData = isShortsCacheValid && !shouldForceRefresh && !shortsData?.error
-    ? { success: true, videos: cachedShorts.data }
+    ? { success: true, videos: cachedShorts.data, previousVideos: cachedShorts.previousData || [] }
     : shortsData;
 
   // DEBUG: Log first video data when received
@@ -574,6 +575,7 @@ export default function YouTubeTrends() {
         ...prev,
         [cacheKey]: {
           data: shortsData.videos,
+          previousData: shortsData.previousVideos || [],
           fetchedAt,
         },
       }));
@@ -618,6 +620,7 @@ export default function YouTubeTrends() {
             ...prev,
             [cacheKey]: {
               data: result.data.videos,
+              previousData: "previousVideos" in result.data ? result.data.previousVideos || [] : [],
               fetchedAt,
             },
           }));
@@ -664,10 +667,14 @@ export default function YouTubeTrends() {
     updateCurrentFilter("country", value);
     setVisiblePreviousRecommendedCount(0);
     setVisiblePreviousRisingCount(0);
+    setVisiblePreviousShortsCount(0);
     setIsExposureCountryInfoOpen(false);
   };
   const handleCategoryChange = (value: string) => updateCurrentFilter("category", value);
-  const handleSortChange = (value: string) => updateCurrentFilter("sort", value);
+  const handleSortChange = (value: string) => {
+    updateCurrentFilter("sort", value);
+    setVisiblePreviousShortsCount(0);
+  };
   const handleRisingPeriodChange = (value: string) => {
     updateCurrentFilter("period", value);
     setVisiblePreviousRisingCount(0);
@@ -678,6 +685,7 @@ export default function YouTubeTrends() {
     setActiveTab(tabId);
     setIsMobileTabMenuOpen(false);
     setVisiblePreviousRecommendedCount(0);
+    setVisiblePreviousShortsCount(0);
     setIsExposureCountryInfoOpen(false);
     setLocation(tabId === "trending" ? "/trends/youtube" : `/trends/youtube?tab=${tabId}`);
   };
@@ -1575,6 +1583,37 @@ export default function YouTubeTrends() {
       );
     }
 
+    const previousShortsVideos = "previousVideos" in displayShortsData
+      ? displayShortsData.previousVideos || []
+      : [];
+    const renderShortsCard = (video: any, isPrevious = false) => (
+      <button
+        type="button"
+        key={`${isPrevious ? "previous" : "current"}-shorts-${video.id}`}
+        onClick={() => {
+          setSelectedVideo(video);
+          setIsModalOpen(true);
+        }}
+        className="videoCard"
+      >
+        <div className="videoThumbnail">
+          <img src={video.thumbnail} alt={video.title} />
+          {isPrevious ? <span className="previousRisingBadge">이전 쇼츠</span> : null}
+          <div className="videoDurationBadge">{formatDuration(video.duration)}</div>
+          <div className="videoPlayIcon">
+            <Play size={32} fill="currentColor" />
+          </div>
+        </div>
+        <div className="videoInfo">
+          <h3 className="videoTitle">{video.title}</h3>
+          <p className="videoChannel">{video.channelTitle}</p>
+          <div className="videoMeta">
+            <span>{formatViewCount(video.viewCount)} 조회 · {formatDate(video.publishedAt)}</span>
+          </div>
+        </div>
+      </button>
+    );
+
     return (
       <div>
         {/* Last Update Info - Mobile */}
@@ -1620,32 +1659,43 @@ export default function YouTubeTrends() {
           </div>
         )}
         <div className="videosGrid">
-          {displayShortsData.videos.map((video: any) => (
-            <button
-              key={video.id}
-              onClick={() => {
-                setSelectedVideo(video);
-                setIsModalOpen(true);
-              }}
-              className="videoCard"
-            >
-              <div className="videoThumbnail">
-                <img src={video.thumbnail} alt={video.title} />
-                <div className="videoDurationBadge">{formatDuration(video.duration)}</div>
-                <div className="videoPlayIcon">
-                  <Play size={32} fill="currentColor" />
-                </div>
-              </div>
-              <div className="videoInfo">
-                <h3 className="videoTitle">{video.title}</h3>
-                <p className="videoChannel">{video.channelTitle}</p>
-                <div className="videoMeta">
-                  <span>{formatViewCount(video.viewCount)} 조회 · {formatDate(video.publishedAt)}</span>
-                </div>
-              </div>
-            </button>
-          ))}
+          {displayShortsData.videos.map((video: any) => renderShortsCard(video))}
         </div>
+
+        {previousShortsVideos.length > 0 && visiblePreviousShortsCount === 0 ? (
+          <button
+            type="button"
+            className="previousRisingToggle"
+            onClick={() => setVisiblePreviousShortsCount(12)}
+          >
+            이전 쇼츠 더보기
+            <ChevronDown size={18} aria-hidden="true" />
+          </button>
+        ) : null}
+
+        {visiblePreviousShortsCount > 0 && previousShortsVideos.length > 0 ? (
+          <section className="previousRisingSection">
+            <div className="previousRisingHeader">
+              <h2>이전 쇼츠</h2>
+              <span>최근 3일 이내 목록</span>
+            </div>
+            <div className="videosGrid">
+              {previousShortsVideos
+                .slice(0, visiblePreviousShortsCount)
+                .map((video: any) => renderShortsCard(video, true))}
+            </div>
+            {visiblePreviousShortsCount < previousShortsVideos.length ? (
+              <button
+                type="button"
+                className="previousRisingToggle"
+                onClick={() => setVisiblePreviousShortsCount(count => count + 12)}
+              >
+                더보기
+                <ChevronDown size={18} aria-hidden="true" />
+              </button>
+            ) : null}
+          </section>
+        ) : null}
       </div>
     );
   };

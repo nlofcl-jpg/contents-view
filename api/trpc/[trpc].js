@@ -4394,7 +4394,8 @@ var appRouter = router({
         if (videoIds.length === 0) {
           return {
             success: true,
-            videos: []
+            videos: [],
+            previousVideos: []
           };
         }
         const videosParams = new URLSearchParams({
@@ -4677,9 +4678,19 @@ var appRouter = router({
           );
         }
         videos = videos.slice(0, input.maxResults);
+        let previousVideos = [];
+        try {
+          previousVideos = await syncYouTubeRecommendedHistory(
+            `shorts:${input.regionCode}:${input.sortBy}`,
+            videos
+          );
+        } catch (historyError) {
+          console.error("Failed to sync YouTube Shorts history:", historyError);
+        }
         return {
           success: true,
-          videos
+          videos,
+          previousVideos
         };
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : "Connection failed";

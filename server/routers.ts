@@ -2130,6 +2130,7 @@ export const appRouter = router({
             return {
               success: true,
               videos: [],
+              previousVideos: [],
             };
           }
 
@@ -2479,10 +2480,20 @@ export const appRouter = router({
 
           // Limit to maxResults (default 24)
           videos = videos.slice(0, input.maxResults);
+          let previousVideos: any[] = [];
+          try {
+            previousVideos = await syncYouTubeRecommendedHistory(
+              `shorts:${input.regionCode}:${input.sortBy}`,
+              videos
+            );
+          } catch (historyError) {
+            console.error("Failed to sync YouTube Shorts history:", historyError);
+          }
 
           return {
             success: true,
             videos,
+            previousVideos,
           };
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : "Connection failed";
