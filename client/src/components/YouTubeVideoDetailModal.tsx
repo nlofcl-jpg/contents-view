@@ -107,7 +107,7 @@ export function YouTubeVideoDetailModal({
 
   if (!isOpen || !video) return null;
 
-  const visibleTags = (video.tags || []).filter(Boolean).slice(0, 6);
+  const visibleTags = Array.from(new Set((video.tags || []).map(tag => tag.trim()).filter(Boolean))).slice(0, 10);
   const insightItems = [
     { label: "조회수", value: `${formatViewCount(video.viewCount)}회` },
     { label: "댓글 수", value: `${formatViewCount(video.commentCount || 0)}개` },

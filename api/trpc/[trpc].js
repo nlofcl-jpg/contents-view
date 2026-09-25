@@ -2675,7 +2675,7 @@ async function getStoredYouTubeRisingVideos(input) {
       viewCount,
       commentCount: Number(row.comment_count || 0),
       categoryId: String(row.category_id || ""),
-      tags: [],
+      tags: Array.isArray(row.tags) ? row.tags.filter(Boolean).slice(0, 20) : [],
       duration: toIsoDuration(Number(row.duration_seconds || 0)),
       subscriberCount,
       hiddenSubscribers: Boolean(row.hidden_subscribers),
@@ -3988,11 +3988,11 @@ var appRouter = router({
           duration: item.contentDetails.duration
         }));
         const uniqueChannelIds = Array.from(new Set(videos.map((v) => v.channelId))).slice(0, 50);
-        const channelThumbnails = {};
+        const channelDetails = {};
         if (uniqueChannelIds.length > 0) {
           try {
             const channelParams = new URLSearchParams({
-              part: "snippet",
+              part: "snippet,statistics",
               id: uniqueChannelIds.join(","),
               key: apiKeyRecord.apiKey
             });
@@ -4003,20 +4003,36 @@ var appRouter = router({
             if (channelResponse.ok) {
               const channelData = await channelResponse.json();
               (channelData.items || []).forEach((channel) => {
-                const thumbnailUrl = channel.snippet?.thumbnails?.high?.url || channel.snippet?.thumbnails?.medium?.url || channel.snippet?.thumbnails?.default?.url;
-                if (thumbnailUrl) {
-                  channelThumbnails[channel.id] = thumbnailUrl;
-                }
+                channelDetails[channel.id] = channel;
               });
             }
           } catch (channelError) {
             console.error("Failed to fetch channel thumbnails:", channelError);
           }
         }
-        videos = videos.map((video) => ({
-          ...video,
-          channelThumbnail: channelThumbnails[video.channelId] || null
-        }));
+        const analyzedAt = Date.now();
+        videos = videos.map((video) => {
+          const channel = channelDetails[video.channelId];
+          const hiddenSubscribers = !channel || Boolean(channel.statistics?.hiddenSubscriberCount);
+          const subscriberCount = hiddenSubscribers ? 0 : Number(channel.statistics?.subscriberCount || 0);
+          const elapsedHours = Math.max((analyzedAt - new Date(video.publishedAt).getTime()) / 36e5, 0.1);
+          const averageHourlyViews = Math.round(video.viewCount / elapsedHours);
+          const outlierScore = subscriberCount > 0 ? video.viewCount / subscriberCount : null;
+          return {
+            ...video,
+            channelThumbnail: channel?.snippet?.thumbnails?.high?.url || channel?.snippet?.thumbnails?.medium?.url || channel?.snippet?.thumbnails?.default?.url || null,
+            subscriberCount,
+            hiddenSubscribers,
+            averageHourlyViews,
+            velocityPerHour: null,
+            velocityAvailable: false,
+            acceleration: null,
+            outlierScore: outlierScore === null ? null : Number(outlierScore.toFixed(2)),
+            freshness: Math.max(0, 1 - elapsedHours / (24 * 7)),
+            elapsedHours: Number(elapsedHours.toFixed(1))
+          };
+        });
+        videos = scoreRisingCandidates(videos);
         if (videos.length > 0) {
           const firstVideo = videos[0];
           console.log("[DEBUG] getTrendingVideos - First video:", {
@@ -4025,7 +4041,6 @@ var appRouter = router({
             channelId: firstVideo.channelId,
             channelThumbnail: firstVideo.channelThumbnail
           });
-          console.log("[DEBUG] channelThumbnails map:", channelThumbnails);
         }
         if (input.sortBy === "viewCount") {
           videos.sort((a, b) => b.viewCount - a.viewCount);

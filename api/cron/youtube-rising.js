@@ -283,6 +283,7 @@ async function collectYouTubeRisingSnapshots() {
     category_id: Number(item.snippet.categoryId || 0),
     published_at: item.snippet.publishedAt,
     duration_seconds: parseDurationSeconds(item.contentDetails?.duration || "PT0S"),
+    tags: Array.isArray(item.snippet.tags) ? item.snippet.tags.slice(0, 20) : [],
     updated_at: capturedAt
   }));
   if (videoRows.length > 0) {

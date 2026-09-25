@@ -467,6 +467,7 @@ export async function collectYouTubeRisingSnapshots() {
     category_id: Number(item.snippet.categoryId || 0),
     published_at: item.snippet.publishedAt,
     duration_seconds: parseDurationSeconds(item.contentDetails?.duration || "PT0S"),
+    tags: Array.isArray(item.snippet.tags) ? item.snippet.tags.slice(0, 20) : [],
     updated_at: capturedAt,
   }));
   if (videoRows.length > 0) {
@@ -726,7 +727,7 @@ export async function getStoredYouTubeRisingVideos(input: StoredRisingInput) {
       viewCount,
       commentCount: Number(row.comment_count || 0),
       categoryId: String(row.category_id || ""),
-      tags: [],
+      tags: Array.isArray(row.tags) ? row.tags.filter(Boolean).slice(0, 20) : [],
       duration: toIsoDuration(Number(row.duration_seconds || 0)),
       subscriberCount,
       hiddenSubscribers: Boolean(row.hidden_subscribers),
