@@ -14,7 +14,7 @@ import { createRequire } from "module";
 import { createHmac } from "crypto";
 import { eq } from "drizzle-orm";
 import { users } from "../drizzle/schema";
-import { getStoredYouTubeRisingVideos, isYouTubeTopicChannel, scoreRisingCandidates, selectBalancedRisingVideos } from "./youtubeRising";
+import { getStoredYouTubeRisingVideos, isYouTubeTopicChannel, scoreRisingCandidates, selectBalancedRisingVideos, syncYouTubeRecommendedHistory } from "./youtubeRising";
 
 const require = createRequire(import.meta.url);
 
@@ -1602,7 +1602,7 @@ export const appRouter = router({
             part: "snippet,statistics,contentDetails",
             chart: "mostPopular",
             regionCode: input.regionCode,
-            maxResults: input.maxResults.toString(),
+            maxResults: (input.videoCategoryId === undefined ? 50 : input.maxResults).toString(),
             key: apiKeyRecord.apiKey,
           });
 
@@ -1638,20 +1638,22 @@ export const appRouter = router({
           }
 
           // Process videos
-          let videos = (data.items || []).map((item: any) => ({
-            id: item.id,
-            title: item.snippet.title,
-            description: item.snippet.description,
-            thumbnail: item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url,
-            channelTitle: item.snippet.channelTitle,
-            channelId: item.snippet.channelId,
-            publishedAt: item.snippet.publishedAt,
-            viewCount: parseInt(item.statistics.viewCount || "0"),
-            commentCount: parseInt(item.statistics.commentCount || "0"),
-            categoryId: item.snippet.categoryId,
-            tags: Array.isArray(item.snippet.tags) ? item.snippet.tags.slice(0, 12) : [],
-            duration: item.contentDetails.duration,
-          }));
+          let videos = (data.items || [])
+            .filter((item: any) => input.videoCategoryId !== undefined || !isYouTubeTopicChannel(item.snippet?.channelTitle))
+            .map((item: any) => ({
+              id: item.id,
+              title: item.snippet.title,
+              description: item.snippet.description,
+              thumbnail: item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url,
+              channelTitle: item.snippet.channelTitle,
+              channelId: item.snippet.channelId,
+              publishedAt: item.snippet.publishedAt,
+              viewCount: parseInt(item.statistics.viewCount || "0"),
+              commentCount: parseInt(item.statistics.commentCount || "0"),
+              categoryId: item.snippet.categoryId,
+              tags: Array.isArray(item.snippet.tags) ? item.snippet.tags.slice(0, 12) : [],
+              duration: item.contentDetails.duration,
+            }));
 
           // Fetch channel profile images
           // Collect unique channel IDs
@@ -1716,9 +1718,20 @@ export const appRouter = router({
           }
           // "trending" keeps the default order from YouTube API
 
+          videos = videos.slice(0, input.maxResults);
+          let previousVideos: any[] = [];
+          if (input.videoCategoryId === undefined) {
+            try {
+              previousVideos = await syncYouTubeRecommendedHistory(input.regionCode, videos);
+            } catch (historyError) {
+              console.error("Failed to sync YouTube recommendation history:", historyError);
+            }
+          }
+
           return {
             success: true,
             videos,
+            previousVideos,
           };
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : "Connection failed";

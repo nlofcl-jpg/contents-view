@@ -2535,6 +2535,48 @@ function matchesSubscriberRange(count, hidden, range) {
 function isMissingRisingHistoryError(error) {
   return error?.code === "42P01" || error?.code === "PGRST204" || error?.code === "PGRST205";
 }
+async function syncYouTubeRecommendedHistory(regionCode, currentVideos) {
+  if (!supabaseAdmin3) return [];
+  const { data: historyRows, error: historyError } = await supabaseAdmin3.from("youtube_recommended_history").select("video_id,video_data,first_recommended_at,last_recommended_at,exited_at").eq("region_code", regionCode).limit(1e3);
+  if (historyError) {
+    if (isMissingRisingHistoryError(historyError)) return [];
+    throw historyError;
+  }
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const archiveCutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1e3);
+  const existingByVideoId = new Map((historyRows || []).map((row) => [row.video_id, row]));
+  const currentVideoIds = new Set(currentVideos.map((video) => video.id));
+  const historyUpserts = currentVideos.map((video) => ({
+    video_id: video.id,
+    region_code: regionCode,
+    video_data: video,
+    first_recommended_at: existingByVideoId.get(video.id)?.first_recommended_at || now,
+    last_recommended_at: now,
+    exited_at: null
+  }));
+  if (historyUpserts.length > 0) {
+    const { error } = await supabaseAdmin3.from("youtube_recommended_history").upsert(historyUpserts, { onConflict: "video_id,region_code" });
+    if (error && !isMissingRisingHistoryError(error)) throw error;
+  }
+  const exitingVideoIds = (historyRows || []).filter((row) => row.exited_at === null && !currentVideoIds.has(row.video_id)).map((row) => row.video_id);
+  for (const videoIdBatch of chunks(exitingVideoIds, 200)) {
+    const { error } = await supabaseAdmin3.from("youtube_recommended_history").update({ exited_at: now }).eq("region_code", regionCode).in("video_id", videoIdBatch).is("exited_at", null);
+    if (error && !isMissingRisingHistoryError(error)) throw error;
+  }
+  await supabaseAdmin3.from("youtube_recommended_history").delete().lt("exited_at", archiveCutoff.toISOString());
+  return (historyRows || []).filter((row) => {
+    const exitedAt = row.exited_at || (exitingVideoIds.includes(row.video_id) ? now : null);
+    return Boolean(
+      exitedAt && new Date(exitedAt).getTime() >= archiveCutoff.getTime() && !currentVideoIds.has(row.video_id)
+    );
+  }).map((row) => ({
+    ...row.video_data,
+    previousRecommended: true,
+    firstRecommendedAt: row.first_recommended_at,
+    lastRecommendedAt: row.last_recommended_at,
+    exitedAt: row.exited_at || now
+  })).sort((a, b) => new Date(b.exitedAt).getTime() - new Date(a.exitedAt).getTime());
+}
 async function syncRisingRankHistory(input, currentVideos, candidateVideos) {
   if (!supabaseAdmin3) return [];
   const { data: historyRows, error: historyError } = await supabaseAdmin3.from("youtube_rising_rank_history").select("video_id,first_ranked_at,last_ranked_at,exited_at,peak_rank,peak_score,last_rank,last_score").eq("region_code", input.regionCode).eq("period", input.period).limit(2e3);
@@ -3903,7 +3945,7 @@ var appRouter = router({
           part: "snippet,statistics,contentDetails",
           chart: "mostPopular",
           regionCode: input.regionCode,
-          maxResults: input.maxResults.toString(),
+          maxResults: (input.videoCategoryId === void 0 ? 50 : input.maxResults).toString(),
           key: apiKeyRecord.apiKey
         });
         if (input.videoCategoryId !== void 0) {
@@ -3931,7 +3973,7 @@ var appRouter = router({
             videos: []
           };
         }
-        let videos = (data.items || []).map((item) => ({
+        let videos = (data.items || []).filter((item) => input.videoCategoryId !== void 0 || !isYouTubeTopicChannel(item.snippet?.channelTitle)).map((item) => ({
           id: item.id,
           title: item.snippet.title,
           description: item.snippet.description,
@@ -3992,9 +4034,19 @@ var appRouter = router({
             (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
           );
         }
+        videos = videos.slice(0, input.maxResults);
+        let previousVideos = [];
+        if (input.videoCategoryId === void 0) {
+          try {
+            previousVideos = await syncYouTubeRecommendedHistory(input.regionCode, videos);
+          } catch (historyError) {
+            console.error("Failed to sync YouTube recommendation history:", historyError);
+          }
+        }
         return {
           success: true,
-          videos
+          videos,
+          previousVideos
         };
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : "Connection failed";

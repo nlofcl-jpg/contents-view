@@ -527,6 +527,75 @@ function isMissingRisingHistoryError(error: any) {
   return error?.code === "42P01" || error?.code === "PGRST204" || error?.code === "PGRST205";
 }
 
+export async function syncYouTubeRecommendedHistory(regionCode: string, currentVideos: any[]) {
+  if (!supabaseAdmin) return [];
+
+  const { data: historyRows, error: historyError } = await supabaseAdmin
+    .from("youtube_recommended_history")
+    .select("video_id,video_data,first_recommended_at,last_recommended_at,exited_at")
+    .eq("region_code", regionCode)
+    .limit(1000);
+  if (historyError) {
+    if (isMissingRisingHistoryError(historyError)) return [];
+    throw historyError;
+  }
+
+  const now = new Date().toISOString();
+  const archiveCutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  const existingByVideoId = new Map((historyRows || []).map(row => [row.video_id, row]));
+  const currentVideoIds = new Set(currentVideos.map(video => video.id));
+  const historyUpserts = currentVideos.map(video => ({
+    video_id: video.id,
+    region_code: regionCode,
+    video_data: video,
+    first_recommended_at: existingByVideoId.get(video.id)?.first_recommended_at || now,
+    last_recommended_at: now,
+    exited_at: null,
+  }));
+  if (historyUpserts.length > 0) {
+    const { error } = await supabaseAdmin
+      .from("youtube_recommended_history")
+      .upsert(historyUpserts, { onConflict: "video_id,region_code" });
+    if (error && !isMissingRisingHistoryError(error)) throw error;
+  }
+
+  const exitingVideoIds = (historyRows || [])
+    .filter(row => row.exited_at === null && !currentVideoIds.has(row.video_id))
+    .map(row => row.video_id);
+  for (const videoIdBatch of chunks(exitingVideoIds, 200)) {
+    const { error } = await supabaseAdmin
+      .from("youtube_recommended_history")
+      .update({ exited_at: now })
+      .eq("region_code", regionCode)
+      .in("video_id", videoIdBatch)
+      .is("exited_at", null);
+    if (error && !isMissingRisingHistoryError(error)) throw error;
+  }
+
+  await supabaseAdmin
+    .from("youtube_recommended_history")
+    .delete()
+    .lt("exited_at", archiveCutoff.toISOString());
+
+  return (historyRows || [])
+    .filter(row => {
+      const exitedAt = row.exited_at || (exitingVideoIds.includes(row.video_id) ? now : null);
+      return Boolean(
+        exitedAt &&
+        new Date(exitedAt).getTime() >= archiveCutoff.getTime() &&
+        !currentVideoIds.has(row.video_id)
+      );
+    })
+    .map(row => ({
+      ...row.video_data,
+      previousRecommended: true,
+      firstRecommendedAt: row.first_recommended_at,
+      lastRecommendedAt: row.last_recommended_at,
+      exitedAt: row.exited_at || now,
+    }))
+    .sort((a, b) => new Date(b.exitedAt).getTime() - new Date(a.exitedAt).getTime());
+}
+
 async function syncRisingRankHistory(
   input: StoredRisingInput,
   currentVideos: any[],

@@ -211,11 +211,12 @@ export default function YouTubeTrends() {
   const [analysisSort, setAnalysisSort] = useState<AnalysisSortType>("relevance");
   const [analysisDurationType, setAnalysisDurationType] = useState<AnalysisDurationType>("all");
   const [visibleAnalysisCount, setVisibleAnalysisCount] = useState(10);
+  const [visiblePreviousRecommendedCount, setVisiblePreviousRecommendedCount] = useState(0);
   const [visiblePreviousRisingCount, setVisiblePreviousRisingCount] = useState(0);
   const [isExposureCountryInfoOpen, setIsExposureCountryInfoOpen] = useState(false);
   const [lastUpdateTimesByKey, setLastUpdateTimesByKey] = useState<Record<string, number>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [videoCache, setVideoCache] = useState<Record<string, { data: any; fetchedAt: number }>>({});
+  const [videoCache, setVideoCache] = useState<Record<string, { data: any; previousData?: any[]; fetchedAt: number }>>({});
   const [channelProfileCache, setChannelProfileCache] = useState<Record<string, { url: string; title: string }>>({});
   const [channelCache, setChannelCache] = useState<Record<string, { data: any; fetchedAt: number }>>({});
   const [shortsCache, setShortsCache] = useState<Record<string, { data: any; fetchedAt: number }>>({});
@@ -371,7 +372,7 @@ export default function YouTubeTrends() {
   // v3: Force cache invalidation - channelThumbnail field must be present
   const cacheKey = activeTab === "shorts" 
     ? `youtube:${activeTab}:${regionCode}:${apiSortBy}:7d:v3`
-    : `youtube:${activeTab}:${regionCode}:${category}:${apiSortBy}:v3`;
+    : `youtube:${activeTab}:${regionCode}:${category}:${apiSortBy}:v4`;
   const lastUpdateTime = lastUpdateTimesByKey[cacheKey];
   const now = Date.now();
   
@@ -463,7 +464,7 @@ export default function YouTubeTrends() {
 
   // Use cache if available and valid, otherwise use API response
   const displayVideosData = isCacheValid && !shouldForceRefresh
-    ? { success: true, videos: cached.data }
+    ? { success: true, videos: cached.data, previousVideos: cached.previousData || [] }
     : videosData;
 
   // Check if we should use channel cache before making API call
@@ -536,6 +537,7 @@ export default function YouTubeTrends() {
         ...prev,
         [cacheKey]: {
           data: videosData.videos,
+          previousData: videosData.previousVideos || [],
           fetchedAt,
         },
       }));
@@ -633,6 +635,7 @@ export default function YouTubeTrends() {
             ...prev,
             [cacheKey]: {
               data: result.data.videos,
+              previousData: "previousVideos" in result.data ? result.data.previousVideos || [] : [],
               fetchedAt,
             },
           }));
@@ -659,6 +662,7 @@ export default function YouTubeTrends() {
   // Handler functions for current tab
   const handleCountryChange = (value: string) => {
     updateCurrentFilter("country", value);
+    setVisiblePreviousRecommendedCount(0);
     setVisiblePreviousRisingCount(0);
     setIsExposureCountryInfoOpen(false);
   };
@@ -673,6 +677,7 @@ export default function YouTubeTrends() {
   const handleTabChange = (tabId: TabType) => {
     setActiveTab(tabId);
     setIsMobileTabMenuOpen(false);
+    setVisiblePreviousRecommendedCount(0);
     setIsExposureCountryInfoOpen(false);
     setLocation(tabId === "trending" ? "/trends/youtube" : `/trends/youtube?tab=${tabId}`);
   };
@@ -924,6 +929,77 @@ export default function YouTubeTrends() {
     );
   };
 
+  const renderRecommendationCard = (video: any, isPrevious = false) => {
+    const isBookmarked = isYouTubeVideoBookmarked(video.id);
+    return (
+      <article key={`${isPrevious ? "previous-recommended" : "recommended"}-${video.id}`} className="videoCardWrapper">
+        <div
+          className="videoCard"
+          role="button"
+          tabIndex={0}
+          onClick={() => {
+            setSelectedVideo(video);
+            setIsModalOpen(true);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              setSelectedVideo(video);
+              setIsModalOpen(true);
+            }
+          }}
+        >
+          <div className="videoThumbnail">
+            <img src={video.thumbnail} alt={video.title} />
+            {isPrevious ? <span className="previousRisingBadge">이전 추천</span> : null}
+            <div className="videoDurationBadge">{formatDuration(video.duration)}</div>
+            <div className="videoPlayIcon">
+              <Play size={32} fill="currentColor" />
+            </div>
+          </div>
+          <div className="videoInfo">
+            <h3 className="videoTitle">{video.title}</h3>
+            <div className="videoChannelRow">
+              <div className="channelProfileImage">
+                {video.channelThumbnail ? (
+                  <img src={video.channelThumbnail} alt={video.channelTitle} />
+                ) : (
+                  <div className="channelProfilePlaceholder">{video.channelTitle.charAt(0).toUpperCase()}</div>
+                )}
+              </div>
+              <p className="videoChannel">{video.channelTitle}</p>
+            </div>
+            <div className="videoMeta">
+              <span>{formatViewCount(video.viewCount)} 조회 · {formatDate(video.publishedAt)}</span>
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            toggleYouTubeBookmark({
+              id: video.id,
+              title: video.title,
+              thumbnail: video.thumbnail,
+              channelTitle: video.channelTitle,
+              channelThumbnail: video.channelThumbnail,
+              viewCount: video.viewCount,
+              publishedAt: video.publishedAt,
+              duration: video.duration,
+            }, "video");
+          }}
+          disabled={isBookmarkPending(video.id)}
+          className={`bookmarkButton ${isBookmarked ? "bookmarked" : ""} ${isBookmarkPending(video.id) ? "pending" : ""}`}
+          title={isBookmarked ? "북마크 해제" : "북마크"}
+        >
+          <Bookmark size={20} fill={isBookmarked ? "currentColor" : "none"} />
+        </button>
+      </article>
+    );
+  };
+
   const renderTrendingTab = () => {
     // Check API Key status first (highest priority)
     if (!apiKeyData?.exists || apiKeyData?.testStatus !== "success") {
@@ -1020,76 +1096,43 @@ export default function YouTubeTrends() {
           </div>
         )}
         <div className="videosGrid">
-          {displayVideosData.videos.map((video: any) => {
-            const isBookmarked = isYouTubeVideoBookmarked(video.id);
-            return (
-              <article key={video.id} className="videoCardWrapper">
-                <div
-                  className="videoCard"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => {
-                    setSelectedVideo(video);
-                    setIsModalOpen(true);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setSelectedVideo(video);
-                      setIsModalOpen(true);
-                    }
-                  }}
-                >
-                  <div className="videoThumbnail">
-                    <img src={video.thumbnail} alt={video.title} />
-                    <div className="videoDurationBadge">{formatDuration(video.duration)}</div>
-                    <div className="videoPlayIcon">
-                      <Play size={32} fill="currentColor" />
-                    </div>
-                  </div>
-                  <div className="videoInfo">
-                    <h3 className="videoTitle">{video.title}</h3>
-                    <div className="videoChannelRow">
-                      <div className="channelProfileImage">
-                        {video.channelThumbnail ? (
-                          <img src={video.channelThumbnail} alt={video.channelTitle} />
-                        ) : (
-                          <div className="channelProfilePlaceholder">{video.channelTitle.charAt(0).toUpperCase()}</div>
-                        )}
-                      </div>
-                      <p className="videoChannel">{video.channelTitle}</p>
-                    </div>
-                    <div className="videoMeta">
-                      <span>{formatViewCount(video.viewCount)} 조회 · {formatDate(video.publishedAt)}</span>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    toggleYouTubeBookmark({
-                      id: video.id,
-                      title: video.title,
-                      thumbnail: video.thumbnail,
-                      channelTitle: video.channelTitle,
-                      channelThumbnail: video.channelThumbnail,
-                      viewCount: video.viewCount,
-                      publishedAt: video.publishedAt,
-                      duration: video.duration,
-                    }, 'video');
-                  }}
-                  disabled={isBookmarkPending(video.id)}
-                  className={`bookmarkButton ${isBookmarked ? 'bookmarked' : ''} ${isBookmarkPending(video.id) ? 'pending' : ''}`}
-                  title={isBookmarked ? '북마크 해제' : '북마크'}
-                >
-                  <Bookmark size={20} fill={isBookmarked ? 'currentColor' : 'none'} />
-                </button>
-              </article>
-            );
-          })}
+          {displayVideosData.videos.map((video: any) => renderRecommendationCard(video))}
         </div>
+
+        {activeTab === "trending" && (displayVideosData.previousVideos?.length || 0) > 0 && visiblePreviousRecommendedCount === 0 ? (
+          <button
+            type="button"
+            className="previousRisingToggle"
+            onClick={() => setVisiblePreviousRecommendedCount(12)}
+          >
+            이전 추천 영상 더보기
+            <ChevronDown size={18} aria-hidden="true" />
+          </button>
+        ) : null}
+
+        {activeTab === "trending" && visiblePreviousRecommendedCount > 0 && (displayVideosData.previousVideos?.length || 0) > 0 ? (
+          <section className="previousRisingSection">
+            <div className="previousRisingHeader">
+              <h2>이전 추천 영상</h2>
+              <span>최근 3일 이내 목록</span>
+            </div>
+            <div className="videosGrid">
+              {(displayVideosData.previousVideos || [])
+                .slice(0, visiblePreviousRecommendedCount)
+                .map((video: any) => renderRecommendationCard(video, true))}
+            </div>
+            {visiblePreviousRecommendedCount < (displayVideosData.previousVideos?.length || 0) ? (
+              <button
+                type="button"
+                className="previousRisingToggle"
+                onClick={() => setVisiblePreviousRecommendedCount(count => count + 12)}
+              >
+                더보기
+                <ChevronDown size={18} aria-hidden="true" />
+              </button>
+            ) : null}
+          </section>
+        ) : null}
       </div>
     );
   };
