@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowRight, Newspaper, Users } from "lucide-react";
+import { ArrowRight, Newspaper, TrendingUp, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
@@ -15,6 +15,7 @@ type TrendRow = {
   tone?: "hot" | "normal";
   video?: any;
   minimal?: boolean;
+  risingScore?: boolean;
 };
 
 type TrendCard = {
@@ -156,7 +157,12 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
               </div>
               {(row.rightValue || row.detailHref) && (
                 <div className={`flex shrink-0 items-center gap-2 ${row.minimal ? "ml-auto" : ""}`}>
-                  {row.rightValue && <span className="text-xs font-bold text-blue-300">{row.rightValue}</span>}
+                  {row.rightValue && (
+                    <span className={`inline-flex items-center gap-1 text-xs font-bold ${row.risingScore ? "text-red-400" : "text-blue-300"}`}>
+                      {row.risingScore ? <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" /> : null}
+                      {row.rightValue}
+                    </span>
+                  )}
                   {row.detailHref && (
                     <button
                       type="button"
@@ -235,11 +241,12 @@ export default function ServiceCards() {
     return videos.slice(0, 5).map((video: any) => ({
       label: stripHtml(video.title),
       rightValue: video.discoveryScore !== null && video.discoveryScore !== undefined
-        ? `지수 ${video.discoveryScore}`
+        ? String(Math.round(Number(video.discoveryScore)))
         : undefined,
       image: video.thumbnail,
       video,
       minimal: true,
+      risingScore: true,
     }));
   }, [youtubeRisingQuery.data]);
 
