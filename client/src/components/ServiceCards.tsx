@@ -14,6 +14,7 @@ type TrendRow = {
   image?: string | null;
   tone?: "hot" | "normal";
   video?: any;
+  minimal?: boolean;
 };
 
 type TrendCard = {
@@ -65,26 +66,6 @@ function GoogleLogo() {
 
 function stripHtml(value?: string | null) {
   return (value || "").replace(/<[^>]*>/g, "").replace(/&quot;/g, "\"").replace(/&amp;/g, "&").trim();
-}
-
-function formatRelativeTime(value?: string | null) {
-  if (!value) return null;
-  const date = new Date(value);
-  const time = date.getTime();
-  if (Number.isNaN(time)) return null;
-
-  const diffMs = Date.now() - time;
-  const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
-  if (diffMinutes < 1) return "방금 전";
-  if (diffMinutes < 60) return `${diffMinutes}분 전`;
-
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours}시간 전`;
-
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `${diffDays}일 전`;
-
-  return date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" });
 }
 
 function formatCommunityDate(value?: string | null) {
@@ -142,6 +123,7 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
               className={`flex min-h-[61px] items-center gap-3 rounded-md border border-slate-800/70 bg-slate-900/25 p-2.5 ${(row.video || row.externalHref) ? "cursor-pointer transition-colors hover:border-blue-400/40 hover:bg-slate-900/55" : ""}`}
               role={(row.video || row.externalHref) ? "button" : undefined}
               tabIndex={(row.video || row.externalHref) ? 0 : undefined}
+              aria-label={row.video ? `${row.label} 분석 보기` : undefined}
               onClick={() => {
                 if (row.video) onVideoSelect?.(row.video);
                 if (row.externalHref) window.open(row.externalHref, "_blank", "noopener,noreferrer");
@@ -155,23 +137,27 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
                 }
               }}
             >
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-xs font-bold text-blue-200">
-                {index + 1}
-              </div>
+              {!row.minimal && (
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-xs font-bold text-blue-200">
+                  {index + 1}
+                </div>
+              )}
               {row.image && (
                 <img
                   src={row.image}
                   alt=""
-                  className="h-10 w-14 shrink-0 rounded object-cover"
+                  className={`${row.minimal ? "h-12 w-20" : "h-10 w-14"} shrink-0 rounded object-cover`}
                   loading="lazy"
                 />
               )}
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-slate-100">{row.label}</p>
-                {row.meta && <p className="mt-1 truncate text-xs text-slate-400">{row.meta}</p>}
-              </div>
+              {!row.minimal && (
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-slate-100">{row.label}</p>
+                  {row.meta && <p className="mt-1 truncate text-xs text-slate-400">{row.meta}</p>}
+                </div>
+              )}
               {(row.rightValue || row.detailHref) && (
-                <div className="flex shrink-0 items-center gap-2">
+                <div className={`flex shrink-0 items-center gap-2 ${row.minimal ? "ml-auto" : ""}`}>
                   {row.rightValue && <span className="text-xs font-bold text-blue-300">{row.rightValue}</span>}
                   {row.detailHref && (
                     <button
@@ -250,17 +236,12 @@ export default function ServiceCards() {
     const videos = (youtubeRisingQuery.data as any)?.videos || [];
     return videos.slice(0, 5).map((video: any) => ({
       label: stripHtml(video.title),
-      meta: [
-        video.outlierScore !== null && video.outlierScore !== undefined
-          ? `채널 대비 ${video.outlierScore}배`
-          : null,
-        formatRelativeTime(video.publishedAt),
-      ].filter(Boolean).join(" · "),
       rightValue: video.discoveryScore !== null && video.discoveryScore !== undefined
         ? `지수 ${video.discoveryScore}`
         : undefined,
       image: video.thumbnail,
       video,
+      minimal: true,
     }));
   }, [youtubeRisingQuery.data]);
 
