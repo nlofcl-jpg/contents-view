@@ -3800,6 +3800,7 @@ var appRouter = router({
           channelThumbnail: channel?.snippet?.thumbnails?.high?.url || channel?.snippet?.thumbnails?.medium?.url || channel?.snippet?.thumbnails?.default?.url || null,
           publishedAt: item.snippet.publishedAt,
           viewCount,
+          likeCount: Number(item.statistics?.likeCount || 0),
           commentCount: Number(item.statistics?.commentCount || 0),
           categoryId: String(item.snippet.categoryId || ""),
           tags: Array.isArray(item.snippet.tags) ? item.snippet.tags.slice(0, 20) : [],
