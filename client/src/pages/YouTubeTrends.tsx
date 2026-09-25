@@ -4,7 +4,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { YouTubeApiStatusCard } from "@/components/YouTubeApiStatusCard";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
-import { AlertCircle, Clock, Play, ChevronDown, RotateCw, Users, Bookmark, Search } from "lucide-react";
+import { AlertCircle, CircleAlert, Clock, Play, ChevronDown, RotateCw, Users, Bookmark, Search } from "lucide-react";
 import { useBookmark } from "@/contexts/BookmarkContext";
 import { useLocation } from "wouter";
 
@@ -212,6 +212,7 @@ export default function YouTubeTrends() {
   const [analysisDurationType, setAnalysisDurationType] = useState<AnalysisDurationType>("all");
   const [visibleAnalysisCount, setVisibleAnalysisCount] = useState(10);
   const [visiblePreviousRisingCount, setVisiblePreviousRisingCount] = useState(0);
+  const [isExposureCountryInfoOpen, setIsExposureCountryInfoOpen] = useState(false);
   const [lastUpdateTimesByKey, setLastUpdateTimesByKey] = useState<Record<string, number>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [videoCache, setVideoCache] = useState<Record<string, { data: any; fetchedAt: number }>>({});
@@ -240,6 +241,22 @@ export default function YouTubeTrends() {
     setAnalysisDurationType("all");
     setVisibleAnalysisCount(10);
   }, [location]);
+
+  useEffect(() => {
+    if (!isExposureCountryInfoOpen) return;
+
+    const closeInfoPopup = (event: MouseEvent | KeyboardEvent) => {
+      if (event instanceof KeyboardEvent && event.key !== "Escape") return;
+      if (event instanceof MouseEvent && event.target instanceof Element && event.target.closest("[data-exposure-country-info]")) return;
+      setIsExposureCountryInfoOpen(false);
+    };
+    document.addEventListener("mousedown", closeInfoPopup);
+    document.addEventListener("keydown", closeInfoPopup);
+    return () => {
+      document.removeEventListener("mousedown", closeInfoPopup);
+      document.removeEventListener("keydown", closeInfoPopup);
+    };
+  }, [isExposureCountryInfoOpen]);
 
   // Manage filters per tab
   const [filtersByTab, setFiltersByTab] = useState({
@@ -643,6 +660,7 @@ export default function YouTubeTrends() {
   const handleCountryChange = (value: string) => {
     updateCurrentFilter("country", value);
     setVisiblePreviousRisingCount(0);
+    setIsExposureCountryInfoOpen(false);
   };
   const handleCategoryChange = (value: string) => updateCurrentFilter("category", value);
   const handleSortChange = (value: string) => updateCurrentFilter("sort", value);
@@ -655,6 +673,7 @@ export default function YouTubeTrends() {
   const handleTabChange = (tabId: TabType) => {
     setActiveTab(tabId);
     setIsMobileTabMenuOpen(false);
+    setIsExposureCountryInfoOpen(false);
     setLocation(tabId === "trending" ? "/trends/youtube" : `/trends/youtube?tab=${tabId}`);
   };
 
@@ -1607,9 +1626,30 @@ export default function YouTubeTrends() {
       {/* Filter Section */}
       {activeTab !== "analysis" && <div className="filterSection">
         <div className="filterGroup">
-          <label htmlFor="country-select" className="filterLabel">
-            {activeTab === "rising" ? "노출 국가" : "국가"}
-          </label>
+          <div className="filterLabelRow">
+            <label htmlFor="country-select" className="filterLabel">
+              {activeTab === "rising" ? "노출 국가" : "국가"}
+            </label>
+            {activeTab === "rising" ? (
+              <div className="exposureCountryInfo" data-exposure-country-info>
+                <button
+                  type="button"
+                  className="exposureCountryInfoButton"
+                  aria-label="노출 국가 기준 안내"
+                  aria-expanded={isExposureCountryInfoOpen}
+                  aria-controls="exposure-country-info-popup"
+                  onClick={() => setIsExposureCountryInfoOpen(open => !open)}
+                >
+                  <CircleAlert size={13} strokeWidth={2} aria-hidden="true" />
+                </button>
+                {isExposureCountryInfoOpen ? (
+                  <div id="exposure-country-info-popup" className="exposureCountryInfoPopup" role="dialog">
+                    선택한 국가의 YouTube 추천·검색 결과에서 발견된 영상입니다. 채널 국적과는 다를 수 있으며, 같은 영상이 여러 국가에 표시될 수 있습니다.
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
           <div className="selectWrapper">
             <select
               id="country-select"
