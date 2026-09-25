@@ -4,6 +4,9 @@ import { createPortal } from "react-dom";
 import { ChevronDown, Bookmark, MessageCircle, RefreshCw, ThumbsUp } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { formatCommunityDateTime } from "@/lib/communityDateTime";
+import GuestAccessPrompt from "@/components/GuestAccessPrompt";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useLocation } from "wouter";
 
 type CommunityFilterType = "all" | "dcinside" | "ppomppu" | "theqoo" | "instiz" | "natepon" | "ruliweb" | "inven" | "bobaedream" | "humoruniv" | "clien";
 type PeriodFilterType = "realtime" | "today" | "week";
@@ -486,6 +489,8 @@ function DropdownPortal({
 }
 
 export default function Community() {
+  const [, setLocation] = useLocation();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const cachedRanking = useMemo(() => readCommunityRankingCache(), []);
   const [selectedCommunity, setSelectedCommunity] = useState<CommunityFilterType>("all");
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodFilterType>("today");
@@ -498,6 +503,7 @@ export default function Community() {
   );
   const [dropdownPosition, setDropdownPosition] = useState<DropdownPosition | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showGuestPrompt, setShowGuestPrompt] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastFetchedAt, setLastFetchedAt] = useState<string | null>(
     cachedRanking?.lastFetchedAt || null
@@ -506,6 +512,10 @@ export default function Community() {
   const communityButtonRef = useRef<HTMLButtonElement | null>(null);
   const sortButtonRef = useRef<HTMLButtonElement | null>(null);
   const periodButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) setCurrentPage(1);
+  }, [authLoading, isAuthenticated]);
 
   // Map frontend sort values to server enum values - memoized to prevent infinite queries
   const sortParam = useMemo(() => {
@@ -821,7 +831,8 @@ export default function Community() {
   });
   
   const totalPages = Math.ceil(sortedPosts.length / PAGE_SIZE);
-  const paginatedPosts = sortedPosts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const visiblePage = isAuthenticated ? currentPage : 1;
+  const paginatedPosts = sortedPosts.slice((visiblePage - 1) * PAGE_SIZE, visiblePage * PAGE_SIZE);
 
   const getCommunityLabel = () => {
     if (selectedCommunity === "inven") return "인벤";
@@ -903,6 +914,10 @@ export default function Community() {
   };
 
   const handlePageChange = (page: number) => {
+    if (page > 1 && !isAuthenticated) {
+      if (!authLoading) setShowGuestPrompt(true);
+      return;
+    }
     setCurrentPage(page);
     // 페이지 변경 시 리스트 상단으로 스크롤
     const listContainer = document.querySelector(".communityListContainer");
@@ -1068,7 +1083,7 @@ export default function Community() {
                 <div className="colRank">
                   <span className="rankBadge">
                     {selectedCommunity === "all" 
-                      ? (currentPage - 1) * PAGE_SIZE + index + 1
+                      ? (visiblePage - 1) * PAGE_SIZE + index + 1
                       : post.rank
                     }
                   </span>
@@ -1155,7 +1170,7 @@ export default function Community() {
           {/* Pagination */}
           {!isCommunityRankingLoading && totalPages > 1 && (() => {
             const PAGES_PER_GROUP = 10;
-            const currentGroup = Math.floor((currentPage - 1) / PAGES_PER_GROUP);
+            const currentGroup = Math.floor((visiblePage - 1) / PAGES_PER_GROUP);
             const startPage = currentGroup * PAGES_PER_GROUP + 1;
             const endPage = Math.min(startPage + PAGES_PER_GROUP - 1, totalPages);
             const pageNumbers = Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
@@ -1182,10 +1197,10 @@ export default function Community() {
                     <button
                       key={page}
                       type="button"
-                      className={`paginationButton ${currentPage === page ? "active" : ""}`}
+                      className={`paginationButton ${visiblePage === page ? "active" : ""}`}
                       onClick={() => handlePageChange(page)}
                       aria-label={`${page}페이지로 이동`}
-                      aria-current={currentPage === page ? "page" : undefined}
+                      aria-current={visiblePage === page ? "page" : undefined}
                     >
                       {page}
                     </button>
@@ -1208,6 +1223,18 @@ export default function Community() {
           })()}
         </div>
       </div>
+      <GuestAccessPrompt
+        open={showGuestPrompt && !isAuthenticated}
+        onBrowse={() => setShowGuestPrompt(false)}
+        onLogin={() => {
+          setShowGuestPrompt(false);
+          setLocation("/login?redirect=%2Fcommunity");
+        }}
+        onSignup={() => {
+          setShowGuestPrompt(false);
+          setLocation("/login?mode=signup&redirect=%2Fcommunity");
+        }}
+      />
     </div>
   );
 }
