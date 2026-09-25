@@ -3914,7 +3914,7 @@ var appRouter = router({
         }
         const channelIds = Array.from(channelMap.keys());
         const channelParams = new URLSearchParams({
-          part: "snippet,statistics",
+          part: "snippet,statistics,contentDetails",
           id: channelIds.join(","),
           key: apiKeyRecord.apiKey
         });
@@ -3960,7 +3960,8 @@ var appRouter = router({
             videoCount,
             videoCountInTrending: aggregated.videoCount,
             topVideoTitle: aggregated.topVideoTitle,
-            trendingScore
+            trendingScore,
+            uploadsPlaylistId: item.contentDetails?.relatedPlaylists?.uploads || null
           };
         });
         if (input.sortBy === "subscribers") {
@@ -3970,9 +3971,47 @@ var appRouter = router({
         } else {
           channels.sort((a, b) => b.trendingScore - a.trendingScore);
         }
+        const selectedChannels = channels.slice(0, input.maxResults);
+        const channelsWithLatestVideos = await Promise.all(
+          selectedChannels.map(async (channel) => {
+            const { uploadsPlaylistId, ...channelData2 } = channel;
+            if (!uploadsPlaylistId) {
+              return { ...channelData2, latestVideos: [] };
+            }
+            try {
+              const playlistParams = new URLSearchParams({
+                part: "snippet,contentDetails",
+                playlistId: uploadsPlaylistId,
+                maxResults: "4",
+                key: apiKeyRecord.apiKey
+              });
+              const playlistResponse = await fetch(
+                `https://www.googleapis.com/youtube/v3/playlistItems?${playlistParams.toString()}`,
+                { method: "GET" }
+              );
+              if (!playlistResponse.ok) {
+                return { ...channelData2, latestVideos: [] };
+              }
+              const playlistData = await playlistResponse.json();
+              const latestVideos = (playlistData.items || []).map((playlistItem) => {
+                const videoId = playlistItem.contentDetails?.videoId || playlistItem.snippet?.resourceId?.videoId;
+                if (!videoId) return null;
+                return {
+                  videoId,
+                  title: playlistItem.snippet?.title || "\uCD5C\uC2E0 \uC601\uC0C1",
+                  thumbnail: playlistItem.snippet?.thumbnails?.medium?.url || playlistItem.snippet?.thumbnails?.high?.url || playlistItem.snippet?.thumbnails?.default?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+                  publishedAt: playlistItem.contentDetails?.videoPublishedAt || playlistItem.snippet?.publishedAt || null
+                };
+              }).filter(Boolean).slice(0, 4);
+              return { ...channelData2, latestVideos };
+            } catch {
+              return { ...channelData2, latestVideos: [] };
+            }
+          })
+        );
         return {
           success: true,
-          channels: channels.slice(0, input.maxResults)
+          channels: channelsWithLatestVideos
         };
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : "Connection failed";

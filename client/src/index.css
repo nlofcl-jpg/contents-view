@@ -6548,11 +6548,14 @@ input[type="date"].youtubeSelect {
   position: relative;
   display: block;
   min-width: 0;
+  padding: 0;
   overflow: hidden;
   border: 1px solid rgba(96, 165, 250, 0.16);
   border-radius: 6px;
   aspect-ratio: 16 / 9;
   background: #080d18;
+  color: inherit;
+  cursor: pointer;
 }
 
 .channelLatestVideo img {

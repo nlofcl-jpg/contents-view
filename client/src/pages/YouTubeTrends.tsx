@@ -1276,8 +1276,7 @@ export default function YouTubeTrends() {
                     <span>{formatKoreanNumber(channel.subscriberCount)} 구독자</span>
                     <span>·</span>
                     <span>{formatKoreanNumber(channel.viewCount)} 조회</span>
-                  </div>
-                  <div className="channelStats">
+                    <span>·</span>
                     <span>{channel.videoCount.toLocaleString("ko-KR")}개 영상</span>
                   </div>
                 </div>
@@ -1288,20 +1287,30 @@ export default function YouTubeTrends() {
                   <span className="channelLatestLabel">최신 영상</span>
                   <div className="channelLatestGrid">
                     {channel.latestVideos.slice(0, 4).map((video: any) => (
-                      <a
+                      <button
+                        type="button"
                         key={video.videoId}
-                        href={`https://www.youtube.com/watch?v=${video.videoId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         className="channelLatestVideo"
                         title={video.title}
-                        aria-label={`${video.title} 영상 보기`}
+                        aria-label={`${video.title} 영상 분석 보기`}
+                        onClick={() => {
+                          setSelectedVideo({
+                            id: video.videoId,
+                            title: video.title,
+                            channelTitle: channel.channelTitle,
+                            channelThumbnail: channel.thumbnail,
+                            viewCount: 0,
+                            publishedAt: video.publishedAt || new Date().toISOString(),
+                            duration: "PT0S",
+                          });
+                          setIsModalOpen(true);
+                        }}
                       >
                         <img src={video.thumbnail} alt="" loading="lazy" />
                         <span className="channelLatestPlay" aria-hidden="true">
                           <Play size={14} fill="currentColor" />
                         </span>
-                      </a>
+                      </button>
                     ))}
                   </div>
                 </div>
