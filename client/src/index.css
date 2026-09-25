@@ -6096,6 +6096,34 @@ input[type="date"].youtubeSelect {
   font-weight: 500;
 }
 
+.youtubeVideoCopyLinkButton {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  border-radius: 6px;
+  background: rgba(59, 130, 246, 0.08);
+  color: #91a4c2;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+.youtubeVideoCopyLinkButton:hover,
+.youtubeVideoCopyLinkButton:focus-visible {
+  border-color: rgba(96, 165, 250, 0.5);
+  background: rgba(59, 130, 246, 0.18);
+  color: #dbeafe;
+}
+
+.youtubeVideoCopyLinkButton.copied {
+  border-color: rgba(52, 211, 153, 0.35);
+  background: rgba(16, 185, 129, 0.12);
+  color: #6ee7b7;
+}
+
 .youtubeVideoModalMeta {
   display: flex;
   gap: 12px;

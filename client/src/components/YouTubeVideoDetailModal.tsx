@@ -1,5 +1,5 @@
-import { X } from "lucide-react";
-import { useEffect } from "react";
+import { Check, Copy, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 
@@ -94,6 +94,7 @@ export function YouTubeVideoDetailModal({
   onClose,
 }: YouTubeVideoDetailModalProps) {
   const { isAuthenticated } = useAuth();
+  const [isLinkCopied, setIsLinkCopied] = useState(false);
   const { data: analysisData, isFetching: isAnalysisFetching } = trpc.youtube.getVideoAnalysis.useQuery(
     { videoId: video?.id || "" },
     {
@@ -117,6 +118,39 @@ export function YouTubeVideoDetailModal({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
+
+  useEffect(() => {
+    setIsLinkCopied(false);
+  }, [video?.id, isOpen]);
+
+  useEffect(() => {
+    if (!isLinkCopied) return;
+    const timer = window.setTimeout(() => setIsLinkCopied(false), 1600);
+    return () => window.clearTimeout(timer);
+  }, [isLinkCopied]);
+
+  const handleCopyVideoLink = async () => {
+    if (!video?.id) return;
+    const videoUrl = `https://www.youtube.com/watch?v=${video.id}`;
+
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(videoUrl);
+      } else {
+        const copyField = document.createElement("textarea");
+        copyField.value = videoUrl;
+        copyField.style.position = "fixed";
+        copyField.style.opacity = "0";
+        document.body.appendChild(copyField);
+        copyField.select();
+        document.execCommand("copy");
+        copyField.remove();
+      }
+      setIsLinkCopied(true);
+    } catch {
+      setIsLinkCopied(false);
+    }
+  };
 
   if (!isOpen || !video) return null;
 
@@ -198,6 +232,15 @@ export function YouTubeVideoDetailModal({
                   : `구독자 ${formatViewCount(modalVideo.subscriberCount || 0)}`}
               </span>
             )}
+            <button
+              type="button"
+              className={`youtubeVideoCopyLinkButton${isLinkCopied ? " copied" : ""}`}
+              onClick={handleCopyVideoLink}
+              title={isLinkCopied ? "링크 복사 완료" : "영상 링크 복사"}
+              aria-label={isLinkCopied ? "영상 링크 복사 완료" : "영상 링크 복사"}
+            >
+              {isLinkCopied ? <Check size={14} /> : <Copy size={14} />}
+            </button>
           </div>
 
           {/* Meta Info */}
