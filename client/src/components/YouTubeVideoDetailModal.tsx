@@ -1,5 +1,7 @@
 import { X } from "lucide-react";
 import { useEffect } from "react";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 interface Video {
   id: string;
@@ -91,6 +93,17 @@ export function YouTubeVideoDetailModal({
   isOpen,
   onClose,
 }: YouTubeVideoDetailModalProps) {
+  const { isAuthenticated } = useAuth();
+  const { data: analysisData, isFetching: isAnalysisFetching } = trpc.youtube.getVideoAnalysis.useQuery(
+    { videoId: video?.id || "" },
+    {
+      enabled: isAuthenticated && isOpen && Boolean(video?.id),
+      retry: false,
+      staleTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    },
+  );
+
   // Handle ESC key
   useEffect(() => {
     if (!isOpen) return;
@@ -107,14 +120,26 @@ export function YouTubeVideoDetailModal({
 
   if (!isOpen || !video) return null;
 
-  const visibleTags = Array.from(new Set((video.tags || []).map(tag => tag.trim()).filter(Boolean))).slice(0, 10);
+  const freshVideo = analysisData?.success ? analysisData.video : null;
+  const modalVideo: Video = freshVideo
+    ? {
+        ...video,
+        ...freshVideo,
+        velocityPerHour: video.velocityPerHour ?? freshVideo.velocityPerHour,
+        averageHourlyViews: video.averageHourlyViews ?? freshVideo.averageHourlyViews,
+        outlierScore: video.outlierScore ?? freshVideo.outlierScore,
+        discoveryScore: video.discoveryScore ?? freshVideo.discoveryScore,
+      }
+    : video;
+
+  const visibleTags = Array.from(new Set((modalVideo.tags || []).map(tag => tag.trim()).filter(Boolean))).slice(0, 10);
   const insightItems = [
-    { label: "조회수", value: `${formatViewCount(video.viewCount)}회` },
-    { label: "댓글 수", value: `${formatViewCount(video.commentCount || 0)}개` },
-    { label: "카테고리", value: getCategoryName(video.categoryId) },
+    { label: "조회수", value: `${formatViewCount(modalVideo.viewCount)}회` },
+    { label: "댓글 수", value: `${formatViewCount(modalVideo.commentCount || 0)}개` },
+    { label: "카테고리", value: getCategoryName(modalVideo.categoryId) },
   ];
-  const risingVelocity = video.velocityPerHour ?? video.averageHourlyViews;
-  const risingInsightItems = video.discoveryScore === undefined
+  const risingVelocity = modalVideo.velocityPerHour ?? modalVideo.averageHourlyViews;
+  const risingInsightItems = modalVideo.discoveryScore === undefined
     ? []
     : [
         {
@@ -125,13 +150,13 @@ export function YouTubeVideoDetailModal({
         },
         {
           label: "채널 대비",
-          value: video.outlierScore === null || video.outlierScore === undefined
+          value: modalVideo.outlierScore === null || modalVideo.outlierScore === undefined
             ? "-"
-            : `${video.outlierScore}배`,
+            : `${modalVideo.outlierScore}배`,
         },
         {
           label: "상승 지수",
-          value: video.discoveryScore === null ? "-" : String(video.discoveryScore),
+          value: modalVideo.discoveryScore === null ? "-" : String(modalVideo.discoveryScore),
         },
       ];
 
@@ -153,8 +178,8 @@ export function YouTubeVideoDetailModal({
         {/* YouTube iframe */}
         <div className="youtubeVideoModalIframeContainer">
           <iframe
-            src={`https://www.youtube.com/embed/${video.id}`}
-            title={video.title}
+            src={`https://www.youtube.com/embed/${modalVideo.id}`}
+            title={modalVideo.title}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
             className="youtubeVideoModalIframe"
@@ -163,22 +188,23 @@ export function YouTubeVideoDetailModal({
 
         {/* Video Info */}
         <div className="youtubeVideoModalInfo">
-          <h2 className="youtubeVideoModalTitle">{video.title}</h2>
+          <h2 className="youtubeVideoModalTitle">{modalVideo.title}</h2>
           <div className="youtubeVideoModalChannelRow">
-            <p className="youtubeVideoModalChannel">{video.channelTitle}</p>
-            {(video.hiddenSubscribers || video.subscriberCount !== undefined) && (
+            <p className="youtubeVideoModalChannel">{modalVideo.channelTitle}</p>
+            {(modalVideo.hiddenSubscribers || modalVideo.subscriberCount !== undefined) && (
               <span className="youtubeVideoModalSubscribers">
-                {video.hiddenSubscribers
+                {modalVideo.hiddenSubscribers
                   ? "구독자 비공개"
-                  : `구독자 ${formatViewCount(video.subscriberCount || 0)}`}
+                  : `구독자 ${formatViewCount(modalVideo.subscriberCount || 0)}`}
               </span>
             )}
           </div>
 
           {/* Meta Info */}
           <div className="youtubeVideoModalMeta">
-            <span>{formatDate(video.publishedAt)}</span>
-            <span>{formatDuration(video.duration)}</span>
+            <span>{formatDate(modalVideo.publishedAt)}</span>
+            <span>{formatDuration(modalVideo.duration)}</span>
+            {isAnalysisFetching ? <span>최신 분석 중...</span> : null}
           </div>
 
           <div className="youtubeVideoInsightGrid">
@@ -211,7 +237,7 @@ export function YouTubeVideoDetailModal({
 
           {/* YouTube Button */}
           <a
-            href={`https://www.youtube.com/watch?v=${video.id}`}
+            href={`https://www.youtube.com/watch?v=${modalVideo.id}`}
             target="_blank"
             rel="noopener noreferrer"
             className="youtubeVideoModalButton"

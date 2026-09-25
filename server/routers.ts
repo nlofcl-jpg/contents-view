@@ -1358,6 +1358,83 @@ export const appRouter = router({
 
   youtube: router({
     /**
+     * Fetch a fresh, normalized analysis payload for every YouTube video modal.
+     */
+    getVideoAnalysis: protectedProcedure
+      .input(z.object({ videoId: z.string().min(1).max(32) }))
+      .query(async ({ ctx, input }) => {
+        if (!ctx.user) throw new Error("User not authenticated");
+
+        const apiKeyRecord = await userApiKeys.getUserApiKey(ctx.user, "youtube");
+        if (!apiKeyRecord || apiKeyRecord.testStatus !== "success") {
+          return { success: false as const, error: "YouTube API 키를 확인해주세요.", video: null };
+        }
+
+        try {
+          const videoParams = new URLSearchParams({
+            part: "snippet,statistics,contentDetails",
+            id: input.videoId,
+            key: apiKeyRecord.apiKey,
+          });
+          const videoResponse = await fetch(`https://www.googleapis.com/youtube/v3/videos?${videoParams.toString()}`);
+          if (!videoResponse.ok) {
+            const body = await videoResponse.json();
+            return { success: false as const, error: translateYouTubeError(body.error?.message || "Failed to fetch video"), video: null };
+          }
+          const videoData = await videoResponse.json();
+          const item = videoData.items?.[0];
+          if (!item) return { success: false as const, error: "영상을 찾을 수 없습니다.", video: null };
+
+          const channelParams = new URLSearchParams({
+            part: "snippet,statistics",
+            id: item.snippet.channelId,
+            key: apiKeyRecord.apiKey,
+          });
+          const channelResponse = await fetch(`https://www.googleapis.com/youtube/v3/channels?${channelParams.toString()}`);
+          const channelData = channelResponse.ok ? await channelResponse.json() : { items: [] };
+          const channel = channelData.items?.[0];
+          const hiddenSubscribers = !channel || Boolean(channel.statistics?.hiddenSubscriberCount);
+          const subscriberCount = hiddenSubscribers ? 0 : Number(channel.statistics?.subscriberCount || 0);
+          const viewCount = Number(item.statistics?.viewCount || 0);
+          const elapsedHours = Math.max((Date.now() - new Date(item.snippet.publishedAt).getTime()) / 3_600_000, 0.1);
+          const averageHourlyViews = Math.round(viewCount / elapsedHours);
+          const outlierScore = subscriberCount > 0 ? viewCount / subscriberCount : null;
+          const analyzed = scoreRisingCandidates([{
+            id: item.id,
+            title: item.snippet.title,
+            description: item.snippet.description || "",
+            thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url,
+            channelTitle: item.snippet.channelTitle,
+            channelId: item.snippet.channelId,
+            channelThumbnail: channel?.snippet?.thumbnails?.high?.url || channel?.snippet?.thumbnails?.medium?.url || channel?.snippet?.thumbnails?.default?.url || null,
+            publishedAt: item.snippet.publishedAt,
+            viewCount,
+            commentCount: Number(item.statistics?.commentCount || 0),
+            categoryId: String(item.snippet.categoryId || ""),
+            tags: Array.isArray(item.snippet.tags) ? item.snippet.tags.slice(0, 20) : [],
+            duration: item.contentDetails?.duration || "PT0S",
+            subscriberCount,
+            hiddenSubscribers,
+            averageHourlyViews,
+            velocityPerHour: null,
+            velocityAvailable: false,
+            acceleration: null,
+            outlierScore: outlierScore === null ? null : Number(outlierScore.toFixed(2)),
+            freshness: Math.max(0, 1 - elapsedHours / (24 * 7)),
+            elapsedHours: Number(elapsedHours.toFixed(1)),
+          }])[0];
+
+          return { success: true as const, video: analyzed };
+        } catch (error) {
+          return {
+            success: false as const,
+            error: translateYouTubeError(error instanceof Error ? error.message : "Connection failed"),
+            video: null,
+          };
+        }
+      }),
+
+    /**
      * Get popular channels based on trending videos
      * 1. Fetch top 50 popular videos
      * 2. Extract unique channelIds
