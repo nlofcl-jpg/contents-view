@@ -150,12 +150,10 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
                   loading="lazy"
                 />
               )}
-              {!row.minimal && (
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-100">{row.label}</p>
-                  {row.meta && <p className="mt-1 truncate text-xs text-slate-400">{row.meta}</p>}
-                </div>
-              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-slate-100">{row.label}</p>
+                {!row.minimal && row.meta && <p className="mt-1 truncate text-xs text-slate-400">{row.meta}</p>}
+              </div>
               {(row.rightValue || row.detailHref) && (
                 <div className={`flex shrink-0 items-center gap-2 ${row.minimal ? "ml-auto" : ""}`}>
                   {row.rightValue && <span className="text-xs font-bold text-blue-300">{row.rightValue}</span>}
