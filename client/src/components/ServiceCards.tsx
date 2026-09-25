@@ -228,8 +228,14 @@ export default function ServiceCards() {
 
   const canLoadYouTube = Boolean(apiKeyData?.exists && apiKeyData.testStatus === "success");
 
-  const youtubeQuery = trpc.youtube.getTrendingVideos.useQuery(
-    { regionCode: "KR", sortBy: "trending", maxResults: 5 },
+  const youtubeRisingQuery = trpc.youtube.getRisingVideos.useQuery(
+    {
+      regionCode: "KR",
+      period: "1h",
+      subscriberRange: "all",
+      sortBy: "score",
+      maxResults: 5,
+    },
     { enabled: canLoadYouTube, retry: false, refetchOnWindowFocus: false }
   );
 
@@ -249,17 +255,27 @@ export default function ServiceCards() {
   );
 
   const youtubeRows = useMemo<TrendRow[]>(() => {
-    const videos = (youtubeQuery.data as any)?.videos || [];
+    const videos = (youtubeRisingQuery.data as any)?.videos || [];
     return videos.slice(0, 5).map((video: any) => ({
       label: stripHtml(video.title),
       meta: [
-        compactCount(video.viewCount) ? `조회수 ${compactCount(video.viewCount)}` : null,
+        compactCount(video.velocityPerHour)
+          ? `시간당 증가 ${compactCount(video.velocityPerHour)}`
+          : compactCount(video.averageHourlyViews)
+            ? `평균 시간당 ${compactCount(video.averageHourlyViews)}`
+            : null,
+        video.outlierScore !== null && video.outlierScore !== undefined
+          ? `채널 대비 ${video.outlierScore}배`
+          : null,
         formatRelativeTime(video.publishedAt),
       ].filter(Boolean).join(" · "),
+      rightValue: video.discoveryScore !== null && video.discoveryScore !== undefined
+        ? `지수 ${video.discoveryScore}`
+        : undefined,
       image: video.thumbnail,
       video,
     }));
-  }, [youtubeQuery.data]);
+  }, [youtubeRisingQuery.data]);
 
   const searchRows = useMemo<TrendRow[]>(() => {
     const trends = (googleTrendsQuery.data as any)?.data || [];
@@ -294,13 +310,13 @@ export default function ServiceCards() {
     {
       id: "youtube",
       title: "YouTube",
-      badge: "실시간 인기",
-      href: "/trends/youtube",
+      badge: "급상승 영상",
+      href: "/trends/youtube?tab=rising",
       icon: <YouTubeLogo />,
       brandIcon: true,
       rows: youtubeRows,
-      loading: canLoadYouTube && youtubeQuery.isLoading,
-      emptyText: isAuthenticated ? "YouTube API key 연결 후 인기 영상을 표시합니다." : "로그인 후 YouTube API key를 연결하면 인기 영상을 표시합니다.",
+      loading: canLoadYouTube && youtubeRisingQuery.isLoading,
+      emptyText: isAuthenticated ? "YouTube API key 연결 후 급상승 영상을 표시합니다." : "로그인 후 YouTube API key를 연결하면 급상승 영상을 표시합니다.",
     },
     {
       id: "search",
