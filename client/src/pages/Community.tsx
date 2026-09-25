@@ -514,7 +514,13 @@ export default function Community() {
   const periodButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) setCurrentPage(1);
+    if (authLoading || isAuthenticated) return;
+    setCurrentPage(1);
+    setSelectedCommunity("all");
+    setSelectedPeriod("today");
+    setSelectedSort("popular");
+    setOpenMenu(null);
+    setDropdownPosition(null);
   }, [authLoading, isAuthenticated]);
 
   // Map frontend sort values to server enum values - memoized to prevent infinite queries
@@ -880,6 +886,15 @@ export default function Community() {
     }
   };
 
+  const handleFilterClick = (menu: OpenMenuType) => {
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      setShowGuestPrompt(true);
+      return;
+    }
+    handleMenuOpen(menu);
+  };
+
   const handleMenuClose = () => {
     menuTimeoutRef.current = setTimeout(() => {
       setOpenMenu(null);
@@ -888,6 +903,12 @@ export default function Community() {
   };
 
   const handleMenuSelect = (menu: OpenMenuType, value: string) => {
+    if (!isAuthenticated) {
+      setOpenMenu(null);
+      setDropdownPosition(null);
+      if (!authLoading) setShowGuestPrompt(true);
+      return;
+    }
     if (menu === "community") {
       setSelectedCommunity(value as CommunityFilterType);
     } else if (menu === "sort") {
@@ -955,8 +976,8 @@ export default function Community() {
               ref={communityButtonRef}
               type="button"
               className={`unifiedMenuButton ${openMenu === "community" ? "active" : ""}`}
-              onClick={() => handleMenuOpen("community")}
-              onMouseEnter={() => handleMenuOpen("community")}
+              onClick={() => handleFilterClick("community")}
+              onMouseEnter={() => { if (isAuthenticated) handleMenuOpen("community"); }}
               onMouseLeave={handleMenuClose}
             >
               {getCommunityLabel()}
@@ -987,8 +1008,8 @@ export default function Community() {
               ref={sortButtonRef}
               type="button"
               className={`unifiedMenuButton ${openMenu === "sort" ? "active" : ""}`}
-              onClick={() => handleMenuOpen("sort")}
-              onMouseEnter={() => handleMenuOpen("sort")}
+              onClick={() => handleFilterClick("sort")}
+              onMouseEnter={() => { if (isAuthenticated) handleMenuOpen("sort"); }}
               onMouseLeave={handleMenuClose}
             >
               {getSortLabel()}
@@ -1013,8 +1034,8 @@ export default function Community() {
               ref={periodButtonRef}
               type="button"
               className={`unifiedMenuButton ${openMenu === "period" ? "active" : ""}`}
-              onClick={() => handleMenuOpen("period")}
-              onMouseEnter={() => handleMenuOpen("period")}
+              onClick={() => handleFilterClick("period")}
+              onMouseEnter={() => { if (isAuthenticated) handleMenuOpen("period"); }}
               onMouseLeave={handleMenuClose}
             >
               {getPeriodLabel()}
