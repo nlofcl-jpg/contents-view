@@ -674,15 +674,15 @@ a {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border-bottom: 1px solid #4ea0ff;
-  background: #1768d3;
+  border-bottom: 1px solid rgba(124, 58, 237, 0.72);
+  background: linear-gradient(135deg, rgba(21, 140, 255, 0.9), rgba(124, 58, 237, 0.9));
   color: #f7fbff;
   text-decoration: none;
   transition: background 0.18s ease, color 0.18s ease;
 }
 
 .flowDownloadBanner:hover {
-  background: #2981f0;
+  background: linear-gradient(135deg, rgba(21, 140, 255, 1), rgba(124, 58, 237, 1));
   color: #ffffff;
 }
 
