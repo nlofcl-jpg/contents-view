@@ -63,14 +63,6 @@ function GoogleLogo() {
   );
 }
 
-function compactCount(value?: number | string | null) {
-  const numberValue = typeof value === "string" ? Number(value) : value;
-  if (!numberValue || Number.isNaN(numberValue)) return null;
-  if (numberValue >= 100000000) return `${Math.round(numberValue / 10000000) / 10}억`;
-  if (numberValue >= 10000) return `${Math.round(numberValue / 1000) / 10}만`;
-  return numberValue.toLocaleString("ko-KR");
-}
-
 function stripHtml(value?: string | null) {
   return (value || "").replace(/<[^>]*>/g, "").replace(/&quot;/g, "\"").replace(/&amp;/g, "&").trim();
 }
@@ -259,11 +251,6 @@ export default function ServiceCards() {
     return videos.slice(0, 5).map((video: any) => ({
       label: stripHtml(video.title),
       meta: [
-        compactCount(video.velocityPerHour)
-          ? `시간당 증가 ${compactCount(video.velocityPerHour)}`
-          : compactCount(video.averageHourlyViews)
-            ? `평균 시간당 ${compactCount(video.averageHourlyViews)}`
-            : null,
         video.outlierScore !== null && video.outlierScore !== undefined
           ? `채널 대비 ${video.outlierScore}배`
           : null,
