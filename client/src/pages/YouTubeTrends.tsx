@@ -1175,15 +1175,19 @@ export default function YouTubeTrends() {
       );
     }
 
+    const displayChannelsError = displayChannelsData && "error" in displayChannelsData
+      ? displayChannelsData.error
+      : null;
+
     // Check for API error first (higher priority than empty state)
-    if (displayChannelsData?.error) {
+    if (displayChannelsError) {
       return (
         <div className="emptyStateContainer">
           <AlertCircle className="emptyStateIcon" size={48} />
           <p className="emptyStateText">
-            {displayChannelsData.error.includes("\n") ? (
+            {displayChannelsError.includes("\n") ? (
               <>
-                {displayChannelsData.error.split("\n").map((line, idx) => (
+                {displayChannelsError.split("\n").map((line: string, idx: number) => (
                   <span key={idx}>
                     {line}
                     {idx === 0 && <br />}
@@ -1191,7 +1195,7 @@ export default function YouTubeTrends() {
                 ))}
               </>
             ) : (
-              displayChannelsData.error
+              displayChannelsError
             )}
           </p>
         </div>
@@ -1255,28 +1259,54 @@ export default function YouTubeTrends() {
         )}
         <div className="channelsGrid">
           {displayChannelsData.channels.map((channel: any) => (
-            <a
-              key={channel.channelId}
-              href={`https://www.youtube.com/channel/${channel.channelId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="channelCard"
-            >
-              <div className="channelThumbnailWrapper">
-                <img src={channel.thumbnail} alt={channel.channelTitle} className="channelThumbnail" />
-              </div>
-              <div className="channelInfo">
-                <h3 className="channelTitle">{channel.channelTitle}</h3>
-                <div className="channelStats">
-                  <span>{formatKoreanNumber(channel.subscriberCount)} 구독자</span>
-                  <span>·</span>
-                  <span>{formatKoreanNumber(channel.viewCount)} 조회</span>
+            <article key={channel.channelId} className="channelCard">
+              <a
+                href={`https://www.youtube.com/channel/${channel.channelId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="channelSummaryLink"
+                aria-label={`${channel.channelTitle} 채널 보기`}
+              >
+                <div className="channelThumbnailWrapper">
+                  <img src={channel.thumbnail} alt="" className="channelThumbnail" />
                 </div>
-                <div className="channelStats">
-                  <span>{channel.videoCount.toLocaleString("ko-KR")}개 영상</span>
+                <div className="channelInfo">
+                  <h3 className="channelTitle">{channel.channelTitle}</h3>
+                  <div className="channelStats">
+                    <span>{formatKoreanNumber(channel.subscriberCount)} 구독자</span>
+                    <span>·</span>
+                    <span>{formatKoreanNumber(channel.viewCount)} 조회</span>
+                  </div>
+                  <div className="channelStats">
+                    <span>{channel.videoCount.toLocaleString("ko-KR")}개 영상</span>
+                  </div>
                 </div>
-              </div>
-            </a>
+              </a>
+
+              {channel.latestVideos?.length > 0 && (
+                <div className="channelLatestSection">
+                  <span className="channelLatestLabel">최신 영상</span>
+                  <div className="channelLatestGrid">
+                    {channel.latestVideos.slice(0, 4).map((video: any) => (
+                      <a
+                        key={video.videoId}
+                        href={`https://www.youtube.com/watch?v=${video.videoId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="channelLatestVideo"
+                        title={video.title}
+                        aria-label={`${video.title} 영상 보기`}
+                      >
+                        <img src={video.thumbnail} alt="" loading="lazy" />
+                        <span className="channelLatestPlay" aria-hidden="true">
+                          <Play size={14} fill="currentColor" />
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </article>
           ))}
         </div>
       </div>
