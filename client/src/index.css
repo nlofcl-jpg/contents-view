@@ -813,7 +813,7 @@ a {
 .headerBrandText {
   font-size: 26px;
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   color: #f8fafc;
   white-space: nowrap;
 }
@@ -830,7 +830,11 @@ a {
 }
 
 .headerBrandText strong {
-  color: var(--blue);
+  background: linear-gradient(135deg, rgba(21, 140, 255, 0.9), rgba(124, 58, 237, 0.9));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
   font-weight: 800;
 }
 
