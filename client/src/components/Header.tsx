@@ -9,6 +9,7 @@ import { ChevronDown, Download, Menu } from "lucide-react";
 interface HeaderProps {
   onOpenMyPageModal?: () => void;
   onToggleMobileMenu?: (panelType: "menu" | "account") => void;
+  onGuestMenuAccess?: (path?: string, onBrowse?: () => void) => boolean;
 }
 
 type NoticeItem = {
@@ -23,6 +24,7 @@ const NOTICE_LAST_SEEN_KEY = "contents-view-last-seen-notice-id";
 export default function Header({ 
   onOpenMyPageModal, 
   onToggleMobileMenu,
+  onGuestMenuAccess,
 }: HeaderProps) {
   const { user, isAuthenticated, logout } = useAuth();
   const [location, setLocation] = useLocation();
@@ -154,8 +156,8 @@ export default function Header({
 
   const handleTrendItemClick = (path: string) => {
     if (path !== "#") {
-      setLocation(path);
       setOpenTrendMenu(false);
+      if (!onGuestMenuAccess?.(path)) setLocation(path);
     }
   };
 
@@ -175,8 +177,12 @@ export default function Header({
   };
 
   const handleNewsItemClick = (path: string) => {
-    setLocation(path);
     setOpenNewsMenu(false);
+    if (!onGuestMenuAccess?.(path)) setLocation(path);
+  };
+
+  const handleNavLinkClick = (event: React.MouseEvent<HTMLAnchorElement>, path: string) => {
+    if (onGuestMenuAccess?.(path)) event.preventDefault();
   };
 
   const handleLogout = async () => {
@@ -247,7 +253,7 @@ export default function Header({
           </button>
           <button
             className="mobileMenuButton mobileMenuButtonLeft"
-            onClick={() => onToggleMobileMenu?.("menu")}
+            onClick={() => { if (!onGuestMenuAccess?.()) onToggleMobileMenu?.("menu"); }}
             type="button"
             aria-label="메뉴"
           >
@@ -300,7 +306,13 @@ export default function Header({
           <button 
             type="button"
             className="headerNavButton"
-            onClick={() => setOpenTrendMenu(!openTrendMenu)}
+            onClick={() => {
+              if (onGuestMenuAccess?.("/trends/youtube", () => setOpenTrendMenu(true))) {
+                setOpenTrendMenu(false);
+                return;
+              }
+              setOpenTrendMenu(!openTrendMenu);
+            }}
           >
             실시간 트렌드
             <ChevronDown
@@ -333,7 +345,13 @@ export default function Header({
           <button
             type="button"
             className={`headerNavButton ${location.startsWith("/news") ? "active" : ""}`}
-            onClick={() => setOpenNewsMenu(!openNewsMenu)}
+            onClick={() => {
+              if (onGuestMenuAccess?.("/news", () => setOpenNewsMenu(true))) {
+                setOpenNewsMenu(false);
+                return;
+              }
+              setOpenNewsMenu(!openNewsMenu);
+            }}
           >
             뉴스&이슈
             <ChevronDown
@@ -361,15 +379,15 @@ export default function Header({
           )}
         </div>
 
-        <a href="/community" className={`headerNavItem headerNavLink ${location === "/community" ? "active" : ""}`}>
+        <a href="/community" onClick={(event) => handleNavLinkClick(event, "/community")} className={`headerNavItem headerNavLink ${location === "/community" ? "active" : ""}`}>
           커뮤니티 반응
         </a>
 
-        <a href="/ai-studio" className={`headerNavItem headerNavLink ${location === "/ai-studio" ? "active" : ""}`}>
+        <a href="/ai-studio" onClick={(event) => handleNavLinkClick(event, "/ai-studio")} className={`headerNavItem headerNavLink ${location === "/ai-studio" ? "active" : ""}`}>
           AI 스튜디오
         </a>
 
-        <a href="/saved-contents" className={`headerNavItem headerNavLink ${location === "/saved-contents" ? "active" : ""}`}>
+        <a href="/saved-contents" onClick={(event) => handleNavLinkClick(event, "/saved-contents")} className={`headerNavItem headerNavLink ${location === "/saved-contents" ? "active" : ""}`}>
           내 보관함
         </a>
         {isAdmin && (

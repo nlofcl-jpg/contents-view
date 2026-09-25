@@ -13,7 +13,7 @@ const serviceLinks = [
   { label: "내 보관함", href: "/saved-contents" },
 ];
 
-export default function Footer() {
+export default function Footer({ onGuestMenuAccess }: { onGuestMenuAccess?: (path?: string) => boolean }) {
   const year = new Date().getFullYear();
 
   return (
@@ -35,7 +35,9 @@ export default function Footer() {
           <div className="siteFooterNavGroup">
             <h2>트렌드</h2>
             {trendLinks.map(link => (
-              <Link key={link.href} href={link.href}>
+              <Link key={link.href} href={link.href} onClick={(event) => {
+                if (onGuestMenuAccess?.(link.href)) event.preventDefault();
+              }}>
                 {link.label}
               </Link>
             ))}
@@ -43,7 +45,9 @@ export default function Footer() {
           <div className="siteFooterNavGroup">
             <h2>서비스</h2>
             {serviceLinks.map(link => (
-              <Link key={link.href} href={link.href}>
+              <Link key={link.href} href={link.href} onClick={(event) => {
+                if (onGuestMenuAccess?.(link.href)) event.preventDefault();
+              }}>
                 {link.label}
               </Link>
             ))}
