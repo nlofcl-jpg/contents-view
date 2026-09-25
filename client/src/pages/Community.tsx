@@ -889,6 +889,8 @@ export default function Community() {
   const handleFilterClick = (menu: OpenMenuType) => {
     if (authLoading) return;
     if (!isAuthenticated) {
+      setOpenMenu(null);
+      setDropdownPosition(null);
       setShowGuestPrompt(true);
       return;
     }

@@ -10,7 +10,7 @@ type GuestAccessPromptProps = {
 export default function GuestAccessPrompt({ open, onBrowse, onLogin, onSignup }: GuestAccessPromptProps) {
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onBrowse(); }}>
-      <DialogContent className="w-[calc(100%-2rem)] max-w-[360px] gap-0 rounded-md border-slate-700 bg-[#121b2b] px-6 pb-5 pt-7 text-white shadow-2xl sm:max-w-[360px]">
+      <DialogContent overlayClassName="z-[11000]" className="z-[11001] w-[calc(100%-2rem)] max-w-[360px] gap-0 rounded-md border-slate-700 bg-[#121b2b] px-6 pb-5 pt-7 text-white shadow-2xl sm:max-w-[360px]">
         <DialogTitle className="pr-5 text-[17px] leading-6">컨텐츠뷰 이용 안내</DialogTitle>
         <DialogDescription className="mt-3 text-sm leading-6 text-slate-300">
           간편 회원가입 후 컨텐츠뷰의 더욱 다양한 서비스를 이용해 보세요.
