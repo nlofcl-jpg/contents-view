@@ -315,7 +315,7 @@ export default function YouTubeTrends() {
     rising: {
       country: "KR",
       sort: "score",
-      period: "1h",
+      period: "realtime",
     },
   });
 
@@ -337,7 +337,7 @@ export default function YouTubeTrends() {
   const country = currentFilters.country;
   const sortBy = currentFilters.sort;
   const category = activeTab === "trending" ? "all" : (currentFilters as any).category || "all";
-  const risingPeriod = (currentFilters as any).period || "1h";
+  const risingPeriod = (currentFilters as any).period || "realtime";
 
   // Query to get API key status
   const { data: apiKeyData } = trpc.user.apiKey.getWithStatus.useQuery(
