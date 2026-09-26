@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { downloadFlowAutomationFile } from "@/lib/protectedDownload";
+import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 
 const installSteps = [
   {
@@ -27,11 +28,12 @@ export default function FlowAutomation() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [showGuestPrompt, setShowGuestPrompt] = useState(false);
 
   const handleDownload = async () => {
     if (authLoading || isDownloading) return;
     if (!isAuthenticated) {
-      setLocation("/login?redirect=/ai-studio/flow-automation");
+      setShowGuestPrompt(true);
       return;
     }
 
@@ -50,6 +52,12 @@ export default function FlowAutomation() {
     } finally {
       setIsDownloading(false);
     }
+  };
+
+  const handleGuestAuth = (mode: "login" | "signup") => {
+    setShowGuestPrompt(false);
+    const signupParam = mode === "signup" ? "mode=signup&" : "";
+    setLocation(`/login?${signupParam}redirect=%2Fai-studio%2Fflow-automation`);
   };
 
   return (
@@ -108,6 +116,12 @@ export default function FlowAutomation() {
           <p>Chrome 확장프로그램 관리 화면에서 폴더를 선택하면 설치가 완료됩니다.</p>
         </div>
       </section>
+      <GuestAccessPrompt
+        open={showGuestPrompt}
+        onBrowse={() => setShowGuestPrompt(false)}
+        onLogin={() => handleGuestAuth("login")}
+        onSignup={() => handleGuestAuth("signup")}
+      />
     </div>
   );
 }

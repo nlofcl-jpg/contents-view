@@ -2,6 +2,7 @@ import { Download, ExternalLink, FolderDown, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
+import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 
 type StudioTab = "programs" | "upcoming";
 
@@ -27,6 +28,7 @@ const programs: Program[] = [
 export default function AIStudio() {
   const [location, setLocation] = useLocation();
   const { isAuthenticated, loading: authLoading } = useAuth();
+  const [guestProgramPath, setGuestProgramPath] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<StudioTab>(() =>
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "upcoming"
       ? "upcoming"
@@ -45,14 +47,21 @@ export default function AIStudio() {
   const handleProgramDownload = (program: Program) => {
     if (authLoading) return;
     if (!isAuthenticated) {
-      const redirectPath = program.detailPath || "/ai-studio";
-      setLocation(`/login?redirect=${encodeURIComponent(redirectPath)}`);
+      setGuestProgramPath(program.detailPath || "/ai-studio");
       return;
     }
 
     if (program.detailPath) {
       setLocation(program.detailPath);
     }
+  };
+
+  const handleGuestAuth = (mode: "login" | "signup") => {
+    const params = new URLSearchParams();
+    if (mode === "signup") params.set("mode", "signup");
+    params.set("redirect", guestProgramPath || "/ai-studio");
+    setGuestProgramPath(null);
+    setLocation(`/login?${params.toString()}`);
   };
 
   return (
@@ -134,6 +143,12 @@ export default function AIStudio() {
           <p>새로운 AI 도구를 준비하고 있습니다.</p>
         </section>
       )}
+      <GuestAccessPrompt
+        open={guestProgramPath !== null}
+        onBrowse={() => setGuestProgramPath(null)}
+        onLogin={() => handleGuestAuth("login")}
+        onSignup={() => handleGuestAuth("signup")}
+      />
     </div>
   );
 }
