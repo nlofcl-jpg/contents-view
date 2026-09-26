@@ -109,7 +109,7 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
       <div className="space-y-2">
         {card.loading ? (
           Array.from({ length: 5 }).map((_, index) => (
-            <div key={index} className="flex min-h-[61px] items-center gap-3 rounded-md border border-slate-800/70 bg-slate-900/35 p-2.5">
+            <div key={index} className="flex min-h-[62px] items-center gap-3 rounded-md border border-slate-800/70 bg-slate-900/35 p-2.5">
               <div className="h-6 w-6 rounded-full bg-slate-800/80" />
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="h-3 w-4/5 rounded bg-slate-800/80" />
@@ -121,7 +121,7 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
           card.rows.map((row, index) => (
             <div
               key={`${card.id}-${index}-${row.label}`}
-              className={`flex min-h-[61px] items-center gap-3 rounded-md border border-slate-800/70 bg-slate-900/25 p-2.5 ${(row.video || row.externalHref) ? "cursor-pointer transition-colors hover:border-blue-400/40 hover:bg-slate-900/55" : ""}`}
+              className={`flex min-h-[62px] items-center gap-3 rounded-md border border-slate-800/70 bg-slate-900/25 p-2.5 ${(row.video || row.externalHref) ? "cursor-pointer transition-colors hover:border-blue-400/40 hover:bg-slate-900/55" : ""}`}
               role={(row.video || row.externalHref) ? "button" : undefined}
               tabIndex={(row.video || row.externalHref) ? 0 : undefined}
               aria-label={row.video ? `${row.label} 분석 보기` : undefined}
@@ -147,7 +147,7 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
                 <img
                   src={row.image}
                   alt=""
-                  className={`${row.minimal ? "h-12 w-20" : "h-10 w-14"} shrink-0 rounded object-cover`}
+                  className={`${row.minimal ? "h-9 w-16" : "h-10 w-14"} shrink-0 rounded object-cover`}
                   loading="lazy"
                 />
               )}
