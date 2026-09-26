@@ -1083,6 +1083,7 @@ export default function YouTubeTrends() {
                       disabled={isBookmarkPending(video.id)}
                       className={`bookmarkButton ${isBookmarked ? "bookmarked" : ""} ${isBookmarkPending(video.id) ? "pending" : ""}`}
                       title={isBookmarked ? "북마크 해제" : "북마크"}
+                      aria-label={isBookmarked ? "북마크 해제" : "북마크"}
                     >
                       <Bookmark size={20} fill={isBookmarked ? "currentColor" : "none"} />
                     </button>
@@ -1170,6 +1171,7 @@ export default function YouTubeTrends() {
           disabled={isBookmarkPending(video.id)}
           className={`bookmarkButton ${isBookmarked ? "bookmarked" : ""} ${isBookmarkPending(video.id) ? "pending" : ""}`}
           title={isBookmarked ? "북마크 해제" : "북마크"}
+          aria-label={isBookmarked ? "북마크 해제" : "북마크"}
         >
           <Bookmark size={20} fill={isBookmarked ? "currentColor" : "none"} />
         </button>
@@ -1597,6 +1599,7 @@ export default function YouTubeTrends() {
             disabled={isBookmarkPending(video.id)}
             className={`bookmarkButton ${isBookmarked ? "bookmarked" : ""} ${isBookmarkPending(video.id) ? "pending" : ""}`}
             title={isBookmarked ? "북마크 해제" : "북마크"}
+            aria-label={isBookmarked ? "북마크 해제" : "북마크"}
           >
             <Bookmark size={20} fill={isBookmarked ? "currentColor" : "none"} />
           </button>
