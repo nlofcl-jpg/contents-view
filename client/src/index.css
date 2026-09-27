@@ -2792,6 +2792,47 @@ a {
   color: #d6e6ff;
 }
 
+.issueShareFooter {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 0 20px;
+}
+
+.issueKakaoShareButton {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: #fee500;
+  color: #3c1e1e;
+  cursor: pointer;
+  transition: background-color 150ms ease, transform 150ms ease;
+}
+
+.issueKakaoShareButton:hover {
+  background: #ffef52;
+  transform: translateY(-2px);
+}
+
+.issueKakaoShareButton:disabled {
+  cursor: wait;
+  opacity: 0.75;
+  transform: none;
+}
+
+.issueKakaoShareButton:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+.issueKakaoShareButton svg {
+  width: 22px;
+  height: 22px;
+}
+
 .newsSearchSection {
   display: flex;
   flex-direction: column;

@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink, LoaderCircle } from "lucide-react";
+import { toast } from "sonner";
 import { useLocation, useRoute } from "wouter";
 import { supabase } from "@/lib/supabase";
+import { loadKakaoSdk, shareIssueOnKakao } from "@/lib/kakaoShare";
 
 type IssueDetailRecord = {
   id: string;
@@ -20,6 +22,7 @@ export default function IssueDetail() {
   const [, setLocation] = useLocation();
   const [issue, setIssue] = useState<IssueDetailRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [kakaoSdkStatus, setKakaoSdkStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
 
   useEffect(() => {
     if (!supabase || !params?.id) {
@@ -45,6 +48,29 @@ export default function IssueDetail() {
       cancelled = true;
     };
   }, [params?.id]);
+
+  useEffect(() => {
+    if (!issue || !import.meta.env.VITE_KAKAO_JAVASCRIPT_KEY) return;
+    let cancelled = false;
+    setKakaoSdkStatus("loading");
+    loadKakaoSdk()
+      .then(() => { if (!cancelled) setKakaoSdkStatus("ready"); })
+      .catch(() => { if (!cancelled) setKakaoSdkStatus("error"); });
+    return () => { cancelled = true; };
+  }, [issue]);
+
+  const handleKakaoShare = () => {
+    if (!issue) return;
+    if (kakaoSdkStatus === "error") {
+      toast.error("카카오톡 공유를 불러오지 못했습니다. 페이지를 새로고침해 주세요.");
+      return;
+    }
+    try {
+      shareIssueOnKakao(issue);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "카카오톡 공유를 시작하지 못했습니다.");
+    }
+  };
 
   return (
     <div className="pageContainer issueDetailPage">
@@ -84,6 +110,24 @@ export default function IssueDetail() {
             )}
           </div>
           </div>
+          <footer className="issueShareFooter">
+            <button
+              type="button"
+              className="issueKakaoShareButton"
+              onClick={handleKakaoShare}
+              disabled={kakaoSdkStatus === "loading"}
+              title="카카오톡으로 공유"
+              aria-label="카카오톡으로 이슈 공유"
+            >
+              {kakaoSdkStatus === "loading" ? (
+                <LoaderCircle size={20} className="animate-spin" aria-hidden="true" />
+              ) : (
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="currentColor" d="M12 3.5c-5.1 0-9.2 3.18-9.2 7.1 0 2.5 1.67 4.7 4.19 5.96l-.7 2.78c-.06.23.2.42.39.28l3.32-2.22c.65.1 1.32.15 2 .15 5.1 0 9.2-3.18 9.2-7.1s-4.1-6.95-9.2-6.95Z" />
+                </svg>
+              )}
+            </button>
+          </footer>
         </article>
       )}
     </div>
