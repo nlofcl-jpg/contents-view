@@ -11,7 +11,6 @@ type IssueDetailRecord = {
   summary: string;
   article_url: string | null;
   thumbnail_url: string | null;
-  source_name: string | null;
   article_title: string | null;
   article_summary: string | null;
   created_at: string;
@@ -33,7 +32,7 @@ export default function IssueDetail() {
     let cancelled = false;
     supabase
       .from("issues")
-      .select("id,title,summary,article_url,thumbnail_url,source_name,article_title,article_summary,created_at")
+      .select("id,title,summary,article_url,thumbnail_url,article_title,article_summary,created_at")
       .eq("id", params.id)
       .eq("is_published", true)
       .maybeSingle()
@@ -86,17 +85,23 @@ export default function IssueDetail() {
       ) : (
         <article className="issueDetail">
           <header className="issueDetailHeader">
-            <span className="issueCardSource">{issue.source_name || "이슈"}</span>
+            <div className="issueDetailMeta">
+              <span>이슈</span>
+              <time dateTime={issue.created_at}>
+                {new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric" }).format(new Date(issue.created_at))}
+              </time>
+            </div>
             <h1>{issue.article_title || issue.title}</h1>
           </header>
           <div className="issueDetailArticle">
-          {issue.thumbnail_url && (
-            <img className="issueDetailImage" src={issue.thumbnail_url} alt="" />
-          )}
-          <div className="issueDetailContent">
+            {issue.thumbnail_url && (
+              <img className="issueDetailImage" src={issue.thumbnail_url} alt="" />
+            )}
             {(issue.summary || issue.article_summary) && (
               <p className="issueDetailSummary">{issue.summary || issue.article_summary}</p>
             )}
+          </div>
+          <footer className="issueShareFooter">
             {issue.article_url && (
               <a
                 className="issueOriginalLink"
@@ -108,9 +113,6 @@ export default function IssueDetail() {
                 <ExternalLink size={15} aria-hidden="true" />
               </a>
             )}
-          </div>
-          </div>
-          <footer className="issueShareFooter">
             <button
               type="button"
               className="issueKakaoShareButton"
