@@ -2835,6 +2835,7 @@ a {
 }
 
 .issueKakaoShareButton {
+  position: relative;
   display: inline-flex;
   width: 40px;
   height: 40px;
@@ -2842,15 +2843,27 @@ a {
   justify-content: center;
   border: 0;
   border-radius: 50%;
-  background: #fee500;
+  background: transparent;
   color: #3c1e1e;
   cursor: pointer;
-  transition: background-color 150ms ease, transform 150ms ease;
+  transition: transform 150ms ease;
+}
+
+.issueKakaoShareButton::before {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: #fee500;
+  content: "";
+  transition: background-color 150ms ease;
 }
 
 .issueKakaoShareButton:hover {
-  background: #ffef52;
   transform: translateY(-2px);
+}
+
+.issueKakaoShareButton:hover::before {
+  background: #ffef52;
 }
 
 .issueKakaoShareButton:disabled {
@@ -2865,8 +2878,9 @@ a {
 }
 
 .issueKakaoShareButton svg {
-  width: 22px;
-  height: 22px;
+  position: relative;
+  width: 18px;
+  height: 18px;
 }
 
 .newsSearchSection {
