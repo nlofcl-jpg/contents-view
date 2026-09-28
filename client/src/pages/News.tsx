@@ -1,7 +1,7 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 
 interface NewsItem {
@@ -24,12 +24,9 @@ interface PublishedIssue {
   id: string;
   title: string;
   summary: string;
-  article_url: string | null;
   thumbnail_url: string | null;
-  source_name: string | null;
   article_title: string | null;
   article_summary: string | null;
-  created_at: string;
 }
 
 interface NewsSessionCache {
@@ -52,38 +49,10 @@ function getIssueDisplayTitle(issue: PublishedIssue) {
 }
 
 function getIssueDisplaySummary(issue: PublishedIssue) {
-  return issue.article_summary || issue.summary;
-}
-
-function IssueCardTitle({ title, variant }: { title: string; variant: "featured" | "list" }) {
-  const titleRef = useRef<HTMLHeadingElement>(null);
-
-  useLayoutEffect(() => {
-    const element = titleRef.current;
-    if (!element) return;
-
-    const maxFontSize = variant === "featured" ? 18 : 16;
-    const minFontSize = 11;
-    const fitTitle = () => {
-      let fontSize = maxFontSize;
-      element.style.fontSize = `${fontSize}px`;
-
-      while (element.scrollHeight > element.clientHeight + 1 && fontSize > minFontSize) {
-        fontSize -= 1;
-        element.style.fontSize = `${fontSize}px`;
-      }
-    };
-
-    fitTitle();
-    window.addEventListener("resize", fitTitle);
-    return () => window.removeEventListener("resize", fitTitle);
-  }, [title, variant]);
-
-  return (
-    <h2 ref={titleRef} className={variant === "featured" ? "issueFeaturedTitle" : "issueListTitle"}>
-      {title}
-    </h2>
-  );
+  const summary = issue.summary.trim();
+  return summary && summary !== issue.title.trim() && summary !== getIssueDisplayTitle(issue).trim()
+    ? summary
+    : issue.article_summary?.trim() || "";
 }
 
 function readNewsSessionCache(): NewsSessionCache | null {
@@ -222,7 +191,7 @@ export default function News() {
 
     supabase
       .from("issues")
-      .select("id,title,summary,article_url,thumbnail_url,source_name,article_title,article_summary,created_at")
+      .select("id,title,summary,thumbnail_url,article_title,article_summary")
       .eq("is_published", true)
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
@@ -294,12 +263,10 @@ export default function News() {
   };
 
   const isLoadingFeatured = !nationNewsData || !businessNewsData || !technologyNewsData || !entertainmentNewsData;
-  const featuredIssues = useMemo(() => issues.slice(0, 3), [issues]);
-  const issueList = useMemo(() => issues.slice(3), [issues]);
-  const issuePageCount = Math.max(1, Math.ceil(issueList.length / 10));
+  const issuePageCount = Math.max(1, Math.ceil(issues.length / 10));
   const visibleIssueList = useMemo(
-    () => issueList.slice((issuesPage - 1) * 10, issuesPage * 10),
-    [issueList, issuesPage],
+    () => issues.slice((issuesPage - 1) * 10, issuesPage * 10),
+    [issues, issuesPage],
   );
 
   // Get the most recent update time from all news data
@@ -523,53 +490,27 @@ export default function News() {
             <p className="issuesStatus">공개된 이슈가 아직 없습니다.</p>
           ) : (
             <>
-              <div className="issuesFeaturedGrid">
-                {featuredIssues.map((issue) => (
-                  <button
+              <div className="issueList" aria-label="이슈 목록">
+                {visibleIssueList.map((issue) => (
+                  <Link
                     key={issue.id}
-                    type="button"
-                    className="issueFeaturedCard"
-                    onClick={() => setLocation(`/news/issues/${issue.id}`)}
+                    href={`/news/issues/${issue.id}`}
+                    className="issueListItem"
                   >
-                    {issue.thumbnail_url ? (
-                      <img className="issueFeaturedImage" src={issue.thumbnail_url} alt="" />
-                    ) : (
-                      <div className="issueFeaturedImage issueCardImageFallback" aria-hidden="true" />
-                    )}
-                    <div className="issueFeaturedOverlay">
-                      <span className="issueCardSource">{issue.source_name || "이슈"}</span>
-                      <IssueCardTitle title={getIssueDisplayTitle(issue)} variant="featured" />
+                    <div className="issueListBody">
+                      <h2 className="issueListTitle">{getIssueDisplayTitle(issue)}</h2>
+                      {getIssueDisplaySummary(issue) && <p>{getIssueDisplaySummary(issue)}</p>}
                     </div>
-                  </button>
+                    {issue.thumbnail_url ? (
+                      <img className="issueListImage" src={issue.thumbnail_url} alt="" />
+                    ) : (
+                      <div className="issueListImage issueCardImageFallback" aria-hidden="true" />
+                    )}
+                  </Link>
                 ))}
               </div>
 
-              {visibleIssueList.length > 0 && (
-                <div className="issueList" aria-label="이슈 목록">
-                  {visibleIssueList.map((issue) => (
-                    <button
-                      key={issue.id}
-                      type="button"
-                      className="issueListItem"
-                      onClick={() => setLocation(`/news/issues/${issue.id}`)}
-                    >
-                      {issue.thumbnail_url ? (
-                        <img className="issueListImage" src={issue.thumbnail_url} alt="" />
-                      ) : (
-                        <div className="issueListImage issueCardImageFallback" aria-hidden="true" />
-                      )}
-                      <div className="issueListBody">
-                        <span className="issueCardSource">{issue.source_name || "이슈"}</span>
-                        <IssueCardTitle title={getIssueDisplayTitle(issue)} variant="list" />
-                        {getIssueDisplaySummary(issue) && <p>{getIssueDisplaySummary(issue)}</p>}
-                      </div>
-                      <span className="issueListMore" aria-hidden="true">→</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {issueList.length > 10 && (
+              {issues.length > 10 && (
                 <nav className="issuePagination" aria-label="이슈 페이지 이동">
                   <button
                     type="button"
