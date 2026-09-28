@@ -2513,8 +2513,6 @@ a {
 
 .issuesSection {
   min-height: 300px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(110, 147, 203, 0.18);
 }
 
 .issuesStatus {
@@ -3018,7 +3016,6 @@ a {
 
   .issuesSection {
     min-height: 230px;
-    padding-top: 14px;
   }
 
   .issueListItem {
