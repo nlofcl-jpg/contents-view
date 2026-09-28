@@ -2527,6 +2527,74 @@ a {
   background: #111d31 url("/contents-view-symbol.png") center / 28px no-repeat;
 }
 
+.issuesFeaturedGrid {
+  display: grid;
+  max-width: 1000px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0 auto 30px;
+}
+
+.issueFeaturedCard {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border: 1px solid rgba(76, 113, 170, 0.35);
+  border-radius: 8px;
+  background: #111d31;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+
+.issueFeaturedCard:hover {
+  border-color: rgba(96, 165, 250, 0.75);
+  transform: translateY(-2px);
+}
+
+.issueFeaturedCard:focus-visible {
+  outline: 2px solid #72aaff;
+  outline-offset: 4px;
+}
+
+.issueFeaturedImage {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1.22 / 1;
+  object-fit: cover;
+}
+
+.issueFeaturedOverlay {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: flex-end;
+  min-height: 62%;
+  padding: 28px 14px 14px;
+  background: linear-gradient(180deg, transparent, rgba(2, 8, 20, 0.96));
+}
+
+.issueFeaturedTitle {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: #f1f5ff;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+@media (max-width: 900px) {
+  .issuesFeaturedGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .issueList {
   display: flex;
   flex-direction: column;
@@ -3016,6 +3084,20 @@ a {
 
   .issuesSection {
     min-height: 230px;
+  }
+
+  .issuesFeaturedGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+
+  .issueFeaturedOverlay {
+    padding: 24px 10px 10px;
+  }
+
+  .issueFeaturedTitle {
+    font-size: 13px;
   }
 
   .issueListItem {

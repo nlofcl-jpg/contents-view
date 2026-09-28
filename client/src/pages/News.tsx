@@ -263,11 +263,10 @@ export default function News() {
   };
 
   const isLoadingFeatured = !nationNewsData || !businessNewsData || !technologyNewsData || !entertainmentNewsData;
-  const issuePageCount = Math.max(1, Math.ceil(issues.length / 10));
-  const visibleIssueList = useMemo(
-    () => issues.slice((issuesPage - 1) * 10, issuesPage * 10),
-    [issues, issuesPage],
-  );
+  const featuredIssues = issues.slice(0, 4);
+  const remainingIssues = issues.slice(4);
+  const issuePageCount = Math.max(1, Math.ceil(remainingIssues.length / 10));
+  const visibleIssueList = remainingIssues.slice((issuesPage - 1) * 10, issuesPage * 10);
 
   // Get the most recent update time from all news data
   const getLatestUpdateTime = useMemo(() => {
@@ -490,27 +489,48 @@ export default function News() {
             <p className="issuesStatus">공개된 이슈가 아직 없습니다.</p>
           ) : (
             <>
-              <div className="issueList" aria-label="이슈 목록">
-                {visibleIssueList.map((issue) => (
+              <div className="issuesFeaturedGrid" aria-label="최신 이슈">
+                {featuredIssues.map((issue) => (
                   <Link
                     key={issue.id}
                     href={`/news/issues/${issue.id}`}
-                    className="issueListItem"
+                    className="issueFeaturedCard"
                   >
-                    <div className="issueListBody">
-                      <h2 className="issueListTitle">{getIssueDisplayTitle(issue)}</h2>
-                      {getIssueDisplaySummary(issue) && <p>{getIssueDisplaySummary(issue)}</p>}
-                    </div>
                     {issue.thumbnail_url ? (
-                      <img className="issueListImage" src={issue.thumbnail_url} alt="" />
+                      <img className="issueFeaturedImage" src={issue.thumbnail_url} alt="" />
                     ) : (
-                      <div className="issueListImage issueCardImageFallback" aria-hidden="true" />
+                      <div className="issueFeaturedImage issueCardImageFallback" aria-hidden="true" />
                     )}
+                    <div className="issueFeaturedOverlay">
+                      <h2 className="issueFeaturedTitle">{getIssueDisplayTitle(issue)}</h2>
+                    </div>
                   </Link>
                 ))}
               </div>
 
-              {issues.length > 10 && (
+              {remainingIssues.length > 0 && (
+                <div className="issueList" aria-label="이슈 목록">
+                  {visibleIssueList.map((issue) => (
+                    <Link
+                      key={issue.id}
+                      href={`/news/issues/${issue.id}`}
+                      className="issueListItem"
+                    >
+                      <div className="issueListBody">
+                        <h2 className="issueListTitle">{getIssueDisplayTitle(issue)}</h2>
+                        {getIssueDisplaySummary(issue) && <p>{getIssueDisplaySummary(issue)}</p>}
+                      </div>
+                      {issue.thumbnail_url ? (
+                        <img className="issueListImage" src={issue.thumbnail_url} alt="" />
+                      ) : (
+                        <div className="issueListImage issueCardImageFallback" aria-hidden="true" />
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              )}
+
+              {remainingIssues.length > 10 && (
                 <nav className="issuePagination" aria-label="이슈 페이지 이동">
                   <button
                     type="button"
