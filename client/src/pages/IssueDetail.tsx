@@ -85,13 +85,28 @@ export default function IssueDetail() {
       ) : (
         <article className="issueDetail">
           <header className="issueDetailHeader">
+            <h1>{issue.article_title || issue.title}</h1>
             <div className="issueDetailMeta">
-              <span>이슈</span>
               <time dateTime={issue.created_at}>
                 {new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric" }).format(new Date(issue.created_at))}
               </time>
+              <button
+                type="button"
+                className="issueKakaoShareButton"
+                onClick={handleKakaoShare}
+                disabled={kakaoSdkStatus === "loading"}
+                title="카카오톡으로 공유"
+                aria-label="카카오톡으로 이슈 공유"
+              >
+                {kakaoSdkStatus === "loading" ? (
+                  <LoaderCircle size={20} className="animate-spin" aria-hidden="true" />
+                ) : (
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path fill="currentColor" d="M12 3.5c-5.1 0-9.2 3.18-9.2 7.1 0 2.5 1.67 4.7 4.19 5.96l-.7 2.78c-.06.23.2.42.39.28l3.32-2.22c.65.1 1.32.15 2 .15 5.1 0 9.2-3.18 9.2-7.1s-4.1-6.95-9.2-6.95Z" />
+                  </svg>
+                )}
+              </button>
             </div>
-            <h1>{issue.article_title || issue.title}</h1>
           </header>
           <div className="issueDetailArticle">
             {issue.thumbnail_url && (
@@ -101,8 +116,8 @@ export default function IssueDetail() {
               <p className="issueDetailSummary">{issue.summary || issue.article_summary}</p>
             )}
           </div>
-          <footer className="issueShareFooter">
-            {issue.article_url && (
+          {issue.article_url && (
+            <footer className="issueShareFooter">
               <a
                 className="issueOriginalLink"
                 href={issue.article_url}
@@ -112,24 +127,8 @@ export default function IssueDetail() {
                 원문 보기
                 <ExternalLink size={15} aria-hidden="true" />
               </a>
-            )}
-            <button
-              type="button"
-              className="issueKakaoShareButton"
-              onClick={handleKakaoShare}
-              disabled={kakaoSdkStatus === "loading"}
-              title="카카오톡으로 공유"
-              aria-label="카카오톡으로 이슈 공유"
-            >
-              {kakaoSdkStatus === "loading" ? (
-                <LoaderCircle size={20} className="animate-spin" aria-hidden="true" />
-              ) : (
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path fill="currentColor" d="M12 3.5c-5.1 0-9.2 3.18-9.2 7.1 0 2.5 1.67 4.7 4.19 5.96l-.7 2.78c-.06.23.2.42.39.28l3.32-2.22c.65.1 1.32.15 2 .15 5.1 0 9.2-3.18 9.2-7.1s-4.1-6.95-9.2-6.95Z" />
-                </svg>
-              )}
-            </button>
-          </footer>
+            </footer>
+          )}
         </article>
       )}
     </div>

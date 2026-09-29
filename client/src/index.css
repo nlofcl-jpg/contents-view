@@ -2728,28 +2728,16 @@ a {
 .issueDetailMeta {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 40px;
+  margin-top: 18px;
   color: #8fa2bc;
   font-size: 12px;
 }
 
-.issueDetailMeta span {
-  color: #88baff;
-  font-weight: 600;
-}
-
-.issueDetailMeta time::before {
-  display: inline-block;
-  width: 3px;
-  height: 3px;
-  margin: 0 12px 3px 0;
-  border-radius: 50%;
-  background: #657794;
-  content: "";
-}
-
 .issueDetailHeader h1 {
-  margin: 16px 0 0;
+  margin: 0;
   color: #f8fbff;
   font-size: 34px;
   font-weight: 600;
@@ -2831,14 +2819,8 @@ a {
 .issueShareFooter {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
   border-top: 1px solid rgba(148, 163, 184, 0.18);
   padding: 22px 0 28px;
-}
-
-.issueShareFooter > .issueKakaoShareButton:first-child {
-  margin-left: auto;
 }
 
 .issueKakaoShareButton {
