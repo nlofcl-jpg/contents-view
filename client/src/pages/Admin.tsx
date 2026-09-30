@@ -830,7 +830,7 @@ function IssuesPanel() {
         </div>
       )}
 
-      <div>
+      {!(isFormOpen && registrationMode === "manual" && !editingId) && <div>
         {filteredIssues.length > 0 && (
           <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
             <button type="button" className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-slate-500 hover:text-white" onClick={toggleAllIssues}>
@@ -919,7 +919,7 @@ function IssuesPanel() {
         ) : (
           <p className="text-sm text-slate-500">조건에 맞는 이슈가 없습니다.</p>
         )}
-      </div>
+      </div>}
     </section>
   );
 }
