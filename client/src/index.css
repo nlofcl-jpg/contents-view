@@ -2867,6 +2867,21 @@ a {
   line-height: 1.9;
 }
 
+.issueBodyPreview {
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  padding-top: 18px;
+}
+
+.issueBodyPreviewLabel {
+  display: block;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.issueBodyPreview .issueDetailSummary {
+  margin-top: 12px;
+}
+
 .issueDetailArticle > .issueDetailSummary:first-child {
   margin-top: 0;
 }

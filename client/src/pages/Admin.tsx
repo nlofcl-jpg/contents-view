@@ -333,7 +333,7 @@ function IssuesPanel() {
   const handleSave = async () => {
     if (!supabase || !user) return;
     if (!title.trim() || !summary.trim()) {
-      setError("제목과 핵심 요약을 입력하세요.");
+      setError("제목과 본문을 입력하세요.");
       setMessage(null);
       return;
     }
@@ -664,14 +664,20 @@ function IssuesPanel() {
           </div>
         </label>
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-slate-300">핵심 요약</span>
+          <span className="mb-2 block text-sm font-medium text-slate-300">본문</span>
           <textarea
             className="min-h-32 w-full resize-y rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-400"
-            placeholder="이슈 상세 페이지에 표시할 핵심 내용을 입력"
+            placeholder="이슈 상세 페이지에 표시할 본문을 입력"
             value={summary}
             onChange={event => setSummary(event.target.value)}
           />
         </label>
+        {summary.trim() && (
+          <div className="issueBodyPreview">
+            <span className="issueBodyPreviewLabel">상세페이지 미리보기</span>
+            <p className="issueDetailSummary">{summary.trim()}</p>
+          </div>
+        )}
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-slate-300">기사 원문 링크</span>
