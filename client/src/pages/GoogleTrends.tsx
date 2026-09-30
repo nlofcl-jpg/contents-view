@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, type CSSProperties } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GoogleTrendTraffic } from "@/components/GoogleTrendTraffic";
@@ -40,6 +40,19 @@ export default function GoogleTrends() {
   const [selectedTrend, setSelectedTrend] = useState<TrendItem | null>(null);
   const [isDetailDismissed, setIsDetailDismissed] = useState(false);
   const [visibleCount, setVisibleCount] = useState(10);
+  const searchListRef = useRef<HTMLDivElement>(null);
+  const [searchListHeight, setSearchListHeight] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    const list = searchListRef.current;
+    if (!list) return;
+
+    const updateHeight = () => setSearchListHeight(list.getBoundingClientRect().height);
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, [isLoading, error, popularSearches.length]);
 
   // Fetch Google Trends data
   const { data: trendsData, isLoading: isTrendsLoading, error: trendsError } = trpc.googleTrends.realtimeTrending.useQuery(
@@ -156,10 +169,10 @@ export default function GoogleTrends() {
             <p className="text-slate-500">실시간 인기 검색어 데이터를 불러올 수 없습니다.</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-6 md:flex-row">
+          <div className="flex flex-col gap-6 md:flex-row md:items-start">
             {/* 왼쪽: 인기 검색어 목록 */}
             <div className={`min-w-0 transition-all duration-300 ${selectedTrend ? "w-full md:flex-1" : "w-full"}`}>
-              <div className="border border-slate-800 rounded-xl overflow-hidden bg-transparent">
+              <div ref={searchListRef} className="border border-slate-800 rounded-xl overflow-hidden bg-transparent">
                 {/* 데스크톱 테이블 */}
                 <div className="hidden md:block">
                   <div className="grid grid-cols-12 gap-4 p-4 border-b border-slate-800 bg-slate-900/30">
@@ -244,9 +257,12 @@ export default function GoogleTrends() {
 
             {/* 오른쪽: 상세 정보 박스 */}
             {selectedTrend && (
-              <div className="flex w-full min-w-0 flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/50 animate-in slide-in-from-right-4 duration-300 md:flex-1">
+              <div
+                className="flex w-full min-w-0 flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/50 animate-in slide-in-from-right-4 duration-300 md:h-[var(--trend-list-height)] md:flex-1"
+                style={{ "--trend-list-height": searchListHeight ? `${searchListHeight}px` : "auto" } as CSSProperties}
+              >
                 {/* 헤더 */}
-                <div className="flex items-center justify-between p-6 border-b border-slate-800">
+                <div className="flex shrink-0 items-center justify-between p-6 border-b border-slate-800">
                   <div className="flex-1 min-w-0">
                     <h3 className="text-xl font-bold text-foreground truncate">{selectedTrend.keyword}</h3>
                     <div className="text-slate-400 text-sm mt-1 flex flex-wrap items-center gap-x-1">
@@ -264,7 +280,7 @@ export default function GoogleTrends() {
                 </div>
 
                 {/* 본문 */}
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="min-h-0 flex-1 overflow-y-auto p-6">
                   <div>
                     <h4 className="text-lg font-semibold text-foreground mb-4">관련 뉴스</h4>
                     {selectedTrend.news && selectedTrend.news.length > 0 ? (
