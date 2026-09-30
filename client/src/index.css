@@ -350,8 +350,15 @@ a {
 
 @media (max-width: 768px) {
   .siteFooter {
-    margin-top: 20px;
-    padding-top: 8px;
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 20;
+    max-width: none;
+    margin: 0;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+    background: var(--bg);
   }
 
   .siteFooterInner {
@@ -360,8 +367,9 @@ a {
 
   .siteFooterBottom {
     margin-top: 0;
-    padding-top: 8px;
+    padding-top: 0;
     border-top: 0;
+    justify-content: center;
   }
 
   .siteFooterBottom span:last-child {
@@ -9141,5 +9149,11 @@ input[type="date"].youtubeSelect {
 
   .risingMetrics strong {
     font-size: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .app > .mainContent {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom));
   }
 }
