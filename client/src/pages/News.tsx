@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
+import { stripIssueBodyFormatting } from "@shared/issueBody";
 
 interface NewsItem {
   title: string;
@@ -49,7 +50,7 @@ function getIssueDisplayTitle(issue: PublishedIssue) {
 }
 
 function getIssueDisplaySummary(issue: PublishedIssue) {
-  const summary = issue.summary.trim();
+  const summary = stripIssueBodyFormatting(issue.summary);
   return summary && summary !== issue.title.trim() && summary !== getIssueDisplayTitle(issue).trim()
     ? summary
     : issue.article_summary?.trim() || "";

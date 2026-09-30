@@ -1,3 +1,5 @@
+import { stripIssueBodyFormatting } from "@shared/issueBody";
+
 type ShareIssue = {
   id: string;
   title: string;
@@ -55,10 +57,7 @@ export function buildIssueKakaoFeed(issue: ShareIssue): KakaoFeed {
     objectType: "feed",
     content: {
       title: issue.article_title || issue.title,
-      description: (issue.summary || issue.article_summary || "CONTENTS VIEW 이슈 보기")
-        .replace(/\s+/g, " ")
-        .trim()
-        .slice(0, 140),
+      description: stripIssueBodyFormatting(issue.summary || issue.article_summary || "CONTENTS VIEW 이슈 보기").slice(0, 140),
       imageUrl,
       link,
     },

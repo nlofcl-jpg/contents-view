@@ -1,9 +1,12 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "wouter";
+import { Bold } from "lucide-react";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
+import IssueBody from "@/components/IssueBody";
+import { formatIssueBodyLines, parseIssueBodyLine, type IssueBodySize } from "@shared/issueBody";
 
 type AdminTab = "notices" | "issues" | "users" | "apiKeys";
 
@@ -249,6 +252,8 @@ function IssuesPanel() {
   const [issueListMode, setIssueListMode] = useState<IssueListMode>("manual");
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
+  const bodyInputRef = useRef<HTMLTextAreaElement>(null);
+  const [bodyCursor, setBodyCursor] = useState(0);
   const [articleUrl, setArticleUrl] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [sourceName, setSourceName] = useState("");
@@ -264,6 +269,41 @@ function IssuesPanel() {
   const [publicationChangingIssueId, setPublicationChangingIssueId] = useState<string | null>(null);
   const [selectedIssueIds, setSelectedIssueIds] = useState<Set<string>>(() => new Set());
   const matchClippingNewsMutation = trpc.news.matchClippingNews.useMutation();
+
+  const currentBodyLineStart = summary.lastIndexOf("\n", bodyCursor - 1) + 1;
+  const currentBodyLineEnd = summary.indexOf("\n", bodyCursor);
+  const currentBodySize = parseIssueBodyLine(summary.slice(currentBodyLineStart, currentBodyLineEnd === -1 ? undefined : currentBodyLineEnd)).size;
+
+  const updateBodySelection = (value: string, start: number, end: number) => {
+    setSummary(value);
+    setBodyCursor(start);
+    requestAnimationFrame(() => {
+      bodyInputRef.current?.focus();
+      bodyInputRef.current?.setSelectionRange(start, end);
+    });
+  };
+
+  const handleBodySizeChange = (size: IssueBodySize) => {
+    const input = bodyInputRef.current;
+    if (!input) return;
+    const formatted = formatIssueBodyLines(summary, input.selectionStart, input.selectionEnd, size);
+    updateBodySelection(formatted.value, formatted.selectionStart, formatted.selectionEnd);
+  };
+
+  const handleBodyBold = () => {
+    const input = bodyInputRef.current;
+    if (!input) return;
+    const { selectionStart: start, selectionEnd: end } = input;
+    const selected = summary.slice(start, end);
+    if (!selected) {
+      updateBodySelection(summary.slice(0, start) + "****" + summary.slice(end), start + 2, start + 2);
+      return;
+    }
+    const lines = selected.split("\n");
+    const isBold = lines.every(line => !line || (line.startsWith("**") && line.endsWith("**")));
+    const formatted = lines.map(line => !line ? line : isBold ? line.slice(2, -2) : `**${line}**`).join("\n");
+    updateBodySelection(summary.slice(0, start) + formatted + summary.slice(end), start, start + formatted.length);
+  };
 
   const loadIssues = async () => {
     if (!supabase) return;
@@ -663,19 +703,40 @@ function IssuesPanel() {
             </select>
           </div>
         </label>
-        <label className="block">
-          <span className="mb-2 block text-sm font-medium text-slate-300">본문</span>
+        <div>
+          <label htmlFor="issue-body" className="mb-2 block text-sm font-medium text-slate-300">본문</label>
+          <div className="issueBodyToolbar">
+            <button type="button" onClick={handleBodyBold} title="선택한 글자 굵게" aria-label="선택한 글자 굵게">
+              <Bold size={16} aria-hidden="true" />
+            </button>
+            <select
+              aria-label="본문 글자 크기"
+              title="현재 줄 글자 크기"
+              value={currentBodySize}
+              onChange={event => handleBodySizeChange(event.target.value as IssueBodySize)}
+            >
+              <option value="body">본문</option>
+              <option value="subtitle">소제목</option>
+              <option value="large">큰 소제목</option>
+            </select>
+          </div>
           <textarea
+            id="issue-body"
+            ref={bodyInputRef}
             className="min-h-32 w-full resize-y rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-400"
             placeholder="이슈 상세 페이지에 표시할 본문을 입력"
             value={summary}
-            onChange={event => setSummary(event.target.value)}
+            onChange={event => {
+              setSummary(event.target.value);
+              setBodyCursor(event.target.selectionStart);
+            }}
+            onSelect={event => setBodyCursor(event.currentTarget.selectionStart)}
           />
-        </label>
+        </div>
         {summary.trim() && (
           <div className="issueBodyPreview">
             <span className="issueBodyPreviewLabel">상세페이지 미리보기</span>
-            <p className="issueDetailSummary">{summary.trim()}</p>
+            <IssueBody value={summary.trim()} />
           </div>
         )}
         <div className="grid gap-4 md:grid-cols-2">

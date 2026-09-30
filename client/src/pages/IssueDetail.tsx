@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useLocation, useRoute } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { loadKakaoSdk, shareIssueOnKakao } from "@/lib/kakaoShare";
+import IssueBody from "@/components/IssueBody";
 
 type IssueDetailRecord = {
   id: string;
@@ -113,7 +114,7 @@ export default function IssueDetail() {
               <img className="issueDetailImage" src={issue.thumbnail_url} alt="" />
             )}
             {(issue.summary || issue.article_summary) && (
-              <p className="issueDetailSummary">{issue.summary || issue.article_summary}</p>
+              <IssueBody value={issue.summary || issue.article_summary || ""} />
             )}
             <button
               type="button"

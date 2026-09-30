@@ -2867,6 +2867,61 @@ a {
   line-height: 1.9;
 }
 
+.issueDetailSummary strong {
+  color: #f8fbff;
+  font-weight: 700;
+}
+
+.issueBodyLarge,
+.issueBodySubtitle {
+  margin: 0;
+  color: #f8fbff;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.issueBodyLarge {
+  font-size: 24px;
+  line-height: 1.5;
+}
+
+.issueBodySubtitle {
+  font-size: 20px;
+  line-height: 1.6;
+}
+
+.issueBodyToolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.issueBodyToolbar button,
+.issueBodyToolbar select {
+  min-height: 34px;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  background: #020617;
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.issueBodyToolbar button {
+  display: grid;
+  width: 36px;
+  place-items: center;
+}
+
+.issueBodyToolbar select {
+  padding: 0 9px;
+  font-size: 13px;
+}
+
+.issueBodyToolbar button:hover,
+.issueBodyToolbar select:hover {
+  border-color: #60a5fa;
+}
+
 .issueBodyPreview {
   border-top: 1px solid rgba(148, 163, 184, 0.18);
   padding-top: 18px;
@@ -3235,6 +3290,14 @@ a {
     margin-top: 24px;
     font-size: 15px;
     line-height: 1.8;
+  }
+
+  .issueBodyLarge {
+    font-size: 21px;
+  }
+
+  .issueBodySubtitle {
+    font-size: 18px;
   }
 
   .newsSearchSection {
