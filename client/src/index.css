@@ -2782,13 +2782,11 @@ a {
 }
 
 .issueScrollTopButton {
-  position: fixed;
-  right: max(12px, env(safe-area-inset-right));
-  bottom: max(12px, env(safe-area-inset-bottom));
-  z-index: 40;
+  position: relative;
   display: grid;
   width: 40px;
   height: 40px;
+  margin: 24px 0 0 auto;
   place-items: center;
   padding: 0;
   border: 0;

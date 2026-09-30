@@ -115,6 +115,15 @@ export default function IssueDetail() {
             {(issue.summary || issue.article_summary) && (
               <p className="issueDetailSummary">{issue.summary || issue.article_summary}</p>
             )}
+            <button
+              type="button"
+              className="issueScrollTopButton"
+              onClick={(event) => event.currentTarget.closest(".mainContent")?.scrollTo({ top: 0, behavior: "smooth" })}
+              title="맨 위로"
+              aria-label="맨 위로"
+            >
+              <ArrowUp size={14} aria-hidden="true" />
+            </button>
           </div>
           {issue.article_url && (
             <footer className="issueShareFooter">
@@ -129,15 +138,6 @@ export default function IssueDetail() {
               </a>
             </footer>
           )}
-          <button
-            type="button"
-            className="issueScrollTopButton"
-            onClick={(event) => event.currentTarget.closest(".mainContent")?.scrollTo({ top: 0, behavior: "smooth" })}
-            title="맨 위로"
-            aria-label="맨 위로"
-          >
-            <ArrowUp size={14} aria-hidden="true" />
-          </button>
         </article>
       )}
     </div>
