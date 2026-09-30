@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GoogleTrendTraffic } from "@/components/GoogleTrendTraffic";
 import { trpc } from "@/lib/trpc";
@@ -38,7 +38,8 @@ export default function GoogleTrends() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTrend, setSelectedTrend] = useState<TrendItem | null>(null);
-  const [visibleCount, setVisibleCount] = useState(30);
+  const [isDetailDismissed, setIsDetailDismissed] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(10);
 
   // Fetch Google Trends data
   const { data: trendsData, isLoading: isTrendsLoading, error: trendsError } = trpc.googleTrends.realtimeTrending.useQuery(
@@ -56,8 +57,9 @@ export default function GoogleTrends() {
       setPopularSearches(trendsData.data);
       setError(null);
       setSelectedTrend(previous => {
+        if (isDetailDismissed) return null;
         const keyword = selectedKeywordFromUrl || previous?.keyword;
-        return keyword ? trendsData.data.find((item: TrendItem) => item.keyword === keyword) || null : null;
+        return trendsData.data.find((item: TrendItem) => item.keyword === keyword) || trendsData.data[0];
       });
     } else if (trendsData?.success && (!trendsData.data || trendsData.data.length === 0)) {
       setError("실시간 인기 검색어 데이터를 불러올 수 없습니다.");
@@ -69,7 +71,7 @@ export default function GoogleTrends() {
       setSelectedTrend(null);
     }
     setIsLoading(isTrendsLoading);
-  }, [trendsData, isTrendsLoading, selectedKeywordFromUrl]);
+  }, [trendsData, isTrendsLoading, selectedKeywordFromUrl, isDetailDismissed]);
 
   // Handle error from tRPC
   useEffect(() => {
@@ -83,12 +85,14 @@ export default function GoogleTrends() {
   const handleCountryChange = (newCountry: string) => {
     setSelectedCountry(newCountry);
     setSelectedKeywordFromUrl("");
+    setIsDetailDismissed(false);
     setSelectedTrend(null);
-    setVisibleCount(30);
+    setVisibleCount(10);
   };
 
   const handleSelectTrend = (item: TrendItem | null) => {
     setSelectedKeywordFromUrl("");
+    setIsDetailDismissed(item === null);
     setSelectedTrend(item);
   };
 
@@ -152,9 +156,9 @@ export default function GoogleTrends() {
             <p className="text-slate-500">실시간 인기 검색어 데이터를 불러올 수 없습니다.</p>
           </div>
         ) : (
-          <div className="flex gap-6">
+          <div className="flex flex-col gap-6 md:flex-row">
             {/* 왼쪽: 인기 검색어 목록 */}
-            <div className={`transition-all duration-300 ${selectedTrend ? "flex-1" : "w-full"}`}>
+            <div className={`min-w-0 transition-all duration-300 ${selectedTrend ? "w-full md:flex-1" : "w-full"}`}>
               <div className="border border-slate-800 rounded-xl overflow-hidden bg-transparent">
                 {/* 데스크톱 테이블 */}
                 <div className="hidden md:block">
@@ -226,16 +230,21 @@ export default function GoogleTrends() {
               </div>
               {popularSearches.length > visibleCount && (
                 <div className="mt-4 text-center">
-                  <Button variant="outline" onClick={() => setVisibleCount(count => count + 30)}>
+                  <button
+                    type="button"
+                    onClick={() => setVisibleCount(count => count + 10)}
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-400 transition-colors hover:text-blue-300"
+                  >
                     더보기
-                  </Button>
+                    <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                  </button>
                 </div>
               )}
             </div>
 
             {/* 오른쪽: 상세 정보 박스 */}
             {selectedTrend && (
-              <div className="flex-1 border border-slate-800 rounded-xl bg-slate-900/50 overflow-hidden flex flex-col animate-in slide-in-from-right-4 duration-300">
+              <div className="flex w-full min-w-0 flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/50 animate-in slide-in-from-right-4 duration-300 md:flex-1">
                 {/* 헤더 */}
                 <div className="flex items-center justify-between p-6 border-b border-slate-800">
                   <div className="flex-1 min-w-0">
