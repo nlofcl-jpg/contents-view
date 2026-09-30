@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GoogleTrendTraffic } from "@/components/GoogleTrendTraffic";
 import { trpc } from "@/lib/trpc";
 
 interface NewsItem {
@@ -14,6 +15,7 @@ interface TrendItem {
   rank: number;
   keyword: string;
   traffic?: string;
+  trafficCount?: number;
   news?: NewsItem[];
   source: string;
   country: string;
@@ -108,7 +110,7 @@ export default function GoogleTrends() {
           Google Trends
         </h1>
         <p className="pageDescription">
-          최근 24시간 검색어를 검색량순으로 확인하세요.
+          인기 검색어와 관련 뉴스를 검색량순으로 확인하세요.
         </p>
       </div>
 
@@ -116,7 +118,7 @@ export default function GoogleTrends() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold text-foreground">
-            최근 24시간 검색어
+            인기 검색어
           </h2>
           <div className="flex gap-2 overflow-x-auto pb-2">
             {countries.map((country) => (
@@ -172,7 +174,7 @@ export default function GoogleTrends() {
                     >
                       <div className="col-span-1 text-xl font-bold text-slate-300">{item.rank}</div>
                       <div className="col-span-6 text-foreground font-medium truncate">{item.keyword}</div>
-                      <div className="col-span-3 text-slate-400 text-sm">{item.traffic || "-"}</div>
+                      <div className="col-span-3 text-sm"><GoogleTrendTraffic traffic={item.traffic} trafficCount={item.trafficCount} /></div>
                       <div className="col-span-2 text-right">
                         <button
                           onClick={(e) => {
@@ -207,7 +209,7 @@ export default function GoogleTrends() {
                         </div>
                       </div>
                       <div className="flex items-center justify-between gap-3">
-                        <span className="text-slate-400 text-sm">{item.traffic || "-"}</span>
+                        <GoogleTrendTraffic traffic={item.traffic} trafficCount={item.trafficCount} className="text-sm" />
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -238,9 +240,11 @@ export default function GoogleTrends() {
                 <div className="flex items-center justify-between p-6 border-b border-slate-800">
                   <div className="flex-1 min-w-0">
                     <h3 className="text-xl font-bold text-foreground truncate">{selectedTrend.keyword}</h3>
-                    <p className="text-slate-400 text-sm mt-1">
-                      검색량 순위 {selectedTrend.rank} · 검색량 {selectedTrend.traffic || "-"} · Google Trends
-                    </p>
+                    <div className="text-slate-400 text-sm mt-1 flex flex-wrap items-center gap-x-1">
+                      <span>검색량 순위 {selectedTrend.rank} · 검색량</span>
+                      <GoogleTrendTraffic traffic={selectedTrend.traffic} trafficCount={selectedTrend.trafficCount} />
+                      <span>· Google Trends</span>
+                    </div>
                   </div>
                   <button
                     onClick={() => handleSelectTrend(null)}

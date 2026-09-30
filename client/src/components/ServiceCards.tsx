@@ -3,6 +3,7 @@ import { ArrowRight, Newspaper, TrendingUp, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
+import { GoogleTrendTraffic } from "@/components/GoogleTrendTraffic";
 import { trpc } from "@/lib/trpc";
 
 type TrendRow = {
@@ -16,6 +17,7 @@ type TrendRow = {
   video?: any;
   minimal?: boolean;
   risingScore?: boolean;
+  googleTraffic?: { traffic: string; trafficCount?: number };
 };
 
 type TrendCard = {
@@ -155,13 +157,16 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
                 <p className="truncate text-sm font-semibold text-slate-100">{row.label}</p>
                 {!row.minimal && row.meta && <p className="mt-1 truncate text-xs text-slate-400">{row.meta}</p>}
               </div>
-              {(row.rightValue || row.detailHref) && (
+              {(row.rightValue || row.googleTraffic || row.detailHref) && (
                 <div className={`flex shrink-0 items-center gap-2 ${row.minimal ? "ml-auto" : ""}`}>
                   {row.rightValue && (
                     <span className={`inline-flex items-center gap-1 text-xs font-bold ${row.risingScore ? "text-red-400" : "text-blue-300"}`}>
                       {row.risingScore ? <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" /> : null}
                       {row.rightValue}
                     </span>
+                  )}
+                  {row.googleTraffic && (
+                    <GoogleTrendTraffic traffic={row.googleTraffic.traffic} trafficCount={row.googleTraffic.trafficCount} className="text-xs" />
                   )}
                   {row.detailHref && (
                     <button
@@ -254,7 +259,7 @@ export default function ServiceCards() {
     const trends = (googleTrendsQuery.data as any)?.data || [];
     return trends.slice(0, 5).map((item: any) => ({
       label: stripHtml(item.keyword),
-      rightValue: item.traffic || "-",
+      googleTraffic: { traffic: item.traffic || "", trafficCount: item.trafficCount },
       detailHref: `/trends/google?country=KR&trend=${encodeURIComponent(item.keyword)}`,
     }));
   }, [googleTrendsQuery.data]);
