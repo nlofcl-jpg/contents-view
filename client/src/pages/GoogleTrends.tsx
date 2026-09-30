@@ -175,7 +175,7 @@ export default function GoogleTrends() {
               <div ref={searchListRef} className="border border-slate-800 rounded-xl overflow-hidden bg-transparent">
                 {/* 데스크톱 테이블 */}
                 <div className="hidden md:block">
-                  <div className="grid grid-cols-12 gap-4 p-4 border-b border-slate-800 bg-slate-900/30">
+                  <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-slate-800 bg-slate-900/30">
                     <div className="col-span-1 text-slate-400 text-sm font-medium">순위</div>
                     <div className="col-span-6 text-slate-400 text-sm font-medium">검색어</div>
                     <div className="col-span-3 text-slate-400 text-sm font-medium">검색량</div>
@@ -184,9 +184,11 @@ export default function GoogleTrends() {
                   {popularSearches.slice(0, visibleCount).map((item, idx) => (
                     <div
                       key={item.keyword}
-                      className={`grid grid-cols-12 gap-4 p-4 items-center hover:bg-slate-900/20 transition cursor-pointer ${
-                        selectedTrend?.keyword === item.keyword ? "bg-slate-900/40 border-l-2 border-blue-600" : ""
-                      } ${idx < Math.min(popularSearches.length, visibleCount) - 1 ? "border-b border-slate-800" : ""}`}
+                      className={`mx-2 grid grid-cols-12 items-center gap-4 rounded-md p-4 transition-colors cursor-pointer ${
+                        selectedTrend?.keyword === item.keyword
+                          ? "bg-blue-500/15 ring-1 ring-inset ring-blue-400/45"
+                          : "hover:bg-slate-900/30"
+                      } ${idx < Math.min(popularSearches.length, visibleCount) - 1 && selectedTrend?.keyword !== item.keyword ? "border-b border-slate-800" : ""}`}
                       onClick={() => handleSelectTrend(item)}
                     >
                       <div className="col-span-1 text-xl font-bold text-slate-300">{item.rank}</div>
@@ -214,7 +216,7 @@ export default function GoogleTrends() {
                       key={item.keyword}
                       className={`p-4 rounded-lg bg-slate-900/20 border transition cursor-pointer ${
                         selectedTrend?.keyword === item.keyword
-                          ? "border-blue-600 bg-slate-900/40"
+                          ? "border-blue-400/50 bg-blue-500/15"
                           : "border-slate-800 hover:bg-slate-900/40"
                       }`}
                       onClick={() => handleSelectTrend(item)}
