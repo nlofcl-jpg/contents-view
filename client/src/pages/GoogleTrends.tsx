@@ -1,7 +1,9 @@
 import { useState, useEffect, useLayoutEffect, useRef, type CSSProperties } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { GoogleTrendTraffic } from "@/components/GoogleTrendTraffic";
+import { useIsMobile } from "@/hooks/useMobile";
 import { trpc } from "@/lib/trpc";
 
 interface NewsItem {
@@ -21,6 +23,43 @@ interface TrendItem {
   country: string;
 }
 
+function TrendNews({ news }: { news?: NewsItem[] }) {
+  return (
+    <div>
+      <h4 className="mb-4 text-lg font-semibold text-foreground">관련 뉴스</h4>
+      {news && news.length > 0 ? (
+        <div className="space-y-4">
+          {news.map((newsItem, idx) => (
+            <a
+              key={idx}
+              href={newsItem.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex gap-4 rounded-lg bg-slate-800/50 p-3 transition hover:bg-slate-800"
+            >
+              {newsItem.image && (
+                <img
+                  src={newsItem.image}
+                  alt={newsItem.title}
+                  className="h-16 w-16 flex-shrink-0 rounded object-cover transition group-hover:opacity-80 sm:h-20 sm:w-20"
+                />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="line-clamp-2 text-sm font-medium text-foreground transition group-hover:text-blue-400">
+                  {newsItem.title}
+                </p>
+                <p className="mt-2 text-xs text-slate-400">{newsItem.source}</p>
+              </div>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-slate-400">관련 뉴스가 없습니다.</p>
+      )}
+    </div>
+  );
+}
+
 export default function GoogleTrends() {
   const getInitialParams = () => {
     if (typeof window === "undefined") return { country: "KR", trend: "" };
@@ -38,10 +77,16 @@ export default function GoogleTrends() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTrend, setSelectedTrend] = useState<TrendItem | null>(null);
+  const [isMobileNewsOpen, setIsMobileNewsOpen] = useState(false);
   const [isDetailDismissed, setIsDetailDismissed] = useState(false);
   const [visibleCount, setVisibleCount] = useState(10);
   const searchListRef = useRef<HTMLDivElement>(null);
   const [searchListHeight, setSearchListHeight] = useState<number | null>(null);
+  const isMobile = useIsMobile();
+
+  useEffect(() => {
+    if (!isMobile) setIsMobileNewsOpen(false);
+  }, [isMobile]);
 
   useLayoutEffect(() => {
     const list = searchListRef.current;
@@ -100,13 +145,15 @@ export default function GoogleTrends() {
     setSelectedKeywordFromUrl("");
     setIsDetailDismissed(false);
     setSelectedTrend(null);
+    setIsMobileNewsOpen(false);
     setVisibleCount(10);
   };
 
-  const handleSelectTrend = (item: TrendItem | null) => {
+  const handleSelectTrend = (item: TrendItem | null, showMobileNews = false) => {
     setSelectedKeywordFromUrl("");
     setIsDetailDismissed(item === null);
     setSelectedTrend(item);
+    setIsMobileNewsOpen(showMobileNews && Boolean(item));
   };
 
   const countries = [
@@ -133,11 +180,11 @@ export default function GoogleTrends() {
 
       {/* 실시간 인기 검색어 */}
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-foreground">
+        <div className="flex min-w-0 flex-col items-start gap-3 md:flex-row md:items-center md:justify-between">
+          <h2 className="text-xl font-bold text-foreground md:text-2xl">
             인기 검색어
           </h2>
-          <div className="flex gap-2 overflow-x-auto pb-2">
+          <div className="flex w-full min-w-0 gap-2 overflow-x-auto pb-2 md:w-auto">
             {countries.map((country) => (
               <Button
                 key={country.code}
@@ -219,7 +266,7 @@ export default function GoogleTrends() {
                           ? "border-blue-400/50 bg-blue-500/15"
                           : "border-slate-800 hover:bg-slate-900/40"
                       }`}
-                      onClick={() => handleSelectTrend(item)}
+                      onClick={() => handleSelectTrend(item, true)}
                     >
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div className="text-xl font-bold text-slate-300 w-8 flex-shrink-0">{item.rank}</div>
@@ -232,7 +279,7 @@ export default function GoogleTrends() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleSelectTrend(item);
+                            handleSelectTrend(item, true);
                           }}
                           className="text-blue-500 hover:text-blue-400 text-sm font-medium transition flex-shrink-0"
                         >
@@ -260,7 +307,7 @@ export default function GoogleTrends() {
             {/* 오른쪽: 상세 정보 박스 */}
             {selectedTrend && (
               <div
-                className="flex w-full min-w-0 flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/50 animate-in slide-in-from-right-4 duration-300 md:h-[var(--trend-list-height)] md:flex-1"
+                className="hidden w-full min-w-0 flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/50 animate-in slide-in-from-right-4 duration-300 md:flex md:h-[var(--trend-list-height)] md:flex-1"
                 style={{ "--trend-list-height": searchListHeight ? `${searchListHeight}px` : "auto" } as CSSProperties}
               >
                 {/* 헤더 */}
@@ -283,44 +330,33 @@ export default function GoogleTrends() {
 
                 {/* 본문 */}
                 <div className="min-h-0 flex-1 overflow-y-auto p-6">
-                  <div>
-                    <h4 className="text-lg font-semibold text-foreground mb-4">관련 뉴스</h4>
-                    {selectedTrend.news && selectedTrend.news.length > 0 ? (
-                      <div className="space-y-4">
-                        {selectedTrend.news.map((newsItem, idx) => (
-                          <a
-                            key={idx}
-                            href={newsItem.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex gap-4 p-3 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition group"
-                          >
-                            {newsItem.image && (
-                              <img
-                                src={newsItem.image}
-                                alt={newsItem.title}
-                                className="w-20 h-20 object-cover rounded flex-shrink-0 group-hover:opacity-80 transition"
-                              />
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-foreground text-sm font-medium line-clamp-2 group-hover:text-blue-400 transition">
-                                {newsItem.title}
-                              </p>
-                              <p className="text-slate-400 text-xs mt-2">{newsItem.source}</p>
-                            </div>
-                          </a>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-slate-400 text-sm">관련 뉴스가 없습니다.</p>
-                    )}
-                  </div>
+                  <TrendNews news={selectedTrend.news} />
                 </div>
               </div>
             )}
           </div>
         )}
       </div>
+      <Dialog open={isMobile && isMobileNewsOpen} onOpenChange={setIsMobileNewsOpen}>
+        {selectedTrend && (
+          <DialogContent
+            className="flex max-h-[85dvh] flex-col gap-0 overflow-hidden border-slate-700 bg-slate-950 p-0 text-foreground sm:max-w-lg"
+            overlayClassName="bg-black/75"
+          >
+            <DialogHeader className="shrink-0 border-b border-slate-800 px-5 py-5 pr-12 text-left">
+              <DialogTitle className="text-lg leading-snug">{selectedTrend.keyword}</DialogTitle>
+              <DialogDescription className="flex flex-wrap items-center gap-x-1 text-xs text-slate-400">
+                <span>검색량 순위 {selectedTrend.rank} · 검색량</span>
+                <GoogleTrendTraffic traffic={selectedTrend.traffic} trafficCount={selectedTrend.trafficCount} />
+                <span>· Google Trends</span>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="min-h-0 flex-1 overflow-y-auto p-5">
+              <TrendNews news={selectedTrend.news} />
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
     </div>
   );
 }
