@@ -169,6 +169,7 @@ export function MobileMenuDrawer({
                     onClick={() => handleNavigation("/trends/youtube")}
                     type="button"
                   >
+                    <img className="mobileTrendLogo" src="/youtube-favicon.png" alt="" aria-hidden="true" />
                     <span>YouTube</span>
                   </button>
 
@@ -177,6 +178,7 @@ export function MobileMenuDrawer({
                     onClick={() => handleNavigation("/trends/naver")}
                     type="button"
                   >
+                    <img className="mobileTrendLogo" src="/naver-favicon.png" alt="" aria-hidden="true" />
                     <span>네이버 트렌드</span>
                   </button>
 
@@ -185,6 +187,7 @@ export function MobileMenuDrawer({
                     onClick={() => handleNavigation("/trends/google")}
                     type="button"
                   >
+                    <img className="mobileTrendLogo" src="/google-trends-favicon.png" alt="" aria-hidden="true" />
                     <span>Google Trends</span>
                   </button>
                 </>
