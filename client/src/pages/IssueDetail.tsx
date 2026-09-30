@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, ExternalLink, LoaderCircle } from "lucide-react";
+import { ArrowLeft, ArrowUp, ExternalLink, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation, useRoute } from "wouter";
 import { supabase } from "@/lib/supabase";
@@ -129,6 +129,15 @@ export default function IssueDetail() {
               </a>
             </footer>
           )}
+          <button
+            type="button"
+            className="issueScrollTopButton"
+            onClick={(event) => event.currentTarget.closest(".mainContent")?.scrollTo({ top: 0, behavior: "smooth" })}
+            title="맨 위로"
+            aria-label="맨 위로"
+          >
+            <ArrowUp size={14} aria-hidden="true" />
+          </button>
         </article>
       )}
     </div>
