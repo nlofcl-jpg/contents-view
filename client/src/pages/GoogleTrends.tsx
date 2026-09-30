@@ -36,6 +36,7 @@ export default function GoogleTrends() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTrend, setSelectedTrend] = useState<TrendItem | null>(null);
+  const [visibleCount, setVisibleCount] = useState(30);
 
   // Fetch Google Trends data
   const { data: trendsData, isLoading: isTrendsLoading, error: trendsError } = trpc.googleTrends.realtimeTrending.useQuery(
@@ -43,6 +44,7 @@ export default function GoogleTrends() {
     {
       enabled: true,
       retry: 1,
+      refetchInterval: 10 * 60 * 1000,
     }
   );
 
@@ -51,10 +53,10 @@ export default function GoogleTrends() {
     if (trendsData?.success && trendsData.data && trendsData.data.length > 0) {
       setPopularSearches(trendsData.data);
       setError(null);
-      const matchedTrend = selectedKeywordFromUrl
-        ? trendsData.data.find((item: TrendItem) => item.keyword === selectedKeywordFromUrl)
-        : null;
-      setSelectedTrend(matchedTrend || null);
+      setSelectedTrend(previous => {
+        const keyword = selectedKeywordFromUrl || previous?.keyword;
+        return keyword ? trendsData.data.find((item: TrendItem) => item.keyword === keyword) || null : null;
+      });
     } else if (trendsData?.success && (!trendsData.data || trendsData.data.length === 0)) {
       setError("실시간 인기 검색어 데이터를 불러올 수 없습니다.");
       setPopularSearches([]);
@@ -79,6 +81,8 @@ export default function GoogleTrends() {
   const handleCountryChange = (newCountry: string) => {
     setSelectedCountry(newCountry);
     setSelectedKeywordFromUrl("");
+    setSelectedTrend(null);
+    setVisibleCount(30);
   };
 
   const handleSelectTrend = (item: TrendItem | null) => {
@@ -104,7 +108,7 @@ export default function GoogleTrends() {
           Google Trends
         </h1>
         <p className="pageDescription">
-          Google Trends RSS 기반으로 현재 급상승 중인 검색어를 확인하세요.
+          최근 24시간 검색어를 검색량순으로 확인하세요.
         </p>
       </div>
 
@@ -112,7 +116,7 @@ export default function GoogleTrends() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold text-foreground">
-            실시간 인기 검색어
+            최근 24시간 검색어
           </h2>
           <div className="flex gap-2 overflow-x-auto pb-2">
             {countries.map((country) => (
@@ -158,12 +162,12 @@ export default function GoogleTrends() {
                     <div className="col-span-3 text-slate-400 text-sm font-medium">검색량</div>
                     <div className="col-span-2 text-slate-400 text-sm font-medium text-right">자세히</div>
                   </div>
-                  {popularSearches.map((item, idx) => (
+                  {popularSearches.slice(0, visibleCount).map((item, idx) => (
                     <div
-                      key={item.rank}
+                      key={item.keyword}
                       className={`grid grid-cols-12 gap-4 p-4 items-center hover:bg-slate-900/20 transition cursor-pointer ${
-                        selectedTrend?.rank === item.rank ? "bg-slate-900/40 border-l-2 border-blue-600" : ""
-                      } ${idx < popularSearches.length - 1 ? "border-b border-slate-800" : ""}`}
+                        selectedTrend?.keyword === item.keyword ? "bg-slate-900/40 border-l-2 border-blue-600" : ""
+                      } ${idx < Math.min(popularSearches.length, visibleCount) - 1 ? "border-b border-slate-800" : ""}`}
                       onClick={() => handleSelectTrend(item)}
                     >
                       <div className="col-span-1 text-xl font-bold text-slate-300">{item.rank}</div>
@@ -186,11 +190,11 @@ export default function GoogleTrends() {
 
                 {/* 모바일 카드형 */}
                 <div className="md:hidden space-y-3 p-4">
-                  {popularSearches.map((item) => (
+                  {popularSearches.slice(0, visibleCount).map((item) => (
                     <div
-                      key={item.rank}
+                      key={item.keyword}
                       className={`p-4 rounded-lg bg-slate-900/20 border transition cursor-pointer ${
-                        selectedTrend?.rank === item.rank
+                        selectedTrend?.keyword === item.keyword
                           ? "border-blue-600 bg-slate-900/40"
                           : "border-slate-800 hover:bg-slate-900/40"
                       }`}
@@ -199,7 +203,7 @@ export default function GoogleTrends() {
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div className="text-xl font-bold text-slate-300 w-8 flex-shrink-0">{item.rank}</div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-foreground font-medium truncate">{item.keyword}</p>
+                          <p className="text-foreground font-medium break-words">{item.keyword}</p>
                         </div>
                       </div>
                       <div className="flex items-center justify-between gap-3">
@@ -218,6 +222,13 @@ export default function GoogleTrends() {
                   ))}
                 </div>
               </div>
+              {popularSearches.length > visibleCount && (
+                <div className="mt-4 text-center">
+                  <Button variant="outline" onClick={() => setVisibleCount(count => count + 30)}>
+                    더보기
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* 오른쪽: 상세 정보 박스 */}
@@ -228,7 +239,7 @@ export default function GoogleTrends() {
                   <div className="flex-1 min-w-0">
                     <h3 className="text-xl font-bold text-foreground truncate">{selectedTrend.keyword}</h3>
                     <p className="text-slate-400 text-sm mt-1">
-                      순위 {selectedTrend.rank} · 검색량 {selectedTrend.traffic || "-"} · Google Trends
+                      검색량 순위 {selectedTrend.rank} · 검색량 {selectedTrend.traffic || "-"} · Google Trends
                     </p>
                   </div>
                   <button

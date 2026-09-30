@@ -15,6 +15,7 @@ import { createHmac } from "crypto";
 import { eq } from "drizzle-orm";
 import { users } from "../drizzle/schema";
 import { getStoredYouTubeRisingVideos, isYouTubeTopicChannel, scoreRisingCandidates, selectBalancedRisingVideos, syncYouTubeRecommendedHistory } from "./youtubeRising";
+import { GOOGLE_TREND_HISTORY_MS, parseGoogleTrendTraffic, rankGoogleTrends, type GoogleTrendItem } from "./googleTrendsHistory";
 
 const require = createRequire(import.meta.url);
 
@@ -22,7 +23,7 @@ const NAVER_SEARCH_AD_PROVIDER = "naver-search-ad";
 const BLOG_ANALYSIS_POST_LIMIT = 6;
 const BLOG_RANK_SEARCH_LIMIT = 100;
 
-const supabaseAdminForNaverKeys =
+const supabaseAdmin =
   ENV.supabaseUrl && ENV.supabaseServiceRoleKey
     ? createClient(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
         auth: {
@@ -119,9 +120,9 @@ function normalizeNaverSearchAdInput(input: {
 }
 
 async function getStoredNaverSearchAdCredentials() {
-  if (!supabaseAdminForNaverKeys) return null;
+  if (!supabaseAdmin) return null;
 
-  const { data: successData, error: successError } = await supabaseAdminForNaverKeys
+  const { data: successData, error: successError } = await supabaseAdmin
     .from("user_api_keys")
     .select("encrypted_key")
     .eq("provider", NAVER_SEARCH_AD_PROVIDER)
@@ -140,7 +141,7 @@ async function getStoredNaverSearchAdCredentials() {
     return parseNaverSearchAdCredentials(successData.encrypted_key);
   }
 
-  const { data, error } = await supabaseAdminForNaverKeys
+  const { data, error } = await supabaseAdmin
     .from("user_api_keys")
     .select("encrypted_key")
     .eq("provider", NAVER_SEARCH_AD_PROVIDER)
@@ -812,8 +813,94 @@ async function fetchNaverBlogPostDetails(postUrl: string) {
 }
 
 // Google Trends RSS 캐시
-const googleTrendsCache: Record<string, { data: Array<{ rank: number; keyword: string }>; timestamp: number }> = {};
+const googleTrendsCache: Record<string, { data: GoogleTrendItem[]; timestamp: number }> = {};
 const CACHE_TTL = 10 * 60 * 1000; // 10분
+
+type StoredGoogleTrend = {
+  keyword_key: string;
+  keyword: string;
+  traffic: string;
+  traffic_count: number;
+  news: unknown;
+  last_seen_at: string;
+};
+
+async function loadGoogleTrendHistory(countryCode: string, cutoff: string): Promise<StoredGoogleTrend[]> {
+  if (!supabaseAdmin) return [];
+
+  const rows: StoredGoogleTrend[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await supabaseAdmin
+      .from("google_trend_history")
+      .select("keyword_key,keyword,traffic,traffic_count,news,last_seen_at")
+      .eq("country_code", countryCode)
+      .gte("last_seen_at", cutoff)
+      .order("last_seen_at", { ascending: false })
+      .range(offset, offset + 999);
+    if (error) throw error;
+    rows.push(...(data ?? []));
+    if (!data || data.length < 1000) break;
+  }
+  return rows;
+}
+
+async function mergeGoogleTrendHistory(
+  countryCode: string,
+  current: Omit<GoogleTrendItem, "rank">[],
+  now: number,
+): Promise<GoogleTrendItem[]> {
+  if (!supabaseAdmin) return rankGoogleTrends(current);
+
+  const cutoff = new Date(now - GOOGLE_TREND_HISTORY_MS).toISOString();
+  const currentKeys = new Set(current.map(item => item.keyword.normalize("NFKC").toLocaleLowerCase()));
+  try {
+    if (current.length > 0) {
+      const { error } = await supabaseAdmin.from("google_trend_history").upsert(
+        current.map(item => ({
+          country_code: countryCode,
+          keyword_key: item.keyword.normalize("NFKC").toLocaleLowerCase(),
+          keyword: item.keyword,
+          traffic: item.traffic,
+          traffic_count: item.trafficCount,
+          news: item.news,
+          last_seen_at: item.lastSeenAt,
+        })),
+        { onConflict: "country_code,keyword_key" },
+      );
+      if (error) throw error;
+    }
+
+    const history = await loadGoogleTrendHistory(countryCode, cutoff);
+    const { error: pruneError } = await supabaseAdmin
+      .from("google_trend_history")
+      .delete()
+      .lt("last_seen_at", cutoff);
+    if (pruneError) console.error("[Google Trends RSS] History cleanup failed:", pruneError);
+
+    return rankGoogleTrends([
+      ...current,
+      ...history
+        .filter(row => !currentKeys.has(row.keyword_key))
+        .map(row => ({
+          keyword: row.keyword,
+          traffic: row.traffic,
+          trafficCount: Number(row.traffic_count) || 0,
+          news: Array.isArray(row.news) ? row.news : [],
+          source: "Google Trends",
+          country: countryCode,
+          isCurrent: false,
+          lastSeenAt: row.last_seen_at,
+        })),
+    ]);
+  } catch (error) {
+    console.error("[Google Trends RSS] History storage unavailable:", error);
+    return rankGoogleTrends(current);
+  }
+}
+
+async function getGoogleTrendHistoryFallback(countryCode: string): Promise<GoogleTrendItem[]> {
+  return mergeGoogleTrendHistory(countryCode, [], Date.now());
+}
 
 // 국가별 Google Trends RSS URL
 const GOOGLE_TRENDS_RSS_URLS: Record<string, string> = {
@@ -831,7 +918,7 @@ const GOOGLE_TRENDS_RSS_URLS: Record<string, string> = {
 /**
  * Get Google Trends realtime trending searches from RSS
  */
-async function getGoogleTrendingSearches(countryCode: string = "KR"): Promise<Array<{ rank: number; keyword: string; source: string; country: string }>> {
+async function getGoogleTrendingSearches(countryCode: string = "KR"): Promise<GoogleTrendItem[]> {
   try {
     const cacheKey = `google_trends_${countryCode}`;
     const now = Date.now();
@@ -839,12 +926,7 @@ async function getGoogleTrendingSearches(countryCode: string = "KR"): Promise<Ar
     // 캐시 확인
     if (googleTrendsCache[cacheKey] && now - googleTrendsCache[cacheKey].timestamp < CACHE_TTL) {
       console.log(`[Google Trends RSS] Cache HIT for country: ${countryCode}`);
-      const cachedData = googleTrendsCache[cacheKey].data;
-      return cachedData.map(item => ({
-        ...item,
-        source: "Google Trends",
-        country: countryCode,
-      }));
+      return googleTrendsCache[cacheKey].data;
     }
     
     const rssUrl = GOOGLE_TRENDS_RSS_URLS[countryCode];
@@ -864,7 +946,7 @@ async function getGoogleTrendingSearches(countryCode: string = "KR"): Promise<Ar
     
     if (!response.ok) {
       console.error(`[Google Trends RSS] HTTP Error: ${response.status}`);
-      return [];
+      return getGoogleTrendHistoryFallback(countryCode);
     }
     
     const rssText = await response.text();
@@ -878,12 +960,11 @@ async function getGoogleTrendingSearches(countryCode: string = "KR"): Promise<Ar
     const newsTitleRegex = /<ht:news_item_title>([^<]+)<\/ht:news_item_title>/;
     const newsSourceRegex = /<ht:news_item_source>([^<]+)<\/ht:news_item_source>/;
     
-    const items = [];
+    const items: Omit<GoogleTrendItem, "rank">[] = [];
     let match;
-    let rank = 1;
     let itemCount = 0;
     
-    while ((match = itemRegex.exec(rssText)) !== null && rank <= 20) {
+    while ((match = itemRegex.exec(rssText)) !== null && itemCount < 20) {
       itemCount++;
       const itemContent = match[1];
       const titleMatch = titleRegex.exec(itemContent);
@@ -925,12 +1006,15 @@ async function getGoogleTrendingSearches(countryCode: string = "KR"): Promise<Ar
           }
           
           items.push({
-            rank: rank,
             keyword: keyword,
             traffic: traffic,
+            trafficCount: parseGoogleTrendTraffic(traffic),
             news: newsArray,
+            source: "Google Trends",
+            country: countryCode,
+            isCurrent: true,
+            lastSeenAt: new Date(now).toISOString(),
           });
-          rank++;
         }
       }
     }
@@ -938,29 +1022,26 @@ async function getGoogleTrendingSearches(countryCode: string = "KR"): Promise<Ar
     console.log(`[Google Trends RSS] RSS item count: ${itemCount}`);
     console.log(`[Google Trends RSS] Parsed keywords: ${items.length}`);
     console.log(`[Google Trends RSS] Final keywords: ${items.length}`);
+
+    const uniqueItems = Array.from(new Map(items.map(item => [item.keyword.normalize("NFKC").toLocaleLowerCase(), item])).values());
     
-    if (items.length === 0) {
-      console.warn(`[Google Trends RSS] No keywords parsed for country: ${countryCode}`);
-      return [];
-    }
+    if (items.length === 0) console.warn(`[Google Trends RSS] No keywords parsed for country: ${countryCode}`);
+
+    const rankedItems = await mergeGoogleTrendHistory(countryCode, uniqueItems, now);
     
     // 캐시에 저장
     googleTrendsCache[cacheKey] = {
-      data: items,
+      data: rankedItems,
       timestamp: now,
     };
     
-    console.log(`[Google Trends RSS] Success - fetched ${items.length} trending searches for ${countryCode}`);
+    console.log(`[Google Trends RSS] Success - fetched ${uniqueItems.length} current, ${rankedItems.length} total for ${countryCode}`);
     
-    return items.map(item => ({
-      ...item,
-      source: "Google Trends",
-      country: countryCode,
-    }));
+    return rankedItems;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : "Unknown error";
     console.error(`[Google Trends RSS] Error fetching realtime trends for ${countryCode}:`, errorMsg);
-    return [];
+    return getGoogleTrendHistoryFallback(countryCode);
   }
 }
 
