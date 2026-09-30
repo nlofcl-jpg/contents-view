@@ -182,7 +182,7 @@ export function MobileMenuDrawer({
 
                   <button
                     className="mobileNavItem subNavItem"
-                    onClick={() => handleNavigation("#")}
+                    onClick={() => handleNavigation("/trends/google")}
                     type="button"
                   >
                     <span>Google Trends</span>

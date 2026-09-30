@@ -897,6 +897,63 @@ a {
   z-index: 8;
 }
 
+@media (min-width: 1361px) and (max-width: 1500px) {
+  .headerNavMenu {
+    gap: 16px;
+  }
+
+  .profileText {
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1360px) {
+  .header {
+    height: 64px;
+    padding: 0;
+  }
+
+  .header .desktopOnly {
+    display: none;
+  }
+
+  .mobileMenuButtonWrapper {
+    position: absolute;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .header .mobileHeaderIconButton,
+  .header .mobileMenuButtonLeft {
+    display: flex;
+  }
+
+  .header .mobileNoticePopover {
+    display: block;
+  }
+
+  .headerBrand {
+    gap: 10px;
+  }
+
+  .headerBrandLogo {
+    width: 38px;
+    height: 38px;
+  }
+
+  .headerBrandText {
+    font-size: 21px;
+  }
+}
+
 .headerNavItem {
   position: relative;
 }
