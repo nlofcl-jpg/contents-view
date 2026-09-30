@@ -1327,6 +1327,10 @@ a {
     linear-gradient(90deg, rgba(7, 10, 17, 0.94) 0%, rgba(7, 10, 17, 0.82) 45%, rgba(7, 10, 17, 0.42) 100%);
 }
 
+.heroMenuOpen {
+  z-index: 7;
+}
+
 .hero::before {
   content: "";
   position: absolute;

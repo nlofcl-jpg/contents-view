@@ -38,7 +38,7 @@ export default function Hero() {
   };
 
   return (
-    <section className="hero">
+    <section className={`hero${isPlatformMenuOpen ? " heroMenuOpen" : ""}`}>
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
         <div className="heroCopy">
           <p className="heroKicker">TRACK. ANALYZE. DISCOVER.</p>
