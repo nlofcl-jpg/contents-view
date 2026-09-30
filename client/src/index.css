@@ -2782,7 +2782,9 @@ a {
 }
 
 .issueScrollTopButton {
-  position: relative;
+  position: sticky;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 1;
   display: grid;
   width: 40px;
   height: 40px;
