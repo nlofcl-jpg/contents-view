@@ -351,21 +351,21 @@ a {
 @media (max-width: 768px) {
   .siteFooter {
     margin-top: 20px;
-    padding-top: 24px;
+    padding-top: 8px;
   }
 
   .siteFooterInner {
-    grid-template-columns: 1fr;
-    gap: 24px;
-  }
-
-  .siteFooterNav {
     display: none;
   }
 
   .siteFooterBottom {
-    flex-direction: column;
-    gap: 6px;
+    margin-top: 0;
+    padding-top: 8px;
+    border-top: 0;
+  }
+
+  .siteFooterBottom span:last-child {
+    display: none;
   }
 }
 
