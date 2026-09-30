@@ -360,8 +360,7 @@ a {
   }
 
   .siteFooterNav {
-    grid-template-columns: 1fr 1fr;
-    gap: 18px;
+    display: none;
   }
 
   .siteFooterBottom {
