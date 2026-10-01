@@ -132,21 +132,24 @@ function CommunitySourceMark({ name }: { name?: string }) {
 function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoSelect?: (video: any) => void }) {
   const [, setLocation] = useLocation();
   const isYouTubeCard = card.id === "youtube";
+  const isSearchCard = card.id === "search";
   const isCommunityCard = card.id === "community";
-  const isFeaturedCard = isYouTubeCard || isCommunityCard;
+  const isNewsCard = card.id === "news";
+  const isFeaturedCard = isYouTubeCard || isSearchCard || isCommunityCard || isNewsCard;
+  const glassRowClass = "trend-glass-row rounded-lg backdrop-blur-sm";
 
   return (
-    <article className={`group relative rounded-lg border p-5 shadow-[0_22px_70px_rgba(0,0,0,0.22)] transition-colors ${isFeaturedCard ? "border-blue-400/30 bg-[#0c1423] hover:border-blue-400/50" : "border-blue-500/20 bg-slate-950/50 hover:border-blue-400/40 hover:bg-slate-950/70"}`}>
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <div className={`flex min-w-0 items-center ${isCommunityCard ? "gap-2" : "gap-3"}`}>
+    <article className={`group relative rounded-lg border p-5 ${isFeaturedCard ? "trend-glass-card backdrop-blur-md" : "border-blue-500/20 bg-slate-950/50 shadow-[0_22px_70px_rgba(0,0,0,0.22)] transition-colors hover:border-blue-400/40 hover:bg-slate-950/70"}`}>
+      <div className={`mb-5 flex items-center justify-between gap-3 ${isFeaturedCard ? "min-h-10" : ""}`}>
+        <div className={`flex min-w-0 items-center ${isCommunityCard || isNewsCard ? "gap-2" : "gap-3"}`}>
           <div
-            className={`flex shrink-0 items-center justify-center ${isCommunityCard ? "h-8 w-8" : "h-10 w-10"} ${
-              card.brandIcon || isCommunityCard ? "" : "rounded-lg bg-blue-500/15 text-blue-300"
+            className={`flex shrink-0 items-center justify-center ${isCommunityCard || isNewsCard ? "h-8 w-8" : "h-10 w-10"} ${
+              card.brandIcon || isCommunityCard || isNewsCard ? "" : "rounded-lg bg-blue-500/15 text-blue-300"
             }`}
           >
             {card.icon}
           </div>
-          <h3 className={`truncate font-semibold text-white ${isCommunityCard ? "text-sm" : "text-lg"}`}>{card.title}</h3>
+          <h3 className={`truncate font-semibold text-white ${isCommunityCard || isNewsCard ? "text-sm" : "text-lg"}`}>{card.title}</h3>
         </div>
         {isFeaturedCard ? (
           <button
@@ -166,7 +169,7 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
       <div className="space-y-2">
         {card.loading ? (
           Array.from({ length: 5 }).map((_, index) => (
-            <div key={index} className={`flex items-center gap-3 rounded-md border border-slate-800/70 bg-slate-900/35 p-2.5 ${isFeaturedCard ? "h-[72px]" : "min-h-[62px]"}`}>
+            <div key={index} className={`flex items-center gap-3 p-2.5 ${isFeaturedCard ? `h-[72px] ${glassRowClass}` : "min-h-[62px] rounded-md border border-slate-800/70 bg-slate-900/35"}`}>
               <div className="h-6 w-6 rounded-full bg-slate-800/80" />
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="h-3 w-4/5 rounded bg-slate-800/80" />
@@ -175,13 +178,30 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
             </div>
           ))
         ) : card.rows.length > 0 ? (
-          card.rows.map((row, index) => isCommunityCard ? (
+          card.rows.map((row, index) => isSearchCard ? (
+            <button
+              key={`${card.id}-${index}-${row.label}`}
+              type="button"
+              className={`grid h-[72px] w-full grid-cols-[24px_minmax(0,1fr)_auto] items-center gap-2 py-1.5 pl-1.5 pr-3.5 text-left ${glassRowClass}`}
+              onClick={() => row.detailHref && setLocation(row.detailHref)}
+              aria-label={`${index + 1}위 ${row.label} 자세히`}
+            >
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-400/20 text-xs font-bold text-blue-100">{index + 1}</span>
+              <span className="min-w-0">
+                <span className="block min-w-0 truncate text-sm font-semibold leading-5 text-slate-100" title={row.label}>{row.label}</span>
+              </span>
+              <span className="inline-flex shrink-0 items-center gap-2">
+                {row.googleTraffic && <GoogleTrendTraffic traffic={row.googleTraffic.traffic} trafficCount={row.googleTraffic.trafficCount} className="shrink-0 text-xs" />}
+                {row.detailHref && <span className="text-[11px] font-semibold text-slate-500">자세히</span>}
+              </span>
+            </button>
+          ) : isCommunityCard ? (
             <a
               key={`${card.id}-${index}-${row.label}`}
               href={row.externalHref || card.href}
               target={row.externalHref ? "_blank" : undefined}
               rel={row.externalHref ? "noopener noreferrer" : undefined}
-              className="grid h-[72px] w-full grid-cols-[18px_40px_minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-blue-400/20 bg-[#101c30] p-1.5 text-left transition-colors hover:border-blue-400/50 hover:bg-[#14243c]"
+              className={`grid h-[72px] w-full grid-cols-[18px_40px_minmax(0,1fr)_auto] items-center gap-2 py-1.5 pl-1.5 pr-3.5 text-left ${glassRowClass}`}
               aria-label={`${index + 1}위 ${row.label} 원문 보기`}
             >
               <span className="text-center text-base font-bold text-blue-300">{index + 1}</span>
@@ -200,7 +220,7 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
             <button
               key={`${card.id}-${index}-${row.label}`}
               type="button"
-              className="grid w-full grid-cols-[76px_minmax(0,1fr)] items-center gap-2 rounded-lg border border-blue-400/20 bg-[#101c30] p-1.5 text-left transition-colors hover:border-blue-400/50 hover:bg-[#14243c]"
+              className={`grid w-full grid-cols-[76px_minmax(0,1fr)] items-center gap-2 p-1.5 text-left ${glassRowClass}`}
               onClick={() => row.video && onVideoSelect?.(row.video)}
               aria-label={`${index + 1}위 ${row.label} 분석 보기`}
             >
@@ -227,7 +247,7 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
           ) : (
             <div
               key={`${card.id}-${index}-${row.label}`}
-              className={`flex min-h-[62px] items-center gap-3 rounded-md border border-slate-800/70 bg-slate-900/25 p-2.5 ${(row.video || row.externalHref) ? "cursor-pointer transition-colors hover:border-blue-400/40 hover:bg-slate-900/55" : ""}`}
+              className={`flex items-center gap-3 p-2.5 ${isNewsCard ? `h-[72px] ${glassRowClass}` : "min-h-[62px] rounded-md border border-slate-800/70 bg-slate-900/25"} ${(row.video || row.externalHref) ? `cursor-pointer ${isNewsCard ? "" : "transition-colors hover:border-blue-400/40 hover:bg-slate-900/55"}` : ""}`}
               role={(row.video || row.externalHref) ? "button" : undefined}
               tabIndex={(row.video || row.externalHref) ? 0 : undefined}
               aria-label={row.video ? `${row.label} 분석 보기` : undefined}
@@ -290,7 +310,7 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
             </div>
           ))
         ) : (
-          <div className="rounded-md border border-slate-800/70 bg-slate-900/25 p-4 text-sm text-slate-400">
+          <div className={`p-4 text-sm text-slate-400 ${isFeaturedCard ? glassRowClass : "rounded-md border border-slate-800/70 bg-slate-900/25"}`}>
             {card.emptyText}
           </div>
         )}
@@ -441,7 +461,7 @@ export default function ServiceCards() {
       title: "뉴스 & 이슈",
       badge: "주요 이슈",
       href: "/news",
-      icon: <Newspaper className="h-5 w-5" />,
+      icon: <Newspaper className="h-7 w-7 text-sky-400" />,
       rows: newsRows,
       loading: newsQuery.isLoading,
       emptyText: "최신 뉴스를 불러오지 못했습니다.",
