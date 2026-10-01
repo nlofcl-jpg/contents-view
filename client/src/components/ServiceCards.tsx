@@ -18,6 +18,7 @@ type TrendRow = {
   minimal?: boolean;
   risingScore?: boolean;
   googleTraffic?: { traffic: string; trafficCount?: number };
+  durationText?: string | null;
 };
 
 type TrendCard = {
@@ -87,11 +88,33 @@ function formatCommunityDate(value?: string | null) {
   return normalized.split(/\s+/)[0] || null;
 }
 
+function formatVideoAge(value?: string | null) {
+  if (!value) return null;
+  const elapsedMinutes = Math.floor((Date.now() - new Date(value).getTime()) / 60_000);
+  if (!Number.isFinite(elapsedMinutes) || elapsedMinutes < 0) return null;
+  if (elapsedMinutes < 60) return `${Math.max(1, elapsedMinutes)}분 전`;
+  if (elapsedMinutes < 1_440) return `${Math.floor(elapsedMinutes / 60)}시간 전`;
+  return `${Math.floor(elapsedMinutes / 1_440)}일 전`;
+}
+
+function formatVideoDuration(value?: string | null) {
+  const match = value?.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
+  if (!match) return null;
+  const hours = Number(match[1] || 0);
+  const minutes = Number(match[2] || 0);
+  const seconds = Number(match[3] || 0);
+  if (!hours && !minutes && !seconds) return null;
+  return hours
+    ? `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+    : `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
 function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoSelect?: (video: any) => void }) {
   const [, setLocation] = useLocation();
+  const isYouTubeCard = card.id === "youtube";
 
   return (
-    <article className="group relative rounded-lg border border-blue-500/20 bg-slate-950/50 p-5 shadow-[0_22px_70px_rgba(0,0,0,0.22)] transition-colors hover:border-blue-400/40 hover:bg-slate-950/70">
+    <article className={`group relative rounded-lg border p-5 shadow-[0_22px_70px_rgba(0,0,0,0.22)] transition-colors ${isYouTubeCard ? "border-blue-400/30 bg-[#0c1423] hover:border-blue-400/50" : "border-blue-500/20 bg-slate-950/50 hover:border-blue-400/40 hover:bg-slate-950/70"}`}>
       <div className="mb-5 flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <div
@@ -103,9 +126,19 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
           </div>
           <h3 className="truncate text-lg font-semibold text-white">{card.title}</h3>
         </div>
-        <span className="shrink-0 rounded-full border border-blue-500/30 px-3 py-1 text-xs font-semibold text-blue-300">
-          {card.badge}
-        </span>
+        {isYouTubeCard ? (
+          <button
+            type="button"
+            className="inline-flex shrink-0 items-center gap-1 text-xs text-slate-400 transition-colors hover:text-blue-300"
+            onClick={() => setLocation(card.href)}
+          >
+            더보기 <ArrowRight size={14} aria-hidden="true" />
+          </button>
+        ) : (
+          <span className="shrink-0 rounded-full border border-blue-500/30 px-3 py-1 text-xs font-semibold text-blue-300">
+            {card.badge}
+          </span>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -120,7 +153,32 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
             </div>
           ))
         ) : card.rows.length > 0 ? (
-          card.rows.map((row, index) => (
+          card.rows.map((row, index) => isYouTubeCard ? (
+            <button
+              key={`${card.id}-${index}-${row.label}`}
+              type="button"
+              className="flex h-[64px] w-full items-center gap-2 border-b border-slate-700/35 px-0.5 text-left transition-colors last:border-0 hover:bg-blue-400/5"
+              onClick={() => row.video && onVideoSelect?.(row.video)}
+              aria-label={`${index + 1}위 ${row.label} 분석 보기`}
+            >
+              <span className={`w-4 shrink-0 text-center text-sm font-bold ${index === 0 ? "text-rose-400" : index === 1 ? "text-cyan-400" : index === 2 ? "text-amber-400" : "text-slate-400"}`}>
+                {index + 1}
+              </span>
+              <span className="relative h-10 w-[62px] shrink-0 overflow-hidden rounded bg-slate-800">
+                {row.image && <img src={row.image} alt="" className="h-full w-full object-cover" loading="lazy" />}
+                {row.durationText && <span className="absolute bottom-0.5 right-0.5 rounded bg-black/80 px-1 text-[9px] leading-4 text-white">{row.durationText}</span>}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-xs font-semibold text-slate-100">{row.label}</span>
+                {row.meta && <span className="mt-1 block truncate text-[10px] text-slate-400">{row.meta}</span>}
+              </span>
+              {row.rightValue && (
+                <span className="inline-flex shrink-0 items-center gap-0.5 text-[11px] font-bold text-rose-400" aria-label={`상승 지수 ${row.rightValue}`}>
+                  <TrendingUp size={12} aria-hidden="true" />{row.rightValue}
+                </span>
+              )}
+            </button>
+          ) : (
             <div
               key={`${card.id}-${index}-${row.label}`}
               className={`flex min-h-[62px] items-center gap-3 rounded-md border border-slate-800/70 bg-slate-900/25 p-2.5 ${(row.video || row.externalHref) ? "cursor-pointer transition-colors hover:border-blue-400/40 hover:bg-slate-900/55" : ""}`}
@@ -192,14 +250,14 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
         )}
       </div>
 
-      <button
+      {!isYouTubeCard && <button
         type="button"
         onClick={() => setLocation(card.href)}
         className="mx-auto mt-3 flex items-center justify-center gap-1 text-[11px] font-medium text-slate-500 transition-colors hover:text-blue-200"
       >
         더보기
         <ArrowRight className="h-3 w-3" />
-      </button>
+      </button>}
     </article>
   );
 }
@@ -245,10 +303,15 @@ export default function ServiceCards() {
     const videos = (youtubeRisingQuery.data as any)?.videos || [];
     return videos.slice(0, 5).map((video: any) => ({
       label: stripHtml(video.title),
+      meta: [
+        Number.isFinite(Number(video.viewCount)) ? `조회수 ${new Intl.NumberFormat("ko-KR", { notation: "compact", maximumFractionDigits: 1 }).format(Number(video.viewCount))}` : null,
+        formatVideoAge(video.publishedAt),
+      ].filter(Boolean).join(" · "),
       rightValue: video.discoveryScore !== null && video.discoveryScore !== undefined
         ? String(Math.round(Number(video.discoveryScore)))
         : undefined,
       image: video.thumbnail,
+      durationText: formatVideoDuration(video.duration),
       video,
       minimal: true,
       risingScore: true,
@@ -287,7 +350,7 @@ export default function ServiceCards() {
   const cards: TrendCard[] = [
     {
       id: "youtube",
-      title: "YouTube",
+      title: "급상승 영상",
       badge: "급상승 영상",
       href: "/trends/youtube?tab=rising",
       icon: <YouTubeLogo />,
