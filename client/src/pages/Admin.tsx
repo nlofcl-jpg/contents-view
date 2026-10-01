@@ -5,7 +5,7 @@ import { useLocation } from "wouter";
 import { Bold, ImagePlus, X } from "lucide-react";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
 import IssueBody from "@/components/IssueBody";
-import { removeStoredIssueImages, uploadIssueImage, validateIssueImage } from "@/lib/issueImages";
+import { getStoredIssueImagePath, removeStoredIssueImages, uploadIssueImage, validateIssueImage, validateIssueImageUrl } from "@/lib/issueImages";
 import { formatIssueBodyLines, parseIssueBodyLine, type IssueBodySize } from "@shared/issueBody";
 
 type AdminTab = "notices" | "issues" | "users" | "apiKeys";
@@ -195,7 +195,9 @@ function IssuesPanel() {
   const [bodyCursor, setBodyCursor] = useState(0);
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [imageMode, setImageMode] = useState<"upload" | "url">("upload");
   const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null);
+  const [imagePreviewError, setImagePreviewError] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -214,6 +216,10 @@ function IssuesPanel() {
     setThumbnailPreviewUrl(previewUrl);
     return () => URL.revokeObjectURL(previewUrl);
   }, [thumbnailFile]);
+
+  useEffect(() => {
+    setImagePreviewError(false);
+  }, [thumbnailFile, thumbnailUrl]);
 
   const currentBodyLineStart = summary.lastIndexOf("\n", bodyCursor - 1) + 1;
   const currentBodyLineEnd = summary.indexOf("\n", bodyCursor);
@@ -276,6 +282,7 @@ function IssuesPanel() {
     setSummary("");
     setThumbnailUrl("");
     setThumbnailFile(null);
+    setImageMode("upload");
     setIsPublished(false);
     setIsFormOpen(false);
   };
@@ -286,6 +293,7 @@ function IssuesPanel() {
     setSummary(issue.summary);
     setThumbnailUrl(issue.thumbnail_url ?? "");
     setThumbnailFile(null);
+    setImageMode(issue.thumbnail_url && !getStoredIssueImagePath(issue.thumbnail_url) ? "url" : "upload");
     setIsPublished(issue.is_published);
     setIsFormOpen(true);
     setError(null);
@@ -299,12 +307,28 @@ function IssuesPanel() {
     setIsFormOpen(true);
   };
 
+  const handleImageModeChange = (mode: "upload" | "url") => {
+    if (mode === imageMode) return;
+    setImageMode(mode);
+    setThumbnailFile(null);
+    setThumbnailUrl("");
+    setError(null);
+  };
+
   const handleSave = async () => {
     if (!supabase || !user) return;
     if (!title.trim() || !summary.trim()) {
       setError("제목과 본문을 입력하세요.");
       setMessage(null);
       return;
+    }
+    if (imageMode === "url") {
+      const urlError = validateIssueImageUrl(thumbnailUrl);
+      if (urlError) {
+        setError(urlError);
+        setMessage(null);
+        return;
+      }
     }
 
     setIsSaving(true);
@@ -315,7 +339,7 @@ function IssuesPanel() {
     let uploadedImageUrl: string | null = null;
 
     try {
-      if (thumbnailFile) {
+      if (imageMode === "upload" && thumbnailFile) {
         const uploaded = await uploadIssueImage(thumbnailFile);
         uploadedImageUrl = uploaded.url;
       }
@@ -332,7 +356,7 @@ function IssuesPanel() {
       source_name: null,
       article_title: null,
       article_summary: null,
-      thumbnail_url: uploadedImageUrl || thumbnailUrl || null,
+      thumbnail_url: uploadedImageUrl || thumbnailUrl.trim() || null,
       is_published: isPublished,
       registration_status: "complete" as const,
     };
@@ -558,11 +582,31 @@ function IssuesPanel() {
         {summary.trim() && (
           <div className="issueBodyPreview">
             <span className="issueBodyPreviewLabel">상세페이지 미리보기</span>
-            <IssueBody value={summary.trim()} />
+            <div className="issueBodyPreviewContent">
+              <IssueBody value={summary.trim()} />
+            </div>
           </div>
         )}
         <div>
           <span className="mb-2 block text-sm font-medium text-slate-300">썸네일 이미지</span>
+          <div className="mb-3 inline-flex rounded-md border border-slate-700 bg-slate-950/70 p-0.5" role="group" aria-label="이미지 등록 방식">
+            <button
+              type="button"
+              aria-pressed={imageMode === "upload"}
+              className={`rounded px-3 py-1.5 text-xs transition ${imageMode === "upload" ? "bg-blue-500/25 text-white" : "text-slate-400 hover:text-white"}`}
+              onClick={() => handleImageModeChange("upload")}
+            >
+              이미지 첨부
+            </button>
+            <button
+              type="button"
+              aria-pressed={imageMode === "url"}
+              className={`rounded px-3 py-1.5 text-xs transition ${imageMode === "url" ? "bg-blue-500/25 text-white" : "text-slate-400 hover:text-white"}`}
+              onClick={() => handleImageModeChange("url")}
+            >
+              이미지 주소
+            </button>
+          </div>
           <input
             ref={imageInputRef}
             type="file"
@@ -582,16 +626,30 @@ function IssuesPanel() {
               setThumbnailFile(file);
             }}
           />
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-blue-400 hover:text-white"
-              onClick={() => imageInputRef.current?.click()}
-            >
-              <ImagePlus size={16} aria-hidden="true" />
-              이미지 첨부
-            </button>
-            {(thumbnailFile || thumbnailUrl) && (
+          {imageMode === "upload" ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-blue-400 hover:text-white"
+                onClick={() => imageInputRef.current?.click()}
+              >
+                <ImagePlus size={16} aria-hidden="true" />
+                파일 선택
+              </button>
+              {thumbnailFile && <span className="min-w-0 truncate text-xs text-slate-400">{thumbnailFile.name}</span>}
+            </div>
+          ) : (
+            <input
+              type="url"
+              aria-label="썸네일 이미지 주소"
+              className="w-full rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-400"
+              placeholder="https://example.com/image.jpg"
+              value={thumbnailUrl}
+              onChange={event => setThumbnailUrl(event.target.value)}
+            />
+          )}
+          {(thumbnailFile || thumbnailUrl) && (
+            <div className="mt-2 flex items-center gap-3">
               <button
                 type="button"
                 className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-red-300"
@@ -600,16 +658,17 @@ function IssuesPanel() {
                 <X size={14} aria-hidden="true" />
                 이미지 제거
               </button>
-            )}
-            {thumbnailFile && <span className="min-w-0 truncate text-xs text-slate-400">{thumbnailFile.name}</span>}
-          </div>
-          {(thumbnailPreviewUrl || thumbnailUrl) && (
+            </div>
+          )}
+          {(thumbnailPreviewUrl || (thumbnailUrl && !validateIssueImageUrl(thumbnailUrl))) && !imagePreviewError && (
             <img
               src={thumbnailPreviewUrl || thumbnailUrl}
               alt="썸네일 미리보기"
               className="mt-3 max-h-56 max-w-full object-contain"
+              onError={() => setImagePreviewError(true)}
             />
           )}
+          {imagePreviewError && <p className="mt-2 text-xs text-amber-300">이미지를 불러올 수 없습니다. 주소와 공개 설정을 확인해 주세요.</p>}
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" className="primaryButton" onClick={handleSave} disabled={isSaving}>

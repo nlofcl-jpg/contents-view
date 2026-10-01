@@ -15,6 +15,17 @@ export function validateIssueImage(file: File): string | null {
   return null;
 }
 
+export function validateIssueImageUrl(value: string): string | null {
+  if (!value.trim()) return null;
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol === "http:" || url.protocol === "https:") return null;
+  } catch {
+    // Invalid URLs are handled by the shared error below.
+  }
+  return "이미지 주소는 http 또는 https URL로 입력해 주세요.";
+}
+
 export function getStoredIssueImagePath(url: string, supabaseUrl = import.meta.env.VITE_SUPABASE_URL): string | null {
   if (!supabaseUrl) return null;
 

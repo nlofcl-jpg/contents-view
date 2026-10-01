@@ -2933,8 +2933,17 @@ a {
   font-size: 12px;
 }
 
-.issueBodyPreview .issueDetailSummary {
+.issueBodyPreviewContent {
+  height: 220px;
+  min-height: 120px;
+  overflow: auto;
+  resize: vertical;
   margin-top: 12px;
+  padding-right: 8px;
+}
+
+.issueBodyPreviewContent .issueDetailSummary {
+  margin-top: 0;
 }
 
 .issueDetailArticle > .issueDetailSummary:first-child {

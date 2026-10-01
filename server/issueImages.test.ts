@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getStoredIssueImagePath, MAX_ISSUE_IMAGE_SIZE, validateIssueImage } from "../client/src/lib/issueImages";
+import { getStoredIssueImagePath, MAX_ISSUE_IMAGE_SIZE, validateIssueImage, validateIssueImageUrl } from "../client/src/lib/issueImages";
 
 describe("issue image uploads", () => {
   it("accepts supported image formats and rejects other files", () => {
@@ -10,6 +10,14 @@ describe("issue image uploads", () => {
   it("rejects files larger than the upload limit", () => {
     const largeImage = new File([new Uint8Array(MAX_ISSUE_IMAGE_SIZE + 1)], "issue.jpg", { type: "image/jpeg" });
     expect(validateIssueImage(largeImage)).toMatch(/5MB/);
+  });
+
+  it("accepts external image URLs but rejects unsafe or malformed schemes", () => {
+    expect(validateIssueImageUrl("https://images.example.com/issue.webp")).toBeNull();
+    expect(validateIssueImageUrl(" http://images.example.com/issue.png ")).toBeNull();
+    expect(validateIssueImageUrl("")).toBeNull();
+    expect(validateIssueImageUrl("javascript:alert(1)")).toMatch(/http/);
+    expect(validateIssueImageUrl("not-a-url")).toMatch(/http/);
   });
 
   it("only cleans up images in the configured public bucket", () => {
