@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowRight, Newspaper, TrendingUp, Users } from "lucide-react";
+import { ArrowRight, Flame, MessageCircle, Newspaper, TrendingUp } from "lucide-react";
 import { useLocation } from "wouter";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
 import { GoogleTrendTraffic } from "@/components/GoogleTrendTraffic";
@@ -19,6 +19,8 @@ type TrendRow = {
   googleTraffic?: { traffic: string; trafficCount?: number };
   durationText?: string | null;
   channelTitle?: string | null;
+  communityName?: string;
+  communityMetric?: { label: string; value: string };
 };
 
 type TrendCard = {
@@ -76,8 +78,8 @@ function formatCommunityDate(value?: string | null) {
   if (!value) return null;
   const normalized = String(value).trim();
   const dateMatch = normalized.match(/(\d{4}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}[./-]\d{1,2})/);
-  if (dateMatch) return dateMatch[1].replaceAll("-", ".");
-  if (/^\d+\s*분/.test(normalized) || /^\d+\s*시간/.test(normalized) || normalized.includes("방금")) return "오늘";
+  if (dateMatch) return dateMatch[1].replace(/^\d{4}[./-]/, "").replaceAll("-", ".");
+  if (/^\d+\s*(분|시간)\s*전/.test(normalized) || normalized.includes("방금")) return normalized;
   if (normalized.includes("어제")) return "어제";
 
   const parsed = new Date(normalized);
@@ -109,12 +111,32 @@ function formatVideoDuration(value?: string | null) {
     : `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
+function formatCommunityMetric(value: number) {
+  return new Intl.NumberFormat("ko-KR", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+}
+
+function CommunitySourceMark({ name }: { name?: string }) {
+  const sources: Record<string, { initials: string; color: string }> = {
+    "디시인사이드": { initials: "dc", color: "bg-blue-700" },
+    "뽐뿌": { initials: "pp", color: "bg-cyan-700" },
+    "네이트판": { initials: "판", color: "bg-orange-600" },
+    "루리웹": { initials: "R", color: "bg-blue-600" },
+    "인벤": { initials: "in", color: "bg-indigo-600" },
+    "보배드림": { initials: "bb", color: "bg-sky-700" },
+    "웃긴대학": { initials: "웃대", color: "bg-emerald-700" },
+  };
+  const source = sources[name || ""] || { initials: name?.slice(0, 2) || "?", color: "bg-slate-700" };
+  return <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-sm font-bold text-white ${source.color}`} aria-hidden="true">{source.initials}</span>;
+}
+
 function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoSelect?: (video: any) => void }) {
   const [, setLocation] = useLocation();
   const isYouTubeCard = card.id === "youtube";
+  const isCommunityCard = card.id === "community";
+  const isFeaturedCard = isYouTubeCard || isCommunityCard;
 
   return (
-    <article className={`group relative rounded-lg border p-5 shadow-[0_22px_70px_rgba(0,0,0,0.22)] transition-colors ${isYouTubeCard ? "border-blue-400/30 bg-[#0c1423] hover:border-blue-400/50" : "border-blue-500/20 bg-slate-950/50 hover:border-blue-400/40 hover:bg-slate-950/70"}`}>
+    <article className={`group relative rounded-lg border p-5 shadow-[0_22px_70px_rgba(0,0,0,0.22)] transition-colors ${isFeaturedCard ? "border-blue-400/30 bg-[#0c1423] hover:border-blue-400/50" : "border-blue-500/20 bg-slate-950/50 hover:border-blue-400/40 hover:bg-slate-950/70"}`}>
       <div className="mb-5 flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <div
@@ -126,7 +148,7 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
           </div>
           <h3 className="truncate text-lg font-semibold text-white">{card.title}</h3>
         </div>
-        {isYouTubeCard ? (
+        {isFeaturedCard ? (
           <button
             type="button"
             className="inline-flex shrink-0 items-center gap-1 text-xs text-slate-400 transition-colors hover:text-blue-300"
@@ -144,7 +166,7 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
       <div className="space-y-2">
         {card.loading ? (
           Array.from({ length: 5 }).map((_, index) => (
-            <div key={index} className="flex min-h-[62px] items-center gap-3 rounded-md border border-slate-800/70 bg-slate-900/35 p-2.5">
+            <div key={index} className={`flex items-center gap-3 rounded-md border border-slate-800/70 bg-slate-900/35 p-2.5 ${isFeaturedCard ? "h-[72px]" : "min-h-[62px]"}`}>
               <div className="h-6 w-6 rounded-full bg-slate-800/80" />
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="h-3 w-4/5 rounded bg-slate-800/80" />
@@ -153,7 +175,28 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
             </div>
           ))
         ) : card.rows.length > 0 ? (
-          card.rows.map((row, index) => isYouTubeCard ? (
+          card.rows.map((row, index) => isCommunityCard ? (
+            <a
+              key={`${card.id}-${index}-${row.label}`}
+              href={row.externalHref || card.href}
+              target={row.externalHref ? "_blank" : undefined}
+              rel={row.externalHref ? "noopener noreferrer" : undefined}
+              className="grid h-[72px] w-full grid-cols-[18px_40px_minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-blue-400/20 bg-[#101c30] p-1.5 text-left transition-colors hover:border-blue-400/50 hover:bg-[#14243c]"
+              aria-label={`${index + 1}위 ${row.label} 원문 보기`}
+            >
+              <span className="text-center text-base font-bold text-blue-300">{index + 1}</span>
+              <CommunitySourceMark name={row.communityName} />
+              <span className="flex min-w-0 flex-col justify-center gap-1">
+                <span className="block min-w-0 truncate text-xs font-semibold leading-4 text-slate-100" title={row.label}>{row.label}</span>
+                <span className="block min-w-0 truncate text-[10px] leading-4 text-slate-400">{row.meta}</span>
+              </span>
+              {row.communityMetric && (
+                <span className="inline-flex shrink-0 items-center gap-0.5 text-xs font-bold text-rose-400" aria-label={`${row.communityMetric.label} ${row.communityMetric.value}`}>
+                  <Flame size={12} aria-hidden="true" />{row.communityMetric.value}
+                </span>
+              )}
+            </a>
+          ) : isYouTubeCard ? (
             <button
               key={`${card.id}-${index}-${row.label}`}
               type="button"
@@ -253,7 +296,7 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
         )}
       </div>
 
-      {!isYouTubeCard && <button
+      {!isFeaturedCard && <button
         type="button"
         onClick={() => setLocation(card.href)}
         className="mx-auto mt-3 flex items-center justify-center gap-1 text-[11px] font-medium text-slate-500 transition-colors hover:text-blue-200"
@@ -284,10 +327,16 @@ export default function ServiceCards() {
     { retry: 1, refetchOnWindowFocus: false }
   );
 
-  const communityQuery = trpc.community.getDcinside.useQuery(
-    { sort: "popular" },
-    { retry: 1, refetchOnWindowFocus: false }
-  );
+  const communityQueryOptions = { retry: 1, staleTime: 10 * 60 * 1000, refetchOnWindowFocus: false } as const;
+  const dcinsideQuery = trpc.community.getDcinside.useQuery({ sort: "popular" }, communityQueryOptions);
+  const ppomppuQuery = trpc.community.getPpomppu.useQuery(undefined, communityQueryOptions);
+  const natepannQuery = trpc.community.getNatePann.useQuery({ sort: "popular" }, communityQueryOptions);
+  const ruliwebQuery = trpc.community.getRuliweb.useQuery({ sort: "popular" }, communityQueryOptions);
+  const invenQuery = trpc.community.getInven.useQuery({ sort: "popular" }, communityQueryOptions);
+  const bobaedreamQuery = trpc.community.getBobaedream.useQuery({ sort: "popular" }, communityQueryOptions);
+  const humorunivQuery = trpc.community.getHumorUniv.useQuery({ sort: "popular" }, communityQueryOptions);
+  const communityLoading = [dcinsideQuery, ppomppuQuery, natepannQuery, ruliwebQuery, invenQuery, bobaedreamQuery, humorunivQuery]
+    .some((query) => query.isPending);
 
   const newsQuery = trpc.news.getLatestNews.useQuery(
     { category: "all", limit: 5 },
@@ -324,13 +373,24 @@ export default function ServiceCards() {
   }, [googleTrendsQuery.data]);
 
   const communityRows = useMemo<TrendRow[]>(() => {
-    const posts = (communityQuery.data as any)?.data || [];
-    return posts.slice(0, 5).map((post: any) => ({
+    const responses = [
+      dcinsideQuery.data, ppomppuQuery.data, natepannQuery.data, ruliwebQuery.data,
+      invenQuery.data, bobaedreamQuery.data, humorunivQuery.data,
+    ];
+    const posts = responses.flatMap((response) => response?.success ? response.data || [] : []);
+    const popularity = (post: any) =>
+      Number(post.reactionCount || 0) * 2 + Number(post.commentCount || 0) * 1.5
+      + (typeof post.viewCount === "number" ? post.viewCount : 0) * 0.1;
+    return posts.sort((a: any, b: any) => popularity(b) - popularity(a)).slice(0, 5).map((post: any) => ({
       label: stripHtml(post.title),
-      meta: [post.community, formatCommunityDate(post.time), post.commentCount ? `댓글 ${post.commentCount}` : null].filter(Boolean).join(" · "),
+      meta: [post.community, formatCommunityDate(post.time)].filter(Boolean).join(" · "),
       externalHref: post.url && post.url !== "#" ? post.url : undefined,
+      communityName: post.community,
+      communityMetric: Number(post.reactionCount) > 0
+        ? { label: "추천", value: formatCommunityMetric(Number(post.reactionCount)) }
+        : { label: "조회수", value: typeof post.viewCount === "number" ? formatCommunityMetric(post.viewCount) : String(post.viewCount || 0) },
     }));
-  }, [communityQuery.data]);
+  }, [dcinsideQuery.data, ppomppuQuery.data, natepannQuery.data, ruliwebQuery.data, invenQuery.data, bobaedreamQuery.data, humorunivQuery.data]);
 
   const newsRows = useMemo<TrendRow[]>(() => {
     const news = Array.isArray(newsQuery.data) ? newsQuery.data : [];
@@ -370,12 +430,12 @@ export default function ServiceCards() {
     },
     {
       id: "community",
-      title: "커뮤니티 반응",
-      badge: "실시간 버즈",
+      title: "커뮤니티 트렌드",
+      badge: "커뮤니티 트렌드",
       href: "/community",
-      icon: <Users className="h-5 w-5" />,
+      icon: <MessageCircle className="h-5 w-5" />,
       rows: communityRows,
-      loading: communityQuery.isLoading,
+      loading: communityLoading,
       emptyText: "커뮤니티 인기글을 불러오지 못했습니다.",
     },
     {
