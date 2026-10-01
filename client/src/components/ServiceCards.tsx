@@ -19,6 +19,7 @@ type TrendRow = {
   risingScore?: boolean;
   googleTraffic?: { traffic: string; trafficCount?: number };
   durationText?: string | null;
+  channelTitle?: string | null;
 };
 
 type TrendCard = {
@@ -157,24 +158,25 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
             <button
               key={`${card.id}-${index}-${row.label}`}
               type="button"
-              className="flex h-[64px] w-full items-center gap-2 border-b border-slate-700/35 px-0.5 text-left transition-colors last:border-0 hover:bg-blue-400/5"
+              className="flex min-h-[92px] w-full items-center gap-3 rounded-lg border border-blue-400/20 bg-[#101c30] p-2.5 text-left transition-colors hover:border-blue-400/50 hover:bg-[#14243c]"
               onClick={() => row.video && onVideoSelect?.(row.video)}
               aria-label={`${index + 1}위 ${row.label} 분석 보기`}
             >
-              <span className={`w-4 shrink-0 text-center text-sm font-bold ${index === 0 ? "text-rose-400" : index === 1 ? "text-cyan-400" : index === 2 ? "text-amber-400" : "text-slate-400"}`}>
-                {index + 1}
-              </span>
-              <span className="relative h-10 w-[62px] shrink-0 overflow-hidden rounded bg-slate-800">
+              <span className="relative h-[68px] w-[96px] shrink-0 overflow-hidden rounded-md bg-slate-800 sm:h-[76px] sm:w-[116px]">
                 {row.image && <img src={row.image} alt="" className="h-full w-full object-cover" loading="lazy" />}
-                {row.durationText && <span className="absolute bottom-0.5 right-0.5 rounded bg-black/80 px-1 text-[9px] leading-4 text-white">{row.durationText}</span>}
+                <span className={`absolute left-0 top-0 flex h-6 min-w-6 items-center justify-center px-1 text-xs font-bold text-white ${index === 0 ? "bg-rose-500" : "bg-blue-500"}`}>
+                  {index + 1}
+                </span>
+                {row.durationText && <span className="absolute bottom-1 right-1 rounded bg-black/80 px-1 text-[10px] leading-4 text-white">{row.durationText}</span>}
               </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-xs font-semibold text-slate-100">{row.label}</span>
-                {row.meta && <span className="mt-1 block truncate text-[10px] text-slate-400">{row.meta}</span>}
+              <span className="min-w-0 flex-1 space-y-1">
+                <span className="block truncate text-sm font-semibold text-slate-100">{row.label}</span>
+                {row.channelTitle && <span className="block truncate text-[11px] text-slate-400">{row.channelTitle}</span>}
+                {row.meta && <span className="block truncate text-[11px] text-slate-400">{row.meta}</span>}
               </span>
               {row.rightValue && (
-                <span className="inline-flex shrink-0 items-center gap-0.5 text-[11px] font-bold text-rose-400" aria-label={`상승 지수 ${row.rightValue}`}>
-                  <TrendingUp size={12} aria-hidden="true" />{row.rightValue}
+                <span className="inline-flex shrink-0 items-center gap-0.5 text-sm font-bold text-rose-400" aria-label={`상승 지수 ${row.rightValue}`}>
+                  <TrendingUp size={14} aria-hidden="true" />{row.rightValue}
                 </span>
               )}
             </button>
@@ -312,6 +314,7 @@ export default function ServiceCards() {
         : undefined,
       image: video.thumbnail,
       durationText: formatVideoDuration(video.duration),
+      channelTitle: stripHtml(video.channelTitle),
       video,
       minimal: true,
       risingScore: true,
@@ -407,7 +410,7 @@ export default function ServiceCards() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           {cards.map((card) => (
             <TrendDashboardCard key={card.id} card={card} onVideoSelect={setSelectedVideo} />
           ))}
