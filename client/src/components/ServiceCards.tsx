@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowRight, Flame, MessageCircle, Newspaper, TrendingUp } from "lucide-react";
+import { ArrowRight, MessageCircle, MessageCircleMore, Newspaper, ThumbsUp, TrendingUp } from "lucide-react";
 import { useLocation } from "wouter";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
 import { GoogleTrendTraffic } from "@/components/GoogleTrendTraffic";
@@ -111,22 +111,22 @@ function formatVideoDuration(value?: string | null) {
     : `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
-function formatCommunityMetric(value: number) {
-  return new Intl.NumberFormat("ko-KR", { notation: "compact", maximumFractionDigits: 1 }).format(value);
-}
-
 function CommunitySourceMark({ name }: { name?: string }) {
-  const sources: Record<string, { initials: string; color: string }> = {
-    "디시인사이드": { initials: "dc", color: "bg-blue-700" },
-    "뽐뿌": { initials: "pp", color: "bg-cyan-700" },
-    "네이트판": { initials: "판", color: "bg-orange-600" },
-    "루리웹": { initials: "R", color: "bg-blue-600" },
-    "인벤": { initials: "in", color: "bg-indigo-600" },
-    "보배드림": { initials: "bb", color: "bg-sky-700" },
-    "웃긴대학": { initials: "웃대", color: "bg-emerald-700" },
+  const sources: Record<string, { image: string; background: string }> = {
+    "디시인사이드": { image: "/community-dcinside.png", background: "bg-[#222f60]" },
+    "뽐뿌": { image: "/community-ppomppu.png", background: "bg-white" },
+    "네이트판": { image: "/community-natepann.png", background: "bg-[#525252]" },
+    "루리웹": { image: "/community-ruliweb.png", background: "bg-[#0e2040]" },
+    "인벤": { image: "/community-inven.png", background: "bg-white" },
+    "보배드림": { image: "/community-bobaedream.png", background: "bg-[#116fa6]" },
+    "웃긴대학": { image: "/community-humoruniv.png", background: "bg-white" },
   };
-  const source = sources[name || ""] || { initials: name?.slice(0, 2) || "?", color: "bg-slate-700" };
-  return <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-sm font-bold text-white ${source.color}`} aria-hidden="true">{source.initials}</span>;
+  const source = sources[name || ""];
+  return (
+    <span className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md ${source?.background || "bg-slate-700"}`} aria-hidden="true">
+      {source ? <img src={source.image} alt="" className="h-full w-full object-contain p-1" loading="lazy" /> : <MessageCircle size={20} className="text-white" />}
+    </span>
+  );
 }
 
 function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoSelect?: (video: any) => void }) {
@@ -138,15 +138,15 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
   return (
     <article className={`group relative rounded-lg border p-5 shadow-[0_22px_70px_rgba(0,0,0,0.22)] transition-colors ${isFeaturedCard ? "border-blue-400/30 bg-[#0c1423] hover:border-blue-400/50" : "border-blue-500/20 bg-slate-950/50 hover:border-blue-400/40 hover:bg-slate-950/70"}`}>
       <div className="mb-5 flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
+        <div className={`flex min-w-0 items-center ${isCommunityCard ? "gap-2" : "gap-3"}`}>
           <div
-            className={`flex h-10 w-10 shrink-0 items-center justify-center ${
-              card.brandIcon ? "" : "rounded-lg bg-blue-500/15 text-blue-300"
+            className={`flex shrink-0 items-center justify-center ${isCommunityCard ? "h-8 w-8" : "h-10 w-10"} ${
+              card.brandIcon || isCommunityCard ? "" : "rounded-lg bg-blue-500/15 text-blue-300"
             }`}
           >
             {card.icon}
           </div>
-          <h3 className="truncate text-lg font-semibold text-white">{card.title}</h3>
+          <h3 className={`truncate font-semibold text-white ${isCommunityCard ? "text-sm" : "text-lg"}`}>{card.title}</h3>
         </div>
         {isFeaturedCard ? (
           <button
@@ -192,7 +192,7 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
               </span>
               {row.communityMetric && (
                 <span className="inline-flex shrink-0 items-center gap-0.5 text-xs font-bold text-rose-400" aria-label={`${row.communityMetric.label} ${row.communityMetric.value}`}>
-                  <Flame size={12} aria-hidden="true" />{row.communityMetric.value}
+                  <ThumbsUp size={12} aria-hidden="true" />{row.communityMetric.value}
                 </span>
               )}
             </a>
@@ -386,9 +386,7 @@ export default function ServiceCards() {
       meta: [post.community, formatCommunityDate(post.time)].filter(Boolean).join(" · "),
       externalHref: post.url && post.url !== "#" ? post.url : undefined,
       communityName: post.community,
-      communityMetric: Number(post.reactionCount) > 0
-        ? { label: "추천", value: formatCommunityMetric(Number(post.reactionCount)) }
-        : { label: "조회수", value: typeof post.viewCount === "number" ? formatCommunityMetric(post.viewCount) : String(post.viewCount || 0) },
+      communityMetric: { label: "좋아요", value: (Number(post.reactionCount) || 0).toLocaleString("ko-KR") },
     }));
   }, [dcinsideQuery.data, ppomppuQuery.data, natepannQuery.data, ruliwebQuery.data, invenQuery.data, bobaedreamQuery.data, humorunivQuery.data]);
 
@@ -433,7 +431,7 @@ export default function ServiceCards() {
       title: "커뮤니티 트렌드",
       badge: "커뮤니티 트렌드",
       href: "/community",
-      icon: <MessageCircle className="h-5 w-5" />,
+      icon: <MessageCircleMore className="h-7 w-7 text-sky-400" />,
       rows: communityRows,
       loading: communityLoading,
       emptyText: "커뮤니티 인기글을 불러오지 못했습니다.",
