@@ -8498,39 +8498,32 @@ input[type="date"].youtubeSelect {
 }
 
 .aiStudioTabs {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 28px;
-  width: 100%;
-  border-bottom: 1px solid rgba(120, 151, 204, 0.18);
+  align-self: center;
+  gap: 0;
+  width: auto;
+  padding: 4px;
+  border: 1px solid rgba(71, 85, 105, 0.8);
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.55);
 }
 
 .aiStudioTab {
-  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 42px;
-  padding: 0 2px;
+  height: 36px;
+  min-width: 92px;
+  padding: 0 20px;
   border: 0;
-  border-radius: 0;
+  border-radius: 999px;
   background: transparent;
-  color: #8492aa;
-  font-size: 15px;
+  color: #8391a7;
+  font-size: 14px;
   font-weight: 400;
   cursor: pointer;
-  transition: color 0.18s ease;
-}
-
-.aiStudioTab::after {
-  position: absolute;
-  right: 0;
-  bottom: -1px;
-  left: 0;
-  height: 2px;
-  background: transparent;
-  content: "";
-  transition: background 0.18s ease;
+  transition: background 0.18s ease, color 0.18s ease;
 }
 
 .aiStudioTab:hover,
@@ -8538,8 +8531,9 @@ input[type="date"].youtubeSelect {
   color: #f2f7ff;
 }
 
-.aiStudioTab.active::after {
-  background: #2586ff;
+.aiStudioTab.active {
+  background: #2563eb;
+  box-shadow: 0 8px 18px rgba(15, 62, 150, 0.32);
 }
 
 .aiStudioPanel {
@@ -8663,12 +8657,7 @@ input[type="date"].youtubeSelect {
 }
 
 @media (max-width: 639px) {
-  .aiStudioTabs {
-    gap: 22px;
-  }
-
   .aiStudioTab {
-    height: 38px;
     font-size: 14px;
   }
 

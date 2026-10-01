@@ -75,22 +75,22 @@ export default function AIStudio() {
         <button
           type="button"
           role="tab"
+          aria-selected={activeTab === "upcoming"}
+          aria-controls="ai-studio-upcoming"
+          className={`aiStudioTab ${activeTab === "upcoming" ? "active" : ""}`}
+          onClick={() => handleTabChange("upcoming")}
+        >
+          영상 제작
+        </button>
+        <button
+          type="button"
+          role="tab"
           aria-selected={activeTab === "programs"}
           aria-controls="ai-studio-programs"
           className={`aiStudioTab ${activeTab === "programs" ? "active" : ""}`}
           onClick={() => handleTabChange("programs")}
         >
           프로그램
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "upcoming"}
-          aria-controls="ai-studio-upcoming"
-          className={`aiStudioTab ${activeTab === "upcoming" ? "active" : ""}`}
-          onClick={() => handleTabChange("upcoming")}
-        >
-          준비중
         </button>
       </div>
 
