@@ -530,8 +530,7 @@ function IssuesPanel() {
 
       {isFormOpen && (
       <div className="space-y-4 rounded-lg border border-slate-800 bg-slate-900/60 p-5">
-        <div className="flex items-center justify-between gap-4">
-          <h3 className="text-base font-medium text-slate-100">{editingId ? "이슈 수정" : "새 이슈 등록"}</h3>
+        <div className="flex justify-end">
           <button
             type="button"
             className="text-xs text-slate-400 hover:text-slate-100"
@@ -544,14 +543,14 @@ function IssuesPanel() {
           <span className="mb-2 block text-sm font-medium text-slate-300">제목</span>
           <div className="flex gap-2">
             <input
-              className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-400"
+              className="h-10 min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none focus:border-blue-400"
               placeholder="이슈 제목"
               value={title}
               onChange={event => setTitle(event.target.value)}
             />
             <AdminSelect
               aria-label="공개 상태"
-              className="w-24 rounded-md border border-slate-700 bg-slate-950/80 px-2 text-sm text-slate-200 outline-none focus:border-blue-400"
+              className="h-10 w-[88px] rounded-md border border-slate-700 bg-slate-950/80 pl-2 text-sm text-slate-200 outline-none focus:border-blue-400"
               value={isPublished ? "published" : "private"}
               onChange={event => setIsPublished(event.target.value === "published")}
             >
