@@ -806,10 +806,12 @@ function NoticePanel() {
       .order("created_at", { ascending: false });
 
     if (loadError) {
-      setError(loadError.message);
+      console.error("[Notices] Failed to load notices", loadError);
+      setError("공지를 불러오지 못했습니다.");
       return;
     }
 
+    setError(null);
     setNotices(data ?? []);
   };
 
@@ -860,7 +862,8 @@ function NoticePanel() {
     setIsSaving(false);
 
     if (saveError) {
-      setError(saveError.message);
+      console.error("[Notices] Failed to save notice", saveError);
+      setError("공지를 저장하지 못했습니다.");
       return;
     }
 
@@ -877,7 +880,8 @@ function NoticePanel() {
     const { error: deleteError } = await supabase.from("notices").delete().eq("id", notice.id);
 
     if (deleteError) {
-      setError(deleteError.message);
+      console.error("[Notices] Failed to delete notice", deleteError);
+      setError("공지를 삭제하지 못했습니다.");
       return;
     }
 
@@ -976,9 +980,8 @@ function NoticePanel() {
       </div>
       )}
 
-      <div>
-        {filteredNotices.length > 0 ? (
-          <div className="overflow-hidden rounded-md border border-slate-800">
+      {filteredNotices.length > 0 && (
+        <div className="overflow-hidden rounded-md border border-slate-800">
             <div className="grid grid-cols-[minmax(0,1fr)_92px_128px] gap-3 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs text-slate-500">
               <span>제목</span>
               <span>생성일</span>
@@ -1006,11 +1009,8 @@ function NoticePanel() {
                 </div>
               </article>
             ))}
-          </div>
-        ) : (
-          <p className="text-sm text-slate-500">조건에 맞는 공지가 없습니다.</p>
-        )}
-      </div>
+        </div>
+      )}
     </section>
   );
 }
