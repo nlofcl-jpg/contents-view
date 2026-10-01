@@ -1438,6 +1438,39 @@ export const appRouter = router({
   }),
 
   youtube: router({
+    getCollectedRisingVideos: publicProcedure
+      .input(z.object({
+        regionCode: z.string().min(2).max(2),
+        videoCategoryId: z.number().optional(),
+        period: z.enum(["realtime", "1h", "6h", "24h"]).default("1h"),
+        subscriberRange: z.enum(["all", "lt10k", "10k-100k", "100k-1m", "gt1m"]).default("all"),
+        sortBy: z.enum(["score", "hourly", "outlier", "newest"]).default("score"),
+        maxResults: z.number().min(1).max(50).default(30),
+      }))
+      .query(async ({ input }) => {
+        try {
+          const result = await getStoredYouTubeRisingVideos(input);
+          return result || {
+            success: false as const,
+            error: "수집된 급상승 데이터를 사용할 수 없습니다.",
+            videos: [],
+            previousVideos: [],
+            collectedAt: null,
+            metricMode: "collecting" as const,
+          };
+        } catch (error) {
+          console.error("[YouTube rising] Failed to read collected videos", error);
+          return {
+            success: false as const,
+            error: "급상승 영상을 불러오지 못했습니다.",
+            videos: [],
+            previousVideos: [],
+            collectedAt: null,
+            metricMode: "collecting" as const,
+          };
+        }
+      }),
+
     /**
      * Fetch a fresh, normalized analysis payload for every YouTube video modal.
      */

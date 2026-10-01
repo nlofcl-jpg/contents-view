@@ -491,7 +491,7 @@ export default function YouTubeTrends() {
     isLoading: isRisingLoading,
     error: risingError,
     refetch: refetchRising,
-  } = trpc.youtube.getRisingVideos.useQuery(
+  } = trpc.youtube.getCollectedRisingVideos.useQuery(
     {
       regionCode,
       period: risingPeriod as "realtime" | "1h" | "6h" | "24h",
@@ -500,12 +500,9 @@ export default function YouTubeTrends() {
       maxResults: 30,
     },
     {
-      enabled:
-        isAuthenticated &&
-        activeTab === "rising" &&
-        apiKeyData?.exists &&
-        apiKeyData?.testStatus === "success",
-      staleTime: 15 * 60 * 1000,
+      enabled: activeTab === "rising",
+      staleTime: 5 * 60 * 1000,
+      retry: false,
       refetchOnWindowFocus: false,
     }
   );
@@ -1502,20 +1499,11 @@ export default function YouTubeTrends() {
   };
 
   const renderRisingTab = () => {
-    if (!apiKeyData?.exists || apiKeyData?.testStatus !== "success") {
-      return (
-        <div className="emptyStateContainer">
-          <AlertCircle className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">{YOUTUBE_API_KEY_ERROR_MESSAGE}</p>
-        </div>
-      );
-    }
-
     if (isRisingLoading) {
       return (
         <div className="emptyStateContainer">
           <Clock className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">급상승 후보를 분석하는 중입니다...</p>
+          <p className="emptyStateText">수집된 급상승 영상을 불러오는 중입니다...</p>
         </div>
       );
     }
@@ -1525,7 +1513,7 @@ export default function YouTubeTrends() {
       return (
         <div className="emptyStateContainer">
           <AlertCircle className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">{risingDataError || YOUTUBE_API_KEY_ERROR_MESSAGE}</p>
+          <p className="emptyStateText">{risingDataError || "급상승 영상을 불러오지 못했습니다."}</p>
         </div>
       );
     }
@@ -1580,7 +1568,7 @@ export default function YouTubeTrends() {
               </div>
             </div>
           </div>
-          <button
+          {isAuthenticated && <button
             type="button"
             onClick={(event) => {
               event.preventDefault();
@@ -1602,7 +1590,7 @@ export default function YouTubeTrends() {
             aria-label={isBookmarked ? "북마크 해제" : "북마크"}
           >
             <Bookmark size={20} fill={isBookmarked ? "currentColor" : "none"} />
-          </button>
+          </button>}
         </article>
       );
     };
@@ -1610,7 +1598,7 @@ export default function YouTubeTrends() {
       return (
         <div className="emptyStateContainer">
           <AlertCircle className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">선택한 조건에서 새롭게 상승하는 영상을 찾을 수 없습니다.</p>
+          <p className="emptyStateText">선택한 조건의 수집된 급상승 영상이 없습니다.</p>
         </div>
       );
     }
@@ -2036,12 +2024,12 @@ export default function YouTubeTrends() {
       </div>}
 
       {/* Content Section */}
-      {authLoading ? (
+      {activeTab !== "rising" && authLoading ? (
         <div className="emptyStateContainer">
           <Clock className="emptyStateIcon" size={48} />
           <p className="emptyStateText">인증 상태를 확인하는 중입니다...</p>
         </div>
-      ) : !isAuthenticated ? (
+      ) : activeTab !== "rising" && !isAuthenticated ? (
         <div className="emptyStateContainer">
           <AlertCircle className="emptyStateIcon" size={48} />
           <p className="emptyStateText">
@@ -2075,6 +2063,8 @@ export default function YouTubeTrends() {
         </div>
       ) : activeTab === "analysis" ? (
         renderAnalysisTab()
+      ) : activeTab === "rising" ? (
+        renderRisingTab()
       ) : isAuthenticated && !apiKeyData?.exists ? (
         <YouTubeApiStatusCard activeTab={activeTab} apiKeyMessage={TAB_MESSAGES.trending} />
       ) : activeTab === "trending" || activeTab === "category" ? (
@@ -2083,8 +2073,6 @@ export default function YouTubeTrends() {
         renderChannelsTab()
       ) : activeTab === "shorts" ? (
         renderShortsTab()
-      ) : activeTab === "rising" ? (
-        renderRisingTab()
       ) : null}
 
       {/* Video Detail Modal */}
@@ -2095,6 +2083,7 @@ export default function YouTubeTrends() {
           setIsModalOpen(false);
           setSelectedVideo(null);
         }}
+        useStoredSnapshot={activeTab === "rising"}
       />
     </div>
   );

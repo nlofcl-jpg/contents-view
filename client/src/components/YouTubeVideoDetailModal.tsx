@@ -26,6 +26,7 @@ interface YouTubeVideoDetailModalProps {
   video: Video | null;
   isOpen: boolean;
   onClose: () => void;
+  useStoredSnapshot?: boolean;
 }
 
 // Format view count (e.g., 1000000 -> 100만)
@@ -92,13 +93,14 @@ export function YouTubeVideoDetailModal({
   video,
   isOpen,
   onClose,
+  useStoredSnapshot = false,
 }: YouTubeVideoDetailModalProps) {
   const { isAuthenticated } = useAuth();
   const [isLinkCopied, setIsLinkCopied] = useState(false);
   const { data: analysisData, isFetching: isAnalysisFetching } = trpc.youtube.getVideoAnalysis.useQuery(
     { videoId: video?.id || "" },
     {
-      enabled: isAuthenticated && isOpen && Boolean(video?.id),
+      enabled: !useStoredSnapshot && isAuthenticated && isOpen && Boolean(video?.id),
       retry: false,
       staleTime: 5 * 60 * 1000,
       refetchOnWindowFocus: false,

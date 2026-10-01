@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { ArrowRight, Newspaper, TrendingUp, Users } from "lucide-react";
 import { useLocation } from "wouter";
-import { useAuth } from "@/_core/hooks/useAuth";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
 import { GoogleTrendTraffic } from "@/components/GoogleTrendTraffic";
 import { trpc } from "@/lib/trpc";
@@ -267,25 +266,17 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
 }
 
 export default function ServiceCards() {
-  const { isAuthenticated } = useAuth();
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
 
-  const { data: apiKeyData } = trpc.user.apiKey.getWithStatus.useQuery(
-    { provider: "youtube" },
-    { enabled: isAuthenticated, retry: false, refetchOnWindowFocus: false }
-  );
-
-  const canLoadYouTube = Boolean(apiKeyData?.exists && apiKeyData.testStatus === "success");
-
-  const youtubeRisingQuery = trpc.youtube.getRisingVideos.useQuery(
+  const youtubeRisingQuery = trpc.youtube.getCollectedRisingVideos.useQuery(
     {
       regionCode: "KR",
-      period: "1h",
+      period: "realtime",
       subscriberRange: "all",
       sortBy: "score",
       maxResults: 5,
     },
-    { enabled: canLoadYouTube, retry: false, refetchOnWindowFocus: false }
+    { staleTime: 5 * 60 * 1000, retry: false, refetchOnWindowFocus: false }
   );
 
   const googleTrendsQuery = trpc.googleTrends.realtimeTrending.useQuery(
@@ -361,8 +352,10 @@ export default function ServiceCards() {
       icon: <YouTubeLogo />,
       brandIcon: true,
       rows: youtubeRows,
-      loading: canLoadYouTube && youtubeRisingQuery.isLoading,
-      emptyText: isAuthenticated ? "YouTube API key 연결 후 급상승 영상을 표시합니다." : "로그인 후 YouTube API key를 연결하면 급상승 영상을 표시합니다.",
+      loading: youtubeRisingQuery.isLoading,
+      emptyText: youtubeRisingQuery.data && "error" in youtubeRisingQuery.data
+        ? youtubeRisingQuery.data.error
+        : "수집된 급상승 영상이 없습니다.",
     },
     {
       id: "search",
@@ -422,6 +415,7 @@ export default function ServiceCards() {
         video={selectedVideo}
         isOpen={Boolean(selectedVideo)}
         onClose={() => setSelectedVideo(null)}
+        useStoredSnapshot
       />
     </section>
   );

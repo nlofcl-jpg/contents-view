@@ -3821,6 +3821,36 @@ var appRouter = router({
     })
   }),
   youtube: router({
+    getCollectedRisingVideos: publicProcedure.input(z3.object({
+      regionCode: z3.string().min(2).max(2),
+      videoCategoryId: z3.number().optional(),
+      period: z3.enum(["realtime", "1h", "6h", "24h"]).default("1h"),
+      subscriberRange: z3.enum(["all", "lt10k", "10k-100k", "100k-1m", "gt1m"]).default("all"),
+      sortBy: z3.enum(["score", "hourly", "outlier", "newest"]).default("score"),
+      maxResults: z3.number().min(1).max(50).default(30)
+    })).query(async ({ input }) => {
+      try {
+        const result = await getStoredYouTubeRisingVideos(input);
+        return result || {
+          success: false,
+          error: "\uC218\uC9D1\uB41C \uAE09\uC0C1\uC2B9 \uB370\uC774\uD130\uB97C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+          videos: [],
+          previousVideos: [],
+          collectedAt: null,
+          metricMode: "collecting"
+        };
+      } catch (error) {
+        console.error("[YouTube rising] Failed to read collected videos", error);
+        return {
+          success: false,
+          error: "\uAE09\uC0C1\uC2B9 \uC601\uC0C1\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.",
+          videos: [],
+          previousVideos: [],
+          collectedAt: null,
+          metricMode: "collecting"
+        };
+      }
+    }),
     /**
      * Fetch a fresh, normalized analysis payload for every YouTube video modal.
      */
