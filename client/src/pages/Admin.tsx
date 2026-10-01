@@ -1,8 +1,8 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { useLocation } from "wouter";
-import { Bold, ImagePlus, X } from "lucide-react";
+import { Bold, ChevronDown, ImagePlus, X } from "lucide-react";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
 import IssueBody from "@/components/IssueBody";
 import { getStoredIssueImagePath, removeStoredIssueImages, uploadIssueImage, validateIssueImage, validateIssueImageUrl } from "@/lib/issueImages";
@@ -105,6 +105,17 @@ type IssueRecord = {
 type VisibilityFilter = "all" | "published" | "private";
 type SortDirection = "newest" | "oldest";
 
+function AdminSelect({ className = "", children, ...props }: ComponentProps<"select">) {
+  return (
+    <span className="relative inline-flex shrink-0 items-center">
+      <select {...props} className={`${className} appearance-none pr-8`}>
+        {children}
+      </select>
+      <ChevronDown size={14} aria-hidden="true" className="pointer-events-none absolute right-2 text-slate-400" />
+    </span>
+  );
+}
+
 type ManagementToolbarProps = {
   title: string;
   description: string;
@@ -153,7 +164,7 @@ function ManagementToolbar({
       </div>
 
       <div className="flex flex-wrap gap-3 rounded-lg border border-slate-800 bg-slate-950/45 p-5">
-        <select
+        <AdminSelect
           className="h-10 w-[180px] rounded-md border border-slate-700 bg-slate-950/80 px-3 text-sm font-normal text-slate-200 outline-none focus:border-blue-400"
           value={visibility}
           onChange={event => onVisibilityChange(event.target.value as VisibilityFilter)}
@@ -161,15 +172,15 @@ function ManagementToolbar({
           <option value="all">전체 상태</option>
           <option value="published">공개</option>
           <option value="private">비공개</option>
-        </select>
-        <select
+        </AdminSelect>
+        <AdminSelect
           className="h-10 w-[180px] rounded-md border border-slate-700 bg-slate-950/80 px-3 text-sm font-normal text-slate-200 outline-none focus:border-blue-400"
           value={sortDirection}
           onChange={event => onSortChange(event.target.value as SortDirection)}
         >
           <option value="newest">최신 등록순</option>
           <option value="oldest">오래된 등록순</option>
-        </select>
+        </AdminSelect>
         <button
           type="button"
           className="h-10 w-[180px] rounded-md border border-slate-700 px-3 text-sm font-normal text-slate-300 transition hover:border-slate-500 hover:text-white"
@@ -538,7 +549,7 @@ function IssuesPanel() {
               value={title}
               onChange={event => setTitle(event.target.value)}
             />
-            <select
+            <AdminSelect
               aria-label="공개 상태"
               className="w-24 rounded-md border border-slate-700 bg-slate-950/80 px-2 text-sm text-slate-200 outline-none focus:border-blue-400"
               value={isPublished ? "published" : "private"}
@@ -546,7 +557,7 @@ function IssuesPanel() {
             >
               <option value="private">비공개</option>
               <option value="published">공개</option>
-            </select>
+            </AdminSelect>
           </div>
         </label>
         <div>
@@ -555,7 +566,7 @@ function IssuesPanel() {
             <button type="button" onClick={handleBodyBold} title="선택한 글자 굵게" aria-label="선택한 글자 굵게">
               <Bold size={16} aria-hidden="true" />
             </button>
-            <select
+            <AdminSelect
               aria-label="본문 글자 크기"
               title="현재 줄 글자 크기"
               value={currentBodySize}
@@ -564,7 +575,7 @@ function IssuesPanel() {
               <option value="body">본문</option>
               <option value="subtitle">소제목</option>
               <option value="large">큰 소제목</option>
-            </select>
+            </AdminSelect>
           </div>
           <textarea
             id="issue-body"
@@ -737,7 +748,7 @@ function IssuesPanel() {
                 </span>
                 <span className="whitespace-nowrap text-xs text-slate-400">{formatCreatedAt(issue.created_at)}</span>
                 <div className="flex justify-end gap-2 whitespace-nowrap">
-                  <select
+                  <AdminSelect
                     aria-label={`${issue.title} 공개 상태`}
                     className="h-8 w-20 rounded-md border border-slate-700 bg-slate-950/80 px-2 text-xs text-slate-200 outline-none transition focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={publicationChangingIssueId === issue.id}
@@ -746,7 +757,7 @@ function IssuesPanel() {
                   >
                     <option value="private">비공개</option>
                     <option value="published">공개</option>
-                  </select>
+                  </AdminSelect>
                   <button
                     type="button"
                     className="whitespace-nowrap rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:border-blue-400 hover:text-white"
