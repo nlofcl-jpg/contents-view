@@ -1,7 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
-import { trpc } from "@/lib/trpc";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Bold, ImagePlus, X } from "lucide-react";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
@@ -97,72 +96,25 @@ type IssueRecord = {
   id: string;
   title: string;
   summary: string;
-  article_url: string | null;
   thumbnail_url: string | null;
-  article_title: string | null;
-  article_summary: string | null;
   is_published: boolean;
   registration_status: "connecting" | "complete" | "failed";
-  registration_type: "manual" | "clipping";
   created_at: string;
 };
 
 type VisibilityFilter = "all" | "published" | "private";
 type SortDirection = "newest" | "oldest";
-type IssueRegistrationMode = "manual" | "clipping";
-type IssueListMode = "manual" | "clipping";
-
-const CLIPPING_NEWS_SEARCH_INTERVAL_MS = 60_000;
-
-type ClippingEntry = {
-  title: string;
-  summary: string;
-};
-
-function parseClippingEntries(value: string): ClippingEntry[] {
-  const numberedEntryPattern = /^\s*\d{1,2}[.)]\s*(.+)$/;
-  const entries: Array<{ title: string; lines: string[] }> = [];
-  let current: { title: string; lines: string[] } | null = null;
-
-  for (const rawLine of value.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    const match = line.match(numberedEntryPattern);
-
-    if (match) {
-      if (current) entries.push(current);
-      current = { title: match[1].trim(), lines: [] };
-      continue;
-    }
-
-    if (current && line) current.lines.push(line);
-  }
-
-  if (current) entries.push(current);
-
-  return entries
-    .map(entry => ({
-      title: entry.title.replace(/\s+/g, " ").trim(),
-      summary: entry.lines.join(" ").replace(/\s+/g, " ").trim(),
-    }))
-    .filter(entry => entry.title.length > 1)
-    .filter((entry, index, all) => all.findIndex(item => item.title === entry.title) === index)
-    .slice(0, 20)
-    .map(entry => ({ ...entry, summary: entry.summary || entry.title }));
-}
 
 type ManagementToolbarProps = {
   title: string;
   description: string;
   createLabel: string;
-  secondaryCreateLabel?: string;
   visibility: VisibilityFilter;
   sortDirection: SortDirection;
   onCreate: () => void;
-  onSecondaryCreate?: () => void;
   onVisibilityChange: (value: VisibilityFilter) => void;
   onSortChange: (value: SortDirection) => void;
   onReset: () => void;
-  headerRight?: ReactNode;
   placeCreateActionsInFilters?: boolean;
 };
 
@@ -170,28 +122,16 @@ function ManagementToolbar({
   title,
   description,
   createLabel,
-  secondaryCreateLabel,
   visibility,
   sortDirection,
   onCreate,
-  onSecondaryCreate,
   onVisibilityChange,
   onSortChange,
   onReset,
-  headerRight,
   placeCreateActionsInFilters = false,
 }: ManagementToolbarProps) {
   const createActions = (
     <div className="flex flex-wrap items-center gap-2">
-      {secondaryCreateLabel && onSecondaryCreate && (
-        <button
-          type="button"
-          className="inline-flex h-9 items-center gap-1 rounded-md border border-slate-600 bg-slate-900/70 px-3 text-sm font-normal text-slate-200 transition hover:border-slate-400 hover:text-white"
-          onClick={onSecondaryCreate}
-        >
-          <span aria-hidden="true">+</span> {secondaryCreateLabel}
-        </button>
-      )}
       <button
         type="button"
         className="inline-flex h-9 items-center gap-1 rounded-md border border-blue-400/60 bg-blue-500/15 px-3 text-sm font-normal text-blue-100 transition hover:bg-blue-500/25"
@@ -209,7 +149,7 @@ function ManagementToolbar({
           <h2 className="text-2xl font-medium text-white">{title}</h2>
           <p className="mt-2 text-sm font-normal text-slate-400">{description}</p>
         </div>
-        {headerRight ?? (!placeCreateActionsInFilters && createActions)}
+        {!placeCreateActionsInFilters && createActions}
       </div>
 
       <div className="flex flex-wrap gap-3 rounded-lg border border-slate-800 bg-slate-950/45 p-5">
@@ -248,8 +188,6 @@ function IssuesPanel() {
   const [issues, setIssues] = useState<IssueRecord[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [registrationMode, setRegistrationMode] = useState<IssueRegistrationMode>("manual");
-  const [issueListMode, setIssueListMode] = useState<IssueListMode>("manual");
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const bodyInputRef = useRef<HTMLTextAreaElement>(null);
@@ -264,12 +202,8 @@ function IssuesPanel() {
   const [error, setError] = useState<string | null>(null);
   const [visibility, setVisibility] = useState<VisibilityFilter>("all");
   const [sortDirection, setSortDirection] = useState<SortDirection>("newest");
-  const [clippingContent, setClippingContent] = useState("");
-  const [isClippingSaving, setIsClippingSaving] = useState(false);
-  const [reconnectingIssueId, setReconnectingIssueId] = useState<string | null>(null);
   const [publicationChangingIssueId, setPublicationChangingIssueId] = useState<string | null>(null);
   const [selectedIssueIds, setSelectedIssueIds] = useState<Set<string>>(() => new Set());
-  const matchClippingNewsMutation = trpc.news.matchClippingNews.useMutation();
 
   useEffect(() => {
     if (!thumbnailFile) {
@@ -321,7 +255,7 @@ function IssuesPanel() {
 
     const { data, error: loadError } = await supabase
       .from("issues")
-      .select("id,title,summary,article_url,thumbnail_url,article_title,article_summary,is_published,registration_status,registration_type,created_at")
+      .select("id,title,summary,thumbnail_url,is_published,registration_status,created_at")
       .order("created_at", { ascending: false });
 
     if (loadError) {
@@ -344,7 +278,6 @@ function IssuesPanel() {
     setThumbnailFile(null);
     setIsPublished(false);
     setIsFormOpen(false);
-    setRegistrationMode("manual");
   };
 
   const handleEdit = (issue: IssueRecord) => {
@@ -355,7 +288,6 @@ function IssuesPanel() {
     setThumbnailFile(null);
     setIsPublished(issue.is_published);
     setIsFormOpen(true);
-    setRegistrationMode("manual");
     setError(null);
     setMessage(null);
   };
@@ -364,18 +296,6 @@ function IssuesPanel() {
     resetForm();
     setMessage(null);
     setError(null);
-    setIssueListMode("manual");
-    setRegistrationMode("manual");
-    setIsFormOpen(true);
-  };
-
-  const handleClippingCreate = () => {
-    resetForm();
-    setMessage(null);
-    setError(null);
-    setRegistrationMode("clipping");
-    setIssueListMode("clipping");
-    setClippingContent("");
     setIsFormOpen(true);
   };
 
@@ -470,45 +390,6 @@ function IssuesPanel() {
     await loadIssues();
   };
 
-  const handleReconnectIssue = async (issue: IssueRecord) => {
-    if (!supabase) return;
-
-    setReconnectingIssueId(issue.id);
-    setError(null);
-    setMessage(null);
-    await supabase.from("issues").update({ registration_status: "connecting" }).eq("id", issue.id);
-    await loadIssues();
-
-    try {
-      const matches = await matchClippingNewsMutation.mutateAsync({
-        titles: [issue.title],
-        excludeArticleUrls: issue.article_url ? [issue.article_url] : [],
-      });
-      const match = matches[0];
-      const { error: updateError } = await supabase.from("issues").update(
-        match
-          ? {
-              article_url: match.articleUrl,
-              source_name: match.sourceName,
-              article_title: match.articleTitle,
-              article_summary: match.articleSummary,
-              registration_status: "complete",
-              registration_type: "manual",
-            }
-          : { registration_status: "complete" },
-      ).eq("id", issue.id);
-
-      if (updateError) throw updateError;
-      setMessage(match ? `'${issue.title}' 뉴스 재연결 완료` : `'${issue.title}'에 맞는 다른 뉴스 결과가 없어 기존 연결을 유지했습니다.`);
-    } catch (reconnectError) {
-      await supabase.from("issues").update({ registration_status: "failed" }).eq("id", issue.id);
-      setError(reconnectError instanceof Error ? reconnectError.message : "뉴스 다시 연결 중 오류가 발생했습니다.");
-    } finally {
-      setReconnectingIssueId(null);
-      await loadIssues();
-    }
-  };
-
   const handlePublicationChange = async (issue: IssueRecord, nextPublished: boolean) => {
     if (!supabase) return;
     if (issue.is_published === nextPublished) return;
@@ -547,13 +428,12 @@ function IssuesPanel() {
 
   const filteredIssues = useMemo(() => {
     return [...issues]
-      .filter(issue => issue.registration_type === issueListMode)
       .filter(issue => visibility === "all" || (visibility === "published" ? issue.is_published : !issue.is_published))
       .sort((left, right) => {
         const difference = new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
         return sortDirection === "newest" ? difference : -difference;
       });
-  }, [issueListMode, issues, sortDirection, visibility]);
+  }, [issues, sortDirection, visibility]);
 
   const isAllFilteredSelected = filteredIssues.length > 0 && filteredIssues.every(issue => selectedIssueIds.has(issue.id));
 
@@ -592,98 +472,15 @@ function IssuesPanel() {
     await loadIssues();
   };
 
-  const clippingEntries = useMemo(() => parseClippingEntries(clippingContent), [clippingContent]);
-
-  const handleClippingSave = async () => {
-    if (!supabase || !user) return;
-    if (clippingEntries.length === 0) {
-      setError("번호별 이슈 제목을 붙여넣어 주세요.");
-      setMessage(null);
-      return;
-    }
-
-    setIsClippingSaving(true);
-    setError(null);
-    const { data: draftData, error: draftError } = await supabase
-      .from("issues")
-      .insert(clippingEntries.map(entry => ({
-        title: entry.title,
-        summary: entry.summary,
-        article_url: null,
-        source_name: null,
-        is_published: false,
-        registration_status: "connecting",
-        registration_type: "clipping",
-        created_by: user.id,
-      })))
-      .select("id,title");
-
-    if (draftError || !draftData) {
-      setIsClippingSaving(false);
-      setError(draftError?.message ?? "이슈 초안을 저장하지 못했습니다.");
-      return;
-    }
-
-    await loadIssues();
-    setClippingContent("");
-    setIsFormOpen(false);
-    setRegistrationMode("manual");
-    let completedCount = 0;
-    let failedCount = 0;
-
-    for (let index = 0; index < draftData.length; index += 1) {
-      const draft = draftData[index];
-      setMessage(`${draftData.length}개 중 ${index + 1}번째 뉴스 원문 확인 중`);
-
-      try {
-        const matches = await matchClippingNewsMutation.mutateAsync({ titles: [draft.title] });
-        const match = matches[0];
-        const { error: updateError } = await supabase!.from("issues").update(
-          match
-            ? {
-                article_url: match.articleUrl,
-                source_name: match.sourceName,
-                article_title: match.articleTitle,
-                article_summary: match.articleSummary,
-                registration_status: "complete",
-                registration_type: "manual",
-              }
-            : { registration_status: "failed" },
-        ).eq("id", draft.id);
-
-        if (updateError) throw updateError;
-        if (match) completedCount += 1;
-        else failedCount += 1;
-      } catch (matchError) {
-        failedCount += 1;
-        await supabase!.from("issues").update({ registration_status: "failed" }).eq("id", draft.id);
-        console.error("[Issue Clipping] Sequential news match failed", matchError);
-      }
-
-      await loadIssues();
-
-      if (index < draftData.length - 1) {
-        await new Promise(resolve => window.setTimeout(resolve, CLIPPING_NEWS_SEARCH_INTERVAL_MS));
-      }
-    }
-
-    setMessage(
-      failedCount > 0
-        ? `${completedCount}개 등록 완료 · ${failedCount}개 뉴스 미연결`
-        : `${completedCount}개 이슈 등록 완료`,
-    );
-    setIsClippingSaving(false);
-  };
-
   return (
     <section className="space-y-6">
       <ManagementToolbar
-        title={issueListMode === "clipping" ? "클리핑 관리" : "이슈 관리"}
-        description={issueListMode === "clipping" ? "등록된 뉴스 클리핑 초안을 관리하세요." : "수동으로 등록한 이슈를 관리하세요."}
-        createLabel={issueListMode === "clipping" ? "새 클리핑 등록" : "새 이슈 등록"}
+        title="이슈 관리"
+        description="등록된 이슈를 관리하세요."
+        createLabel="새 이슈 등록"
         visibility={visibility}
         sortDirection={sortDirection}
-        onCreate={issueListMode === "clipping" ? handleClippingCreate : handleCreate}
+        onCreate={handleCreate}
         onVisibilityChange={setVisibility}
         onSortChange={setSortDirection}
         onReset={() => {
@@ -691,30 +488,12 @@ function IssuesPanel() {
           setSortDirection("newest");
         }}
         placeCreateActionsInFilters
-        headerRight={
-          <div className="flex items-center gap-1 border-b border-slate-800">
-            <button
-              type="button"
-              className={`border-b-2 px-3 py-2 text-sm transition ${issueListMode === "clipping" ? "border-blue-400 text-white" : "border-transparent text-slate-400 hover:text-slate-100"}`}
-              onClick={() => setIssueListMode("clipping")}
-            >
-              클리핑 목록
-            </button>
-            <button
-              type="button"
-              className={`border-b-2 px-3 py-2 text-sm transition ${issueListMode === "manual" ? "border-blue-400 text-white" : "border-transparent text-slate-400 hover:text-slate-100"}`}
-              onClick={() => setIssueListMode("manual")}
-            >
-              이슈 목록
-            </button>
-          </div>
-        }
       />
 
       {message && <p className="text-sm text-emerald-300">{message}</p>}
       {error && <p className="text-sm text-red-300">{error}</p>}
 
-      {isFormOpen && registrationMode === "manual" && (
+      {isFormOpen && (
       <div className="space-y-4 rounded-lg border border-slate-800 bg-slate-900/60 p-5">
         <div className="flex items-center justify-between gap-4">
           <h3 className="text-base font-medium text-slate-100">{editingId ? "이슈 수정" : "새 이슈 등록"}</h3>
@@ -850,51 +629,7 @@ function IssuesPanel() {
       </div>
       )}
 
-      {isFormOpen && registrationMode === "clipping" && (
-        <div className="space-y-4 rounded-lg border border-slate-800 bg-slate-900/60 p-5">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h3 className="text-base font-medium text-slate-100">뉴스 클리핑 등록</h3>
-              <p className="mt-1 text-xs font-normal text-slate-400">번호별 이슈 제목으로 네이버 뉴스 원문을 연결한 뒤, 검색 성공 항목만 비공개 이슈 초안으로 등록합니다.</p>
-            </div>
-            <button type="button" className="text-xs text-slate-400 hover:text-slate-100" onClick={resetForm}>
-              닫기
-            </button>
-          </div>
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-300">번호별 뉴스 요약</span>
-            <textarea
-              className="min-h-52 w-full resize-y rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm leading-6 text-slate-100 outline-none focus:border-blue-400"
-              placeholder={"1. 첫 번째 이슈 제목\n핵심 요약 내용\n\n2. 두 번째 이슈 제목\n핵심 요약 내용"}
-              value={clippingContent}
-              onChange={event => setClippingContent(event.target.value)}
-            />
-          </label>
-          {clippingContent.trim() && (
-            <div className="rounded-md border border-slate-800 bg-slate-950/45 p-4">
-              <p className="text-xs text-slate-400">등록 예정 이슈 {clippingEntries.length}개</p>
-              {clippingEntries.length > 0 && (
-                <ol className="mt-3 space-y-2 text-sm text-slate-200">
-                  {clippingEntries.map((entry, index) => (
-                    <li key={`${entry.title}-${index}`} className="truncate">{index + 1}. {entry.title}</li>
-                  ))}
-                </ol>
-              )}
-            </div>
-          )}
-          <button
-            type="button"
-            className="primaryButton"
-            onClick={handleClippingSave}
-            disabled={isClippingSaving || clippingEntries.length === 0}
-          >
-            {isClippingSaving ? "뉴스 검색 및 초안 등록 중" : `${clippingEntries.length}개 이슈 초안 등록`}
-            <span>→</span>
-          </button>
-        </div>
-      )}
-
-      {!(isFormOpen && registrationMode === "manual" && !editingId) && <div>
+      {!(isFormOpen && !editingId) && <div>
         {filteredIssues.length > 0 && (
           <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
             <button type="button" className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-slate-500 hover:text-white" onClick={toggleAllIssues}>
@@ -912,8 +647,8 @@ function IssuesPanel() {
         )}
         {filteredIssues.length > 0 ? (
           <div className="overflow-x-auto rounded-md border border-slate-800">
-            <div className="min-w-[940px]">
-            <div className="grid grid-cols-[28px_minmax(260px,1fr)_112px_120px_298px] gap-4 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs text-slate-500">
+            <div className="min-w-[850px]">
+            <div className="grid grid-cols-[28px_minmax(260px,1fr)_112px_120px_210px] gap-4 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs text-slate-500">
               <span aria-hidden="true" />
               <span>제목</span>
               <span>등록 상태</span>
@@ -921,7 +656,7 @@ function IssuesPanel() {
               <span className="text-right">관리</span>
             </div>
             {filteredIssues.map(issue => (
-              <article key={issue.id} className="grid grid-cols-[28px_minmax(260px,1fr)_112px_120px_298px] items-center gap-4 border-b border-slate-800/80 px-4 py-3 last:border-b-0">
+              <article key={issue.id} className="grid grid-cols-[28px_minmax(260px,1fr)_112px_120px_210px] items-center gap-4 border-b border-slate-800/80 px-4 py-3 last:border-b-0">
                 <input
                   type="checkbox"
                   className="h-4 w-4 accent-blue-500"
@@ -953,14 +688,6 @@ function IssuesPanel() {
                     <option value="private">비공개</option>
                     <option value="published">공개</option>
                   </select>
-                  <button
-                    type="button"
-                    className="whitespace-nowrap rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-blue-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-                    disabled={reconnectingIssueId === issue.id}
-                    onClick={() => handleReconnectIssue(issue)}
-                  >
-                    {reconnectingIssueId === issue.id ? "연결 중" : "재연결"}
-                  </button>
                   <button
                     type="button"
                     className="whitespace-nowrap rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:border-blue-400 hover:text-white"
