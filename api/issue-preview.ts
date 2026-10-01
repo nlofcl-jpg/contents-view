@@ -7,7 +7,6 @@ type IssuePreview = {
   article_title: string | null;
   article_summary: string | null;
   thumbnail_url: string | null;
-  source_name: string | null;
 };
 
 function escapeHtml(value: string) {
@@ -38,18 +37,16 @@ function getIssueId(req: any) {
   }
 }
 
-function renderPreviewHtml({ title, description, imageUrl, pageUrl, sourceName }: {
+function renderPreviewHtml({ title, description, imageUrl, pageUrl }: {
   title: string;
   description: string;
   imageUrl: string;
   pageUrl: string;
-  sourceName: string;
 }) {
   const escapedTitle = escapeHtml(title);
   const escapedDescription = escapeHtml(description);
   const escapedImageUrl = escapeHtml(imageUrl);
   const escapedPageUrl = escapeHtml(pageUrl);
-  const escapedSourceName = escapeHtml(sourceName);
 
   return `<!doctype html>
 <html lang="ko">
@@ -66,7 +63,6 @@ function renderPreviewHtml({ title, description, imageUrl, pageUrl, sourceName }
     <meta property="og:image" content="${escapedImageUrl}" />
     <meta property="og:image:secure_url" content="${escapedImageUrl}" />
     <meta property="og:image:alt" content="${escapedTitle}" />
-    <meta property="article:section" content="${escapedSourceName}" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${escapedTitle}" />
     <meta name="twitter:description" content="${escapedDescription}" />
@@ -95,7 +91,7 @@ export default async function handler(req: any, res: any) {
   });
   const { data, error } = await supabase
     .from("issues")
-    .select("title,summary,article_title,article_summary,thumbnail_url,source_name")
+    .select("title,summary,article_title,article_summary,thumbnail_url")
     .eq("id", issueId)
     .eq("is_published", true)
     .maybeSingle();
@@ -129,7 +125,6 @@ export default async function handler(req: any, res: any) {
       description,
       imageUrl,
       pageUrl: `${origin}/news/issues/${issueId}`,
-      sourceName: issue.source_name || "뉴스 & 이슈",
     }),
   );
 }

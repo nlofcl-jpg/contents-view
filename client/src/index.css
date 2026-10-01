@@ -2967,27 +2967,6 @@ a {
   line-height: 1.65;
 }
 
-.issueOriginalLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: #9fb0c7;
-  font-size: 13px;
-  font-weight: 400;
-  text-decoration: none;
-}
-
-.issueOriginalLink:hover {
-  color: #d6e6ff;
-}
-
-.issueShareFooter {
-  display: flex;
-  align-items: center;
-  border-top: 1px solid rgba(148, 163, 184, 0.18);
-  padding: 22px 0 28px;
-}
-
 .issueKakaoShareButton {
   position: relative;
   display: inline-flex;

@@ -3,9 +3,10 @@ import { supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "wouter";
-import { Bold } from "lucide-react";
+import { Bold, ImagePlus, X } from "lucide-react";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
 import IssueBody from "@/components/IssueBody";
+import { removeStoredIssueImages, uploadIssueImage, validateIssueImage } from "@/lib/issueImages";
 import { formatIssueBodyLines, parseIssueBodyLine, type IssueBodySize } from "@shared/issueBody";
 
 type AdminTab = "notices" | "issues" | "users" | "apiKeys";
@@ -98,7 +99,6 @@ type IssueRecord = {
   summary: string;
   article_url: string | null;
   thumbnail_url: string | null;
-  source_name: string | null;
   article_title: string | null;
   article_summary: string | null;
   is_published: boolean;
@@ -253,10 +253,11 @@ function IssuesPanel() {
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const bodyInputRef = useRef<HTMLTextAreaElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [bodyCursor, setBodyCursor] = useState(0);
-  const [articleUrl, setArticleUrl] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
-  const [sourceName, setSourceName] = useState("");
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null);
   const [isPublished, setIsPublished] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -269,6 +270,16 @@ function IssuesPanel() {
   const [publicationChangingIssueId, setPublicationChangingIssueId] = useState<string | null>(null);
   const [selectedIssueIds, setSelectedIssueIds] = useState<Set<string>>(() => new Set());
   const matchClippingNewsMutation = trpc.news.matchClippingNews.useMutation();
+
+  useEffect(() => {
+    if (!thumbnailFile) {
+      setThumbnailPreviewUrl(null);
+      return;
+    }
+    const previewUrl = URL.createObjectURL(thumbnailFile);
+    setThumbnailPreviewUrl(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [thumbnailFile]);
 
   const currentBodyLineStart = summary.lastIndexOf("\n", bodyCursor - 1) + 1;
   const currentBodyLineEnd = summary.indexOf("\n", bodyCursor);
@@ -310,7 +321,7 @@ function IssuesPanel() {
 
     const { data, error: loadError } = await supabase
       .from("issues")
-      .select("id,title,summary,article_url,thumbnail_url,source_name,article_title,article_summary,is_published,registration_status,registration_type,created_at")
+      .select("id,title,summary,article_url,thumbnail_url,article_title,article_summary,is_published,registration_status,registration_type,created_at")
       .order("created_at", { ascending: false });
 
     if (loadError) {
@@ -329,9 +340,8 @@ function IssuesPanel() {
     setEditingId(null);
     setTitle("");
     setSummary("");
-    setArticleUrl("");
     setThumbnailUrl("");
-    setSourceName("");
+    setThumbnailFile(null);
     setIsPublished(false);
     setIsFormOpen(false);
     setRegistrationMode("manual");
@@ -341,9 +351,8 @@ function IssuesPanel() {
     setEditingId(issue.id);
     setTitle(issue.title);
     setSummary(issue.summary);
-    setArticleUrl(issue.article_url ?? "");
     setThumbnailUrl(issue.thumbnail_url ?? "");
-    setSourceName(issue.source_name ?? "");
+    setThumbnailFile(null);
     setIsPublished(issue.is_published);
     setIsFormOpen(true);
     setRegistrationMode("manual");
@@ -382,27 +391,56 @@ function IssuesPanel() {
     setError(null);
     setMessage(null);
 
+    const previousImageUrl = editingId ? issues.find(issue => issue.id === editingId)?.thumbnail_url ?? null : null;
+    let uploadedImageUrl: string | null = null;
+
+    try {
+      if (thumbnailFile) {
+        const uploaded = await uploadIssueImage(thumbnailFile);
+        uploadedImageUrl = uploaded.url;
+      }
+    } catch (uploadError) {
+      setIsSaving(false);
+      setError(uploadError instanceof Error ? uploadError.message : "이미지를 업로드하지 못했습니다.");
+      return;
+    }
+
     const values = {
       title: title.trim(),
       summary: summary.trim(),
-      article_url: articleUrl.trim() || null,
-      thumbnail_url: thumbnailUrl.trim() || null,
-      source_name: sourceName.trim() || null,
+      article_url: null,
+      source_name: null,
+      article_title: null,
+      article_summary: null,
+      thumbnail_url: uploadedImageUrl || thumbnailUrl || null,
       is_published: isPublished,
       registration_status: "complete" as const,
     };
 
-    const { error: saveError } = editingId
-      ? await supabase.from("issues").update(values).eq("id", editingId)
-      : await supabase.from("issues").insert({ ...values, registration_type: "manual", created_by: user.id });
+    let saveErrorMessage: string | null = null;
+    try {
+      const { error: saveError } = editingId
+        ? await supabase.from("issues").update(values).eq("id", editingId)
+        : await supabase.from("issues").insert({ ...values, registration_type: "manual", created_by: user.id });
+      saveErrorMessage = saveError?.message ?? null;
+    } catch (saveError) {
+      saveErrorMessage = saveError instanceof Error ? saveError.message : "이슈를 저장하지 못했습니다.";
+    }
 
-    setIsSaving(false);
-
-    if (saveError) {
-      setError(saveError.message);
+    if (saveErrorMessage) {
+      if (uploadedImageUrl) {
+        try { await removeStoredIssueImages([uploadedImageUrl]); } catch (cleanupError) { console.error("[Issue image] Failed to remove unused upload", cleanupError); }
+      }
+      setIsSaving(false);
+      setError(saveErrorMessage);
       return;
     }
 
+    if (previousImageUrl && previousImageUrl !== values.thumbnail_url) {
+      try { await removeStoredIssueImages([previousImageUrl]); } catch (cleanupError) { console.error("[Issue image] Failed to remove replaced image", cleanupError); }
+    }
+
+    setIsSaving(false);
     resetForm();
     setMessage(editingId ? "이슈 수정 완료" : "이슈 등록 완료");
     await loadIssues();
@@ -419,6 +457,8 @@ function IssuesPanel() {
       setError(deleteError.message);
       return;
     }
+
+    try { await removeStoredIssueImages([issue.thumbnail_url]); } catch (cleanupError) { console.error("[Issue image] Failed to remove deleted issue image", cleanupError); }
 
     if (editingId === issue.id) resetForm();
     setSelectedIssueIds(current => {
@@ -539,6 +579,9 @@ function IssuesPanel() {
       setError(deleteError.message);
       return;
     }
+
+    const deletedImageUrls = issues.filter(issue => ids.includes(issue.id)).map(issue => issue.thumbnail_url);
+    try { await removeStoredIssueImages(deletedImageUrls); } catch (cleanupError) { console.error("[Issue image] Failed to remove deleted issue images", cleanupError); }
 
     setSelectedIssueIds(current => {
       const next = new Set(current);
@@ -739,35 +782,56 @@ function IssuesPanel() {
             <IssueBody value={summary.trim()} />
           </div>
         )}
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-300">기사 원문 링크</span>
-            <input
-              className="w-full rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-400"
-              placeholder="https://"
-              value={articleUrl}
-              onChange={event => setArticleUrl(event.target.value)}
-            />
-          </label>
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-300">언론사</span>
-            <input
-              className="w-full rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-400"
-              placeholder="언론사명"
-              value={sourceName}
-              onChange={event => setSourceName(event.target.value)}
-            />
-          </label>
-        </div>
-        <label className="block">
-          <span className="mb-2 block text-sm font-medium text-slate-300">썸네일 이미지 주소</span>
+        <div>
+          <span className="mb-2 block text-sm font-medium text-slate-300">썸네일 이미지</span>
           <input
-            className="w-full rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-400"
-            placeholder="https://"
-            value={thumbnailUrl}
-            onChange={event => setThumbnailUrl(event.target.value)}
+            ref={imageInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="sr-only"
+            aria-label="썸네일 이미지 파일"
+            onChange={event => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (!file) return;
+              const validationError = validateIssueImage(file);
+              if (validationError) {
+                setError(validationError);
+                return;
+              }
+              setError(null);
+              setThumbnailFile(file);
+            }}
           />
-        </label>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-blue-400 hover:text-white"
+              onClick={() => imageInputRef.current?.click()}
+            >
+              <ImagePlus size={16} aria-hidden="true" />
+              이미지 첨부
+            </button>
+            {(thumbnailFile || thumbnailUrl) && (
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-red-300"
+                onClick={() => { setThumbnailFile(null); setThumbnailUrl(""); }}
+              >
+                <X size={14} aria-hidden="true" />
+                이미지 제거
+              </button>
+            )}
+            {thumbnailFile && <span className="min-w-0 truncate text-xs text-slate-400">{thumbnailFile.name}</span>}
+          </div>
+          {(thumbnailPreviewUrl || thumbnailUrl) && (
+            <img
+              src={thumbnailPreviewUrl || thumbnailUrl}
+              alt="썸네일 미리보기"
+              className="mt-3 max-h-56 max-w-full object-contain"
+            />
+          )}
+        </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" className="primaryButton" onClick={handleSave} disabled={isSaving}>
             {isSaving ? "저장 중" : editingId ? "수정 저장" : "등록"}

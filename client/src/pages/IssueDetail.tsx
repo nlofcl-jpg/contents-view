@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowUp, ExternalLink, LoaderCircle } from "lucide-react";
+import { ArrowLeft, ArrowUp, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation, useRoute } from "wouter";
 import { supabase } from "@/lib/supabase";
@@ -10,7 +10,6 @@ type IssueDetailRecord = {
   id: string;
   title: string;
   summary: string;
-  article_url: string | null;
   thumbnail_url: string | null;
   article_title: string | null;
   article_summary: string | null;
@@ -33,7 +32,7 @@ export default function IssueDetail() {
     let cancelled = false;
     supabase
       .from("issues")
-      .select("id,title,summary,article_url,thumbnail_url,article_title,article_summary,created_at")
+      .select("id,title,summary,thumbnail_url,article_title,article_summary,created_at")
       .eq("id", params.id)
       .eq("is_published", true)
       .maybeSingle()
@@ -126,19 +125,6 @@ export default function IssueDetail() {
               <ArrowUp size={14} aria-hidden="true" />
             </button>
           </div>
-          {issue.article_url && (
-            <footer className="issueShareFooter">
-              <a
-                className="issueOriginalLink"
-                href={issue.article_url}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                원문 보기
-                <ExternalLink size={15} aria-hidden="true" />
-              </a>
-            </footer>
-          )}
         </article>
       )}
     </div>
