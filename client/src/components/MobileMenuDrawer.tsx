@@ -20,7 +20,7 @@ export function MobileMenuDrawer({
   const { user, isAuthenticated, logout } = useAuth();
   const [location, navigate] = useLocation();
   const [isTrendOpen, setIsTrendOpen] = useState(true);
-  const [isNewsOpen, setIsNewsOpen] = useState(true);
+  const [isNewsOpen, setIsNewsOpen] = useState(false);
 
   const isOpen = panelType !== null;
 
