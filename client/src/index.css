@@ -5458,13 +5458,13 @@ input[type="date"].youtubeSelect {
 /* Close Button */
 .mobileMenuClose {
   position: absolute;
-  top: 18px;
-  right: 16px;
-  width: 40px;
-  height: 40px;
-  border: none;
-  background: transparent;
-  color: #e0e7ff;
+  top: 16px;
+  right: 18px;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(148, 163, 184, 0.1);
+  color: rgba(224, 231, 255, 0.65);
   cursor: pointer;
   border-radius: 8px;
   transition: all 0.2s ease;
@@ -5475,8 +5475,8 @@ input[type="date"].youtubeSelect {
 }
 
 .mobileMenuClose:hover {
-  background: rgba(59, 130, 246, 0.12);
-  color: #93c5fd;
+  background: rgba(148, 163, 184, 0.2);
+  color: #e0e7ff;
 }
 
 /* Drawer Content */
@@ -5603,6 +5603,10 @@ input[type="date"].youtubeSelect {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+}
+
+.mobileMenuTopActions {
+  margin-bottom: 18px;
 }
 
 .mobileAuthButton {

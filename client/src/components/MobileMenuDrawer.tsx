@@ -74,7 +74,7 @@ export function MobileMenuDrawer({
           type="button"
           aria-label="메뉴 닫기"
         >
-          <X size={24} />
+          <X size={16} />
         </button>
 
         <div className="mobileDrawerContent">
@@ -144,6 +144,16 @@ export function MobileMenuDrawer({
           {panelType === "menu" && (
             <div className="mobileMenuSection">
               <div className="mobileMenuSectionTitle">메뉴</div>
+              {!(isAuthenticated && user) && (
+                <div className="mobileAuthButtonRow mobileMenuTopActions">
+                  <a href={getLoginUrl()} className="mobileAuthButton">
+                    로그인
+                  </a>
+                  <a href={`${getLoginUrl()}?mode=signup`} className="mobileAuthButton secondary">
+                    가입
+                  </a>
+                </div>
+              )}
 
               <button
                 className={`mobileNavItem ${isHomePage ? "active" : ""}`}
@@ -270,37 +280,26 @@ export function MobileMenuDrawer({
                 </button>
               )}
 
-              <div className="mobileMenuBottomActions">
-                {isAuthenticated && user ? (
-                  <>
-                    <button
-                      className="mobileMenuAction"
-                      onClick={handleMyPage}
-                      type="button"
-                    >
-                      <User size={18} />
-                      <span>마이페이지</span>
-                    </button>
-                    <button
-                      className="mobileMenuAction logout"
-                      onClick={handleLogout}
-                      type="button"
-                    >
-                      <LogOut size={18} />
-                      <span>로그아웃</span>
-                    </button>
-                  </>
-                ) : (
-                  <div className="mobileAuthButtonRow">
-                    <a href={getLoginUrl()} className="mobileAuthButton">
-                      로그인
-                    </a>
-                    <a href={`${getLoginUrl()}?mode=signup`} className="mobileAuthButton secondary">
-                      가입
-                    </a>
-                  </div>
-                )}
-              </div>
+              {isAuthenticated && user && (
+                <div className="mobileMenuBottomActions">
+                  <button
+                    className="mobileMenuAction"
+                    onClick={handleMyPage}
+                    type="button"
+                  >
+                    <User size={18} />
+                    <span>마이페이지</span>
+                  </button>
+                  <button
+                    className="mobileMenuAction logout"
+                    onClick={handleLogout}
+                    type="button"
+                  >
+                    <LogOut size={18} />
+                    <span>로그아웃</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
