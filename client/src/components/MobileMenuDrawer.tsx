@@ -20,6 +20,7 @@ export function MobileMenuDrawer({
   const { user, isAuthenticated, logout } = useAuth();
   const [location, navigate] = useLocation();
   const [isTrendOpen, setIsTrendOpen] = useState(true);
+  const [isNewsOpen, setIsNewsOpen] = useState(true);
 
   const isOpen = panelType !== null;
 
@@ -44,6 +45,9 @@ export function MobileMenuDrawer({
   // 현재 페이지 확인
   const isHomePage = location === "/";
   const isYouTubePage = location?.startsWith("/trends/youtube");
+  const isNewsPage = location === "/news";
+  const isIssuesPage = location?.startsWith("/news/issues");
+  const isNewsSearchPage = location?.startsWith("/news/search");
   const isSavedContentsPage = location === "/saved-contents";
   const isCommunityPage = location === "/community";
   const isAIStudioPage = location === "/ai-studio";
@@ -194,12 +198,43 @@ export function MobileMenuDrawer({
               )}
 
               <button
-                className="mobileNavItem"
-                onClick={() => handleNavigation("/news")}
+                className="mobileNavItem groupTitle"
+                onClick={() => setIsNewsOpen(!isNewsOpen)}
                 type="button"
+                aria-expanded={isNewsOpen}
+                aria-controls="mobile-news-submenu"
               >
                 <span>뉴스 &amp; 이슈</span>
+                <span style={{ marginLeft: "auto", transition: "transform 0.2s" }}>
+                  {isNewsOpen ? "⌄" : "⌃"}
+                </span>
               </button>
+
+              {isNewsOpen && (
+                <div id="mobile-news-submenu">
+                  <button
+                    className={`mobileNavItem subNavItem ${isNewsPage ? "active" : ""}`}
+                    onClick={() => handleNavigation("/news")}
+                    type="button"
+                  >
+                    <span>뉴스</span>
+                  </button>
+                  <button
+                    className={`mobileNavItem subNavItem ${isIssuesPage ? "active" : ""}`}
+                    onClick={() => handleNavigation("/news/issues")}
+                    type="button"
+                  >
+                    <span>이슈</span>
+                  </button>
+                  <button
+                    className={`mobileNavItem subNavItem ${isNewsSearchPage ? "active" : ""}`}
+                    onClick={() => handleNavigation("/news/search")}
+                    type="button"
+                  >
+                    <span>검색</span>
+                  </button>
+                </div>
+              )}
 
               <button
                 className={`mobileNavItem ${isCommunityPage ? "active" : ""}`}
