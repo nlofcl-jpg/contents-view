@@ -15,6 +15,8 @@ type KakaoFeed = {
     title: string;
     description: string;
     imageUrl: string;
+    imageWidth: number;
+    imageHeight: number;
     link: { webUrl: string; mobileWebUrl: string };
   };
   itemContent: { profileText: string; profileImageUrl: string };
@@ -59,6 +61,8 @@ export function buildIssueKakaoFeed(issue: ShareIssue): KakaoFeed {
       title: issue.article_title || issue.title,
       description: stripIssueBodyFormatting(issue.summary || issue.article_summary || "CONTENTS VIEW 이슈 보기").slice(0, 140),
       imageUrl,
+      imageWidth: 800,
+      imageHeight: 400,
       link,
     },
     itemContent: {

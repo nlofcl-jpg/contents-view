@@ -17,6 +17,8 @@ describe("buildIssueKakaoFeed", () => {
       title: "원문 제목",
       description: "공개 요약 두 번째 문장",
       imageUrl: "https://example.com/issue.jpg",
+      imageWidth: 800,
+      imageHeight: 400,
       link: {
         webUrl: "https://contents-view-chi.vercel.app/news/issues/issue-123",
         mobileWebUrl: "https://contents-view-chi.vercel.app/news/issues/issue-123",
@@ -39,6 +41,7 @@ describe("buildIssueKakaoFeed", () => {
     expect(feed.content.title).toBe("두 번째 이슈");
     expect(feed.content.description).toBe("기사 요약");
     expect(feed.content.imageUrl).toBe("https://contents-view-chi.vercel.app/contents-view-symbol.png");
+    expect(feed.content.imageWidth / feed.content.imageHeight).toBe(2);
     expect(feed.content.link.webUrl).toContain("/news/issues/second-issue");
   });
 });
