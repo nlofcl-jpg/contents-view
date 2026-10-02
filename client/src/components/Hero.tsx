@@ -1,6 +1,8 @@
 import { ChevronDown, Search } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+import { supabase } from "@/lib/supabase";
+import { readHeroKeywords } from "@/lib/heroKeywords";
 
 const searchPlatforms = [
   { value: "naver", label: "NAVER", className: "isNaver" },
@@ -14,9 +16,20 @@ export default function Hero() {
   const [selectedPlatform, setSelectedPlatform] = useState(searchPlatforms[0]);
   const [isPlatformMenuOpen, setIsPlatformMenuOpen] = useState(false);
   const [keyword, setKeyword] = useState("");
+  const [popularKeywords, setPopularKeywords] = useState<string[]>([]);
 
-  const handleHeroSearch = () => {
-    const trimmedKeyword = keyword.trim();
+  useEffect(() => {
+    if (!supabase) return;
+    let active = true;
+    supabase.from("hero_search_settings").select("keywords").eq("id", 1).maybeSingle()
+      .then(({ data }) => {
+        if (active) setPopularKeywords(readHeroKeywords(data?.keywords));
+      });
+    return () => { active = false; };
+  }, []);
+
+  const handleHeroSearch = (searchKeyword = keyword) => {
+    const trimmedKeyword = searchKeyword.trim();
     if (!trimmedKeyword) return;
 
     if (selectedPlatform.value === "naver") {
@@ -103,10 +116,25 @@ export default function Hero() {
               placeholder="분석할 키워드를 입력하세요"
               aria-label="분석할 키워드"
             />
-            <button type="button" className="heroSearchButton" aria-label="검색" onClick={handleHeroSearch}>
+            <button type="button" className="heroSearchButton" aria-label="검색" onClick={() => handleHeroSearch()}>
               <Search className="heroSearchIcon" aria-hidden="true" />
             </button>
           </div>
+          {popularKeywords.length > 0 && (
+            <div className="heroPopularKeywords" aria-label="인기 검색어">
+              {popularKeywords.map(popularKeyword => (
+                <button
+                  key={popularKeyword}
+                  type="button"
+                  className="heroPopularKeyword"
+                  title={`${popularKeyword} 검색`}
+                  onClick={() => handleHeroSearch(popularKeyword)}
+                >
+                  #{popularKeyword}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </section>

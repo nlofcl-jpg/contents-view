@@ -4,17 +4,19 @@ import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react
 import { useLocation } from "wouter";
 import { Bold, ChevronDown, ImagePlus, X } from "lucide-react";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
+import HeroKeywordsPanel from "@/components/HeroKeywordsPanel";
 import IssueBody from "@/components/IssueBody";
 import { getStoredIssueImagePath, removeStoredIssueImages, uploadIssueImage, validateIssueImage, validateIssueImageUrl } from "@/lib/issueImages";
 import { formatIssueBodyLines, parseIssueBodyLine, type IssueBodySize } from "@shared/issueBody";
 
-type AdminTab = "notices" | "issues" | "users" | "apiKeys";
+type AdminTab = "notices" | "issues" | "users" | "apiKeys" | "heroKeywords";
 
 const adminTabs: Array<{ id: AdminTab; label: string }> = [
   { id: "notices", label: "공지" },
   { id: "users", label: "사용자" },
   { id: "apiKeys", label: "API 키" },
   { id: "issues", label: "이슈" },
+  { id: "heroKeywords", label: "인기 검색어" },
 ];
 
 export default function Admin() {
@@ -88,6 +90,7 @@ export default function Admin() {
       {activeTab === "issues" && <IssuesPanel />}
       {activeTab === "users" && <UsersPanel adminEmail={user?.email ?? ""} />}
       {activeTab === "apiKeys" && <ApiKeysPanel />}
+      {activeTab === "heroKeywords" && <HeroKeywordsPanel />}
     </div>
   );
 }
