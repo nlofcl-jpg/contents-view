@@ -469,21 +469,21 @@ export default function ServiceCards() {
   ];
 
   return (
-    <section className="relative z-[6] px-4 py-14 sm:px-6 lg:px-8">
+    <section className="relative z-[6] px-0 py-14 md:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8">
           <div>
-            <div className="mb-2 flex items-center gap-3">
+            <div className="mb-2 flex items-center justify-center gap-3 md:justify-start">
               <span className="h-3 w-3 rounded-full bg-blue-500 shadow-[0_0_18px_rgba(59,130,246,0.9)]" />
-              <h2 className="text-3xl font-bold text-white">실시간 트렌드 현황</h2>
+              <h2 className="text-center text-2xl font-bold text-white md:text-left md:text-3xl">실시간 트렌드 현황</h2>
             </div>
-            <p className="text-sm text-slate-400">
+            <p className="text-balance text-center text-sm text-slate-400 md:text-left">
               주요 플랫폼과 커뮤니티의 실시간 흐름을 빠르게 확인하세요.
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <div className="trend-cards-carousel grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4" role="region" aria-label="실시간 트렌드 카드" tabIndex={0}>
           {cards.map((card) => (
             <TrendDashboardCard key={card.id} card={card} onVideoSelect={setSelectedVideo} />
           ))}

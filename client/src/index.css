@@ -9345,3 +9345,33 @@ input[type="date"].youtubeSelect {
   border-color: rgba(92, 163, 245, 0.5);
   background-color: rgba(32, 81, 153, 0.2);
 }
+
+@media (max-width: 767px) {
+  .trend-cards-carousel {
+    grid-auto-flow: column;
+    grid-auto-columns: min(28rem, calc(100vw - 4rem));
+    grid-template-columns: none;
+    align-items: stretch;
+    margin-inline: -1rem;
+    padding: 0.5rem 1rem;
+    overflow-x: auto;
+    scroll-padding-inline: 1rem;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .trend-cards-carousel::-webkit-scrollbar {
+    display: none;
+  }
+
+  .trend-cards-carousel > article {
+    scroll-snap-align: start;
+  }
+}
+
+.trend-cards-carousel:focus-visible {
+  outline: 2px solid rgba(100, 175, 255, 0.7);
+  outline-offset: 2px;
+}
