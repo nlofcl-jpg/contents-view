@@ -1,11 +1,12 @@
-import { useMemo, useState } from "react";
-import { ArrowRight, MessageCircle, MessageCircleMore, Newspaper, ThumbsUp, TrendingUp } from "lucide-react";
-import { useLocation } from "wouter";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowRight, ChevronLeft, ChevronRight, CircleAlert, MessageCircle, MessageCircleMore, Newspaper, ThumbsUp, TrendingUp } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
 import { GoogleTrendTraffic } from "@/components/GoogleTrendTraffic";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useGuestRisingVideoAccess } from "@/hooks/useGuestRisingVideoAccess";
 import { trpc } from "@/lib/trpc";
+import { supabase } from "@/lib/supabase";
 
 type TrendRow = {
   label: string;
@@ -136,7 +137,7 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
   const isYouTubeCard = card.id === "youtube";
   const isSearchCard = card.id === "search";
   const isCommunityCard = card.id === "community";
-  const isNewsCard = card.id === "news";
+  const isNewsCard = card.id === "news" || card.id === "issues";
   const isFeaturedCard = isYouTubeCard || isSearchCard || isCommunityCard || isNewsCard;
   const glassRowClass = "trend-glass-row rounded-lg backdrop-blur-sm";
 
@@ -218,6 +219,19 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
                 </span>
               )}
             </a>
+          ) : card.id === "issues" ? (
+            <Link
+              key={`${card.id}-${index}-${row.label}`}
+              href={row.detailHref || card.href}
+              className={`flex h-[72px] items-center gap-3 p-2.5 ${glassRowClass}`}
+            >
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-xs font-bold text-blue-200">{index + 1}</span>
+              {row.image && <img src={row.image} alt="" className="h-10 w-14 shrink-0 rounded object-cover" loading="lazy" />}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold text-slate-100" title={row.label}>{row.label}</span>
+                {row.meta && <span className="mt-1 block truncate text-xs text-slate-400">{row.meta}</span>}
+              </span>
+            </Link>
           ) : isYouTubeCard ? (
             <button
               key={`${card.id}-${index}-${row.label}`}
@@ -332,8 +346,36 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
 
 export default function ServiceCards() {
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { canOpenRisingVideo, guestPrompt } = useGuestRisingVideoAccess(isAuthenticated, authLoading);
+
+  useEffect(() => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+    const updateScrollState = () => {
+      setCanScrollLeft(carousel.scrollLeft > 1);
+      setCanScrollRight(carousel.scrollLeft + carousel.clientWidth < carousel.scrollWidth - 1);
+    };
+    const observer = new ResizeObserver(updateScrollState);
+    observer.observe(carousel);
+    updateScrollState();
+    carousel.addEventListener("scroll", updateScrollState, { passive: true });
+    return () => {
+      observer.disconnect();
+      carousel.removeEventListener("scroll", updateScrollState);
+    };
+  }, []);
+
+  const scrollCards = (direction: -1 | 1) => {
+    const carousel = carouselRef.current;
+    const firstCard = carousel?.querySelector("article");
+    if (!carousel || !firstCard) return;
+    const gap = parseFloat(getComputedStyle(carousel).columnGap) || 0;
+    carousel.scrollBy({ left: direction * (firstCard.getBoundingClientRect().width + gap), behavior: "smooth" });
+  };
 
   const youtubeRisingQuery = trpc.youtube.getCollectedRisingVideos.useQuery(
     {
@@ -366,6 +408,32 @@ export default function ServiceCards() {
     { category: "all", limit: 5 },
     { retry: 1, refetchOnWindowFocus: false }
   );
+  const [issues, setIssues] = useState<Array<{
+    id: string;
+    title: string;
+    article_title: string | null;
+    thumbnail_url: string | null;
+    created_at: string;
+  }>>([]);
+  const [issuesLoading, setIssuesLoading] = useState(Boolean(supabase));
+  const [issuesError, setIssuesError] = useState(false);
+
+  useEffect(() => {
+    if (!supabase) return;
+    let cancelled = false;
+    supabase.from("issues")
+      .select("id,title,article_title,thumbnail_url,created_at")
+      .eq("is_published", true)
+      .order("created_at", { ascending: false })
+      .limit(5)
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        setIssues(error ? [] : data ?? []);
+        setIssuesError(Boolean(error));
+        setIssuesLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   const youtubeRows = useMemo<TrendRow[]>(() => {
     const videos = (youtubeRisingQuery.data as any)?.videos || [];
@@ -424,6 +492,12 @@ export default function ServiceCards() {
       externalHref: item.link,
     }));
   }, [newsQuery.data]);
+  const issueRows = useMemo<TrendRow[]>(() => issues.map((issue) => ({
+    label: stripHtml(issue.article_title || issue.title),
+    meta: new Date(issue.created_at).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" }),
+    image: issue.thumbnail_url,
+    detailHref: `/news/issues/${issue.id}`,
+  })), [issues]);
 
   const cards: TrendCard[] = [
     {
@@ -462,20 +536,30 @@ export default function ServiceCards() {
     },
     {
       id: "news",
-      title: "뉴스 & 이슈",
-      badge: "주요 이슈",
+      title: "뉴스",
+      badge: "최신 뉴스",
       href: "/news",
       icon: <Newspaper className="h-7 w-7 text-sky-400" />,
       rows: newsRows,
       loading: newsQuery.isLoading,
       emptyText: "최신 뉴스를 불러오지 못했습니다.",
     },
+    {
+      id: "issues",
+      title: "이슈",
+      badge: "최신 이슈",
+      href: "/news/issues",
+      icon: <CircleAlert className="h-7 w-7 text-sky-400" />,
+      rows: issueRows,
+      loading: issuesLoading,
+      emptyText: issuesError ? "이슈를 불러오지 못했습니다." : "공개된 이슈가 아직 없습니다.",
+    },
   ];
 
   return (
-    <section className="relative z-[6] px-0 py-14 md:px-6 lg:px-8">
+    <section className="trend-section relative z-[6] px-0 py-14 md:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-8">
+        <div className="mb-8 flex items-end justify-between gap-4">
           <div>
             <div className="mb-2 flex items-center justify-center gap-3 md:justify-start">
               <span className="h-3 w-3 rounded-full bg-blue-500 shadow-[0_0_18px_rgba(59,130,246,0.9)]" />
@@ -485,9 +569,13 @@ export default function ServiceCards() {
               주요 플랫폼과 커뮤니티의 실시간 흐름을 빠르게 확인하세요.
             </p>
           </div>
+          <div className="hidden shrink-0 items-center gap-1 md:flex" aria-label="트렌드 카드 이동">
+            <button type="button" aria-label="이전 카드" title="이전 카드" disabled={!canScrollLeft} onClick={() => scrollCards(-1)} className="flex h-6 w-6 items-center justify-center rounded border border-blue-400/30 text-blue-200 transition-colors hover:bg-blue-500/15 disabled:cursor-not-allowed disabled:opacity-35"><ChevronLeft size={13} /></button>
+            <button type="button" aria-label="다음 카드" title="다음 카드" disabled={!canScrollRight} onClick={() => scrollCards(1)} className="flex h-6 w-6 items-center justify-center rounded border border-blue-400/30 text-blue-200 transition-colors hover:bg-blue-500/15 disabled:cursor-not-allowed disabled:opacity-35"><ChevronRight size={13} /></button>
+          </div>
         </div>
 
-        <div className="trend-cards-carousel grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4" role="region" aria-label="실시간 트렌드 카드" tabIndex={0}>
+        <div ref={carouselRef} data-at-start={!canScrollLeft} className="trend-cards-carousel grid gap-5" role="region" aria-label="실시간 트렌드 카드" tabIndex={0}>
           {cards.map((card) => (
             <TrendDashboardCard
               key={card.id}

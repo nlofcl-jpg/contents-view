@@ -9346,17 +9346,51 @@ input[type="date"].youtubeSelect {
   background-color: rgba(32, 81, 153, 0.2);
 }
 
+.trend-cards-carousel {
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - 3.75rem) / 4);
+  grid-template-columns: none;
+  align-items: stretch;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-color: rgba(72, 138, 222, 0.6) transparent;
+  scrollbar-width: thin;
+}
+
+.trend-cards-carousel > article {
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
+@media (min-width: 1280px) and (hover: hover) {
+  .trend-cards-carousel[data-at-start="true"] > article {
+    transition: transform 240ms ease;
+  }
+
+  .trend-section:hover .trend-cards-carousel[data-at-start="true"] > article {
+    transform: translateX(-3rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trend-cards-carousel > article {
+    transition: none;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1279px) {
+  .trend-cards-carousel {
+    grid-auto-columns: calc((100% - 1.25rem) / 2);
+  }
+}
+
 @media (max-width: 767px) {
   .trend-cards-carousel {
-    grid-auto-flow: column;
     grid-auto-columns: min(28rem, calc(100vw - 4rem));
-    grid-template-columns: none;
-    align-items: stretch;
     margin-inline: -1rem;
     padding: 0.5rem 1rem;
-    overflow-x: auto;
     scroll-padding-inline: 1rem;
-    scroll-snap-type: x mandatory;
     overscroll-behavior-inline: contain;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
