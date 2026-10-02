@@ -3,6 +3,8 @@ import { ArrowRight, MessageCircle, MessageCircleMore, Newspaper, ThumbsUp, Tren
 import { useLocation } from "wouter";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
 import { GoogleTrendTraffic } from "@/components/GoogleTrendTraffic";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useGuestRisingVideoAccess } from "@/hooks/useGuestRisingVideoAccess";
 import { trpc } from "@/lib/trpc";
 
 type TrendRow = {
@@ -330,6 +332,8 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
 
 export default function ServiceCards() {
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { canOpenRisingVideo, guestPrompt } = useGuestRisingVideoAccess(isAuthenticated, authLoading);
 
   const youtubeRisingQuery = trpc.youtube.getCollectedRisingVideos.useQuery(
     {
@@ -485,7 +489,13 @@ export default function ServiceCards() {
 
         <div className="trend-cards-carousel grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4" role="region" aria-label="실시간 트렌드 카드" tabIndex={0}>
           {cards.map((card) => (
-            <TrendDashboardCard key={card.id} card={card} onVideoSelect={setSelectedVideo} />
+            <TrendDashboardCard
+              key={card.id}
+              card={card}
+              onVideoSelect={(video) => {
+                if (canOpenRisingVideo()) setSelectedVideo(video);
+              }}
+            />
           ))}
         </div>
       </div>
@@ -495,6 +505,7 @@ export default function ServiceCards() {
         onClose={() => setSelectedVideo(null)}
         useStoredSnapshot
       />
+      {guestPrompt}
     </section>
   );
 }

@@ -4,6 +4,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { YouTubeApiStatusCard } from "@/components/YouTubeApiStatusCard";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
+import { useGuestRisingVideoAccess } from "@/hooks/useGuestRisingVideoAccess";
 import { AlertCircle, CircleAlert, Clock, Play, ChevronDown, RotateCw, Users, Bookmark, Search, Copy, ExternalLink } from "lucide-react";
 import { useBookmark } from "@/contexts/BookmarkContext";
 import { useLocation } from "wouter";
@@ -226,11 +227,17 @@ function formatDate(dateString: string): string {
 export default function YouTubeTrends() {
   const [location, setLocation] = useLocation();
   const { isAuthenticated, loading: authLoading } = useAuth();
+  const { canOpenRisingVideo, guestPrompt } = useGuestRisingVideoAccess(isAuthenticated, authLoading);
   const { toggleYouTubeBookmark, isYouTubeVideoBookmarked, isBookmarkPending } = useBookmark();
   const [activeTab, setActiveTab] = useState<TabType>(getInitialYouTubeTab);
   const [isMobileTabMenuOpen, setIsMobileTabMenuOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const openRisingVideo = (video: any) => {
+    if (!canOpenRisingVideo()) return;
+    setSelectedVideo(video);
+    setIsModalOpen(true);
+  };
   const [analysisInput, setAnalysisInput] = useState("");
   const [submittedAnalysisKeyword, setSubmittedAnalysisKeyword] = useState("");
   const [submittedAnalysisVideoId, setSubmittedAnalysisVideoId] = useState("");
@@ -1530,15 +1537,11 @@ export default function YouTubeTrends() {
             className="videoCard"
             role="button"
             tabIndex={0}
-            onClick={() => {
-              setSelectedVideo(video);
-              setIsModalOpen(true);
-            }}
+            onClick={() => openRisingVideo(video)}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
-                setSelectedVideo(video);
-                setIsModalOpen(true);
+                openRisingVideo(video);
               }
             }}
           >
@@ -2085,6 +2088,7 @@ export default function YouTubeTrends() {
         }}
         useStoredSnapshot={activeTab === "rising"}
       />
+      {guestPrompt}
     </div>
   );
 }
