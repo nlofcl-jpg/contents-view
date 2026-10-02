@@ -142,8 +142,7 @@ export function MobileMenuDrawer({
 
           {/* 메뉴 패널 */}
           {panelType === "menu" && (
-            <div className="mobileMenuSection">
-              <div className="mobileMenuSectionTitle">메뉴</div>
+            <div className="mobileMenuSection mobileNavigationSection">
               {!(isAuthenticated && user) && (
                 <div className="mobileAuthButtonRow mobileMenuTopActions">
                   <a href={getLoginUrl()} className="mobileAuthButton">
