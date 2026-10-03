@@ -46,7 +46,7 @@ const formatSavedDate = (): string => {
 const SECTIONS = [
   { id: "youtube", label: "YouTube", icon: "▶" },
   { id: "naver", label: "네이버", icon: "N" },
-  { id: "google-trends", label: "Google Trends", icon: "G" },
+  { id: "google-trends", label: "검색 트렌드", icon: "G" },
   { id: "news-issues", label: "뉴스 & 이슈", icon: "▤" },
   { id: "community", label: "커미니티 반응", icon: "∷" },
 ];

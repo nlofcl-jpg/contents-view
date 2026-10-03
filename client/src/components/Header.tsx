@@ -43,7 +43,7 @@ export default function Header({
   const trendItems = [
     { name: "YouTube", path: "/trends/youtube" },
     { name: "네이버 트렌드", path: "/trends/naver" },
-    { name: "Google Trends", path: "/trends/google" },
+    { name: "검색 트렌드", path: "/trends/google" },
   ];
 
   const newsItems = [

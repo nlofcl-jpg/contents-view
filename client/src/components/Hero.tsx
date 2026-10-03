@@ -1,4 +1,4 @@
-import { ChevronDown, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
@@ -27,7 +27,7 @@ export default function Hero() {
     let active = true;
     supabase.from("hero_search_settings").select("keywords").eq("id", 1).maybeSingle()
       .then(({ data }) => {
-        if (active) setPopularKeywords(readHeroKeywords(data?.keywords));
+        if (active) setPopularKeywords(readHeroKeywords(data?.keywords).slice(0, 7));
       });
     return () => { active = false; };
   }, []);
@@ -157,6 +157,14 @@ export default function Hero() {
                   </button>
                 ))}
               </div>
+              <button
+                type="button"
+                className="heroPopularKeywordMore"
+                onClick={() => setLocation("/trends/google")}
+              >
+                더보기
+                <ChevronRight size={14} aria-hidden="true" />
+              </button>
             </div>
           )}
         </div>

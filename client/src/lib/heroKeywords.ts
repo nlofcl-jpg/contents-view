@@ -1,4 +1,4 @@
-export const MAX_HERO_KEYWORDS = 7;
+export const MAX_HERO_KEYWORDS = 10;
 export const MAX_HERO_KEYWORD_LENGTH = 30;
 
 export function cleanHeroKeyword(value: string): string {

@@ -4,7 +4,7 @@ import { useLocation, Link } from "wouter";
 const trendItems = [
   { name: "YouTube", badge: "▶", path: "/trends/youtube" },
   { name: "네이버", badge: "N", path: "/trends/naver" },
-  { name: "Google Trends", badge: "G", path: "/trends/google" },
+  { name: "검색 트렌드", badge: "G", path: "/trends/google" },
 ];
 
 interface SidebarProps {

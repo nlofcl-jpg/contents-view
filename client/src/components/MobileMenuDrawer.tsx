@@ -201,7 +201,7 @@ export function MobileMenuDrawer({
                     type="button"
                   >
                     <img className="mobileTrendLogo" src="/google-trends-favicon.png" alt="" aria-hidden="true" />
-                    <span>Google Trends</span>
+                    <span>검색 트렌드</span>
                   </button>
                 </>
               )}

@@ -1,9 +1,12 @@
-import { useState, useEffect, useLayoutEffect, useRef, type CSSProperties } from "react";
-import { ChevronDown, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
+import { ChevronDown } from "lucide-react";
+import { useLocation } from "wouter";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 import { GoogleTrendTraffic } from "@/components/GoogleTrendTraffic";
-import { useIsMobile } from "@/hooks/useMobile";
+import { MAX_HERO_KEYWORDS, readHeroKeywords } from "@/lib/heroKeywords";
+import { supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
 
 interface NewsItem {
@@ -21,6 +24,53 @@ interface TrendItem {
   news?: NewsItem[];
   source: string;
   country: string;
+}
+
+function SearchKeywordTrends({ showGuestMore, onGuestMore }: { showGuestMore: boolean; onGuestMore: () => void }) {
+  const [keywords, setKeywords] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(Boolean(supabase));
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    if (!supabase) return;
+    let active = true;
+    supabase.from("hero_search_settings").select("keywords").eq("id", 1).maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return;
+        setHasError(Boolean(error));
+        setKeywords(readHeroKeywords(data?.keywords));
+        setIsLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
+
+  return (
+    <section aria-labelledby="search-keyword-trends-heading">
+      <h2 id="search-keyword-trends-heading" className="mb-5 text-lg font-bold text-foreground md:text-xl">검색어 트렌드</h2>
+      {isLoading || hasError ? (
+        <div className="flex h-[562px] items-center justify-center rounded-md border border-slate-800 bg-slate-900/25 p-8 text-center text-sm text-slate-400">
+          {isLoading ? "불러오는 중..." : "인기 검색어를 불러오지 못했습니다."}
+        </div>
+      ) : (
+        <ol className="flex h-[562px] flex-col gap-1.5 overflow-y-auto rounded-md border border-slate-800 bg-slate-900/25 p-1.5">
+          {Array.from({ length: MAX_HERO_KEYWORDS }, (_, index) => (
+            <li key={index} className={`flex min-h-[49px] items-center gap-2 rounded-md px-4 py-2 ${index % 2 === 0 ? "bg-slate-800/35" : "bg-slate-900/45"}`}>
+              <span className="w-5 shrink-0 text-center text-sm font-semibold text-blue-400">{index + 1}</span>
+              {keywords[index] && <span className="min-w-0 truncate text-sm font-medium text-slate-100" title={keywords[index]}>{keywords[index]}</span>}
+            </li>
+          ))}
+        </ol>
+      )}
+      {showGuestMore && (
+        <div className="mt-4 text-center">
+          <button type="button" onClick={onGuestMore} className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-400 transition-colors hover:text-blue-300">
+            더보기
+            <ChevronDown className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      )}
+    </section>
+  );
 }
 
 function TrendNews({ news }: { news?: NewsItem[] }) {
@@ -61,47 +111,35 @@ function TrendNews({ news }: { news?: NewsItem[] }) {
 }
 
 export default function GoogleTrends() {
+  const [, setLocation] = useLocation();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const getInitialParams = () => {
-    if (typeof window === "undefined") return { country: "KR", trend: "" };
+    if (typeof window === "undefined") return "";
     const params = new URLSearchParams(window.location.search);
-    return {
-      country: params.get("country") || "KR",
-      trend: params.get("trend") || "",
-    };
+    return params.get("trend") || "";
   };
 
-  const initialParams = getInitialParams();
-  const [selectedCountry, setSelectedCountry] = useState(initialParams.country);
-  const [selectedKeywordFromUrl, setSelectedKeywordFromUrl] = useState(initialParams.trend);
+  const [selectedKeywordFromUrl, setSelectedKeywordFromUrl] = useState(getInitialParams);
   const [popularSearches, setPopularSearches] = useState<TrendItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTrend, setSelectedTrend] = useState<TrendItem | null>(null);
-  const [isMobileNewsOpen, setIsMobileNewsOpen] = useState(false);
-  const [isDetailDismissed, setIsDetailDismissed] = useState(false);
+  const [isNewsOpen, setIsNewsOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(10);
-  const searchListRef = useRef<HTMLDivElement>(null);
-  const [searchListHeight, setSearchListHeight] = useState<number | null>(null);
-  const isMobile = useIsMobile();
+  const [showGuestPrompt, setShowGuestPrompt] = useState(false);
 
-  useEffect(() => {
-    if (!isMobile) setIsMobileNewsOpen(false);
-  }, [isMobile]);
-
-  useLayoutEffect(() => {
-    const list = searchListRef.current;
-    if (!list) return;
-
-    const updateHeight = () => setSearchListHeight(list.getBoundingClientRect().height);
-    updateHeight();
-    const observer = new ResizeObserver(updateHeight);
-    observer.observe(list);
-    return () => observer.disconnect();
-  }, [isLoading, error, popularSearches.length]);
+  const handleMore = () => {
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      setShowGuestPrompt(true);
+      return;
+    }
+    setVisibleCount(count => count + 10);
+  };
 
   // Fetch Google Trends data
   const { data: trendsData, isLoading: isTrendsLoading, error: trendsError } = trpc.googleTrends.realtimeTrending.useQuery(
-    { country: selectedCountry },
+    { country: "KR" },
     {
       enabled: true,
       retry: 1,
@@ -115,21 +153,26 @@ export default function GoogleTrends() {
       setPopularSearches(trendsData.data);
       setError(null);
       setSelectedTrend(previous => {
-        if (isDetailDismissed) return null;
         const keyword = selectedKeywordFromUrl || previous?.keyword;
-        return trendsData.data.find((item: TrendItem) => item.keyword === keyword) || trendsData.data[0];
+        return trendsData.data.find((item: TrendItem) => item.keyword === keyword) || null;
       });
+      if (selectedKeywordFromUrl) {
+        setIsNewsOpen(trendsData.data.some((item: TrendItem) => item.keyword === selectedKeywordFromUrl));
+        setSelectedKeywordFromUrl("");
+      }
     } else if (trendsData?.success && (!trendsData.data || trendsData.data.length === 0)) {
       setError("실시간 인기 검색어 데이터를 불러올 수 없습니다.");
       setPopularSearches([]);
       setSelectedTrend(null);
+      setIsNewsOpen(false);
     } else if (trendsData?.error) {
       setError("실시간 인기 검색어 데이터를 불러올 수 없습니다.");
       setPopularSearches([]);
       setSelectedTrend(null);
+      setIsNewsOpen(false);
     }
     setIsLoading(isTrendsLoading);
-  }, [trendsData, isTrendsLoading, selectedKeywordFromUrl, isDetailDismissed]);
+  }, [trendsData, isTrendsLoading, selectedKeywordFromUrl]);
 
   // Handle error from tRPC
   useEffect(() => {
@@ -137,117 +180,73 @@ export default function GoogleTrends() {
       setError("실시간 인기 검색어 데이터를 불러올 수 없습니다.");
       setPopularSearches([]);
       setSelectedTrend(null);
+      setIsNewsOpen(false);
     }
   }, [trendsError]);
 
-  const handleCountryChange = (newCountry: string) => {
-    setSelectedCountry(newCountry);
+  const handleSelectTrend = (item: TrendItem) => {
     setSelectedKeywordFromUrl("");
-    setIsDetailDismissed(false);
-    setSelectedTrend(null);
-    setIsMobileNewsOpen(false);
-    setVisibleCount(10);
-  };
-
-  const handleSelectTrend = (item: TrendItem | null, showMobileNews = false) => {
-    setSelectedKeywordFromUrl("");
-    setIsDetailDismissed(item === null);
     setSelectedTrend(item);
-    setIsMobileNewsOpen(showMobileNews && Boolean(item));
+    setIsNewsOpen(true);
   };
-
-  const countries = [
-    { code: "KR", name: "🇰🇷 한국" },
-    { code: "US", name: "🇺🇸 미국" },
-    { code: "JP", name: "🇯🇵 일본" },
-    { code: "GB", name: "🇬🇧 영국" },
-    { code: "FR", name: "🇫🇷 프랑스" },
-    { code: "DE", name: "🇩🇪 독일" },
-    { code: "ES", name: "🇪🇸 스페인" },
-  ];
 
   return (
     <div className="youtubePageContainer">
       {/* 페이지 상단 타이틀 */}
       <div className="pageHeader">
         <h1 className="pageTitle">
-          Google Trends
+          검색 트렌드
         </h1>
         <p className="pageDescription">
-          인기 검색어와 관련 뉴스를 검색량순으로 확인하세요.
+          한국 검색 흐름과 인기 검색어를 확인하세요.
         </p>
       </div>
 
-      {/* 실시간 인기 검색어 */}
-      <div className="space-y-6">
-        <div className="flex min-w-0 flex-col items-start gap-3 md:flex-row md:items-center md:justify-between">
-          <h2 className="text-xl font-bold text-foreground md:text-2xl">
-            인기 검색어
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-2">
+        <section className="min-w-0" aria-labelledby="google-trends-heading">
+          <h2 id="google-trends-heading" className="mb-5 text-lg font-bold text-foreground md:text-xl">
+            구글 트렌드
           </h2>
-          <div className="flex w-full min-w-0 gap-2 overflow-x-auto pb-2 md:w-auto">
-            {countries.map((country) => (
-              <Button
-                key={country.code}
-                variant={selectedCountry === country.code ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleCountryChange(country.code)}
-                className={
-                  selectedCountry === country.code
-                    ? "bg-blue-600 hover:bg-blue-700 whitespace-nowrap"
-                    : "border-slate-600 text-slate-400 hover:bg-slate-900/50 whitespace-nowrap"
-                }
-              >
-                {country.name}
-              </Button>
-            ))}
-          </div>
-        </div>
 
         {error ? (
-          <div className="p-8 text-center rounded-xl bg-transparent border border-slate-800">
+          <div className="flex h-[562px] items-center justify-center rounded-md border border-slate-800 bg-slate-900/25 p-8 text-center">
             <p className="text-slate-500">{error}</p>
           </div>
         ) : isLoading ? (
-          <div className="p-8 text-center rounded-xl bg-transparent border border-slate-800">
+          <div className="flex h-[562px] items-center justify-center rounded-md border border-slate-800 bg-slate-900/25 p-8 text-center">
             <p className="text-slate-500">로딩 중...</p>
           </div>
         ) : popularSearches.length === 0 ? (
-          <div className="p-8 text-center rounded-xl bg-transparent border border-slate-800">
+          <div className="flex h-[562px] items-center justify-center rounded-md border border-slate-800 bg-slate-900/25 p-8 text-center">
             <p className="text-slate-500">실시간 인기 검색어 데이터를 불러올 수 없습니다.</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-6 md:flex-row md:items-start">
-            {/* 왼쪽: 인기 검색어 목록 */}
-            <div className={`min-w-0 transition-all duration-300 ${selectedTrend ? "w-full md:flex-1" : "w-full"}`}>
-              <div ref={searchListRef} className="border border-slate-800 rounded-xl overflow-hidden bg-transparent">
-                {/* 데스크톱 테이블 */}
-                <div className="hidden md:block">
-                  <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-slate-800 bg-slate-900/30">
-                    <div className="col-span-1 text-slate-400 text-sm font-medium">순위</div>
-                    <div className="col-span-6 text-slate-400 text-sm font-medium">검색어</div>
-                    <div className="col-span-3 text-slate-400 text-sm font-medium">검색량</div>
-                    <div className="col-span-2 text-slate-400 text-sm font-medium text-right">자세히</div>
-                  </div>
-                  {popularSearches.slice(0, visibleCount).map((item, idx) => (
+          <div className="min-w-0">
+            <div className="min-w-0">
+              <div className="h-[562px] overflow-y-auto rounded-md border border-slate-800 bg-slate-900/25">
+                <div className="flex flex-col gap-1.5 p-1.5">
+                  {popularSearches.slice(0, visibleCount).map((item, index) => (
                     <div
                       key={item.keyword}
-                      className={`mx-2 grid grid-cols-12 items-center gap-4 rounded-md p-4 transition-colors cursor-pointer ${
+                      className={`grid min-h-[49px] grid-cols-[1.25rem_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-md px-4 py-2 transition-colors cursor-pointer ${
                         selectedTrend?.keyword === item.keyword
                           ? "bg-blue-500/15 ring-1 ring-inset ring-blue-400/45"
-                          : "hover:bg-slate-900/30"
-                      } ${idx < Math.min(popularSearches.length, visibleCount) - 1 && selectedTrend?.keyword !== item.keyword ? "border-b border-slate-800" : ""}`}
+                          : index % 2 === 0
+                            ? "bg-slate-800/35 hover:bg-slate-800/55"
+                            : "bg-slate-900/45 hover:bg-slate-800/40"
+                      }`}
                       onClick={() => handleSelectTrend(item)}
                     >
-                      <div className="col-span-1 text-xl font-bold text-slate-300">{item.rank}</div>
-                      <div className="col-span-6 text-foreground font-medium truncate">{item.keyword}</div>
-                      <div className="col-span-3 text-sm"><GoogleTrendTraffic traffic={item.traffic} trafficCount={item.trafficCount} /></div>
-                      <div className="col-span-2 text-right">
+                      <div className="text-center text-sm font-semibold text-blue-400">{item.rank}</div>
+                      <div className="min-w-0 truncate text-sm font-medium text-foreground" title={item.keyword}>{item.keyword}</div>
+                      <div className="whitespace-nowrap text-sm"><GoogleTrendTraffic traffic={item.traffic} trafficCount={item.trafficCount} /></div>
+                      <div className="text-right">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleSelectTrend(item);
                           }}
-                          className="text-blue-500 hover:text-blue-400 text-sm font-medium transition"
+                          className="whitespace-nowrap text-sm font-medium text-blue-500 transition hover:text-blue-400"
                         >
                           자세히
                         </button>
@@ -256,45 +255,12 @@ export default function GoogleTrends() {
                   ))}
                 </div>
 
-                {/* 모바일 카드형 */}
-                <div className="md:hidden space-y-3 p-4">
-                  {popularSearches.slice(0, visibleCount).map((item) => (
-                    <div
-                      key={item.keyword}
-                      className={`p-4 rounded-lg bg-slate-900/20 border transition cursor-pointer ${
-                        selectedTrend?.keyword === item.keyword
-                          ? "border-blue-400/50 bg-blue-500/15"
-                          : "border-slate-800 hover:bg-slate-900/40"
-                      }`}
-                      onClick={() => handleSelectTrend(item, true)}
-                    >
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="text-xl font-bold text-slate-300 w-8 flex-shrink-0">{item.rank}</div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-foreground font-medium break-words">{item.keyword}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <GoogleTrendTraffic traffic={item.traffic} trafficCount={item.trafficCount} className="text-sm" />
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelectTrend(item, true);
-                          }}
-                          className="text-blue-500 hover:text-blue-400 text-sm font-medium transition flex-shrink-0"
-                        >
-                          자세히
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
-              {popularSearches.length > visibleCount && (
+              {(!isAuthenticated || popularSearches.length > visibleCount) && (
                 <div className="mt-4 text-center">
                   <button
                     type="button"
-                    onClick={() => setVisibleCount(count => count + 10)}
+                    onClick={handleMore}
                     className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-400 transition-colors hover:text-blue-300"
                   >
                     더보기
@@ -304,43 +270,23 @@ export default function GoogleTrends() {
               )}
             </div>
 
-            {/* 오른쪽: 상세 정보 박스 */}
-            {selectedTrend && (
-              <div
-                className="hidden w-full min-w-0 flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/50 animate-in slide-in-from-right-4 duration-300 md:flex md:h-[var(--trend-list-height)] md:flex-1"
-                style={{ "--trend-list-height": searchListHeight ? `${searchListHeight}px` : "auto" } as CSSProperties}
-              >
-                {/* 헤더 */}
-                <div className="flex shrink-0 items-center justify-between p-6 border-b border-slate-800">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-xl font-bold text-foreground truncate">{selectedTrend.keyword}</h3>
-                    <div className="text-slate-400 text-sm mt-1 flex flex-wrap items-center gap-x-1">
-                      <span>검색량 순위 {selectedTrend.rank} · 검색량</span>
-                      <GoogleTrendTraffic traffic={selectedTrend.traffic} trafficCount={selectedTrend.trafficCount} />
-                      <span>· Google Trends</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleSelectTrend(null)}
-                    className="text-slate-400 hover:text-foreground transition flex-shrink-0 ml-4"
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
-                </div>
-
-                {/* 본문 */}
-                <div className="min-h-0 flex-1 overflow-y-auto p-6">
-                  <TrendNews news={selectedTrend.news} />
-                </div>
-              </div>
-            )}
           </div>
         )}
+        </section>
+        <div className="min-w-0">
+          <SearchKeywordTrends showGuestMore={!isAuthenticated} onGuestMore={handleMore} />
+        </div>
       </div>
-      <Dialog open={isMobile && isMobileNewsOpen} onOpenChange={setIsMobileNewsOpen}>
+      <Dialog
+        open={isNewsOpen && Boolean(selectedTrend)}
+        onOpenChange={(open) => {
+          setIsNewsOpen(open);
+          if (!open) setSelectedTrend(null);
+        }}
+      >
         {selectedTrend && (
           <DialogContent
-            className="flex max-h-[85dvh] flex-col gap-0 overflow-hidden border-slate-700 bg-slate-950 p-0 text-foreground sm:max-w-lg"
+            className="flex max-h-[85dvh] flex-col gap-0 overflow-hidden border-slate-700 bg-slate-950 p-0 text-foreground sm:max-w-xl"
             overlayClassName="bg-black/75"
           >
             <DialogHeader className="shrink-0 border-b border-slate-800 px-5 py-5 pr-12 text-left">
@@ -357,6 +303,18 @@ export default function GoogleTrends() {
           </DialogContent>
         )}
       </Dialog>
+      <GuestAccessPrompt
+        open={showGuestPrompt && !isAuthenticated}
+        onBrowse={() => setShowGuestPrompt(false)}
+        onLogin={() => {
+          setShowGuestPrompt(false);
+          setLocation("/login?redirect=%2Ftrends%2Fgoogle");
+        }}
+        onSignup={() => {
+          setShowGuestPrompt(false);
+          setLocation("/login?mode=signup&redirect=%2Ftrends%2Fgoogle");
+        }}
+      />
     </div>
   );
 }

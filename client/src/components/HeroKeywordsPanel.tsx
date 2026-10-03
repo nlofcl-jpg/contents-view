@@ -99,7 +99,7 @@ export default function HeroKeywordsPanel() {
     <section className="max-w-2xl space-y-5">
       <div>
         <h2 className="text-xl font-semibold text-white">인기 검색어</h2>
-        <p className="mt-1 text-sm text-slate-400">메인 검색창 아래에 표시할 검색어와 순서를 관리합니다.</p>
+        <p className="mt-1 text-sm text-slate-400">검색어 트렌드에 최대 10개를 표시합니다. 메인 검색창 아래에는 앞의 7개만 표시됩니다.</p>
       </div>
 
       {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
