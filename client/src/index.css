@@ -1413,13 +1413,28 @@ a {
   overflow: visible;
 }
 
+.heroPopularKeywordSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin-top: 16px;
+}
+
+.heroPopularKeywordTitle {
+  margin: 0 0 9px;
+  color: rgba(205, 222, 246, 0.7);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
 .heroPopularKeywords {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
   width: min(100%, 820px);
-  margin-top: 17px;
 }
 
 .heroPopularKeyword {
@@ -1812,9 +1827,12 @@ a {
     border-radius: 999px;
   }
 
+  .heroPopularKeywordSection {
+    margin-top: 14px;
+  }
+
   .heroPopularKeywords {
     gap: 7px;
-    margin-top: 15px;
   }
 
   .heroPopularKeyword {

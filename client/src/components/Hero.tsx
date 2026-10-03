@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { readHeroKeywords } from "@/lib/heroKeywords";
+import { useAuth } from "@/_core/hooks/useAuth";
+import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 
 const searchPlatforms = [
   { value: "naver", label: "NAVER", className: "isNaver" },
@@ -13,10 +15,12 @@ const searchPlatforms = [
 
 export default function Hero() {
   const [, setLocation] = useLocation();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [selectedPlatform, setSelectedPlatform] = useState(searchPlatforms[0]);
   const [isPlatformMenuOpen, setIsPlatformMenuOpen] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [popularKeywords, setPopularKeywords] = useState<string[]>([]);
+  const [guestKeyword, setGuestKeyword] = useState<string | null>(null);
 
   useEffect(() => {
     if (!supabase) return;
@@ -28,26 +32,43 @@ export default function Hero() {
     return () => { active = false; };
   }, []);
 
-  const handleHeroSearch = (searchKeyword = keyword) => {
+  const getSearchPath = (searchKeyword: string) => {
     const trimmedKeyword = searchKeyword.trim();
-    if (!trimmedKeyword) return;
-
     if (selectedPlatform.value === "naver") {
-      setLocation(`/trends/naver?keyword=${encodeURIComponent(trimmedKeyword)}`);
-      return;
+      return `/trends/naver?keyword=${encodeURIComponent(trimmedKeyword)}`;
     }
 
     if (selectedPlatform.value === "news") {
-      setLocation(`/news/search?keyword=${encodeURIComponent(trimmedKeyword)}`);
-      return;
+      return `/news/search?keyword=${encodeURIComponent(trimmedKeyword)}`;
     }
 
     if (selectedPlatform.value === "youtube") {
-      setLocation(`/trends/youtube?tab=analysis&keyword=${encodeURIComponent(trimmedKeyword)}`);
-      return;
+      return `/trends/youtube?tab=analysis&keyword=${encodeURIComponent(trimmedKeyword)}`;
     }
 
-    setLocation(`/trends/google?trend=${encodeURIComponent(trimmedKeyword)}`);
+    return `/trends/google?trend=${encodeURIComponent(trimmedKeyword)}`;
+  };
+
+  const handleHeroSearch = (searchKeyword = keyword) => {
+    if (!searchKeyword.trim()) return;
+    setLocation(getSearchPath(searchKeyword));
+  };
+
+  const handlePopularKeywordClick = (searchKeyword: string) => {
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      setGuestKeyword(searchKeyword);
+      return;
+    }
+    handleHeroSearch(searchKeyword);
+  };
+
+  const goToGuestAuth = (mode: "login" | "signup") => {
+    const params = new URLSearchParams();
+    if (mode === "signup") params.set("mode", "signup");
+    if (guestKeyword) params.set("redirect", getSearchPath(guestKeyword));
+    setGuestKeyword(null);
+    setLocation(`/login?${params.toString()}`);
   };
 
   return (
@@ -121,22 +142,31 @@ export default function Hero() {
             </button>
           </div>
           {popularKeywords.length > 0 && (
-            <div className="heroPopularKeywords" aria-label="인기 검색어">
-              {popularKeywords.map(popularKeyword => (
-                <button
-                  key={popularKeyword}
-                  type="button"
-                  className="heroPopularKeyword"
-                  title={`${popularKeyword} 검색`}
-                  onClick={() => handleHeroSearch(popularKeyword)}
-                >
-                  #{popularKeyword}
-                </button>
-              ))}
+            <div className="heroPopularKeywordSection" aria-labelledby="heroPopularKeywordTitle">
+              <p id="heroPopularKeywordTitle" className="heroPopularKeywordTitle">인기 검색어</p>
+              <div className="heroPopularKeywords">
+                {popularKeywords.map(popularKeyword => (
+                  <button
+                    key={popularKeyword}
+                    type="button"
+                    className="heroPopularKeyword"
+                    title={`${popularKeyword} 검색`}
+                    onClick={() => handlePopularKeywordClick(popularKeyword)}
+                  >
+                    #{popularKeyword}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
       </div>
+      <GuestAccessPrompt
+        open={guestKeyword !== null}
+        onBrowse={() => setGuestKeyword(null)}
+        onLogin={() => goToGuestAuth("login")}
+        onSignup={() => goToGuestAuth("signup")}
+      />
     </section>
   );
 }
