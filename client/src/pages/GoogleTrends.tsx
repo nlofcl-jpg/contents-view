@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type KeyboardEvent } from "react";
 import { ChevronDown } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -46,7 +46,7 @@ function SearchKeywordTrends({ showGuestMore, onGuestMore }: { showGuestMore: bo
 
   return (
     <section aria-labelledby="search-keyword-trends-heading">
-      <h2 id="search-keyword-trends-heading" className="mb-5 text-lg font-bold text-foreground md:text-xl">검색어 트렌드</h2>
+      <h2 id="search-keyword-trends-heading" className="mb-5 hidden text-xl font-bold text-foreground lg:block">검색어 트렌드</h2>
       {isLoading || hasError ? (
         <div className="flex h-[562px] items-center justify-center rounded-md border border-slate-800 bg-slate-900/25 p-8 text-center text-sm text-slate-400">
           {isLoading ? "불러오는 중..." : "인기 검색어를 불러오지 못했습니다."}
@@ -127,6 +127,19 @@ export default function GoogleTrends() {
   const [isNewsOpen, setIsNewsOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(10);
   const [showGuestPrompt, setShowGuestPrompt] = useState(false);
+  const [mobileTab, setMobileTab] = useState<"google" | "keywords">("google");
+
+  const handleMobileTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    const nextTab = event.key === "ArrowRight" || event.key === "End"
+      ? "keywords"
+      : event.key === "ArrowLeft" || event.key === "Home"
+        ? "google"
+        : null;
+    if (!nextTab) return;
+    event.preventDefault();
+    setMobileTab(nextTab);
+    document.getElementById(nextTab === "google" ? "google-trends-tab" : "search-keyword-trends-tab")?.focus();
+  };
 
   const handleMore = () => {
     if (authLoading) return;
@@ -202,9 +215,43 @@ export default function GoogleTrends() {
         </p>
       </div>
 
+      <div className="mb-5 grid grid-cols-2 border-b border-slate-700 lg:hidden" role="tablist" aria-label="검색 트렌드 종류">
+        <button
+          id="google-trends-tab"
+          type="button"
+          role="tab"
+          aria-selected={mobileTab === "google"}
+          aria-controls="google-trends-panel"
+          tabIndex={mobileTab === "google" ? 0 : -1}
+          onClick={() => setMobileTab("google")}
+          onKeyDown={handleMobileTabKeyDown}
+          className={`min-h-11 border-b-2 px-2 text-xs font-semibold transition-colors ${mobileTab === "google" ? "border-blue-400 text-blue-300" : "border-transparent text-slate-400"}`}
+        >
+          구글 트렌드
+        </button>
+        <button
+          id="search-keyword-trends-tab"
+          type="button"
+          role="tab"
+          aria-selected={mobileTab === "keywords"}
+          aria-controls="search-keyword-trends-panel"
+          tabIndex={mobileTab === "keywords" ? 0 : -1}
+          onClick={() => setMobileTab("keywords")}
+          onKeyDown={handleMobileTabKeyDown}
+          className={`min-h-11 border-b-2 px-2 text-xs font-semibold transition-colors ${mobileTab === "keywords" ? "border-blue-400 text-blue-300" : "border-transparent text-slate-400"}`}
+        >
+          검색어 트렌드
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-2">
-        <section className="min-w-0" aria-labelledby="google-trends-heading">
-          <h2 id="google-trends-heading" className="mb-5 text-lg font-bold text-foreground md:text-xl">
+        <section
+          id="google-trends-panel"
+          role="tabpanel"
+          aria-labelledby="google-trends-tab"
+          className={`min-w-0 ${mobileTab === "google" ? "block" : "hidden"} lg:block`}
+        >
+          <h2 id="google-trends-heading" className="mb-5 hidden text-xl font-bold text-foreground lg:block">
             구글 트렌드
           </h2>
 
@@ -273,7 +320,12 @@ export default function GoogleTrends() {
           </div>
         )}
         </section>
-        <div className="min-w-0">
+        <div
+          id="search-keyword-trends-panel"
+          role="tabpanel"
+          aria-labelledby="search-keyword-trends-tab"
+          className={`min-w-0 ${mobileTab === "keywords" ? "block" : "hidden"} lg:block`}
+        >
           <SearchKeywordTrends showGuestMore={!isAuthenticated} onGuestMore={handleMore} />
         </div>
       </div>
