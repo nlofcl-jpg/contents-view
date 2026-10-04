@@ -476,7 +476,7 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
   };
 
   // Check if any keyword has no shopping data
-  const hasNoShoppingData = data.keywords.some(
+  const hasNoShoppingData = visibleLayers.shopping && data.keywords.some(
     (keyword) => data.shoppingStatus?.[keyword] === 'NO_DATA'
   );
 
