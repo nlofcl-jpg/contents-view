@@ -481,16 +481,16 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
   );
 
   return (
-    <div className="w-full h-full">
+    <div className="flex h-full min-h-0 w-full flex-col">
       {hasNoShoppingData && (
-        <div className="mb-4 inline-flex w-fit max-w-full px-5 py-3 border border-red-500/40 bg-red-950/45 rounded text-sm text-red-200 shopping-no-data-alert">
+        <div className="mb-4 inline-flex w-fit max-w-full shrink-0 px-5 py-3 border border-red-500/40 bg-red-950/45 rounded text-sm text-red-200 shopping-no-data-alert">
           <p className="whitespace-nowrap max-md:whitespace-normal">
             선택한 카테고리에서 해당 검색어의 쇼핑 클릭량 데이터를 찾지 못했습니다. 카테고리를 변경하거나 다른 검색어를 입력해 주세요.
           </p>
         </div>
       )}
       {legendItems.length > 0 && (
-        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 md:mb-4">
+        <div className="mb-3 flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 md:mb-4">
           {legendItems.map((item) => (
             <button
               key={item.label}
@@ -515,7 +515,7 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
           ))}
         </div>
       )}
-      <div className="h-[260px] min-h-0 md:h-[480px] md:min-h-[400px]">
+      <div className="relative min-h-0 flex-1">
         <Line data={chartData} options={options} />
       </div>
     </div>

@@ -15,6 +15,20 @@ const data = {
 };
 
 describe("UnifiedChart shopping data notice", () => {
+  it("keeps the chart within the space left below its legend", () => {
+    const html = renderToStaticMarkup(React.createElement(UnifiedChart, {
+      data,
+      visibleLayers: { trend: true, shopping: false },
+      timeUnit: "date",
+      startDate: "2026-10-01",
+      endDate: "2026-10-04",
+    }));
+
+    expect(html).toContain('class="flex h-full min-h-0 w-full flex-col"');
+    expect(html).toContain('class="relative min-h-0 flex-1"');
+    expect(html).not.toContain("md:h-[480px]");
+  });
+
   it("does not show a shopping warning on the content chart", () => {
     const html = renderToStaticMarkup(React.createElement(UnifiedChart, {
       data,
