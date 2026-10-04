@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, Plus, Save, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { cleanHeroKeyword, MAX_HERO_KEYWORD_LENGTH, MAX_HERO_KEYWORDS, readHeroKeywords } from "@/lib/heroKeywords";
+import { cleanHeroKeyword, MAX_HERO_KEYWORD_LENGTH, MAX_HERO_KEYWORDS, parseRankedHeroKeywords, readHeroKeywords } from "@/lib/heroKeywords";
 
 export default function HeroKeywordsPanel() {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [savedKeywords, setSavedKeywords] = useState<string[]>([]);
   const [newKeyword, setNewKeyword] = useState("");
+  const [bulkInput, setBulkInput] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,9 +67,24 @@ export default function HeroKeywordsPanel() {
     setMessage(null);
   };
 
+  const applyBulkKeywords = () => {
+    try {
+      setKeywords(parseRankedHeroKeywords(bulkInput));
+      setBulkInput("");
+      setError(null);
+      setMessage("순위가 목록에 반영되었습니다. 저장을 눌러 확정하세요.");
+    } catch (parseError) {
+      setError(parseError instanceof Error ? parseError.message : "검색어 형식을 확인해 주세요.");
+      setMessage(null);
+    }
+  };
+
   const saveKeywords = async () => {
     if (!supabase) return;
     const cleaned = keywords.map(cleanHeroKeyword);
+    if (cleaned.length > MAX_HERO_KEYWORDS) {
+      return setError(`검색어는 최대 ${MAX_HERO_KEYWORDS}개까지 등록할 수 있습니다.`);
+    }
     if (cleaned.some(keyword => !keyword || keyword.length > MAX_HERO_KEYWORD_LENGTH)) {
       return setError(`각 검색어를 1~${MAX_HERO_KEYWORD_LENGTH}자로 입력하세요.`);
     }
@@ -99,13 +115,27 @@ export default function HeroKeywordsPanel() {
     <section className="max-w-2xl space-y-5">
       <div>
         <h2 className="text-xl font-semibold text-white">인기 검색어</h2>
-        <p className="mt-1 text-sm text-slate-400">검색어 트렌드에 최대 10개를 표시합니다. 메인 검색창 아래에는 앞의 7개만 표시됩니다.</p>
+        <p className="mt-1 text-sm text-slate-400">검색어 트렌드에 최대 20개를 표시합니다. 메인 검색창 아래에는 앞의 7개만 표시됩니다.</p>
       </div>
 
       {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
       {message && <p role="status" className="text-sm text-emerald-300">{message}</p>}
       {isLoading ? <p className="text-sm text-slate-400">검색어를 불러오는 중...</p> : (
         <>
+          <div className="space-y-2">
+            <label htmlFor="ranked-keywords-input" className="block text-sm font-medium text-slate-200">순위 일괄 입력</label>
+            <textarea
+              id="ranked-keywords-input"
+              value={bulkInput}
+              onChange={event => setBulkInput(event.target.value)}
+              placeholder="1. 한국 일본 축구 | 2. 아시안게임"
+              rows={2}
+              className="w-full resize-y rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-blue-400"
+            />
+            <div className="flex justify-end">
+              <button type="button" onClick={applyBulkKeywords} disabled={!bulkInput.trim()} className="rounded-md border border-blue-400/50 px-3 py-2 text-sm text-blue-200 hover:bg-blue-500/10 disabled:cursor-not-allowed disabled:opacity-40">목록 교체</button>
+            </div>
+          </div>
           <div className="space-y-2">
             {keywords.map((keyword, index) => (
               <div key={index} className="flex items-center gap-2 border-b border-slate-800/70 py-2">

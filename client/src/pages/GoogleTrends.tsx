@@ -5,7 +5,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 import { GoogleTrendTraffic } from "@/components/GoogleTrendTraffic";
-import { MAX_HERO_KEYWORDS, readHeroKeywords } from "@/lib/heroKeywords";
+import { readHeroKeywords } from "@/lib/heroKeywords";
 import { supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
 
@@ -28,6 +28,7 @@ interface TrendItem {
 
 function SearchKeywordTrends({ showGuestMore, onGuestMore }: { showGuestMore: boolean; onGuestMore: () => void }) {
   const [keywords, setKeywords] = useState<string[]>([]);
+  const [showAll, setShowAll] = useState(false);
   const [isLoading, setIsLoading] = useState(Boolean(supabase));
   const [hasError, setHasError] = useState(false);
 
@@ -53,7 +54,7 @@ function SearchKeywordTrends({ showGuestMore, onGuestMore }: { showGuestMore: bo
         </div>
       ) : (
         <ol className="flex h-[562px] flex-col gap-1.5 overflow-y-auto rounded-md border border-slate-800 bg-slate-900/25 p-1.5">
-          {Array.from({ length: MAX_HERO_KEYWORDS }, (_, index) => (
+          {Array.from({ length: showAll ? keywords.length : 10 }, (_, index) => (
             <li key={index} className={`flex min-h-[49px] items-center gap-2 rounded-md px-4 py-2 ${index % 2 === 0 ? "bg-slate-800/35" : "bg-slate-900/45"}`}>
               <span className="w-5 shrink-0 text-center text-sm font-semibold text-blue-400">{index + 1}</span>
               {keywords[index] && <span className="min-w-0 truncate text-sm font-medium text-slate-100" title={keywords[index]}>{keywords[index]}</span>}
@@ -61,11 +62,11 @@ function SearchKeywordTrends({ showGuestMore, onGuestMore }: { showGuestMore: bo
           ))}
         </ol>
       )}
-      {showGuestMore && (
+      {(showGuestMore || keywords.length > 10) && (
         <div className="mt-4 text-center">
-          <button type="button" onClick={onGuestMore} className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-400 transition-colors hover:text-blue-300">
-            더보기
-            <ChevronDown className="h-4 w-4" aria-hidden="true" />
+          <button type="button" onClick={showGuestMore ? onGuestMore : () => setShowAll(current => !current)} className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-400 transition-colors hover:text-blue-300">
+            {showAll && !showGuestMore ? "접기" : "더보기"}
+            <ChevronDown className={`h-4 w-4 ${showAll && !showGuestMore ? "rotate-180" : ""}`} aria-hidden="true" />
           </button>
         </div>
       )}
