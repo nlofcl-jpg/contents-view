@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
-import { GoogleTrendTraffic } from "@/components/GoogleTrendTraffic";
+import { GoogleTrendRankChange, type RankChange } from "@/components/GoogleTrendRankChange";
 import { readHeroKeywords } from "@/lib/heroKeywords";
 import { supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
@@ -18,6 +18,7 @@ interface NewsItem {
 
 interface TrendItem {
   rank: number;
+  rankChange?: RankChange;
   keyword: string;
   traffic?: string;
   trafficCount?: number;
@@ -287,7 +288,7 @@ export default function GoogleTrends() {
                     >
                       <div className="text-center text-sm font-semibold text-blue-400">{item.rank}</div>
                       <div className="min-w-0 truncate text-sm font-medium text-foreground" title={item.keyword}>{item.keyword}</div>
-                      <div className="whitespace-nowrap text-sm"><GoogleTrendTraffic traffic={item.traffic} trafficCount={item.trafficCount} /></div>
+                      <GoogleTrendRankChange change={item.rankChange} />
                       <div className="text-right">
                         <button
                           onClick={(e) => {
@@ -345,8 +346,8 @@ export default function GoogleTrends() {
             <DialogHeader className="shrink-0 border-b border-slate-800 px-5 py-5 pr-12 text-left">
               <DialogTitle className="text-lg leading-snug">{selectedTrend.keyword}</DialogTitle>
               <DialogDescription className="flex flex-wrap items-center gap-x-1 text-xs text-slate-400">
-                <span>검색량 순위 {selectedTrend.rank} · 검색량</span>
-                <GoogleTrendTraffic traffic={selectedTrend.traffic} trafficCount={selectedTrend.trafficCount} />
+                <span>순위 {selectedTrend.rank} ·</span>
+                <GoogleTrendRankChange change={selectedTrend.rankChange} />
                 <span>· Google Trends</span>
               </DialogDescription>
             </DialogHeader>

@@ -7,6 +7,7 @@ export type GoogleTrendNews = {
 
 export type GoogleTrendItem = {
   rank: number;
+  rankChange: GoogleTrendRankChange;
   keyword: string;
   traffic: string;
   trafficCount: number;
@@ -16,6 +17,9 @@ export type GoogleTrendItem = {
   isCurrent: boolean;
   lastSeenAt: string;
 };
+
+export type GoogleTrendRankChange = "up" | "down" | "same" | "new";
+export type UnrankedGoogleTrendItem = Omit<GoogleTrendItem, "rank" | "rankChange">;
 
 export const GOOGLE_TREND_HISTORY_MS = 24 * 60 * 60 * 1000;
 
@@ -34,7 +38,7 @@ export function parseGoogleTrendTraffic(value: string): number {
   return Math.round(Number(match[1]) * (multiplier[match[2]?.toUpperCase() ?? ""] ?? 1));
 }
 
-export function rankGoogleTrends(items: Omit<GoogleTrendItem, "rank">[]): GoogleTrendItem[] {
+export function rankGoogleTrends(items: UnrankedGoogleTrendItem[]): GoogleTrendItem[] {
   return [...items]
     .sort((a, b) =>
       b.trafficCount - a.trafficCount ||
@@ -42,5 +46,27 @@ export function rankGoogleTrends(items: Omit<GoogleTrendItem, "rank">[]): Google
       Date.parse(b.lastSeenAt) - Date.parse(a.lastSeenAt) ||
       a.keyword.localeCompare(b.keyword),
     )
-    .map((item, index) => ({ ...item, rank: index + 1 }));
+    .map((item, index) => ({ ...item, rank: index + 1, rankChange: "same" as const }));
+}
+
+export function compareGoogleTrendRanks(
+  items: GoogleTrendItem[],
+  previousRanks: Record<string, number> | null,
+): GoogleTrendItem[] {
+  if (!previousRanks) return items;
+
+  return items.map(item => {
+    const key = item.keyword.normalize("NFKC").toLocaleLowerCase();
+    const previousRank = Object.prototype.hasOwnProperty.call(previousRanks, key)
+      ? previousRanks[key]
+      : undefined;
+    const rankChange: GoogleTrendRankChange = previousRank === undefined
+      ? "new"
+      : item.rank < previousRank
+        ? "up"
+        : item.rank > previousRank
+          ? "down"
+          : "same";
+    return { ...item, rankChange };
+  });
 }

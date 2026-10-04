@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, ChevronLeft, ChevronRight, CircleAlert, MessageCircle, MessageCircleMore, Newspaper, ThumbsUp, TrendingUp } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
-import { GoogleTrendTraffic } from "@/components/GoogleTrendTraffic";
+import { GoogleTrendRankChange, type RankChange } from "@/components/GoogleTrendRankChange";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useGuestRisingVideoAccess } from "@/hooks/useGuestRisingVideoAccess";
 import { trpc } from "@/lib/trpc";
@@ -19,7 +19,7 @@ type TrendRow = {
   video?: any;
   minimal?: boolean;
   risingScore?: boolean;
-  googleTraffic?: { traffic: string; trafficCount?: number };
+  googleRankChange?: RankChange;
   durationText?: string | null;
   channelTitle?: string | null;
   communityName?: string;
@@ -194,7 +194,7 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
                 <span className="block min-w-0 truncate text-sm font-semibold leading-5 text-slate-100" title={row.label}>{row.label}</span>
               </span>
               <span className="inline-flex shrink-0 items-center gap-2">
-                {row.googleTraffic && <GoogleTrendTraffic traffic={row.googleTraffic.traffic} trafficCount={row.googleTraffic.trafficCount} className="shrink-0 text-xs" />}
+                {row.googleRankChange && <GoogleTrendRankChange change={row.googleRankChange} />}
                 {row.detailHref && <span className="text-[11px] font-semibold text-slate-500">자세히</span>}
               </span>
             </button>
@@ -297,7 +297,7 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
                 <p className="truncate text-sm font-semibold text-slate-100">{row.label}</p>
                 {!row.minimal && row.meta && <p className="mt-1 truncate text-xs text-slate-400">{row.meta}</p>}
               </div>
-              {(row.rightValue || row.googleTraffic || row.detailHref) && (
+              {(row.rightValue || row.googleRankChange || row.detailHref) && (
                 <div className={`flex shrink-0 items-center gap-2 ${row.minimal ? "ml-auto" : ""}`}>
                   {row.rightValue && (
                     <span className={`inline-flex items-center gap-1 text-xs font-bold ${row.risingScore ? "text-red-400" : "text-blue-300"}`}>
@@ -305,8 +305,8 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
                       {row.rightValue}
                     </span>
                   )}
-                  {row.googleTraffic && (
-                    <GoogleTrendTraffic traffic={row.googleTraffic.traffic} trafficCount={row.googleTraffic.trafficCount} className="text-xs" />
+                  {row.googleRankChange && (
+                    <GoogleTrendRankChange change={row.googleRankChange} />
                   )}
                   {row.detailHref && (
                     <button
@@ -459,7 +459,7 @@ export default function ServiceCards() {
     const trends = (googleTrendsQuery.data as any)?.data || [];
     return trends.slice(0, 5).map((item: any) => ({
       label: stripHtml(item.keyword),
-      googleTraffic: { traffic: item.traffic || "", trafficCount: item.trafficCount },
+      googleRankChange: item.rankChange || "same",
       detailHref: `/trends/google?country=KR&trend=${encodeURIComponent(item.keyword)}`,
     }));
   }, [googleTrendsQuery.data]);

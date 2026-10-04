@@ -15,7 +15,7 @@ import { createHmac } from "crypto";
 import { eq } from "drizzle-orm";
 import { users } from "../drizzle/schema";
 import { getStoredYouTubeRisingVideos, isYouTubeTopicChannel, scoreRisingCandidates, selectBalancedRisingVideos, syncYouTubeRecommendedHistory } from "./youtubeRising";
-import { GOOGLE_TREND_HISTORY_MS, parseGoogleTrendTraffic, rankGoogleTrends, type GoogleTrendItem } from "./googleTrendsHistory";
+import { GOOGLE_TREND_HISTORY_MS, compareGoogleTrendRanks, parseGoogleTrendTraffic, rankGoogleTrends, type GoogleTrendItem, type UnrankedGoogleTrendItem } from "./googleTrendsHistory";
 
 const require = createRequire(import.meta.url);
 
@@ -846,7 +846,7 @@ async function loadGoogleTrendHistory(countryCode: string, cutoff: string): Prom
 
 async function mergeGoogleTrendHistory(
   countryCode: string,
-  current: Omit<GoogleTrendItem, "rank">[],
+  current: UnrankedGoogleTrendItem[],
   now: number,
 ): Promise<GoogleTrendItem[]> {
   if (!supabaseAdmin) return rankGoogleTrends(current);
@@ -895,6 +895,52 @@ async function mergeGoogleTrendHistory(
   } catch (error) {
     console.error("[Google Trends RSS] History storage unavailable:", error);
     return rankGoogleTrends(current);
+  }
+}
+
+async function attachGoogleTrendRankChanges(
+  countryCode: string,
+  items: GoogleTrendItem[],
+  now: number,
+): Promise<GoogleTrendItem[]> {
+  if (!supabaseAdmin || items.length === 0) return items;
+
+  const capturedAt = new Date(Math.floor(now / CACHE_TTL) * CACHE_TTL).toISOString();
+  const cutoff = new Date(now - GOOGLE_TREND_HISTORY_MS).toISOString();
+  try {
+    const { data: previous, error: readError } = await supabaseAdmin
+      .from("google_trend_rank_snapshots")
+      .select("rankings")
+      .eq("country_code", countryCode)
+      .lt("captured_at", capturedAt)
+      .gte("captured_at", cutoff)
+      .order("captured_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (readError) throw readError;
+
+    const rankings = Object.fromEntries(items.map(item => [
+      item.keyword.normalize("NFKC").toLocaleLowerCase(), item.rank,
+    ]));
+    const { error: writeError } = await supabaseAdmin
+      .from("google_trend_rank_snapshots")
+      .upsert({ country_code: countryCode, captured_at: capturedAt, rankings }, { onConflict: "country_code,captured_at" });
+    if (writeError) throw writeError;
+
+    const { error: pruneError } = await supabaseAdmin
+      .from("google_trend_rank_snapshots")
+      .delete()
+      .eq("country_code", countryCode)
+      .lt("captured_at", new Date(now - 2 * GOOGLE_TREND_HISTORY_MS).toISOString());
+    if (pruneError) console.error("[Google Trends RSS] Rank snapshot cleanup failed:", pruneError);
+
+    const previousRanks = previous?.rankings && typeof previous.rankings === "object" && !Array.isArray(previous.rankings)
+      ? previous.rankings as Record<string, number>
+      : null;
+    return compareGoogleTrendRanks(items, previousRanks);
+  } catch (error) {
+    console.error("[Google Trends RSS] Rank snapshot unavailable:", error);
+    return items;
   }
 }
 
@@ -960,7 +1006,7 @@ async function getGoogleTrendingSearches(countryCode: string = "KR"): Promise<Go
     const newsTitleRegex = /<ht:news_item_title>([^<]+)<\/ht:news_item_title>/;
     const newsSourceRegex = /<ht:news_item_source>([^<]+)<\/ht:news_item_source>/;
     
-    const items: Omit<GoogleTrendItem, "rank">[] = [];
+    const items: UnrankedGoogleTrendItem[] = [];
     let match;
     let itemCount = 0;
     
@@ -1028,16 +1074,19 @@ async function getGoogleTrendingSearches(countryCode: string = "KR"): Promise<Go
     if (items.length === 0) console.warn(`[Google Trends RSS] No keywords parsed for country: ${countryCode}`);
 
     const rankedItems = await mergeGoogleTrendHistory(countryCode, uniqueItems, now);
+    const results = uniqueItems.length > 0
+      ? await attachGoogleTrendRankChanges(countryCode, rankedItems, now)
+      : rankedItems;
     
     // 캐시에 저장
     googleTrendsCache[cacheKey] = {
-      data: rankedItems,
+      data: results,
       timestamp: now,
     };
     
-    console.log(`[Google Trends RSS] Success - fetched ${uniqueItems.length} current, ${rankedItems.length} total for ${countryCode}`);
+    console.log(`[Google Trends RSS] Success - fetched ${uniqueItems.length} current, ${results.length} total for ${countryCode}`);
     
-    return rankedItems;
+    return results;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : "Unknown error";
     console.error(`[Google Trends RSS] Error fetching realtime trends for ${countryCode}:`, errorMsg);

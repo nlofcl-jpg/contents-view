@@ -2730,7 +2730,16 @@ function parseGoogleTrendTraffic(value) {
 function rankGoogleTrends(items) {
   return [...items].sort(
     (a, b) => b.trafficCount - a.trafficCount || Number(b.isCurrent) - Number(a.isCurrent) || Date.parse(b.lastSeenAt) - Date.parse(a.lastSeenAt) || a.keyword.localeCompare(b.keyword)
-  ).map((item, index) => ({ ...item, rank: index + 1 }));
+  ).map((item, index) => ({ ...item, rank: index + 1, rankChange: "same" }));
+}
+function compareGoogleTrendRanks(items, previousRanks) {
+  if (!previousRanks) return items;
+  return items.map((item) => {
+    const key = item.keyword.normalize("NFKC").toLocaleLowerCase();
+    const previousRank = Object.prototype.hasOwnProperty.call(previousRanks, key) ? previousRanks[key] : void 0;
+    const rankChange = previousRank === void 0 ? "new" : item.rank < previousRank ? "up" : item.rank > previousRank ? "down" : "same";
+    return { ...item, rankChange };
+  });
 }
 
 // server/routers.ts
@@ -3420,6 +3429,28 @@ async function mergeGoogleTrendHistory(countryCode, current, now) {
     return rankGoogleTrends(current);
   }
 }
+async function attachGoogleTrendRankChanges(countryCode, items, now) {
+  if (!supabaseAdmin4 || items.length === 0) return items;
+  const capturedAt = new Date(Math.floor(now / CACHE_TTL) * CACHE_TTL).toISOString();
+  const cutoff = new Date(now - GOOGLE_TREND_HISTORY_MS).toISOString();
+  try {
+    const { data: previous, error: readError } = await supabaseAdmin4.from("google_trend_rank_snapshots").select("rankings").eq("country_code", countryCode).lt("captured_at", capturedAt).gte("captured_at", cutoff).order("captured_at", { ascending: false }).limit(1).maybeSingle();
+    if (readError) throw readError;
+    const rankings = Object.fromEntries(items.map((item) => [
+      item.keyword.normalize("NFKC").toLocaleLowerCase(),
+      item.rank
+    ]));
+    const { error: writeError } = await supabaseAdmin4.from("google_trend_rank_snapshots").upsert({ country_code: countryCode, captured_at: capturedAt, rankings }, { onConflict: "country_code,captured_at" });
+    if (writeError) throw writeError;
+    const { error: pruneError } = await supabaseAdmin4.from("google_trend_rank_snapshots").delete().eq("country_code", countryCode).lt("captured_at", new Date(now - 2 * GOOGLE_TREND_HISTORY_MS).toISOString());
+    if (pruneError) console.error("[Google Trends RSS] Rank snapshot cleanup failed:", pruneError);
+    const previousRanks = previous?.rankings && typeof previous.rankings === "object" && !Array.isArray(previous.rankings) ? previous.rankings : null;
+    return compareGoogleTrendRanks(items, previousRanks);
+  } catch (error) {
+    console.error("[Google Trends RSS] Rank snapshot unavailable:", error);
+    return items;
+  }
+}
 async function getGoogleTrendHistoryFallback(countryCode) {
   return mergeGoogleTrendHistory(countryCode, [], Date.now());
 }
@@ -3518,12 +3549,13 @@ async function getGoogleTrendingSearches(countryCode = "KR") {
     const uniqueItems = Array.from(new Map(items.map((item) => [item.keyword.normalize("NFKC").toLocaleLowerCase(), item])).values());
     if (items.length === 0) console.warn(`[Google Trends RSS] No keywords parsed for country: ${countryCode}`);
     const rankedItems = await mergeGoogleTrendHistory(countryCode, uniqueItems, now);
+    const results = uniqueItems.length > 0 ? await attachGoogleTrendRankChanges(countryCode, rankedItems, now) : rankedItems;
     googleTrendsCache[cacheKey] = {
-      data: rankedItems,
+      data: results,
       timestamp: now
     };
-    console.log(`[Google Trends RSS] Success - fetched ${uniqueItems.length} current, ${rankedItems.length} total for ${countryCode}`);
-    return rankedItems;
+    console.log(`[Google Trends RSS] Success - fetched ${uniqueItems.length} current, ${results.length} total for ${countryCode}`);
+    return results;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : "Unknown error";
     console.error(`[Google Trends RSS] Error fetching realtime trends for ${countryCode}:`, errorMsg);
