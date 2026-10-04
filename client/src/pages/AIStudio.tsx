@@ -66,10 +66,24 @@ export default function AIStudio() {
 
   return (
     <div className="aiStudioPageContainer">
-      <div className="pageHeader">
-        <h1 className="pageTitle">AI 스튜디오</h1>
-        <p className="pageDescription">콘텐츠 제작에 활용할 프로그램과 도구를 모아봅니다.</p>
-      </div>
+      <section className="aiStudioHero" aria-labelledby="ai-studio-title">
+        <div className="aiStudioHeroContent">
+          <span className="aiStudioHeroEyebrow">CONTENTS VIEW</span>
+          <h1 id="ai-studio-title" className="aiStudioHeroTitle">
+            <span className="aiStudioHeroEnglish">AI STUDIO</span>
+            {activeTab === "upcoming" ? (
+              <span className="aiStudioHeroKorean">아이디어를 콘텐츠로, <strong>더 빠르게</strong></span>
+            ) : (
+              <span className="aiStudioHeroKorean">반복 작업을 자동화로, <strong>더 간편하게</strong></span>
+            )}
+          </h1>
+        </div>
+        <div className="aiStudioHeroMedia" aria-hidden="true">
+          {activeTab === "upcoming" && (
+            <img src="/ai-studio-video-hero.png" alt="" />
+          )}
+        </div>
+      </section>
 
       <div className="aiStudioTabs" role="tablist" aria-label="AI 스튜디오 메뉴">
         <button
