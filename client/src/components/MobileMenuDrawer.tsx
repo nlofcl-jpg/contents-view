@@ -21,6 +21,7 @@ export function MobileMenuDrawer({
   const [location, navigate] = useLocation();
   const [isTrendOpen, setIsTrendOpen] = useState(true);
   const [isNewsOpen, setIsNewsOpen] = useState(false);
+  const [isStudioOpen, setIsStudioOpen] = useState(false);
 
   const isOpen = panelType !== null;
 
@@ -50,7 +51,9 @@ export function MobileMenuDrawer({
   const isNewsSearchPage = location?.startsWith("/news/search");
   const isSavedContentsPage = location === "/saved-contents";
   const isCommunityPage = location === "/community";
-  const isAIStudioPage = location === "/ai-studio";
+  const isAIStudioPage = location?.startsWith("/ai-studio");
+  const isVideoProductionPage = location === "/ai-studio/video" ||
+    (location === "/ai-studio" && new URLSearchParams(window.location.search).get("tab") === "upcoming");
   const isAdminPage = location === "/admin";
   const isAdmin = isAuthenticated && user?.role === "admin";
 
@@ -254,12 +257,36 @@ export function MobileMenuDrawer({
               </button>
 
               <button
-                className={`mobileNavItem ${isAIStudioPage ? "active" : ""}`}
-                onClick={() => handleNavigation("/ai-studio")}
+                className={`mobileNavItem groupTitle ${isAIStudioPage ? "active" : ""}`}
+                onClick={() => setIsStudioOpen(!isStudioOpen)}
                 type="button"
+                aria-expanded={isStudioOpen}
+                aria-controls="mobile-studio-submenu"
               >
                 <span>AI 스튜디오</span>
+                <span style={{ marginLeft: "auto", transition: "transform 0.2s" }}>
+                  {isStudioOpen ? "⌄" : "⌃"}
+                </span>
               </button>
+
+              {isStudioOpen && (
+                <div id="mobile-studio-submenu">
+                  <button
+                    className={`mobileNavItem subNavItem ${isVideoProductionPage ? "active" : ""}`}
+                    onClick={() => handleNavigation("/ai-studio/video")}
+                    type="button"
+                  >
+                    <span>영상 제작</span>
+                  </button>
+                  <button
+                    className={`mobileNavItem subNavItem ${isAIStudioPage && !isVideoProductionPage ? "active" : ""}`}
+                    onClick={() => handleNavigation("/ai-studio/programs")}
+                    type="button"
+                  >
+                    <span>프로그램</span>
+                  </button>
+                </div>
+              )}
 
               <button
                 className={`mobileNavItem ${isSavedContentsPage ? "active" : ""}`}

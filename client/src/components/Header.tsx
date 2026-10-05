@@ -33,12 +33,15 @@ export default function Header({
   const [notices, setNotices] = useState<NoticeItem[]>([]);
   const [openTrendMenu, setOpenTrendMenu] = useState(false);
   const [openNewsMenu, setOpenNewsMenu] = useState(false);
+  const [openStudioMenu, setOpenStudioMenu] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const noticeRef = useRef<HTMLDivElement>(null);
   const trendMenuRef = useRef<HTMLDivElement>(null);
   const newsMenuRef = useRef<HTMLDivElement>(null);
+  const studioMenuRef = useRef<HTMLDivElement>(null);
   const trendMenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const newsMenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const studioMenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const trendItems = [
     { name: "YouTube", path: "/trends/youtube" },
@@ -50,6 +53,11 @@ export default function Header({
     { name: "뉴스", path: "/news" },
     { name: "이슈", path: "/news/issues" },
     { name: "검색", path: "/news/search" },
+  ];
+
+  const studioItems = [
+    { name: "영상 제작", path: "/ai-studio/video" },
+    { name: "프로그램", path: "/ai-studio/programs" },
   ];
 
   const latestNoticeId = notices[0]?.id ?? null;
@@ -105,6 +113,19 @@ export default function Header({
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [openNewsMenu]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (studioMenuRef.current && !studioMenuRef.current.contains(event.target as Node)) {
+        setOpenStudioMenu(false);
+      }
+    }
+
+    if (openStudioMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [openStudioMenu]);
 
   // Query to get YouTube API key status
   const { data: apiKeyData } = trpc.user.apiKey.getWithStatus.useQuery(
@@ -178,6 +199,24 @@ export default function Header({
 
   const handleNewsItemClick = (path: string) => {
     setOpenNewsMenu(false);
+    if (!onGuestMenuAccess?.(path)) setLocation(path);
+  };
+
+  const handleStudioMenuHover = (isHovering: boolean) => {
+    if (studioMenuTimeoutRef.current) {
+      clearTimeout(studioMenuTimeoutRef.current);
+      studioMenuTimeoutRef.current = null;
+    }
+
+    if (isHovering) {
+      setOpenStudioMenu(true);
+    } else {
+      studioMenuTimeoutRef.current = setTimeout(() => setOpenStudioMenu(false), 200);
+    }
+  };
+
+  const handleStudioItemClick = (path: string) => {
+    setOpenStudioMenu(false);
     if (!onGuestMenuAccess?.(path)) setLocation(path);
   };
 
@@ -383,9 +422,42 @@ export default function Header({
           커뮤니티 반응
         </a>
 
-        <a href="/ai-studio" onClick={(event) => handleNavLinkClick(event, "/ai-studio")} className={`headerNavItem headerNavLink ${location === "/ai-studio" ? "active" : ""}`}>
-          AI 스튜디오
-        </a>
+        <div
+          className="headerNavItem"
+          ref={studioMenuRef}
+          onMouseEnter={() => handleStudioMenuHover(true)}
+          onMouseLeave={() => handleStudioMenuHover(false)}
+        >
+          <button
+            type="button"
+            className={`headerNavButton ${location.startsWith("/ai-studio") ? "active" : ""}`}
+            aria-expanded={openStudioMenu}
+            onClick={() => {
+              if (onGuestMenuAccess?.("/ai-studio", () => setOpenStudioMenu(true))) {
+                setOpenStudioMenu(false);
+                return;
+              }
+              setOpenStudioMenu(true);
+            }}
+          >
+            AI 스튜디오
+            <ChevronDown className={`headerNavChevron ${openStudioMenu ? "open" : ""}`} aria-hidden="true" />
+          </button>
+          {openStudioMenu && (
+            <div className="headerNavDropdown" onMouseEnter={() => handleStudioMenuHover(true)} onMouseLeave={() => handleStudioMenuHover(false)}>
+              {studioItems.map((item) => (
+                <button
+                  key={item.name}
+                  type="button"
+                  className="headerNavDropdownItem"
+                  onClick={() => handleStudioItemClick(item.path)}
+                >
+                  {item.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         <a href="/saved-contents" onClick={(event) => handleNavLinkClick(event, "/saved-contents")} className={`headerNavItem headerNavLink ${location === "/saved-contents" ? "active" : ""}`}>
           내 보관함

@@ -1,10 +1,17 @@
 import { Download, ExternalLink, FolderDown, Sparkles } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 
 type StudioTab = "programs" | "upcoming";
+type ProductionFormat = "video" | "cardNews" | "motionGraphic";
+
+const productionFormats: { id: ProductionFormat; label: string; emptyMessage: string }[] = [
+  { id: "video", label: "영상제작", emptyMessage: "영상제작 콘텐츠를 준비하고 있습니다." },
+  { id: "cardNews", label: "카드뉴스", emptyMessage: "카드뉴스 콘텐츠를 준비하고 있습니다." },
+  { id: "motionGraphic", label: "모션그래픽", emptyMessage: "모션그래픽 콘텐츠를 준비하고 있습니다." },
+];
 
 type Program = {
   id: string;
@@ -29,20 +36,11 @@ export default function AIStudio() {
   const [location, setLocation] = useLocation();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [guestProgramPath, setGuestProgramPath] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<StudioTab>(() =>
-    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "upcoming"
+  const [productionFormat, setProductionFormat] = useState<ProductionFormat>("video");
+  const activeTab: StudioTab = location === "/ai-studio/video" ||
+    (location === "/ai-studio" && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "upcoming")
       ? "upcoming"
-      : "programs",
-  );
-
-  useEffect(() => {
-    setActiveTab(new URLSearchParams(window.location.search).get("tab") === "upcoming" ? "upcoming" : "programs");
-  }, [location]);
-
-  const handleTabChange = (tab: StudioTab) => {
-    setActiveTab(tab);
-    setLocation(tab === "programs" ? "/ai-studio" : "/ai-studio?tab=upcoming");
-  };
+      : "programs";
 
   const handleProgramDownload = (program: Program) => {
     if (authLoading) return;
@@ -85,31 +83,8 @@ export default function AIStudio() {
         </div>
       </section>
 
-      <div className="aiStudioTabs" role="tablist" aria-label="AI 스튜디오 메뉴">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "upcoming"}
-          aria-controls="ai-studio-upcoming"
-          className={`aiStudioTab ${activeTab === "upcoming" ? "active" : ""}`}
-          onClick={() => handleTabChange("upcoming")}
-        >
-          영상 제작
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === "programs"}
-          aria-controls="ai-studio-programs"
-          className={`aiStudioTab ${activeTab === "programs" ? "active" : ""}`}
-          onClick={() => handleTabChange("programs")}
-        >
-          프로그램
-        </button>
-      </div>
-
       {activeTab === "programs" ? (
-        <section id="ai-studio-programs" role="tabpanel" className="aiStudioPanel">
+        <section className="aiStudioPanel">
           {programs.length > 0 ? (
             <div className="aiStudioProgramGrid">
               {programs.map(program => (
@@ -152,10 +127,25 @@ export default function AIStudio() {
           )}
         </section>
       ) : (
-        <section id="ai-studio-upcoming" role="tabpanel" className="aiStudioEmptyState aiStudioUpcomingState">
-          <Sparkles aria-hidden="true" />
-          <p>새로운 AI 도구를 준비하고 있습니다.</p>
-        </section>
+        <>
+          <div className="aiStudioFormatFilters" role="group" aria-label="제작 유형 필터">
+            {productionFormats.map(format => (
+              <button
+                key={format.id}
+                type="button"
+                className={`aiStudioFormatFilter ${productionFormat === format.id ? "active" : ""}`}
+                aria-pressed={productionFormat === format.id}
+                onClick={() => setProductionFormat(format.id)}
+              >
+                <span>{format.label}</span>
+              </button>
+            ))}
+          </div>
+          <section className="aiStudioEmptyState aiStudioUpcomingState" aria-live="polite">
+            <Sparkles aria-hidden="true" />
+            <p>{productionFormats.find(format => format.id === productionFormat)?.emptyMessage}</p>
+          </section>
+        </>
       )}
       <GuestAccessPrompt
         open={guestProgramPath !== null}
