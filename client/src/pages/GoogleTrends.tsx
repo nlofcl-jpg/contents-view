@@ -266,14 +266,14 @@ export default function GoogleTrends() {
           aria-labelledby="google-trends-tab"
           className={`min-w-0 ${mobileTab === "google" ? "block" : "hidden"} lg:block`}
         >
-          <div className="mb-5 flex min-h-7 items-center justify-end gap-3 lg:justify-between">
-            <h2 id="google-trends-heading" className="hidden text-xl font-bold text-foreground lg:block">
+          <div className="mb-5 flex min-h-7 items-center justify-between gap-3">
+            <h2 id="google-trends-heading" className="text-base font-bold text-foreground lg:text-xl">
               구글 트렌드
             </h2>
             {latestTrendTimestamp > 0 && (
               <time
                 dateTime={new Date(latestTrendTimestamp).toISOString()}
-                className="text-xs text-slate-400"
+                className="shrink-0 text-right text-[10px] text-slate-400 sm:text-xs"
               >
                 {formatSeoulDateTime(latestTrendTimestamp)} 기준
               </time>
