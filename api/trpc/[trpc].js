@@ -2393,7 +2393,7 @@ async function updateApiKeyTestStatus2(user, provider, testStatus, testError = n
 }
 
 // server/routers.ts
-import * as cheerio from "cheerio";
+import * as cheerio2 from "cheerio";
 import { createClient as createClient5 } from "@supabase/supabase-js";
 import { createRequire } from "module";
 import { createHmac as createHmac2 } from "crypto";
@@ -2729,7 +2729,7 @@ function parseGoogleTrendTraffic(value) {
 }
 function rankGoogleTrends(items) {
   return [...items].sort(
-    (a, b) => b.trafficCount - a.trafficCount || Number(b.isCurrent) - Number(a.isCurrent) || Date.parse(b.lastSeenAt) - Date.parse(a.lastSeenAt) || a.keyword.localeCompare(b.keyword)
+    (a, b) => Number(b.isCurrent) - Number(a.isCurrent) || b.trafficCount - a.trafficCount || Date.parse(b.lastSeenAt) - Date.parse(a.lastSeenAt) || (a.sourceRank != null && b.sourceRank != null ? a.sourceRank - b.sourceRank : 0) || a.keyword.localeCompare(b.keyword)
   ).map((item, index) => ({ ...item, rank: index + 1, rankChange: "same" }));
 }
 function compareGoogleTrendRanks(items, previousRanks) {
@@ -2740,6 +2740,45 @@ function compareGoogleTrendRanks(items, previousRanks) {
     const rankChange = previousRank === void 0 ? "new" : item.rank < previousRank ? "up" : item.rank > previousRank ? "down" : "same";
     return { ...item, rankChange };
   });
+}
+
+// server/googleTrendsPage.ts
+import * as cheerio from "cheerio";
+function parseGoogleTrendsPage(html, countryCode, observedAt) {
+  const $ = cheerio.load(html);
+  const script = $("script").toArray().map((element) => $(element).text()).find((content) => content.startsWith("AF_initDataCallback({key: 'ds:0'"));
+  const payload = script?.match(/\bdata:(\[[\s\S]*\]),\s*sideChannel:/)?.[1];
+  if (!payload) return [];
+  try {
+    const data = JSON.parse(payload);
+    if (!Array.isArray(data) || !Array.isArray(data[1])) return [];
+    const seen = /* @__PURE__ */ new Set();
+    const items = [];
+    for (const row of data[1]) {
+      if (!Array.isArray(row)) continue;
+      const keyword = typeof row[0] === "string" ? row[0].trim() : "";
+      const trafficCount = Number(row[6]);
+      if (!keyword || row[2] !== countryCode || !Number.isFinite(trafficCount) || trafficCount <= 0) continue;
+      const key = keyword.normalize("NFKC").toLocaleLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const endedAt = Array.isArray(row[4]) ? Number(row[4][0]) : 0;
+      items.push({
+        keyword,
+        traffic: `${trafficCount}+`,
+        trafficCount,
+        news: [],
+        source: "Google Trends",
+        country: countryCode,
+        isCurrent: !Number.isFinite(endedAt) || endedAt <= 0,
+        lastSeenAt: observedAt,
+        sourceRank: items.length
+      });
+    }
+    return items;
+  } catch {
+    return [];
+  }
 }
 
 // server/routers.ts
@@ -2894,7 +2933,7 @@ function getXmlTexts($, element, selector) {
   return element.find(selector).toArray().map((node) => $(node).text().trim()).filter(Boolean);
 }
 function stripHtmlText(value) {
-  return cheerio.load(value).text().replace(/\s+/g, " ").trim();
+  return cheerio2.load(value).text().replace(/\s+/g, " ").trim();
 }
 function normalizePostTag(value) {
   return stripHtmlText(value).replace(/^#/, "").replace(/\s+/g, " ").trim();
@@ -2912,7 +2951,7 @@ function uniqueTags(values) {
   return tags.slice(0, 8);
 }
 function extractNaverPostTagsFromHtml(html) {
-  const $ = cheerio.load(html);
+  const $ = cheerio2.load(html);
   const candidates = [];
   const selectors = [
     "meta[property='article:tag']",
@@ -3033,7 +3072,7 @@ async function fetchNaverBlogPostTags(postUrl) {
   if (!initialHtml) return [];
   const initialTags = extractNaverPostTagsFromHtml(initialHtml);
   if (initialTags.length > 0) return initialTags;
-  const $ = cheerio.load(initialHtml);
+  const $ = cheerio2.load(initialHtml);
   const iframeSrc = $("#mainFrame").attr("src");
   if (!iframeSrc) return [];
   const iframeUrl = new URL(iframeSrc, "https://blog.naver.com").href;
@@ -3075,7 +3114,7 @@ async function fetchNaverBlogPostEngagement(postUrl) {
     const mobileHtml = await mobileResult.value.text();
     const commentMatch = mobileHtml.match(/commentCount="(\d+)"/i);
     commentCount = commentMatch ? Number(commentMatch[1]) : null;
-    const $ = cheerio.load(mobileHtml);
+    const $ = cheerio2.load(mobileHtml);
     const postBody = $(".se-main-container").first();
     const contentRoot = postBody.length > 0 ? postBody : $("#postView, .post_ct").first();
     if (contentRoot.length > 0) {
@@ -3234,7 +3273,7 @@ async function fetchNaverBlogRss(blogUrl) {
     };
   }
   const xml = await response.text();
-  const $ = cheerio.load(xml, { xmlMode: true });
+  const $ = cheerio2.load(xml, { xmlMode: true });
   const channel = $("channel").first();
   const basePosts = $("item").toArray().slice(0, BLOG_ANALYSIS_POST_LIMIT).map((item, index) => {
     const itemNode = $(item);
@@ -3308,7 +3347,7 @@ async function fetchNaverBlogPostDetails(postUrl) {
     });
     if (response.ok) {
       const xml = await response.text();
-      const $ = cheerio.load(xml, { xmlMode: true });
+      const $ = cheerio2.load(xml, { xmlMode: true });
       blogTitle = getXmlText($, $("channel").first(), "title") || blogTitle;
       const matchedItem = $("item").toArray().find((item) => {
         const itemLink = getXmlText($, $(item), "link");
@@ -3342,7 +3381,7 @@ async function fetchNaverBlogPostDetails(postUrl) {
       );
       if (response.ok) {
         const html = await response.text();
-        const $ = cheerio.load(html);
+        const $ = cheerio2.load(html);
         title = $("meta[property='og:title']").attr("content")?.trim() || $("title").text().trim();
         const addDateMatch = html.match(/addDate="(\d+)"/i);
         if (addDateMatch) pubDate = new Date(Number(addDateMatch[1])).toISOString();
@@ -3393,9 +3432,15 @@ async function mergeGoogleTrendHistory(countryCode, current, now) {
   const cutoff = new Date(now - GOOGLE_TREND_HISTORY_MS).toISOString();
   const currentKeys = new Set(current.map((item) => item.keyword.normalize("NFKC").toLocaleLowerCase()));
   try {
+    const history = await loadGoogleTrendHistory(countryCode, cutoff);
+    const newsByKey = new Map(history.map((row) => [row.keyword_key, Array.isArray(row.news) ? row.news : []]));
+    const currentWithNews = current.map((item) => ({
+      ...item,
+      news: item.news.length > 0 ? item.news : newsByKey.get(item.keyword.normalize("NFKC").toLocaleLowerCase()) ?? []
+    }));
     if (current.length > 0) {
       const { error } = await supabaseAdmin4.from("google_trend_history").upsert(
-        current.map((item) => ({
+        currentWithNews.map((item) => ({
           country_code: countryCode,
           keyword_key: item.keyword.normalize("NFKC").toLocaleLowerCase(),
           keyword: item.keyword,
@@ -3408,11 +3453,10 @@ async function mergeGoogleTrendHistory(countryCode, current, now) {
       );
       if (error) throw error;
     }
-    const history = await loadGoogleTrendHistory(countryCode, cutoff);
     const { error: pruneError } = await supabaseAdmin4.from("google_trend_history").delete().lt("last_seen_at", cutoff);
     if (pruneError) console.error("[Google Trends RSS] History cleanup failed:", pruneError);
     return rankGoogleTrends([
-      ...current,
+      ...currentWithNews,
       ...history.filter((row) => !currentKeys.has(row.keyword_key)).map((row) => ({
         keyword: row.keyword,
         traffic: row.traffic,
@@ -3478,16 +3522,19 @@ async function getGoogleTrendingSearches(countryCode = "KR") {
     }
     console.log(`[Google Trends RSS] Fetching RSS for country: ${countryCode}`);
     console.log(`[Google Trends RSS] URL: ${rssUrl}`);
-    const response = await fetch(rssUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-      }
-    });
-    if (!response.ok) {
-      console.error(`[Google Trends RSS] HTTP Error: ${response.status}`);
-      return getGoogleTrendHistoryFallback(countryCode);
+    let rssText = "";
+    try {
+      const response = await fetch(rssUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        },
+        signal: AbortSignal.timeout(8e3)
+      });
+      if (response.ok) rssText = await response.text();
+      else console.warn(`[Google Trends RSS] HTTP Error: ${response.status}`);
+    } catch (error) {
+      console.warn("[Google Trends RSS] Unavailable, trying page list:", error);
     }
-    const rssText = await response.text();
     console.log(`[Google Trends RSS] Fetched RSS text length: ${rssText.length}`);
     const itemRegex = /<item>([\s\S]*?)<\/item>/g;
     const titleRegex = /<title>([^<]+)<\/title>/;
@@ -3538,7 +3585,8 @@ async function getGoogleTrendingSearches(countryCode = "KR") {
             source: "Google Trends",
             country: countryCode,
             isCurrent: true,
-            lastSeenAt: new Date(now).toISOString()
+            lastSeenAt: new Date(now).toISOString(),
+            sourceRank: items.length
           });
         }
       }
@@ -3548,8 +3596,28 @@ async function getGoogleTrendingSearches(countryCode = "KR") {
     console.log(`[Google Trends RSS] Final keywords: ${items.length}`);
     const uniqueItems = Array.from(new Map(items.map((item) => [item.keyword.normalize("NFKC").toLocaleLowerCase(), item])).values());
     if (items.length === 0) console.warn(`[Google Trends RSS] No keywords parsed for country: ${countryCode}`);
-    const rankedItems = await mergeGoogleTrendHistory(countryCode, uniqueItems, now);
-    const results = uniqueItems.length > 0 ? await attachGoogleTrendRankChanges(countryCode, rankedItems, now) : rankedItems;
+    let pageItems = [];
+    try {
+      const pageResponse = await fetch(`https://trends.google.com/trending?geo=${countryCode}&hl=en`, {
+        headers: { "User-Agent": "Mozilla/5.0" },
+        signal: AbortSignal.timeout(8e3)
+      });
+      if (pageResponse.ok) {
+        pageItems = parseGoogleTrendsPage(await pageResponse.text(), countryCode, new Date(now).toISOString());
+      }
+    } catch (error) {
+      console.warn("[Google Trends] Page list unavailable, using RSS:", error);
+    }
+    if (pageItems.length < 20) {
+      console.warn(`[Google Trends] Page list has ${pageItems.length} items; using RSS/history fallback`);
+    }
+    const rssByKey = new Map(uniqueItems.map((item) => [item.keyword.normalize("NFKC").toLocaleLowerCase(), item]));
+    const currentItems = pageItems.length >= 20 ? pageItems.map((item) => ({
+      ...item,
+      news: rssByKey.get(item.keyword.normalize("NFKC").toLocaleLowerCase())?.news ?? []
+    })) : uniqueItems;
+    const rankedItems = await mergeGoogleTrendHistory(countryCode, currentItems, now);
+    const results = currentItems.length > 0 ? await attachGoogleTrendRankChanges(countryCode, rankedItems, now) : rankedItems;
     googleTrendsCache[cacheKey] = {
       data: results,
       timestamp: now
@@ -5809,8 +5877,8 @@ var appRouter = router({
             stream.on("end", () => resolve(data));
           }).on("error", reject);
         });
-        const cheerio2 = require2("cheerio");
-        const $ = cheerio2.load(html);
+        const cheerio3 = require2("cheerio");
+        const $ = cheerio3.load(html);
         const posts = [];
         const rows = $("tbody tr");
         let rank = 1;

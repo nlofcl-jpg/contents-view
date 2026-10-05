@@ -10,15 +10,17 @@ describe("Google Trends search-volume ranking", () => {
     expect(parseGoogleTrendTraffic("")).toBe(0);
   });
 
-  it("ranks current and previous terms together by traffic", () => {
+  it("ranks current RSS terms ahead of previous terms, then by traffic", () => {
     const base = { news: [], source: "Google Trends", country: "KR", lastSeenAt: "2026-09-30T00:00:00Z" };
     const result = rankGoogleTrends([
       { ...base, keyword: "current", traffic: "100+", trafficCount: 100, isCurrent: true },
+      { ...base, keyword: "current-high", traffic: "1K+", trafficCount: 1000, isCurrent: true },
       { ...base, keyword: "previous", traffic: "1K+", trafficCount: 1000, isCurrent: false },
     ]);
     expect(result.map(({ keyword, rank, isCurrent }) => ({ keyword, rank, isCurrent }))).toEqual([
-      { keyword: "previous", rank: 1, isCurrent: false },
+      { keyword: "current-high", rank: 1, isCurrent: true },
       { keyword: "current", rank: 2, isCurrent: true },
+      { keyword: "previous", rank: 3, isCurrent: false },
     ]);
   });
 

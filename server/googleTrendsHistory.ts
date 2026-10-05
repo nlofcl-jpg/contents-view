@@ -16,6 +16,7 @@ export type GoogleTrendItem = {
   country: string;
   isCurrent: boolean;
   lastSeenAt: string;
+  sourceRank?: number;
 };
 
 export type GoogleTrendRankChange = "up" | "down" | "same" | "new";
@@ -41,9 +42,10 @@ export function parseGoogleTrendTraffic(value: string): number {
 export function rankGoogleTrends(items: UnrankedGoogleTrendItem[]): GoogleTrendItem[] {
   return [...items]
     .sort((a, b) =>
-      b.trafficCount - a.trafficCount ||
       Number(b.isCurrent) - Number(a.isCurrent) ||
+      b.trafficCount - a.trafficCount ||
       Date.parse(b.lastSeenAt) - Date.parse(a.lastSeenAt) ||
+      (a.sourceRank != null && b.sourceRank != null ? a.sourceRank - b.sourceRank : 0) ||
       a.keyword.localeCompare(b.keyword),
     )
     .map((item, index) => ({ ...item, rank: index + 1, rankChange: "same" as const }));

@@ -16,6 +16,7 @@ import { eq } from "drizzle-orm";
 import { users } from "../drizzle/schema";
 import { getStoredYouTubeRisingVideos, isYouTubeTopicChannel, scoreRisingCandidates, selectBalancedRisingVideos, syncYouTubeRecommendedHistory } from "./youtubeRising";
 import { GOOGLE_TREND_HISTORY_MS, compareGoogleTrendRanks, parseGoogleTrendTraffic, rankGoogleTrends, type GoogleTrendItem, type UnrankedGoogleTrendItem } from "./googleTrendsHistory";
+import { parseGoogleTrendsPage } from "./googleTrendsPage";
 
 const require = createRequire(import.meta.url);
 
@@ -854,9 +855,17 @@ async function mergeGoogleTrendHistory(
   const cutoff = new Date(now - GOOGLE_TREND_HISTORY_MS).toISOString();
   const currentKeys = new Set(current.map(item => item.keyword.normalize("NFKC").toLocaleLowerCase()));
   try {
+    const history = await loadGoogleTrendHistory(countryCode, cutoff);
+    const newsByKey = new Map(history.map(row => [row.keyword_key, Array.isArray(row.news) ? row.news : []]));
+    const currentWithNews = current.map(item => ({
+      ...item,
+      news: item.news.length > 0
+        ? item.news
+        : newsByKey.get(item.keyword.normalize("NFKC").toLocaleLowerCase()) ?? [],
+    }));
     if (current.length > 0) {
       const { error } = await supabaseAdmin.from("google_trend_history").upsert(
-        current.map(item => ({
+        currentWithNews.map(item => ({
           country_code: countryCode,
           keyword_key: item.keyword.normalize("NFKC").toLocaleLowerCase(),
           keyword: item.keyword,
@@ -870,7 +879,6 @@ async function mergeGoogleTrendHistory(
       if (error) throw error;
     }
 
-    const history = await loadGoogleTrendHistory(countryCode, cutoff);
     const { error: pruneError } = await supabaseAdmin
       .from("google_trend_history")
       .delete()
@@ -878,7 +886,7 @@ async function mergeGoogleTrendHistory(
     if (pruneError) console.error("[Google Trends RSS] History cleanup failed:", pruneError);
 
     return rankGoogleTrends([
-      ...current,
+      ...currentWithNews,
       ...history
         .filter(row => !currentKeys.has(row.keyword_key))
         .map(row => ({
@@ -984,18 +992,19 @@ async function getGoogleTrendingSearches(countryCode: string = "KR"): Promise<Go
     console.log(`[Google Trends RSS] Fetching RSS for country: ${countryCode}`);
     console.log(`[Google Trends RSS] URL: ${rssUrl}`);
     
-    const response = await fetch(rssUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-      },
-    });
-    
-    if (!response.ok) {
-      console.error(`[Google Trends RSS] HTTP Error: ${response.status}`);
-      return getGoogleTrendHistoryFallback(countryCode);
+    let rssText = "";
+    try {
+      const response = await fetch(rssUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        },
+        signal: AbortSignal.timeout(8_000),
+      });
+      if (response.ok) rssText = await response.text();
+      else console.warn(`[Google Trends RSS] HTTP Error: ${response.status}`);
+    } catch (error) {
+      console.warn("[Google Trends RSS] Unavailable, trying page list:", error);
     }
-    
-    const rssText = await response.text();
     console.log(`[Google Trends RSS] Fetched RSS text length: ${rssText.length}`);
     
     // 간단한 XML 파싱 (정규식 사용)
@@ -1060,6 +1069,7 @@ async function getGoogleTrendingSearches(countryCode: string = "KR"): Promise<Go
             country: countryCode,
             isCurrent: true,
             lastSeenAt: new Date(now).toISOString(),
+            sourceRank: items.length,
           });
         }
       }
@@ -1073,8 +1083,31 @@ async function getGoogleTrendingSearches(countryCode: string = "KR"): Promise<Go
     
     if (items.length === 0) console.warn(`[Google Trends RSS] No keywords parsed for country: ${countryCode}`);
 
-    const rankedItems = await mergeGoogleTrendHistory(countryCode, uniqueItems, now);
-    const results = uniqueItems.length > 0
+    let pageItems: UnrankedGoogleTrendItem[] = [];
+    try {
+      const pageResponse = await fetch(`https://trends.google.com/trending?geo=${countryCode}&hl=en`, {
+        headers: { "User-Agent": "Mozilla/5.0" },
+        signal: AbortSignal.timeout(8_000),
+      });
+      if (pageResponse.ok) {
+        pageItems = parseGoogleTrendsPage(await pageResponse.text(), countryCode, new Date(now).toISOString());
+      }
+    } catch (error) {
+      console.warn("[Google Trends] Page list unavailable, using RSS:", error);
+    }
+    if (pageItems.length < 20) {
+      console.warn(`[Google Trends] Page list has ${pageItems.length} items; using RSS/history fallback`);
+    }
+
+    const rssByKey = new Map(uniqueItems.map(item => [item.keyword.normalize("NFKC").toLocaleLowerCase(), item]));
+    const currentItems = pageItems.length >= 20
+      ? pageItems.map(item => ({
+          ...item,
+          news: rssByKey.get(item.keyword.normalize("NFKC").toLocaleLowerCase())?.news ?? [],
+        }))
+      : uniqueItems;
+    const rankedItems = await mergeGoogleTrendHistory(countryCode, currentItems, now);
+    const results = currentItems.length > 0
       ? await attachGoogleTrendRankChanges(countryCode, rankedItems, now)
       : rankedItems;
     
