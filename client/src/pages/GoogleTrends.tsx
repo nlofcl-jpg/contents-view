@@ -20,6 +20,7 @@ interface TrendItem {
   rank: number;
   rankChange?: RankChange;
   keyword: string;
+  lastSeenAt: string;
   traffic?: string;
   trafficCount?: number;
   news?: NewsItem[];
@@ -28,6 +29,20 @@ interface TrendItem {
 }
 
 const GOOGLE_TRENDS_PAGE_SIZE = 20;
+const seoulDateTimeFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+function formatSeoulDateTime(timestamp: number): string {
+  const parts = new Map(seoulDateTimeFormatter.formatToParts(timestamp).map(part => [part.type, part.value]));
+  return `${parts.get("year")}.${parts.get("month")}.${parts.get("day")} ${parts.get("hour")}:${parts.get("minute")}`;
+}
 
 function SearchKeywordTrends() {
   const [keywords, setKeywords] = useState<string[]>([]);
@@ -123,6 +138,10 @@ export default function GoogleTrends() {
   const [visibleCount, setVisibleCount] = useState(GOOGLE_TRENDS_PAGE_SIZE);
   const [showGuestPrompt, setShowGuestPrompt] = useState(false);
   const [mobileTab, setMobileTab] = useState<"google" | "keywords">("google");
+  const latestTrendTimestamp = popularSearches.reduce((latest, item) => {
+    const timestamp = Date.parse(item.lastSeenAt);
+    return Number.isFinite(timestamp) ? Math.max(latest, timestamp) : latest;
+  }, 0);
 
   const handleMobileTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     const nextTab = event.key === "ArrowRight" || event.key === "End"
@@ -207,7 +226,7 @@ export default function GoogleTrends() {
           검색 트렌드
         </h1>
         <p className="pageDescription">
-          한국 검색 흐름과 인기 검색어를 확인하세요.
+          현재 검색 흐름과 인기 검색어를 확인하세요.
         </p>
       </div>
 
@@ -247,9 +266,19 @@ export default function GoogleTrends() {
           aria-labelledby="google-trends-tab"
           className={`min-w-0 ${mobileTab === "google" ? "block" : "hidden"} lg:block`}
         >
-          <h2 id="google-trends-heading" className="mb-5 hidden text-xl font-bold text-foreground lg:block">
-            구글 트렌드
-          </h2>
+          <div className="mb-5 flex min-h-7 items-center justify-end gap-3 lg:justify-between">
+            <h2 id="google-trends-heading" className="hidden text-xl font-bold text-foreground lg:block">
+              구글 트렌드
+            </h2>
+            {latestTrendTimestamp > 0 && (
+              <time
+                dateTime={new Date(latestTrendTimestamp).toISOString()}
+                className="text-xs text-slate-400"
+              >
+                {formatSeoulDateTime(latestTrendTimestamp)} 기준
+              </time>
+            )}
+          </div>
 
         {error ? (
           <div className="flex h-[562px] items-center justify-center rounded-md border border-slate-800 bg-slate-900/25 p-8 text-center">
