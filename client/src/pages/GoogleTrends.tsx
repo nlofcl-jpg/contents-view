@@ -165,7 +165,8 @@ export default function GoogleTrends() {
         return trendsData.data.find((item: TrendItem) => item.keyword === keyword) || null;
       });
       if (selectedKeywordFromUrl) {
-        setIsNewsOpen(trendsData.data.some((item: TrendItem) => item.keyword === selectedKeywordFromUrl));
+        const hasMatchingTrend = trendsData.data.some((item: TrendItem) => item.keyword === selectedKeywordFromUrl);
+        setIsNewsOpen(hasMatchingTrend && !window.matchMedia("(max-width: 1023px)").matches);
         setSelectedKeywordFromUrl("");
       }
     } else if (trendsData?.success && (!trendsData.data || trendsData.data.length === 0)) {
