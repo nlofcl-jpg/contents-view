@@ -222,9 +222,19 @@ export default function GoogleTrends() {
     <div className="youtubePageContainer">
       {/* 페이지 상단 타이틀 */}
       <div className="pageHeader">
-        <h1 className="pageTitle">
-          검색 트렌드
-        </h1>
+        <div className="flex w-full items-end justify-between gap-2">
+          <h1 className="pageTitle shrink-0">
+            검색 트렌드
+          </h1>
+          {latestTrendTimestamp > 0 && (
+            <time
+              dateTime={new Date(latestTrendTimestamp).toISOString()}
+              className="shrink-0 whitespace-nowrap pb-1 text-right text-[10px] text-slate-400 sm:text-xs"
+            >
+              {formatSeoulDateTime(latestTrendTimestamp)} 기준
+            </time>
+          )}
+        </div>
         <p className="pageDescription">
           현재 검색 흐름과 인기 검색어를 확인하세요.
         </p>
@@ -266,19 +276,9 @@ export default function GoogleTrends() {
           aria-labelledby="google-trends-tab"
           className={`min-w-0 ${mobileTab === "google" ? "block" : "hidden"} lg:block`}
         >
-          <div className="mb-5 flex min-h-7 items-center justify-between gap-3">
-            <h2 id="google-trends-heading" className="text-base font-bold text-foreground lg:text-xl">
-              구글 트렌드
-            </h2>
-            {latestTrendTimestamp > 0 && (
-              <time
-                dateTime={new Date(latestTrendTimestamp).toISOString()}
-                className="shrink-0 text-right text-[10px] text-slate-400 sm:text-xs"
-              >
-                {formatSeoulDateTime(latestTrendTimestamp)} 기준
-              </time>
-            )}
-          </div>
+          <h2 id="google-trends-heading" className="mb-5 hidden text-xl font-bold text-foreground lg:block">
+            구글 트렌드
+          </h2>
 
         {error ? (
           <div className="flex h-[562px] items-center justify-center rounded-md border border-slate-800 bg-slate-900/25 p-8 text-center">
