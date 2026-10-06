@@ -656,19 +656,22 @@ function IssuesPanel() {
           {imagePreviewError && <p className="mt-2 text-xs text-amber-300">이미지를 불러올 수 없습니다. 주소와 공개 설정을 확인해 주세요.</p>}
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" className="primaryButton" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? "저장 중" : editingId ? "수정 저장" : "등록"}
-            <span>→</span>
+          <button
+            type="button"
+            className="h-9 min-w-20 rounded-md border border-slate-700 px-4 text-sm font-medium text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={resetForm}
+            disabled={isSaving}
+          >
+            취소
           </button>
-          {editingId && (
-            <button
-              type="button"
-              className="rounded-md border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-slate-500"
-              onClick={resetForm}
-            >
-              취소
-            </button>
-          )}
+          <button
+            type="button"
+            className="h-9 min-w-20 rounded-md bg-blue-600 px-4 text-sm font-medium text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={handleSave}
+            disabled={isSaving}
+          >
+            {isSaving ? "저장 중" : editingId ? "수정 저장" : "등록"}
+          </button>
         </div>
       </div>
       )}
