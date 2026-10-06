@@ -7406,8 +7406,21 @@ input[type="date"].youtubeSelect {
 
 .savedContentsTabIcon {
   color: #38bdf8;
-  font-size: 13px;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.savedContentsBrandIcon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.sectionIcon .savedContentsBrandIcon {
+  width: 24px;
+  height: 24px;
 }
 
 .savedContentsTabDropdown {

@@ -3,7 +3,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useBookmark } from "@/contexts/BookmarkContext";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
-import { ChevronDown, Trash2, ExternalLink } from "lucide-react";
+import { GoogleLogo, YouTubeLogo } from "@/components/ServiceLogos";
+import { ChevronDown, Trash2, ExternalLink, Instagram, MessageCircleMore, Music2, Newspaper } from "lucide-react";
 import { useLocation } from "wouter";
 
 // Format view count (e.g., 74540 → 7.4만)
@@ -45,17 +46,17 @@ const formatSavedDate = (): string => {
 };
 
 const SECTIONS = [
-  { id: "youtube", label: "YouTube", icon: "▶" },
-  { id: "naver", label: "네이버", icon: "N" },
-  { id: "google-trends", label: "검색 트렌드", icon: "G" },
-  { id: "news-issues", label: "뉴스 & 이슈", icon: "▤" },
-  { id: "community", label: "커미니티 반응", icon: "∷" },
+  { id: "youtube", label: "YouTube", icon: <YouTubeLogo className="savedContentsBrandIcon" /> },
+  { id: "naver", label: "네이버", icon: <img className="savedContentsBrandIcon" src="/naver-favicon.png" alt="" /> },
+  { id: "google-trends", label: "검색 트렌드", icon: <GoogleLogo className="savedContentsBrandIcon" /> },
+  { id: "news-issues", label: "뉴스 & 이슈", icon: <Newspaper className="savedContentsBrandIcon" aria-hidden="true" /> },
+  { id: "community", label: "커미니티 반응", icon: <MessageCircleMore className="savedContentsBrandIcon" aria-hidden="true" /> },
 ];
 
 const VIDEO_PLATFORMS = [
-  { id: "youtube", label: "YouTube", icon: "▶" },
-  { id: "tiktok", label: "TikTok", icon: "♪" },
-  { id: "instagram", label: "Instagram", icon: "◎" },
+  { id: "youtube", label: "YouTube", icon: <YouTubeLogo className="savedContentsBrandIcon" /> },
+  { id: "tiktok", label: "TikTok", icon: <Music2 className="savedContentsBrandIcon" aria-hidden="true" /> },
+  { id: "instagram", label: "Instagram", icon: <Instagram className="savedContentsBrandIcon" aria-hidden="true" /> },
 ];
 
 export default function SavedContents() {
