@@ -4,8 +4,10 @@ import { useAuth } from "@/_core/hooks/useAuth";
 
 export interface BookmarkedYouTubeVideo {
   id: string;
+  contentType?: "video" | "shorts";
   title: string;
   thumbnail: string;
+  channelId?: string;
   channelTitle: string;
   channelThumbnail?: string;
   viewCount: string;
@@ -13,6 +15,7 @@ export interface BookmarkedYouTubeVideo {
   duration: string;
   categoryId?: number;
   country?: string;
+  savedAt?: string;
 }
 
 interface BookmarkContextType {
@@ -72,6 +75,7 @@ export function BookmarkProvider({ children }: { children: ReactNode }) {
       });
       // Sync with database (using utils from component top level)
       utils.youtubeBookmarks.list.invalidate();
+      utils.youtubeBookmarks.trackSavedVideos.invalidate();
     },
   });
 
@@ -86,8 +90,10 @@ export function BookmarkProvider({ children }: { children: ReactNode }) {
       // Optimistically update local state
       const newVideo: BookmarkedYouTubeVideo = {
         id: input.videoId,
+        contentType: input.contentType,
         title: input.title,
         thumbnail: input.thumbnailUrl || "",
+        channelId: input.channelId,
         channelTitle: input.channelTitle || "",
         channelThumbnail: input.channelThumbnailUrl,
         viewCount: String(input.viewCount || ""),
@@ -115,6 +121,7 @@ export function BookmarkProvider({ children }: { children: ReactNode }) {
       });
       // Sync with database (using utils from component top level)
       utils.youtubeBookmarks.list.invalidate();
+      utils.youtubeBookmarks.trackSavedVideos.invalidate();
     },
   });
 
@@ -123,13 +130,16 @@ export function BookmarkProvider({ children }: { children: ReactNode }) {
     if (dbBookmarks) {
       const videos: BookmarkedYouTubeVideo[] = dbBookmarks.map((bookmark: any) => ({
         id: bookmark.videoId,
+        contentType: bookmark.contentType,
         title: bookmark.title,
         thumbnail: bookmark.thumbnailUrl || "",
+        channelId: bookmark.channelId || undefined,
         channelTitle: bookmark.channelTitle || "",
         channelThumbnail: bookmark.channelThumbnailUrl,
         viewCount: bookmark.viewCount || "",
         publishedAt: bookmark.publishedAt || "",
         duration: bookmark.duration || "",
+        savedAt: bookmark.createdAt instanceof Date ? bookmark.createdAt.toISOString() : String(bookmark.createdAt || ""),
       }));
       setBookmarkedYouTubeVideos(videos);
     }
@@ -164,6 +174,7 @@ export function BookmarkProvider({ children }: { children: ReactNode }) {
           contentType,
           title: video.title,
           thumbnailUrl: video.thumbnail,
+          channelId: video.channelId,
           channelTitle: video.channelTitle,
           channelThumbnailUrl: video.channelThumbnail,
           videoUrl: `https://www.youtube.com/watch?v=${video.id}`,
@@ -197,7 +208,7 @@ export function BookmarkProvider({ children }: { children: ReactNode }) {
     // Call the actual mutation (not just remove from state)
     removeBookmarkMutation.mutate({
       videoId,
-      contentType: "video", // Default to video, can be enhanced to detect shorts
+      contentType: video.contentType || "video",
     });
   };
 

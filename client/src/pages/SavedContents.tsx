@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useBookmark } from "@/contexts/BookmarkContext";
+import { trpc } from "@/lib/trpc";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 import { GoogleLogo, YouTubeLogo } from "@/components/ServiceLogos";
-import { ChevronDown, Trash2, ExternalLink, Instagram, MessageCircleMore, Music2, Newspaper } from "lucide-react";
+import { ChevronDown, Trash2, ExternalLink, Instagram, MessageCircleMore, Music2, Newspaper, RefreshCw } from "lucide-react";
 import { useLocation } from "wouter";
 
 // Format view count (e.g., 74540 → 7.4만)
@@ -22,16 +23,28 @@ const formatViewCount = (count: string): string => {
   return num.toString();
 };
 
+const formatCheckedAt = (timestamp: string): string => {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}.${month}.${day} ${hours}:${minutes} 기준`;
+};
+
 // Format saved date (today → "오늘", yesterday → "어제", else → "M월 D일")
-const formatSavedDate = (): string => {
+const formatSavedDate = (savedAt?: string): string => {
+  if (!savedAt) return "방금";
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
   
-  const now = new Date();
-  const currentDate = new Date(now);
+  const currentDate = new Date(savedAt);
+  if (Number.isNaN(currentDate.getTime())) return "-";
   currentDate.setHours(0, 0, 0, 0);
   
   if (currentDate.getTime() === today.getTime()) {
@@ -61,7 +74,7 @@ const VIDEO_PLATFORMS = [
 
 export default function SavedContents() {
   const [location, setLocation] = useLocation();
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { bookmarkedYouTubeVideos, removeYouTubeBookmark } = useBookmark();
   const [showGuestPrompt, setShowGuestPrompt] = useState(true);
   const [activeSectionId, setActiveSectionId] = useState(() => {
@@ -80,6 +93,41 @@ export default function SavedContents() {
   const activeSection = SECTIONS.find((section) => section.id === activeSectionId) || SECTIONS[0];
   const selectedVideoPlatform =
     VIDEO_PLATFORMS.find((platform) => platform.id === selectedVideoPlatformId) || VIDEO_PLATFORMS[0];
+  const { data: trackedData, error: trackingError, isFetching: isTracking, refetch: refreshTracking } = trpc.youtubeBookmarks.trackSavedVideos.useQuery({ accountKey: user?.id || "" }, {
+    enabled: isAuthenticated && activeSectionId === "youtube" && selectedVideoPlatformId === "youtube" && bookmarkedYouTubeVideos.length > 0,
+    retry: false,
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+  const trackedVideoById = new Map(trackedData?.videos.map(video => [video.id, video]) || []);
+  const savedChannels = trackedData?.channels ?? Array.from(new Map(bookmarkedYouTubeVideos
+    .filter(video => video.channelId || video.channelTitle)
+    .map(video => [video.channelId || video.channelTitle, {
+      channelId: video.channelId || "",
+      title: video.channelTitle,
+      thumbnail: video.channelThumbnail || "",
+      latestVideos: [],
+    }])).values());
+
+  const openRecentVideo = (
+    recent: { videoId: string; title: string; thumbnail: string; publishedAt: string; viewCount: number; commentCount: number; duration: string; categoryId: string; tags: string[] },
+    channel: { title: string; thumbnail: string },
+  ) => {
+    setSelectedVideo({
+      id: recent.videoId,
+      title: recent.title,
+      channelTitle: channel.title,
+      channelThumbnail: channel.thumbnail,
+      viewCount: recent.viewCount,
+      commentCount: recent.commentCount,
+      publishedAt: recent.publishedAt,
+      duration: recent.duration,
+      categoryId: recent.categoryId,
+      tags: recent.tags,
+      useStoredSnapshot: true,
+    });
+    setIsModalOpen(true);
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -106,13 +154,35 @@ export default function SavedContents() {
       bookmarkedYouTubeVideos.length > 0
     ) {
       return (
-        <div className="youtubeCardsGrid">
-          {bookmarkedYouTubeVideos.map((video) => (
+        <div className="savedYouTubeGroups">
+          <div className="savedYouTubeGroupHeading">
+            <h3>저장한 영상</h3>
+            <div className="savedYouTubeTrackingStatus">
+              {trackedData?.checkedAt && <span>{formatCheckedAt(trackedData.checkedAt)}</span>}
+              <button type="button" onClick={() => refreshTracking()} disabled={isTracking} title="최신 정보 확인" aria-label="최신 정보 확인">
+                <RefreshCw size={15} className={isTracking ? "refreshIconSpinning" : ""} />
+              </button>
+            </div>
+          </div>
+          {trackingError && <p className="savedYouTubeTrackingNotice">현재 정보를 불러오지 못했습니다. 저장 당시 정보로 표시합니다.</p>}
+          <div className="youtubeCardsGrid">
+          {bookmarkedYouTubeVideos.map((savedVideo) => {
+            const trackedVideo = trackedVideoById.get(savedVideo.id);
+            const video = trackedVideo || savedVideo;
+            const savedViewCount = Number(savedVideo.viewCount || 0);
+            const viewIncrease = trackedVideo && savedViewCount > 0
+              ? trackedVideo.viewCount - savedViewCount
+              : null;
+            const channel = savedChannels.find(item => item.channelId
+              ? item.channelId === video.channelId
+              : item.title === video.channelTitle);
+            const recentVideos = channel?.latestVideos.filter(item => item.videoId !== video.id).slice(0, 3) || [];
+            return (
             <div
               key={video.id}
               className="youtubeContentCard"
               onClick={() => {
-                setSelectedVideo(video);
+                setSelectedVideo({ ...video, viewCount: Number(video.viewCount || 0) });
                 setIsModalOpen(true);
               }}
               style={{ cursor: "pointer" }}
@@ -124,8 +194,9 @@ export default function SavedContents() {
                 <h3 className="cardTitle">{video.title}</h3>
                 <p className="cardChannel">{video.channelTitle}</p>
                 <div className="cardMeta">
-                  <span>{formatViewCount(video.viewCount)} 조회</span>
-                  <span className="cardSavedDate">저장일: {formatSavedDate()}</span>
+                  <span>{trackedVideo?.available ? "현재" : "저장 당시"} {formatViewCount(String(video.viewCount))} 조회</span>
+                  {viewIncrease !== null && <span className={`savedYouTubeViewIncrease${viewIncrease < 0 ? " decreased" : ""}`}>저장 후 {viewIncrease < 0 ? "-" : "+"}{formatViewCount(String(Math.abs(viewIncrease)))} 조회</span>}
+                  <span className="cardSavedDate">저장일: {formatSavedDate(savedVideo.savedAt || trackedVideo?.savedAt)}</span>
                 </div>
                 <div className="cardActions">
                   <a
@@ -151,8 +222,70 @@ export default function SavedContents() {
                   </button>
                 </div>
               </div>
+              {channel && recentVideos.length > 0 && (
+                <div className="savedYouTubeCardRecent">
+                  <span>채널 최근 영상</span>
+                  <div className="savedYouTubeRecentVideos">
+                    {recentVideos.map(recent => (
+                      <button
+                        key={recent.videoId}
+                        type="button"
+                        className="savedYouTubeRecentVideo"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openRecentVideo(recent, channel);
+                        }}
+                        title={recent.title}
+                      >
+                        <img src={recent.thumbnail} alt="" />
+                        <span>{recent.title}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          ))}
+          );
+          })}
+          </div>
+          {savedChannels.length > 0 && (
+            <section className="savedYouTubeChannelSection" aria-label="저장한 영상의 채널">
+              <div className="savedYouTubeGroupHeading">
+                <h3>저장한 영상의 채널</h3>
+              </div>
+              <div className="savedYouTubeChannelGrid">
+                {savedChannels.map(channel => (
+                  <article key={channel.channelId || channel.title} className="savedYouTubeChannelCard">
+                    <div className="savedYouTubeChannelHeader">
+                      {channel.thumbnail ? <img src={channel.thumbnail} alt="" /> : <span className="savedYouTubeChannelAvatar"><YouTubeLogo /></span>}
+                      <div>
+                        <h4>{channel.title}</h4>
+                        {channel.channelId && (
+                          <a href={`https://www.youtube.com/channel/${channel.channelId}`} target="_blank" rel="noopener noreferrer">채널 보기 <ExternalLink size={12} /></a>
+                        )}
+                      </div>
+                    </div>
+                    <div className="savedYouTubeRecentVideos">
+                      {channel.latestVideos.length > 0 ? channel.latestVideos.slice(0, 3).map(recent => (
+                        <button
+                          key={recent.videoId}
+                          type="button"
+                          className="savedYouTubeRecentVideo"
+                          onClick={() => openRecentVideo(recent, channel)}
+                          title={recent.title}
+                        >
+                          <img src={recent.thumbnail} alt="" />
+                          <span>{recent.title}</span>
+                        </button>
+                      )) : (
+                        <p className="savedYouTubeRecentEmpty">{isTracking ? "최근 영상을 확인하고 있습니다." : "최근 영상을 확인할 수 없습니다."}</p>
+                      )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       );
     }
@@ -291,6 +424,7 @@ export default function SavedContents() {
             setSelectedVideo(null);
           }}
           video={selectedVideo}
+          useStoredSnapshot={Boolean(selectedVideo.useStoredSnapshot)}
         />
       )}
       </>

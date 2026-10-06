@@ -7722,9 +7722,194 @@ input[type="date"].youtubeSelect {
 /* YouTube Content Cards in Saved Contents */
 .youtubeCardsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 24px;
   margin-top: 0;
+}
+
+.savedYouTubeGroups {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.savedYouTubeGroupHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.savedYouTubeGroupHeading h3 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.savedYouTubeTrackingStatus {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.savedYouTubeTrackingStatus button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: #93c5fd;
+}
+
+.savedYouTubeTrackingStatus button:disabled {
+  opacity: 0.5;
+}
+
+.savedYouTubeTrackingNotice,
+.savedYouTubeRecentEmpty {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.savedYouTubeViewIncrease {
+  color: #6ee7b7;
+}
+
+.savedYouTubeViewIncrease.decreased {
+  color: #fb7185;
+}
+
+.savedYouTubeChannelSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.savedYouTubeChannelGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.savedYouTubeChannelCard {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgba(96, 165, 250, 0.22);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.56);
+}
+
+.savedYouTubeChannelHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  margin-bottom: 14px;
+}
+
+.savedYouTubeChannelHeader > img {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.savedYouTubeChannelAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 50%;
+  background: rgba(96, 165, 250, 0.15);
+}
+
+.savedYouTubeChannelAvatar svg {
+  width: 22px;
+  height: 22px;
+}
+
+.savedYouTubeChannelHeader > div {
+  min-width: 0;
+}
+
+.savedYouTubeChannelHeader h4 {
+  margin: 0 0 3px;
+  overflow: hidden;
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.savedYouTubeChannelHeader a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #93c5fd;
+  font-size: 11px;
+}
+
+.savedYouTubeRecentVideos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.savedYouTubeCardRecent {
+  margin-top: auto;
+  padding: 0 12px 14px;
+}
+
+.savedYouTubeCardRecent > span {
+  display: block;
+  margin-bottom: 9px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.savedYouTubeRecentVideo {
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+  color: #e2e8f0;
+}
+
+.savedYouTubeRecentVideo img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.savedYouTubeRecentVideo span {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.savedYouTubeRecentEmpty {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 1200px) {
+  .youtubeCardsGrid,
+  .savedYouTubeChannelGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .youtubeContentCard {
@@ -7871,8 +8056,9 @@ input[type="date"].youtubeSelect {
 
 /* Responsive Design for YouTube Cards */
 @media (max-width: 768px) {
-  .youtubeCardsGrid {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  .youtubeCardsGrid,
+  .savedYouTubeChannelGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
   }
 
@@ -7893,7 +8079,8 @@ input[type="date"].youtubeSelect {
 }
 
 @media (max-width: 480px) {
-  .youtubeCardsGrid {
+  .youtubeCardsGrid,
+  .savedYouTubeChannelGrid {
     grid-template-columns: 1fr;
     gap: 12px;
   }
@@ -7911,6 +8098,12 @@ input[type="date"].youtubeSelect {
   .removeButtonOutline {
     font-size: 11px;
     padding: 6px 8px;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 700px) {
+  .savedYouTubeChannelGrid {
+    grid-template-columns: 1fr;
   }
 }
 

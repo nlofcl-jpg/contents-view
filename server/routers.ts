@@ -3063,6 +3063,134 @@ export const appRouter = router({
 
   // YouTube Bookmarks router
   youtubeBookmarks: router({
+    trackSavedVideos: protectedProcedure
+      .input(z.object({ accountKey: z.string() }))
+      .query(async ({ ctx }) => {
+      const bookmarks = await db.getUserYouTubeBookmarks(ctx.user.id);
+      if (bookmarks.length === 0) {
+        return { checkedAt: new Date().toISOString(), videos: [], channels: [] };
+      }
+
+      const userKey = await userApiKeys.getUserApiKey(ctx.user, "youtube");
+      const apiKey = (userKey?.testStatus === "success" ? userKey.apiKey : "")
+        || process.env.YOUTUBE_API_KEY?.trim();
+      if (!apiKey) throw new Error("YouTube API 키가 설정되지 않았습니다.");
+
+      const fetchYouTube = async (resource: string, params: URLSearchParams) => {
+        params.set("key", apiKey);
+        const response = await fetch(`https://www.googleapis.com/youtube/v3/${resource}?${params.toString()}`);
+        if (!response.ok) throw new Error(`YouTube ${resource} request failed: ${response.status}`);
+        return response.json();
+      };
+
+      const videoById = new Map<string, any>();
+      const videoIds = Array.from(new Set(bookmarks.map(bookmark => bookmark.videoId)));
+      for (let offset = 0; offset < videoIds.length; offset += 50) {
+        const data = await fetchYouTube("videos", new URLSearchParams({
+          part: "snippet,statistics,contentDetails",
+          id: videoIds.slice(offset, offset + 50).join(","),
+        }));
+        for (const item of data.items || []) videoById.set(item.id, item);
+      }
+
+      const channelIds = Array.from(new Set(bookmarks
+        .map(bookmark => videoById.get(bookmark.videoId)?.snippet?.channelId || bookmark.channelId)
+        .filter((id): id is string => Boolean(id))));
+      const channelById = new Map<string, any>();
+      for (let offset = 0; offset < channelIds.length; offset += 50) {
+        const data = await fetchYouTube("channels", new URLSearchParams({
+          part: "snippet,contentDetails",
+          id: channelIds.slice(offset, offset + 50).join(","),
+        }));
+        for (const item of data.items || []) channelById.set(item.id, item);
+      }
+
+      const latestByChannel = new Map<string, Array<{ videoId: string; title: string; thumbnail: string; publishedAt: string }>>();
+      for (let offset = 0; offset < channelIds.length; offset += 8) {
+        await Promise.all(channelIds.slice(offset, offset + 8).map(async channelId => {
+          const playlistId = channelById.get(channelId)?.contentDetails?.relatedPlaylists?.uploads;
+          if (!playlistId) return;
+          try {
+            const data = await fetchYouTube("playlistItems", new URLSearchParams({
+              part: "snippet,contentDetails",
+              playlistId,
+              maxResults: "4",
+            }));
+            const latest = (data.items || []).flatMap((item: any) => {
+              const videoId = item.contentDetails?.videoId || item.snippet?.resourceId?.videoId;
+              if (!videoId || !item.snippet?.thumbnails || item.snippet?.title === "Deleted video" || item.snippet?.title === "Private video") return [];
+              return [{
+                videoId,
+                title: item.snippet.title || "최신 영상",
+                thumbnail: item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+                publishedAt: item.contentDetails?.videoPublishedAt || item.snippet.publishedAt || "",
+              }];
+            });
+            latestByChannel.set(channelId, latest);
+          } catch (error) {
+            console.error("[Saved videos] Failed to load channel uploads", channelId, error);
+          }
+        }));
+      }
+
+      const recentVideoById = new Map<string, any>();
+      const recentVideoIds = Array.from(new Set(Array.from(latestByChannel.values())
+        .flatMap(items => items.map(item => item.videoId))));
+      for (let offset = 0; offset < recentVideoIds.length; offset += 50) {
+        try {
+          const data = await fetchYouTube("videos", new URLSearchParams({
+            part: "snippet,statistics,contentDetails",
+            id: recentVideoIds.slice(offset, offset + 50).join(","),
+          }));
+          for (const item of data.items || []) recentVideoById.set(item.id, item);
+        } catch (error) {
+          console.error("[Saved videos] Failed to load recent video details", error);
+        }
+      }
+
+      return {
+        checkedAt: new Date().toISOString(),
+        videos: bookmarks.map(bookmark => {
+          const current = videoById.get(bookmark.videoId);
+          const snippet = current?.snippet;
+          const channelId = snippet?.channelId || bookmark.channelId || "";
+          return {
+            id: bookmark.videoId,
+            title: snippet?.title || bookmark.title,
+            thumbnail: snippet?.thumbnails?.medium?.url || snippet?.thumbnails?.default?.url || bookmark.thumbnailUrl || "",
+            channelId,
+            channelTitle: snippet?.channelTitle || bookmark.channelTitle || "",
+            channelThumbnail: channelById.get(channelId)?.snippet?.thumbnails?.default?.url || bookmark.channelThumbnailUrl || "",
+            viewCount: current ? Number(current.statistics?.viewCount || 0) : Number(bookmark.viewCount || 0),
+            publishedAt: snippet?.publishedAt || bookmark.publishedAt || "",
+            duration: current?.contentDetails?.duration || bookmark.duration || "",
+            savedAt: bookmark.createdAt.toISOString(),
+            available: Boolean(current),
+          };
+        }),
+        channels: channelIds.map(channelId => {
+          const channel = channelById.get(channelId);
+          const savedVideo = bookmarks.find(bookmark => (videoById.get(bookmark.videoId)?.snippet?.channelId || bookmark.channelId) === channelId);
+          return {
+            channelId,
+            title: channel?.snippet?.title || savedVideo?.channelTitle || "채널",
+            thumbnail: channel?.snippet?.thumbnails?.default?.url || savedVideo?.channelThumbnailUrl || "",
+            latestVideos: (latestByChannel.get(channelId) || []).map(recent => {
+              const current = recentVideoById.get(recent.videoId);
+              return {
+                ...recent,
+                viewCount: Number(current?.statistics?.viewCount || 0),
+                commentCount: Number(current?.statistics?.commentCount || 0),
+                duration: current?.contentDetails?.duration || "",
+                categoryId: current?.snippet?.categoryId || "",
+                tags: current?.snippet?.tags || [],
+              };
+            }),
+          };
+        }),
+      };
+    }),
+
     /**
      * Get all YouTube bookmarks for the current user
      */
