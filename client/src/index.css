@@ -7985,6 +7985,38 @@ input[type="date"].youtubeSelect {
   object-fit: cover;
 }
 
+.savedVideoBookmarkButton {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #60a5fa;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.9));
+  cursor: pointer;
+}
+
+.savedVideoBookmarkButton:hover {
+  color: #93c5fd;
+}
+
+.savedVideoBookmarkButton:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+.savedVideoBookmarkButton:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
 .cardContent {
   display: flex;
   flex-direction: column;
@@ -8007,9 +8039,37 @@ input[type="date"].youtubeSelect {
 }
 
 .cardChannel {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
   margin: 0;
   font-size: 13px;
   color: rgba(148, 163, 184, 0.8);
+}
+
+.cardChannel img,
+.cardChannelFallback {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.cardChannelFallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(59, 130, 246, 0.2);
+  color: #bfdbfe;
+  font-size: 11px;
+}
+
+.cardChannel > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cardMeta {
@@ -8018,6 +8078,14 @@ input[type="date"].youtubeSelect {
   gap: 4px;
   font-size: 12px;
   color: rgba(148, 163, 184, 0.7);
+}
+
+.savedVideoViewRow {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  column-gap: 12px;
+  row-gap: 2px;
 }
 
 .cardSavedDate {

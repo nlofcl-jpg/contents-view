@@ -5,7 +5,7 @@ import { trpc } from "@/lib/trpc";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 import { GoogleLogo, YouTubeLogo } from "@/components/ServiceLogos";
-import { ChevronDown, Trash2, ExternalLink, Instagram, MessageCircleMore, Music2, Newspaper, RefreshCw } from "lucide-react";
+import { Bookmark, ChevronDown, Trash2, ExternalLink, Instagram, MessageCircleMore, Music2, Newspaper, RefreshCw } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 
@@ -76,7 +76,7 @@ const VIDEO_PLATFORMS = [
 export default function SavedContents() {
   const [location, setLocation] = useLocation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
-  const { bookmarkedYouTubeVideos, removeYouTubeBookmark } = useBookmark();
+  const { bookmarkedYouTubeVideos, removeYouTubeBookmark, isBookmarkPending } = useBookmark();
   const [showGuestPrompt, setShowGuestPrompt] = useState(true);
   const [activeSectionId, setActiveSectionId] = useState(() => {
     if (typeof window === "undefined") return SECTIONS[0].id;
@@ -207,37 +207,36 @@ export default function SavedContents() {
             >
               <div className="cardThumbnail">
                 <img src={video.thumbnail} alt={video.title} />
+                <button
+                  type="button"
+                  className="savedVideoBookmarkButton"
+                  title="보관 해제"
+                  aria-label={`${video.title} 보관 해제`}
+                  disabled={isBookmarkPending(video.id)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    removeYouTubeBookmark(video.id);
+                  }}
+                >
+                  <Bookmark size={20} fill="currentColor" />
+                </button>
               </div>
               <div className="cardContent">
                 <h3 className="cardTitle">{video.title}</h3>
-                <p className="cardChannel">{video.channelTitle}</p>
-                <div className="cardMeta">
-                  <span>{trackedVideo?.available ? "현재" : "저장 당시"} {formatViewCount(String(video.viewCount))} 조회</span>
-                  {viewIncrease !== null && <span className={`savedYouTubeViewIncrease${viewIncrease < 0 ? " decreased" : ""}`}>저장 후 {viewIncrease < 0 ? "-" : "+"}{formatViewCount(String(Math.abs(viewIncrease)))} 조회</span>}
-                  <span className="cardSavedDate">저장일: {formatSavedDate(savedVideo.savedAt || trackedVideo?.savedAt)}</span>
+                <div className="cardChannel">
+                  {video.channelThumbnail || channel?.thumbnail ? (
+                    <img src={video.channelThumbnail || channel?.thumbnail} alt="" />
+                  ) : (
+                    <span className="cardChannelFallback" aria-hidden="true">{video.channelTitle?.charAt(0) || "Y"}</span>
+                  )}
+                  <span>{video.channelTitle}</span>
                 </div>
-                <div className="cardActions">
-                  <a
-                    href={`https://www.youtube.com/watch?v=${video.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="viewButton"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <ExternalLink size={16} />
-                    원본 보기
-                  </a>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeYouTubeBookmark(video.id);
-                    }}
-                    className="removeButtonOutline"
-                    title="보관 해제"
-                  >
-                    <Trash2 size={16} />
-                    보관 해제
-                  </button>
+                <div className="cardMeta">
+                  <div className="savedVideoViewRow">
+                    <span>{trackedVideo?.available ? "현재" : "저장 당시"} {formatViewCount(String(video.viewCount))} 조회</span>
+                    {viewIncrease !== null && <span className={`savedYouTubeViewIncrease${viewIncrease < 0 ? " decreased" : ""}`}>저장 후 {viewIncrease < 0 ? "-" : "+"}{formatViewCount(String(Math.abs(viewIncrease)))} 조회</span>}
+                  </div>
+                  <span className="cardSavedDate">저장일: {formatSavedDate(savedVideo.savedAt || trackedVideo?.savedAt)}</span>
                 </div>
               </div>
               {channel && recentVideos.length > 0 && (
