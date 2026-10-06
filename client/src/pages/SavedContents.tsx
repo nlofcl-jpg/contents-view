@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useBookmark } from "@/contexts/BookmarkContext";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
+import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 import { ChevronDown, Trash2, ExternalLink } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -59,8 +60,9 @@ const VIDEO_PLATFORMS = [
 
 export default function SavedContents() {
   const [location, setLocation] = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const { bookmarkedYouTubeVideos, removeYouTubeBookmark } = useBookmark();
+  const [showGuestPrompt, setShowGuestPrompt] = useState(true);
   const [activeSectionId, setActiveSectionId] = useState(() => {
     if (typeof window === "undefined") return SECTIONS[0].id;
     const requestedSection = new URLSearchParams(window.location.search).get("tab");
@@ -167,14 +169,23 @@ export default function SavedContents() {
     syncSavedContentsUrl(sectionId);
   };
 
+  const handleGuestAuth = (mode: "login" | "signup") => {
+    const params = new URLSearchParams({ redirect: "/saved-contents" });
+    if (mode === "signup") params.set("mode", "signup");
+    setShowGuestPrompt(false);
+    setLocation(`/login?${params.toString()}`);
+  };
+
   return (
     <div className="savedContentsPageContainer">
       {/* Page Header */}
       <div className="pageHeader">
         <h1 className="pageTitle">내 보관함</h1>
-        <p className="pageDescription">저장한 콘텐츠를 플랫폼별로 확인하고 관리하세요.</p>
+        {isAuthenticated && <p className="pageDescription">저장한 콘텐츠를 플랫폼별로 확인하고 관리하세요.</p>}
       </div>
 
+      {!authLoading && isAuthenticated && (
+      <>
       <div
         className="savedContentsTabsArea"
         onBlur={(event) => {
@@ -281,6 +292,14 @@ export default function SavedContents() {
           video={selectedVideo}
         />
       )}
+      </>
+      )}
+      <GuestAccessPrompt
+        open={!authLoading && !isAuthenticated && showGuestPrompt}
+        onBrowse={() => setShowGuestPrompt(false)}
+        onLogin={() => handleGuestAuth("login")}
+        onSignup={() => handleGuestAuth("signup")}
+      />
     </div>
   );
 }

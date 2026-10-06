@@ -7350,7 +7350,9 @@ input[type="date"].youtubeSelect {
 
 .savedContentsTabsArea {
   position: relative;
-  width: 100%;
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto;
   overflow: visible;
 }
 
@@ -7358,14 +7360,14 @@ input[type="date"].youtubeSelect {
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
-  gap: 8px;
-  width: 100%;
-  padding: 6px;
-  border: 1px solid rgba(59, 130, 246, 0.14);
-  border-radius: 14px;
-  background: rgba(8, 17, 32, 0.64);
+  gap: 0;
+  width: max-content;
+  max-width: 100%;
+  padding: 4px;
+  border: 1px solid rgba(71, 85, 105, 0.8);
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.55);
   overflow-x: auto;
-  overflow-y: visible;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -7374,35 +7376,32 @@ input[type="date"].youtubeSelect {
 }
 
 .savedContentsTab {
-  min-height: 38px;
+  height: 36px;
+  min-width: 92px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
-  padding: 0 14px;
-  border: 1px solid transparent;
-  border-radius: 10px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
   background: transparent;
-  color: #8fa0bb;
+  color: #8391a7;
   font-size: 14px;
   font-weight: 400;
   white-space: nowrap;
   cursor: pointer;
-  transition:
-    color 0.18s ease,
-    background 0.18s ease,
-    border-color 0.18s ease;
+  transition: background 0.18s ease, color 0.18s ease;
 }
 
 .savedContentsTab:hover {
-  color: #dbeafe;
-  background: rgba(59, 130, 246, 0.08);
+  color: #ffffff;
 }
 
 .savedContentsTab.active {
-  color: #f8fafc;
-  border-color: rgba(34, 211, 238, 0.24);
-  background: rgba(14, 165, 233, 0.16);
+  color: #ffffff;
+  background: #2563eb;
+  box-shadow: 0 8px 18px rgba(15, 62, 150, 0.32);
 }
 
 .savedContentsTabIcon {
@@ -7422,7 +7421,7 @@ input[type="date"].youtubeSelect {
 }
 
 .savedContentsTabWithChevron {
-  padding-right: 11px;
+  padding-right: 16px;
 }
 
 .savedContentsTabChevron {
@@ -7600,14 +7599,13 @@ input[type="date"].youtubeSelect {
   }
 
   .savedContentsTabs {
-    gap: 6px;
-    padding: 5px;
-    margin-inline: -2px;
+    padding: 3px;
   }
 
   .savedContentsTab {
-    min-height: 36px;
-    padding: 0 12px;
+    height: 32px;
+    min-width: 72px;
+    padding: 0 14px;
     font-size: 13px;
   }
 

@@ -66,6 +66,7 @@ function App() {
   const guestBrowseAction = useRef<(() => void) | null>(null);
 
   const requestGuestMenuAccess = (path?: string, onBrowse?: () => void) => {
+    if (path?.startsWith("/saved-contents")) return false;
     if (authLoading || isAuthenticated || guestMenuPromptSeen.current) return false;
 
     try {
