@@ -37,7 +37,8 @@ export default function Footer({ onGuestMenuAccess }: { onGuestMenuAccess?: (pat
         <nav className={`siteFooterNav${isAdmin ? " siteFooterNavWithAdmin" : ""}`} aria-label="하단 메뉴">
           {isAdmin && (
             <div className="siteFooterNavGroup siteFooterAdminGroup">
-              <Link href="/admin" className="siteFooterAdminLink">Admin</Link>
+              <h2>관리</h2>
+              <Link href="/admin">Admin</Link>
             </div>
           )}
           <div className="siteFooterNavGroup">
