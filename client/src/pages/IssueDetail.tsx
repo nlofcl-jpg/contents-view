@@ -113,17 +113,19 @@ export default function IssueDetail() {
               <img className="issueDetailImage" src={issue.thumbnail_url} alt="" />
             )}
             {(issue.summary || issue.article_summary) && (
-              <IssueBody value={issue.summary || issue.article_summary || ""} />
+              <div className="issueDetailBody">
+                <IssueBody value={issue.summary || issue.article_summary || ""} />
+                <button
+                  type="button"
+                  className="issueScrollTopButton"
+                  onClick={(event) => event.currentTarget.closest(".mainContent")?.scrollTo({ top: 0, behavior: "smooth" })}
+                  title="맨 위로"
+                  aria-label="맨 위로"
+                >
+                  <ArrowUp size={14} aria-hidden="true" />
+                </button>
+              </div>
             )}
-            <button
-              type="button"
-              className="issueScrollTopButton"
-              onClick={(event) => event.currentTarget.closest(".mainContent")?.scrollTo({ top: 0, behavior: "smooth" })}
-              title="맨 위로"
-              aria-label="맨 위로"
-            >
-              <ArrowUp size={14} aria-hidden="true" />
-            </button>
           </div>
         </article>
       )}
