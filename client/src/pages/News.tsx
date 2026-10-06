@@ -275,16 +275,12 @@ export default function News() {
 
   const formatUpdateTime = (date: Date | null) => {
     if (!date) return '';
-    try {
-      const hours = date.getHours();
-      const minutes = date.getMinutes();
-      const period = hours >= 12 ? '오후' : '오전';
-      const displayHours = hours % 12 || 12;
-      const displayMinutes = minutes.toString().padStart(2, '0');
-      return `${period} ${displayHours}:${displayMinutes}`;
-    } catch {
-      return '';
-    }
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}.${month}.${day} ${hours}:${minutes} 기준`;
   };
 
   return (
@@ -334,7 +330,7 @@ export default function News() {
         <>
       <div>
         {getLatestUpdateTime && (
-          <p className="newsCardsUpdateTime">마지막 업데이트: {formatUpdateTime(getLatestUpdateTime)}</p>
+          <p className="newsCardsUpdateTime">{formatUpdateTime(getLatestUpdateTime)}</p>
         )}
         <h2 className="text-2xl font-bold text-white mb-6">최신 뉴스</h2>
 
