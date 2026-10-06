@@ -15,12 +15,6 @@ interface NewsItem {
   thumbnail: string | null;
 }
 
-interface FeaturedNewsGroup {
-  categoryId: string;
-  categoryLabel: string;
-  items: NewsItem[];
-}
-
 interface PublishedIssue {
   id: string;
   title: string;
@@ -105,14 +99,6 @@ export default function News() {
     { id: 'world', label: '국제' },
   ];
 
-  // Featured categories for top cards
-  const featuredCategories = [
-    { id: 'nation', label: '정치/사회' },
-    { id: 'business', label: '경제' },
-    { id: 'technology', label: 'IT·과학' },
-    { id: 'entertainment', label: '연예' },
-  ];
-
   // Fetch latest news for selected category
   const { data: latestNewsResponse, isLoading: isLoadingLatest } = trpc.news.getLatestNews.useQuery(
     { limit: 30, category: selectedCategory },
@@ -123,7 +109,7 @@ export default function News() {
     }
   );
 
-  // Fetch featured news for 4 categories
+  // Include news from these categories in the combined list.
   const { data: nationNewsResponse } = trpc.news.getLatestNews.useQuery(
     { limit: 2, category: 'nation' },
     { enabled: shouldFetchFeaturedNews, retry: 1, refetchOnWindowFocus: false }
@@ -212,29 +198,24 @@ export default function News() {
     };
   }, [activeContentTab]);
 
-  // Combine featured news into category columns.
-  const featuredNewsGroups = useMemo<FeaturedNewsGroup[]>(() => {
-    const dataByCategory: Record<string, unknown> = {
-      nation: nationNewsData,
-      business: businessNewsData,
-      technology: technologyNewsData,
-      entertainment: entertainmentNewsData,
-    };
+  const visibleNews = useMemo(() => {
+    const latest = Array.isArray(latestNewsData) ? latestNewsData as NewsItem[] : [];
+    if (selectedCategory !== "all") return latest;
 
-    return featuredCategories.map(category => ({
-      categoryId: category.id,
-      categoryLabel: category.label,
-      items: Array.isArray(dataByCategory[category.id])
-        ? (dataByCategory[category.id] as NewsItem[]).slice(0, 2)
-        : [],
-    }));
-  }, [nationNewsData, businessNewsData, technologyNewsData, entertainmentNewsData]);
+    const categoryNews = [nationNewsData, businessNewsData, technologyNewsData, entertainmentNewsData]
+      .flatMap(items => Array.isArray(items) ? items as NewsItem[] : []);
+    const uniqueNews = new Map<string, NewsItem>();
+    for (const news of [...latest, ...categoryNews]) {
+      const key = news.link || `${news.title}:${news.source}`;
+      if (!uniqueNews.has(key)) uniqueNews.set(key, news);
+    }
 
-  // Extract remaining news (excluding featured)
-  const remainingNews = useMemo(() => {
-    const items = Array.isArray(latestNewsData) ? latestNewsData : [];
-    return items.slice(0);
-  }, [latestNewsData]);
+    return Array.from(uniqueNews.values()).sort((a, b) => {
+      const aTime = new Date(a.pubDate || a.publishedAt || 0).getTime() || 0;
+      const bTime = new Date(b.pubDate || b.publishedAt || 0).getTime() || 0;
+      return bTime - aTime;
+    });
+  }, [selectedCategory, latestNewsData, nationNewsData, businessNewsData, technologyNewsData, entertainmentNewsData]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -263,7 +244,8 @@ export default function News() {
     }
   };
 
-  const isLoadingFeatured = !nationNewsData || !businessNewsData || !technologyNewsData || !entertainmentNewsData;
+  const isLoadingNews = isLoadingLatest || (selectedCategory === "all" && shouldFetchFeaturedNews
+    && (!nationNewsData || !businessNewsData || !technologyNewsData || !entertainmentNewsData));
   const featuredIssues = issues.slice(0, 4);
   const remainingIssues = issues.slice(4);
   const issuePageCount = Math.max(1, Math.ceil(remainingIssues.length / 10));
@@ -350,75 +332,10 @@ export default function News() {
 
       {activeContentTab === "news" ? (
         <>
-      {/* Featured News Cards - 4 Categories */}
-      {isLoadingFeatured ? (
-        <div className="mb-12 text-center text-gray-400">뉴스를 불러오는 중...</div>
-      ) : (
-        <div className="mb-12">
-          {getLatestUpdateTime && (
-            <p className="newsCardsUpdateTime">마지막 업데이트: {formatUpdateTime(getLatestUpdateTime)}</p>
-          )}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            {featuredNewsGroups.map(group => (
-              <div key={group.categoryId} className="flex flex-col gap-4">
-                {group.items.map((news: NewsItem, index: number) => (
-                  <div
-                    key={`${group.categoryId}-${index}-${news.link}`}
-                    className="bg-gray-900 rounded-lg overflow-hidden hover:bg-gray-800 transition-colors"
-                  >
-                    {news.thumbnail && (
-                      <div className="w-full h-36 bg-gray-800 overflow-hidden">
-                        <img
-                          src={news.thumbnail}
-                          alt={news.title}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
-                    <div className="p-4">
-                      <div className="mb-2">
-                        <span className="text-[11px] font-medium text-slate-400">
-                          {group.categoryLabel}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">
-                          {news.source}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {formatDate(news.pubDate || news.publishedAt)}
-                        </span>
-                      </div>
-                      <h3 className="text-base font-semibold text-white mb-2 line-clamp-2">
-                        {news.title}
-                      </h3>
-                      <a
-                        href={news.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-400 hover:text-blue-300 text-sm font-medium"
-                      >
-                        원문 보기 →
-                      </a>
-                    </div>
-                  </div>
-                ))}
-                {group.items.length === 0 && (
-                  <div className="bg-gray-900 rounded-lg p-4 text-sm text-slate-500">
-                    <span className="text-[11px] font-medium text-slate-400">
-                      {group.categoryLabel}
-                    </span>
-                    <p className="mt-3">뉴스를 불러오지 못했습니다.</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Latest News List */}
       <div>
+        {getLatestUpdateTime && (
+          <p className="newsCardsUpdateTime">마지막 업데이트: {formatUpdateTime(getLatestUpdateTime)}</p>
+        )}
         <h2 className="text-2xl font-bold text-white mb-6">최신 뉴스</h2>
 
         {/* Category Tabs */}
@@ -437,13 +354,13 @@ export default function News() {
             </button>
           ))}
         </div>
-        {isLoadingLatest ? (
+        {isLoadingNews ? (
           <div className="text-center text-gray-400">뉴스를 불러오는 중...</div>
-        ) : remainingNews.length > 0 ? (
+        ) : visibleNews.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {remainingNews.map((news: NewsItem, index: number) => (
+            {visibleNews.map((news: NewsItem) => (
               <div
-                key={index}
+                key={news.link}
                 className="bg-gray-900 rounded-lg overflow-hidden hover:bg-gray-800 transition-colors"
               >
                 {news.thumbnail && (
