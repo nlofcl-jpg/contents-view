@@ -7133,6 +7133,48 @@ input[type="date"].youtubeSelect {
   text-decoration: none;
 }
 
+.channelCardHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.channelCardHeader .channelSummaryLink {
+  flex: 1;
+}
+
+.channelBookmarkButton,
+.savedYouTubeChannelRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: #94a3b8;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.channelBookmarkButton:hover,
+.channelBookmarkButton.bookmarked,
+.savedYouTubeChannelRemove:hover {
+  color: #60a5fa;
+}
+
+.channelBookmarkButton:disabled,
+.savedYouTubeChannelRemove:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+.savedYouTubeChannelRemove {
+  margin-left: auto;
+}
+
 .channelThumbnailWrapper {
   display: flex;
   justify-content: center;

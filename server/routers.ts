@@ -123,6 +123,23 @@ async function removeYouTubeBookmark(user: User, videoId: string, contentType: "
   if (error) throw error;
 }
 
+async function listYouTubeChannelBookmarks(user: User) {
+  const userId = supabaseBookmarkUserId(user);
+  if (!userId || !supabaseAdmin) throw new Error("Channel bookmark storage is not configured");
+  const { data, error } = await supabaseAdmin
+    .from("youtube_channel_bookmarks")
+    .select("channel_id,title,thumbnail_url,created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map(row => ({
+    channelId: String(row.channel_id),
+    title: String(row.title),
+    thumbnail: String(row.thumbnail_url || ""),
+    savedAt: String(row.created_at),
+  }));
+}
+
 type NaverSearchAdCredentials = {
   customerId: string;
   accessLicense: string;
@@ -3152,11 +3169,41 @@ export const appRouter = router({
 
   // YouTube Bookmarks router
   youtubeBookmarks: router({
+    listChannels: protectedProcedure.query(async ({ ctx }) => listYouTubeChannelBookmarks(ctx.user)),
+    addChannel: protectedProcedure
+      .input(z.object({ channelId: z.string().min(1), title: z.string().min(1), thumbnail: z.string().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const userId = supabaseBookmarkUserId(ctx.user);
+        if (!userId || !supabaseAdmin) throw new Error("Channel bookmark storage is not configured");
+        const { error } = await supabaseAdmin.from("youtube_channel_bookmarks").upsert({
+          user_id: userId,
+          channel_id: input.channelId,
+          title: input.title,
+          thumbnail_url: input.thumbnail || null,
+        }, { onConflict: "user_id,channel_id", ignoreDuplicates: true });
+        if (error) throw error;
+        return { success: true };
+      }),
+    removeChannel: protectedProcedure
+      .input(z.object({ channelId: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        const userId = supabaseBookmarkUserId(ctx.user);
+        if (!userId || !supabaseAdmin) throw new Error("Channel bookmark storage is not configured");
+        const { error } = await supabaseAdmin.from("youtube_channel_bookmarks")
+          .delete()
+          .eq("user_id", userId)
+          .eq("channel_id", input.channelId);
+        if (error) throw error;
+        return { success: true };
+      }),
     trackSavedVideos: protectedProcedure
       .input(z.object({ accountKey: z.string() }))
       .query(async ({ ctx }) => {
-      const bookmarks = await listYouTubeBookmarks(ctx.user);
-      if (bookmarks.length === 0) {
+      const [bookmarks, savedChannels] = await Promise.all([
+        listYouTubeBookmarks(ctx.user),
+        listYouTubeChannelBookmarks(ctx.user),
+      ]);
+      if (bookmarks.length === 0 && savedChannels.length === 0) {
         return { checkedAt: new Date().toISOString(), videos: [], channels: [] };
       }
 
@@ -3182,9 +3229,9 @@ export const appRouter = router({
         for (const item of data.items || []) videoById.set(item.id, item);
       }
 
-      const channelIds = Array.from(new Set(bookmarks
+      const channelIds = Array.from(new Set([...bookmarks
         .map(bookmark => videoById.get(bookmark.videoId)?.snippet?.channelId || bookmark.channelId)
-        .filter((id): id is string => Boolean(id))));
+        .filter((id): id is string => Boolean(id)), ...savedChannels.map(channel => channel.channelId)]));
       const channelById = new Map<string, any>();
       for (let offset = 0; offset < channelIds.length; offset += 50) {
         const data = await fetchYouTube("channels", new URLSearchParams({
@@ -3260,10 +3307,11 @@ export const appRouter = router({
         channels: channelIds.map(channelId => {
           const channel = channelById.get(channelId);
           const savedVideo = bookmarks.find(bookmark => (videoById.get(bookmark.videoId)?.snippet?.channelId || bookmark.channelId) === channelId);
+          const savedChannel = savedChannels.find(item => item.channelId === channelId);
           return {
             channelId,
-            title: channel?.snippet?.title || savedVideo?.channelTitle || "채널",
-            thumbnail: channel?.snippet?.thumbnails?.default?.url || savedVideo?.channelThumbnailUrl || "",
+            title: channel?.snippet?.title || savedChannel?.title || savedVideo?.channelTitle || "채널",
+            thumbnail: channel?.snippet?.thumbnails?.default?.url || savedChannel?.thumbnail || savedVideo?.channelThumbnailUrl || "",
             latestVideos: (latestByChannel.get(channelId) || []).map(recent => {
               const current = recentVideoById.get(recent.videoId);
               return {

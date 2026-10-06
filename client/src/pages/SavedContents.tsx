@@ -7,6 +7,7 @@ import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 import { GoogleLogo, YouTubeLogo } from "@/components/ServiceLogos";
 import { ChevronDown, Trash2, ExternalLink, Instagram, MessageCircleMore, Music2, Newspaper, RefreshCw } from "lucide-react";
 import { useLocation } from "wouter";
+import { toast } from "sonner";
 
 // Format view count (e.g., 74540 → 7.4만)
 const formatViewCount = (count: string): string => {
@@ -93,14 +94,25 @@ export default function SavedContents() {
   const activeSection = SECTIONS.find((section) => section.id === activeSectionId) || SECTIONS[0];
   const selectedVideoPlatform =
     VIDEO_PLATFORMS.find((platform) => platform.id === selectedVideoPlatformId) || VIDEO_PLATFORMS[0];
+  const utils = trpc.useUtils();
+  const { data: channelBookmarks = [] } = trpc.youtubeBookmarks.listChannels.useQuery(undefined, {
+    enabled: isAuthenticated && activeSectionId === "youtube" && selectedVideoPlatformId === "youtube",
+  });
+  const removeChannelBookmark = trpc.youtubeBookmarks.removeChannel.useMutation({
+    onSuccess: () => {
+      utils.youtubeBookmarks.listChannels.invalidate();
+      utils.youtubeBookmarks.trackSavedVideos.invalidate();
+    },
+    onError: () => toast.error("채널 보관을 해제하지 못했습니다."),
+  });
   const { data: trackedData, error: trackingError, isFetching: isTracking, refetch: refreshTracking } = trpc.youtubeBookmarks.trackSavedVideos.useQuery({ accountKey: user?.id || "" }, {
-    enabled: isAuthenticated && activeSectionId === "youtube" && selectedVideoPlatformId === "youtube" && bookmarkedYouTubeVideos.length > 0,
+    enabled: isAuthenticated && activeSectionId === "youtube" && selectedVideoPlatformId === "youtube" && (bookmarkedYouTubeVideos.length > 0 || channelBookmarks.length > 0),
     retry: false,
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
   const trackedVideoById = new Map(trackedData?.videos.map(video => [video.id, video]) || []);
-  const savedChannels = trackedData?.channels ?? Array.from(new Map(bookmarkedYouTubeVideos
+  const videoChannels = trackedData?.channels ?? Array.from(new Map(bookmarkedYouTubeVideos
     .filter(video => video.channelId || video.channelTitle)
     .map(video => [video.channelId || video.channelTitle, {
       channelId: video.channelId || "",
@@ -108,6 +120,12 @@ export default function SavedContents() {
       thumbnail: video.channelThumbnail || "",
       latestVideos: [],
     }])).values());
+  const savedChannels = channelBookmarks.map(bookmark =>
+    videoChannels.find(channel => channel.channelId === bookmark.channelId) || {
+      ...bookmark,
+      latestVideos: [],
+    },
+  );
 
   const openRecentVideo = (
     recent: { videoId: string; title: string; thumbnail: string; publishedAt: string; viewCount: number; commentCount: number; duration: string; categoryId: string; tags: string[] },
@@ -151,11 +169,11 @@ export default function SavedContents() {
     if (
       activeSection.id === "youtube" &&
       selectedVideoPlatform.id === "youtube" &&
-      bookmarkedYouTubeVideos.length > 0
+      (bookmarkedYouTubeVideos.length > 0 || channelBookmarks.length > 0)
     ) {
       return (
         <div className="savedYouTubeGroups">
-          <div className="savedYouTubeGroupHeading">
+          {bookmarkedYouTubeVideos.length > 0 && <><div className="savedYouTubeGroupHeading">
             <h3>저장한 영상</h3>
             <div className="savedYouTubeTrackingStatus">
               {trackedData?.checkedAt && <span>{formatCheckedAt(trackedData.checkedAt)}</span>}
@@ -173,7 +191,7 @@ export default function SavedContents() {
             const viewIncrease = trackedVideo && savedViewCount > 0
               ? trackedVideo.viewCount - savedViewCount
               : null;
-            const channel = savedChannels.find(item => item.channelId
+            const channel = videoChannels.find(item => item.channelId
               ? item.channelId === video.channelId
               : item.title === video.channelTitle);
             const recentVideos = channel?.latestVideos.filter(item => item.videoId !== video.id).slice(0, 3) || [];
@@ -248,10 +266,11 @@ export default function SavedContents() {
           );
           })}
           </div>
+          </>}
           {savedChannels.length > 0 && (
-            <section className="savedYouTubeChannelSection" aria-label="저장한 영상의 채널">
+            <section className="savedYouTubeChannelSection" aria-label="보관한 채널">
               <div className="savedYouTubeGroupHeading">
-                <h3>저장한 영상의 채널</h3>
+                <h3>보관한 채널</h3>
               </div>
               <div className="savedYouTubeChannelGrid">
                 {savedChannels.map(channel => (
@@ -264,6 +283,16 @@ export default function SavedContents() {
                           <a href={`https://www.youtube.com/channel/${channel.channelId}`} target="_blank" rel="noopener noreferrer">채널 보기 <ExternalLink size={12} /></a>
                         )}
                       </div>
+                      <button
+                        type="button"
+                        className="savedYouTubeChannelRemove"
+                        title="채널 보관 해제"
+                        aria-label={`${channel.title} 채널 보관 해제`}
+                        disabled={removeChannelBookmark.isPending}
+                        onClick={() => removeChannelBookmark.mutate({ channelId: channel.channelId })}
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                     <div className="savedYouTubeRecentVideos">
                       {channel.latestVideos.length > 0 ? channel.latestVideos.slice(0, 3).map(recent => (

@@ -8,6 +8,7 @@ import { useGuestRisingVideoAccess } from "@/hooks/useGuestRisingVideoAccess";
 import { AlertCircle, CircleAlert, Clock, Play, ChevronDown, RotateCw, Users, Bookmark, Search, Copy, ExternalLink } from "lucide-react";
 import { useBookmark } from "@/contexts/BookmarkContext";
 import { useLocation } from "wouter";
+import { toast } from "sonner";
 
 type TabType = "analysis" | "trending" | "category" | "channels" | "shorts" | "rising";
 type AnalysisSortType = "relevance" | "publishedAt" | "viewCount";
@@ -230,6 +231,24 @@ export default function YouTubeTrends() {
   const { canOpenRisingVideo, guestPrompt } = useGuestRisingVideoAccess(isAuthenticated, authLoading);
   const { toggleYouTubeBookmark, isYouTubeVideoBookmarked, isBookmarkPending } = useBookmark();
   const [activeTab, setActiveTab] = useState<TabType>(getInitialYouTubeTab);
+  const bookmarkUtils = trpc.useUtils();
+  const { data: channelBookmarks = [] } = trpc.youtubeBookmarks.listChannels.useQuery(undefined, {
+    enabled: isAuthenticated && activeTab === "channels",
+  });
+  const addChannelBookmark = trpc.youtubeBookmarks.addChannel.useMutation({
+    onSuccess: () => {
+      bookmarkUtils.youtubeBookmarks.listChannels.invalidate();
+      bookmarkUtils.youtubeBookmarks.trackSavedVideos.invalidate();
+    },
+    onError: () => toast.error("채널을 보관하지 못했습니다."),
+  });
+  const removeChannelBookmark = trpc.youtubeBookmarks.removeChannel.useMutation({
+    onSuccess: () => {
+      bookmarkUtils.youtubeBookmarks.listChannels.invalidate();
+      bookmarkUtils.youtubeBookmarks.trackSavedVideos.invalidate();
+    },
+    onError: () => toast.error("채널 보관을 해제하지 못했습니다."),
+  });
   const [isMobileTabMenuOpen, setIsMobileTabMenuOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -1448,6 +1467,7 @@ export default function YouTubeTrends() {
         <div className="channelsGrid">
           {displayChannelsData.channels.map((channel: any) => (
             <article key={channel.channelId} className="channelCard">
+              <div className="channelCardHeader">
               <a
                 href={`https://www.youtube.com/channel/${channel.channelId}`}
                 target="_blank"
@@ -1469,6 +1489,25 @@ export default function YouTubeTrends() {
                   </div>
                 </div>
               </a>
+              {isAuthenticated && (
+                <button
+                  type="button"
+                  className={`channelBookmarkButton${channelBookmarks.some(item => item.channelId === channel.channelId) ? " bookmarked" : ""}`}
+                  title={channelBookmarks.some(item => item.channelId === channel.channelId) ? "채널 보관 해제" : "채널 보관"}
+                  aria-label={`${channel.channelTitle} ${channelBookmarks.some(item => item.channelId === channel.channelId) ? "보관 해제" : "보관"}`}
+                  disabled={addChannelBookmark.isPending || removeChannelBookmark.isPending}
+                  onClick={() => {
+                    if (channelBookmarks.some(item => item.channelId === channel.channelId)) {
+                      removeChannelBookmark.mutate({ channelId: channel.channelId });
+                    } else {
+                      addChannelBookmark.mutate({ channelId: channel.channelId, title: channel.channelTitle, thumbnail: channel.thumbnail });
+                    }
+                  }}
+                >
+                  <Bookmark size={19} fill={channelBookmarks.some(item => item.channelId === channel.channelId) ? "currentColor" : "none"} />
+                </button>
+              )}
+              </div>
 
               {channel.latestVideos?.length > 0 && (
                 <div className="channelLatestSection">
