@@ -782,9 +782,12 @@ export default function YouTubeTrends() {
 
   const formatLastUpdateTime = (timestamp: number) => {
     const date = new Date(timestamp);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
     const hours = String(date.getHours()).padStart(2, "0");
     const minutes = String(date.getMinutes()).padStart(2, "0");
-    return `${hours}:${minutes}`;
+    return `${year}.${month}.${day} ${hours}:${minutes} 기준`;
   };
 
   // Render trending videos
@@ -1240,7 +1243,7 @@ export default function YouTubeTrends() {
         {lastUpdateTime && (
           <div className="updateInfoSection updateInfoSectionMobile">
             <span className="updateInfoText">
-              마지막 업데이트: {formatLastUpdateTime(lastUpdateTime)}
+              {formatLastUpdateTime(lastUpdateTime)}
             </span>
             <button
               onClick={handleRefreshClick}
@@ -1262,7 +1265,7 @@ export default function YouTubeTrends() {
           <div className="updateInfoSection updateInfoSectionDesktop">
             <div className="updateInfoContent">
               <span className="updateInfoText">
-                마지막 업데이트: {formatLastUpdateTime(lastUpdateTime)}
+                {formatLastUpdateTime(lastUpdateTime)}
               </span>
               <span className="updateInfoDot">·</span>
               <span className="updateInfoSubtext">데이터는 최대 1시간 단위로 갱신됩니다</span>
@@ -1402,7 +1405,7 @@ export default function YouTubeTrends() {
         {lastUpdateTime && (
           <div className="updateInfoSection updateInfoSectionMobile">
             <span className="updateInfoText">
-              마지막 업데이트: {formatLastUpdateTime(lastUpdateTime)}
+              {formatLastUpdateTime(lastUpdateTime)}
             </span>
             <button
               onClick={handleRefreshClick}
@@ -1424,7 +1427,7 @@ export default function YouTubeTrends() {
           <div className="updateInfoSection updateInfoSectionDesktop">
             <div className="updateInfoContent">
               <span className="updateInfoText">
-                마지막 업데이트: {formatLastUpdateTime(lastUpdateTime)}
+                {formatLastUpdateTime(lastUpdateTime)}
               </span>
               <span className="updateInfoDot">·</span>
               <span className="updateInfoSubtext">데이터는 최대 1시간 단위로 갱신됩니다</span>
@@ -1610,7 +1613,7 @@ export default function YouTubeTrends() {
       <section className="risingDiscoverySection">
         <div className="updateInfoSection updateInfoSectionMobile">
           <span className="updateInfoText">
-            마지막 분석: {risingData?.collectedAt ? formatLastUpdateTime(new Date(risingData.collectedAt).getTime()) : "-"}
+            {risingData?.collectedAt ? formatLastUpdateTime(new Date(risingData.collectedAt).getTime()) : "-"}
           </span>
           <button onClick={handleRefreshClick} disabled={isRefreshing || isRisingLoading} className="refreshButton refreshButtonIconOnly" title="새로고침">
             <RotateCw size={16} className={isRefreshing ? "refreshIconSpinning" : ""} />
@@ -1619,7 +1622,7 @@ export default function YouTubeTrends() {
         <div className="updateInfoSection updateInfoSectionDesktop">
           <div className="updateInfoContent">
             <span className="updateInfoText">
-              마지막 분석: {risingData?.collectedAt ? formatLastUpdateTime(new Date(risingData.collectedAt).getTime()) : "-"}
+              {risingData?.collectedAt ? formatLastUpdateTime(new Date(risingData.collectedAt).getTime()) : "-"}
             </span>
             <span className="updateInfoDot">·</span>
             <span className="updateInfoSubtext">
@@ -1783,7 +1786,7 @@ export default function YouTubeTrends() {
         {lastUpdateTime && (
           <div className="updateInfoSection updateInfoSectionMobile">
             <span className="updateInfoText">
-              마지막 업데이트: {formatLastUpdateTime(lastUpdateTime)}
+              {formatLastUpdateTime(lastUpdateTime)}
             </span>
             <button
               onClick={handleRefreshClick}
@@ -1805,7 +1808,7 @@ export default function YouTubeTrends() {
           <div className="updateInfoSection updateInfoSectionDesktop">
             <div className="updateInfoContent">
               <span className="updateInfoText">
-                마지막 업데이트: {formatLastUpdateTime(lastUpdateTime)}
+                {formatLastUpdateTime(lastUpdateTime)}
               </span>
               <span className="updateInfoDot">·</span>
               <span className="updateInfoSubtext">데이터는 최대 1시간 단위로 갱신됩니다</span>
