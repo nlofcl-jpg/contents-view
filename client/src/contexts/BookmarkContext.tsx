@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { toast } from "sonner";
 
 export interface BookmarkedYouTubeVideo {
   id: string;
@@ -65,6 +66,7 @@ export function BookmarkProvider({ children }: { children: ReactNode }) {
         setBookmarkedYouTubeVideos(context.previousBookmarks);
       }
       console.error("Failed to remove bookmark:", err);
+      toast.error("북마크를 해제하지 못했습니다. 잠시 후 다시 시도해 주세요.");
     },
     onSettled: (data, err, { videoId }) => {
       // Remove from pending set
@@ -111,6 +113,7 @@ export function BookmarkProvider({ children }: { children: ReactNode }) {
         setBookmarkedYouTubeVideos(context.previousBookmarks);
       }
       console.error("Failed to add bookmark:", err);
+      toast.error("북마크를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.");
     },
     onSettled: (data, err, input) => {
       // Remove from pending set

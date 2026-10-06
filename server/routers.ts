@@ -14,6 +14,7 @@ import { createRequire } from "module";
 import { createHmac } from "crypto";
 import { eq } from "drizzle-orm";
 import { users } from "../drizzle/schema";
+import type { InsertYouTubeBookmark, User, YouTubeBookmark } from "../drizzle/schema";
 import { getStoredYouTubeRisingVideos, isYouTubeTopicChannel, scoreRisingCandidates, selectBalancedRisingVideos, syncYouTubeRecommendedHistory } from "./youtubeRising";
 import { GOOGLE_TREND_HISTORY_MS, compareGoogleTrendRanks, parseGoogleTrendTraffic, rankGoogleTrends, type GoogleTrendItem, type UnrankedGoogleTrendItem } from "./googleTrendsHistory";
 import { parseGoogleTrendsPage } from "./googleTrendsPage";
@@ -33,6 +34,94 @@ const supabaseAdmin =
         },
       })
     : null;
+
+function supabaseBookmarkUserId(user: User): string | null {
+  return user.loginMethod === "supabase" && user.openId ? user.openId : null;
+}
+
+type StoredYouTubeBookmark = Omit<YouTubeBookmark, "id"> & { id: number | string };
+
+async function listYouTubeBookmarks(user: User): Promise<StoredYouTubeBookmark[]> {
+  const userId = supabaseBookmarkUserId(user);
+  if (!userId) return db.getUserYouTubeBookmarks(user.id);
+  if (!supabaseAdmin) throw new Error("Supabase bookmark storage is not configured");
+
+  const { data, error } = await supabaseAdmin
+    .from("youtube_bookmarks")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+
+  return (data || []).map((row): StoredYouTubeBookmark => ({
+    id: row.id,
+    userId: user.id,
+    videoId: row.video_id,
+    contentType: row.content_type,
+    title: row.title,
+    thumbnailUrl: row.thumbnail_url,
+    channelId: row.channel_id,
+    channelTitle: row.channel_title,
+    channelThumbnailUrl: row.channel_thumbnail_url,
+    videoUrl: row.video_url,
+    duration: row.duration,
+    viewCount: row.view_count,
+    publishedAt: row.published_at,
+    createdAt: new Date(row.created_at),
+  }));
+}
+
+async function isYouTubeBookmark(user: User, videoId: string, contentType: "video" | "shorts"): Promise<boolean> {
+  const userId = supabaseBookmarkUserId(user);
+  if (!userId) return db.isYouTubeVideoBookmarked(user.id, videoId, contentType);
+  if (!supabaseAdmin) throw new Error("Supabase bookmark storage is not configured");
+
+  const { data, error } = await supabaseAdmin
+    .from("youtube_bookmarks")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("video_id", videoId)
+    .eq("content_type", contentType)
+    .maybeSingle();
+  if (error) throw error;
+  return Boolean(data);
+}
+
+async function addYouTubeBookmark(user: User, bookmark: InsertYouTubeBookmark): Promise<void> {
+  const userId = supabaseBookmarkUserId(user);
+  if (!userId) return db.addYouTubeBookmark(user.id, bookmark);
+  if (!supabaseAdmin) throw new Error("Supabase bookmark storage is not configured");
+
+  const { error } = await supabaseAdmin.from("youtube_bookmarks").upsert({
+    user_id: userId,
+    video_id: bookmark.videoId,
+    content_type: bookmark.contentType,
+    title: bookmark.title,
+    thumbnail_url: bookmark.thumbnailUrl || null,
+    channel_id: bookmark.channelId || null,
+    channel_title: bookmark.channelTitle || null,
+    channel_thumbnail_url: bookmark.channelThumbnailUrl || null,
+    video_url: bookmark.videoUrl || null,
+    duration: bookmark.duration || null,
+    view_count: bookmark.viewCount || null,
+    published_at: bookmark.publishedAt || null,
+  }, { onConflict: "user_id,video_id,content_type", ignoreDuplicates: true });
+  if (error) throw error;
+}
+
+async function removeYouTubeBookmark(user: User, videoId: string, contentType: "video" | "shorts"): Promise<void> {
+  const userId = supabaseBookmarkUserId(user);
+  if (!userId) return db.removeYouTubeBookmark(user.id, videoId, contentType);
+  if (!supabaseAdmin) throw new Error("Supabase bookmark storage is not configured");
+
+  const { error } = await supabaseAdmin
+    .from("youtube_bookmarks")
+    .delete()
+    .eq("user_id", userId)
+    .eq("video_id", videoId)
+    .eq("content_type", contentType);
+  if (error) throw error;
+}
 
 type NaverSearchAdCredentials = {
   customerId: string;
@@ -3066,7 +3155,7 @@ export const appRouter = router({
     trackSavedVideos: protectedProcedure
       .input(z.object({ accountKey: z.string() }))
       .query(async ({ ctx }) => {
-      const bookmarks = await db.getUserYouTubeBookmarks(ctx.user.id);
+      const bookmarks = await listYouTubeBookmarks(ctx.user);
       if (bookmarks.length === 0) {
         return { checkedAt: new Date().toISOString(), videos: [], channels: [] };
       }
@@ -3195,7 +3284,7 @@ export const appRouter = router({
      * Get all YouTube bookmarks for the current user
      */
     list: protectedProcedure.query(async ({ ctx }) => {
-      return await db.getUserYouTubeBookmarks(ctx.user.id);
+      return await listYouTubeBookmarks(ctx.user);
     }),
 
     /**
@@ -3209,7 +3298,7 @@ export const appRouter = router({
         })
       )
       .query(async ({ ctx, input }) => {
-        return await db.isYouTubeVideoBookmarked(ctx.user.id, input.videoId, input.contentType);
+        return await isYouTubeBookmark(ctx.user, input.videoId, input.contentType);
       }),
 
     /**
@@ -3248,7 +3337,7 @@ export const appRouter = router({
           bookmarkData.viewCount = String(input.viewCount);
         }
         if (input.publishedAt) bookmarkData.publishedAt = input.publishedAt;
-        await db.addYouTubeBookmark(ctx.user.id, bookmarkData);
+        await addYouTubeBookmark(ctx.user, bookmarkData);
         return { success: true };
       }),
 
@@ -3263,7 +3352,7 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ ctx, input }) => {
-        await db.removeYouTubeBookmark(ctx.user.id, input.videoId, input.contentType);
+        await removeYouTubeBookmark(ctx.user, input.videoId, input.contentType);
         return { success: true };
       }),
   }),
