@@ -2,11 +2,11 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { useLocation } from "wouter";
-import { Bold, ChevronDown, ImagePlus, X } from "lucide-react";
+import { Bold, ChevronDown, X } from "lucide-react";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
 import HeroKeywordsPanel from "@/components/HeroKeywordsPanel";
 import IssueBody from "@/components/IssueBody";
-import { getStoredIssueImagePath, removeStoredIssueImages, uploadIssueImage, validateIssueImage, validateIssueImageUrl } from "@/lib/issueImages";
+import { removeStoredIssueImages, uploadIssueImage, validateIssueImage, validateIssueImageUrl } from "@/lib/issueImages";
 import { formatIssueBodyLines, parseIssueBodyLine, type IssueBodySize } from "@shared/issueBody";
 
 type AdminTab = "notices" | "issues" | "users" | "apiKeys" | "heroKeywords";
@@ -209,7 +209,6 @@ function IssuesPanel() {
   const [bodyCursor, setBodyCursor] = useState(0);
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-  const [imageMode, setImageMode] = useState<"upload" | "url">("upload");
   const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null);
   const [imagePreviewError, setImagePreviewError] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
@@ -296,7 +295,7 @@ function IssuesPanel() {
     setSummary("");
     setThumbnailUrl("");
     setThumbnailFile(null);
-    setImageMode("upload");
+    if (imageInputRef.current) imageInputRef.current.value = "";
     setIsPublished(false);
     setIsFormOpen(false);
   };
@@ -307,7 +306,7 @@ function IssuesPanel() {
     setSummary(issue.summary);
     setThumbnailUrl(issue.thumbnail_url ?? "");
     setThumbnailFile(null);
-    setImageMode(issue.thumbnail_url && !getStoredIssueImagePath(issue.thumbnail_url) ? "url" : "upload");
+    if (imageInputRef.current) imageInputRef.current.value = "";
     setIsPublished(issue.is_published);
     setIsFormOpen(true);
     setError(null);
@@ -321,14 +320,6 @@ function IssuesPanel() {
     setIsFormOpen(true);
   };
 
-  const handleImageModeChange = (mode: "upload" | "url") => {
-    if (mode === imageMode) return;
-    setImageMode(mode);
-    setThumbnailFile(null);
-    setThumbnailUrl("");
-    setError(null);
-  };
-
   const handleSave = async () => {
     if (!supabase || !user) return;
     if (!title.trim() || !summary.trim()) {
@@ -336,7 +327,7 @@ function IssuesPanel() {
       setMessage(null);
       return;
     }
-    if (imageMode === "url") {
+    if (!thumbnailFile) {
       const urlError = validateIssueImageUrl(thumbnailUrl);
       if (urlError) {
         setError(urlError);
@@ -353,7 +344,7 @@ function IssuesPanel() {
     let uploadedImageUrl: string | null = null;
 
     try {
-      if (imageMode === "upload" && thumbnailFile) {
+      if (thumbnailFile) {
         const uploaded = await uploadIssueImage(thumbnailFile);
         uploadedImageUrl = uploaded.url;
       }
@@ -601,72 +592,53 @@ function IssuesPanel() {
           </div>
         )}
         <div>
-          <span className="mb-2 block text-sm font-medium text-slate-300">썸네일 이미지</span>
-          <div className="mb-3 inline-flex rounded-md border border-slate-700 bg-slate-950/70 p-0.5" role="group" aria-label="이미지 등록 방식">
-            <button
-              type="button"
-              aria-pressed={imageMode === "upload"}
-              className={`rounded px-3 py-1.5 text-xs transition ${imageMode === "upload" ? "bg-blue-500/25 text-white" : "text-slate-400 hover:text-white"}`}
-              onClick={() => handleImageModeChange("upload")}
-            >
-              이미지 첨부
-            </button>
-            <button
-              type="button"
-              aria-pressed={imageMode === "url"}
-              className={`rounded px-3 py-1.5 text-xs transition ${imageMode === "url" ? "bg-blue-500/25 text-white" : "text-slate-400 hover:text-white"}`}
-              onClick={() => handleImageModeChange("url")}
-            >
-              이미지 주소
-            </button>
-          </div>
+          <label htmlFor="issue-image-url" className="mb-2 block text-sm font-medium text-slate-200">대표 이미지</label>
           <input
+            id="issue-image-url"
+            type="url"
+            className="h-11 w-full rounded-md border border-[#30234b] bg-[#141021] px-3 text-sm text-slate-100 outline-none placeholder:text-slate-400 focus:border-blue-400"
+            placeholder="이미지 URL을 입력하세요 (예: https://example.com/image.jpg)"
+            value={thumbnailUrl}
+            onChange={event => {
+              setThumbnailUrl(event.target.value);
+              setThumbnailFile(null);
+              if (imageInputRef.current) imageInputRef.current.value = "";
+              setError(null);
+            }}
+          />
+          <p className="mb-3 mt-2 text-xs text-slate-400">공개적으로 접근 가능한 이미지 URL을 입력하거나, 아래에서 직접 업로드하세요.</p>
+          <input
+            id="issue-image-file"
             ref={imageInputRef}
             type="file"
             accept="image/jpeg,image/png,image/webp"
-            className="sr-only"
+            className="block h-11 w-full cursor-pointer rounded-md border border-[#30234b] bg-[#141021] text-sm leading-[42px] text-slate-300 file:mr-3 file:h-[42px] file:cursor-pointer file:border-0 file:bg-transparent file:px-3 file:text-sm file:font-medium file:text-slate-200 focus:border-blue-400"
             aria-label="썸네일 이미지 파일"
             onChange={event => {
               const file = event.target.files?.[0];
-              event.target.value = "";
               if (!file) return;
               const validationError = validateIssueImage(file);
               if (validationError) {
+                event.target.value = "";
                 setError(validationError);
                 return;
               }
               setError(null);
               setThumbnailFile(file);
+              setThumbnailUrl("");
             }}
           />
-          {imageMode === "upload" ? (
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-blue-400 hover:text-white"
-                onClick={() => imageInputRef.current?.click()}
-              >
-                <ImagePlus size={16} aria-hidden="true" />
-                파일 선택
-              </button>
-              {thumbnailFile && <span className="min-w-0 truncate text-xs text-slate-400">{thumbnailFile.name}</span>}
-            </div>
-          ) : (
-            <input
-              type="url"
-              aria-label="썸네일 이미지 주소"
-              className="w-full rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-400"
-              placeholder="https://example.com/image.jpg"
-              value={thumbnailUrl}
-              onChange={event => setThumbnailUrl(event.target.value)}
-            />
-          )}
+          <p className="mt-2 text-xs text-slate-400">JPG, PNG, WebP 이미지를 업로드할 수 있습니다.</p>
           {(thumbnailFile || thumbnailUrl) && (
             <div className="mt-2 flex items-center gap-3">
               <button
                 type="button"
                 className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-red-300"
-                onClick={() => { setThumbnailFile(null); setThumbnailUrl(""); }}
+                onClick={() => {
+                  setThumbnailFile(null);
+                  setThumbnailUrl("");
+                  if (imageInputRef.current) imageInputRef.current.value = "";
+                }}
               >
                 <X size={14} aria-hidden="true" />
                 이미지 제거
