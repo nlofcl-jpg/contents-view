@@ -270,7 +270,6 @@ export default function Header({
   };
 
   const youtubeStatus = getYouTubeApiStatus();
-  const isAdmin = isAuthenticated && user?.role === "admin";
 
   return (
     <>
@@ -462,11 +461,6 @@ export default function Header({
         <a href="/saved-contents" onClick={(event) => handleNavLinkClick(event, "/saved-contents")} className={`headerNavItem headerNavLink ${location === "/saved-contents" ? "active" : ""}`}>
           내 보관함
         </a>
-        {isAdmin && (
-          <a href="/admin" className={`headerNavItem headerNavLink ${location === "/admin" ? "active" : ""}`}>
-            관리자
-          </a>
-        )}
         </nav>
 
         {/* 오른쪽 영역 */}
@@ -567,11 +561,6 @@ export default function Header({
                   ) : (
                     <a href="/mypage" className="dropdownItem">
                       마이페이지
-                    </a>
-                  )}
-                  {isAdmin && (
-                    <a href="/admin" className="dropdownItem">
-                      관리자 센터
                     </a>
                   )}
                   <button

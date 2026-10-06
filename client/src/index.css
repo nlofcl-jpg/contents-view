@@ -312,6 +312,10 @@ a {
   gap: 24px;
 }
 
+.siteFooterNavWithAdmin {
+  grid-template-columns: minmax(0, 0.5fr) repeat(2, minmax(0, 1fr));
+}
+
 .siteFooterNavGroup {
   display: flex;
   flex-direction: column;
@@ -323,6 +327,12 @@ a {
   font-size: 12px;
   font-weight: 700;
   color: #dbe7ff;
+}
+
+.siteFooterNavGroup .siteFooterAdminLink {
+  color: #dbe7ff;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .siteFooterNavGroup a {
