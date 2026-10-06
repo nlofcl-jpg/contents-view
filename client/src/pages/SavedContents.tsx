@@ -255,7 +255,8 @@ export default function SavedContents() {
                         title={recent.title}
                       >
                         <img src={recent.thumbnail} alt="" />
-                        <span>{recent.title}</span>
+                        <span className="savedYouTubeRecentTitle">{recent.title}</span>
+                        <span className="savedYouTubeRecentViews">조회수 {formatViewCount(String(recent.viewCount))}</span>
                       </button>
                     ))}
                   </div>
@@ -303,7 +304,8 @@ export default function SavedContents() {
                           title={recent.title}
                         >
                           <img src={recent.thumbnail} alt="" />
-                          <span>{recent.title}</span>
+                          <span className="savedYouTubeRecentTitle">{recent.title}</span>
+                          <span className="savedYouTubeRecentViews">조회수 {formatViewCount(String(recent.viewCount))}</span>
                         </button>
                       )) : (
                         <p className="savedYouTubeRecentEmpty">{isTracking ? "최근 영상을 확인하고 있습니다." : "최근 영상을 확인할 수 없습니다."}</p>
