@@ -56,11 +56,11 @@ export function useAuth(options?: UseAuthOptions) {
     setLoading(true);
     const { data, error: sessionError } = await supabase.auth.getSession();
     setSupabaseAccessTokenCookie(data.session?.access_token ?? null);
-    setLoading(false);
 
     if (sessionError) {
       setError(sessionError);
       setUser(null);
+      setLoading(false);
       return null;
     }
 
@@ -69,6 +69,7 @@ export function useAuth(options?: UseAuthOptions) {
       : null;
     setError(null);
     setUser(nextUser);
+    setLoading(false);
     return nextUser;
   }, [loadUserWithProfile]);
 
@@ -82,7 +83,7 @@ export function useAuth(options?: UseAuthOptions) {
 
     supabase.auth
       .getSession()
-      .then(({ data, error: sessionError }) => {
+      .then(async ({ data, error: sessionError }) => {
         if (!isMounted) return;
         if (sessionError) {
           setSupabaseAccessTokenCookie(null);
@@ -92,9 +93,8 @@ export function useAuth(options?: UseAuthOptions) {
           setError(null);
           setSupabaseAccessTokenCookie(data.session?.access_token ?? null);
           if (data.session?.user) {
-            loadUserWithProfile(data.session.user).then(nextUser => {
-              if (isMounted) setUser(nextUser);
-            });
+            const nextUser = await loadUserWithProfile(data.session.user);
+            if (isMounted) setUser(nextUser);
           } else {
             setUser(null);
           }
