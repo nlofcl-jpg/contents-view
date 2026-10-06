@@ -658,7 +658,7 @@ function IssuesPanel() {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            className="h-9 min-w-20 rounded-md border border-slate-700 px-4 text-sm font-medium text-slate-300 transition hover:border-slate-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="secondaryButton issueFormAction"
             onClick={resetForm}
             disabled={isSaving}
           >
@@ -666,7 +666,7 @@ function IssuesPanel() {
           </button>
           <button
             type="button"
-            className="h-9 min-w-20 rounded-md bg-blue-600 px-4 text-sm font-medium text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="primaryButton issueFormAction"
             onClick={handleSave}
             disabled={isSaving}
           >
