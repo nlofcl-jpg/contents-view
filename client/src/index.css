@@ -2787,11 +2787,12 @@ a {
 .issueListImage {
   display: block;
   width: 176px;
-  height: 100px;
+  height: 176px;
+  aspect-ratio: 1;
   border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: 4px;
   background: #111d31;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .issueListBody {
@@ -3339,7 +3340,7 @@ a {
 
   .issueListImage {
     width: 100px;
-    height: 72px;
+    height: 100px;
   }
 
   .issueListBody .issueListTitle {
