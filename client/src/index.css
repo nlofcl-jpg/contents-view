@@ -8651,6 +8651,10 @@ input[type="date"].youtubeSelect {
   border-bottom: 1px solid rgba(82, 116, 158, 0.22);
 }
 
+.aiStudioHeroVideo {
+  border-bottom: 0;
+}
+
 .aiStudioHeroContent {
   min-width: 0;
   padding: 28px 0 36px;

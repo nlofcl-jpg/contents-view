@@ -64,7 +64,7 @@ export default function AIStudio() {
 
   return (
     <div className="aiStudioPageContainer">
-      <section className="aiStudioHero" aria-labelledby="ai-studio-title">
+      <section className={`aiStudioHero ${activeTab === "upcoming" ? "aiStudioHeroVideo" : ""}`} aria-labelledby="ai-studio-title">
         <div className="aiStudioHeroContent">
           <span className="aiStudioHeroEyebrow">CONTENTS VIEW</span>
           <h1 id="ai-studio-title" className="aiStudioHeroTitle">

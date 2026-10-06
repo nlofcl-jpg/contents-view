@@ -991,8 +991,32 @@ export default function UnifiedInsights() {
         </div>
       )}
 
+      {searchMode === "analysis" && (
+        <div className="mb-4 flex w-full justify-center">
+          <div className="inline-flex rounded-full border border-slate-700/80 bg-slate-950/55 p-1">
+            {[
+              { value: "content" as const, label: "컨텐츠" },
+              { value: "seller" as const, label: "쇼핑" },
+            ].map((tab) => (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => handleInsightTabChange(tab.value)}
+                className={`h-9 min-w-24 rounded-full px-5 text-sm transition-colors ${
+                  activeInsightTab === tab.value
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-950/40"
+                    : "text-slate-400 hover:text-slate-100"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Search Card */}
-      <div className="mb-6 w-full max-w-full min-w-0 overflow-visible rounded-[22px] border border-white/35 bg-white p-1.5 shadow-[0_18px_48px_rgba(21,140,255,0.24),0_0_70px_rgba(21,140,255,0.14)] md:mb-8 md:rounded-[28px] md:p-2">
+      <div className="mx-auto mb-6 w-full max-w-3xl min-w-0 overflow-visible rounded-[18px] border border-white/25 bg-white p-1 shadow-[0_12px_28px_rgba(21,140,255,0.16)] md:mb-8 md:rounded-[20px]">
         <div className="relative flex items-center gap-0">
           {activeInsightTab !== "seller" && (
             <>
@@ -1000,7 +1024,7 @@ export default function UnifiedInsights() {
                 <button
                   type="button"
                   onClick={() => setIsSearchModeOpen((open) => !open)}
-                  className="flex h-10 w-16 items-center justify-center gap-0.5 rounded-[18px] whitespace-nowrap text-[9px] font-semibold text-blue-600 transition-colors hover:bg-slate-100 lg:h-12 lg:w-36 lg:gap-2 lg:text-base"
+                  className="flex h-9 w-16 items-center justify-center gap-0.5 rounded-[14px] whitespace-nowrap text-[9px] font-medium text-blue-600 transition-colors hover:bg-slate-100 lg:h-10 lg:w-32 lg:gap-2 lg:text-sm"
                   aria-haspopup="listbox"
                   aria-expanded={isSearchModeOpen}
                 >
@@ -1011,7 +1035,7 @@ export default function UnifiedInsights() {
                   />
                 </button>
                 {isSearchModeOpen && (
-                  <div className="absolute left-0 top-[2.8rem] z-40 w-28 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl shadow-blue-950/20 lg:top-[3.35rem] lg:w-40 lg:rounded-2xl" role="listbox">
+                  <div className="absolute left-0 top-[2.6rem] z-40 w-28 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl shadow-blue-950/20 lg:top-[2.9rem] lg:w-40 lg:rounded-2xl" role="listbox">
                     {SEARCH_MODE_OPTIONS.map((option) => (
                       <button
                         key={option.value}
@@ -1034,7 +1058,7 @@ export default function UnifiedInsights() {
                   </div>
                 )}
               </div>
-              <div className="h-5 w-px shrink-0 bg-slate-200 md:h-6" aria-hidden="true" />
+              <div className="h-4 w-px shrink-0 bg-slate-200 md:h-5" aria-hidden="true" />
             </>
           )}
           <input
@@ -1057,12 +1081,12 @@ export default function UnifiedInsights() {
                   : "분석할 검색어를 입력하세요."
             }
             autoComplete="off"
-            className="h-10 min-w-0 flex-1 rounded-[18px] border-0 bg-transparent px-3 text-sm font-medium text-slate-950 placeholder-slate-400 outline-none md:h-12 md:rounded-[22px] md:px-4 md:text-base md:font-semibold"
+            className="h-9 min-w-0 flex-1 rounded-[14px] border-0 bg-transparent px-2.5 text-[13px] font-normal text-slate-950 placeholder-slate-400 outline-none md:h-10 md:px-3 md:text-sm md:font-medium"
           />
           <button
             onClick={handleSearch}
             disabled={isLoading || isBlogLoading}
-            className="h-10 shrink-0 rounded-[18px] bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:bg-slate-300 disabled:text-slate-500 md:h-12 md:w-28 md:rounded-[22px] md:px-7 md:text-base"
+            className="h-9 shrink-0 rounded-[14px] bg-blue-600 px-3 text-[13px] font-semibold text-white transition-colors hover:bg-blue-500 disabled:bg-slate-300 disabled:text-slate-500 md:h-10 md:w-24 md:text-sm"
           >
             분석
           </button>
@@ -1071,30 +1095,6 @@ export default function UnifiedInsights() {
           <p className="mt-3 text-sm text-red-300">{queryError}</p>
         )}
       </div>
-
-      {searchMode === "analysis" && (
-      <div className="mb-6 flex w-full justify-center">
-        <div className="inline-flex rounded-full border border-slate-700/80 bg-slate-950/55 p-1">
-          {[
-            { value: "content" as const, label: "컨텐츠" },
-            { value: "seller" as const, label: "쇼핑" },
-          ].map((tab) => (
-            <button
-              key={tab.value}
-              type="button"
-              onClick={() => handleInsightTabChange(tab.value)}
-              className={`h-9 min-w-24 rounded-full px-5 text-sm transition-colors ${
-                activeInsightTab === tab.value
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-950/40"
-                  : "text-slate-400 hover:text-slate-100"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      )}
 
       {/* Empty State */}
       {searchMode === "analysis" && keywords.length === 0 && !isLoading && !querySuccess && (
