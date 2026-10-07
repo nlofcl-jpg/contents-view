@@ -9735,30 +9735,6 @@ input[type="date"].youtubeSelect {
   margin-top: 1.5rem;
 }
 
-.risingGuestLoginContent {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  text-align: center;
-}
-
-.risingGuestLoginDescription {
-  display: block;
-  margin-top: 0.5rem;
-  font-size: 0.875rem;
-  opacity: 0.8;
-}
-
-.risingUpdateInfoSection {
-  flex-wrap: wrap;
-}
-
-.risingUpdateInfoSection .risingGuestLoginContent {
-  flex-basis: 100%;
-  padding: 12px 0 4px;
-}
-
 .previousRisingToggle {
   display: flex;
   align-items: center;
