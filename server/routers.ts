@@ -3412,7 +3412,7 @@ export const appRouter = router({
      */
     getDcinside: publicProcedure
       .input(z.object({
-        sort: z.enum(["popular", "recommend", "views", "comments"]).default("popular"),
+        sort: z.enum(["source", "popular", "recommend", "views", "comments"]).default("popular"),
       }).optional())
       .query(async ({ input }) => {
       console.log('[DC Inside] getDcinside called');
@@ -3424,13 +3424,13 @@ export const appRouter = router({
       const now = Date.now();
       
       // Check cache first
-      if (cache[cacheKey] && now < cache[cacheKey].expiresAt) {
+      if (cache[cacheKey] && now < cache[cacheKey].expiresAt && (input?.sort !== 'source' || cache[cacheKey].sourcePosts)) {
         console.log('[DC Inside] Cache HIT - returning cached data');
         console.log('[DC Inside] collectedAt:', cache[cacheKey].collectedAt);
         
         // Apply sorting to cached data
-        const cachedPosts = [...cache[cacheKey].posts];
-        const sortedPosts = cachedPosts.sort((a, b) => {
+        const cachedPosts = [...(input?.sort === 'source' ? cache[cacheKey].sourcePosts : cache[cacheKey].posts)];
+        const sortedPosts = input?.sort === 'source' ? cachedPosts : cachedPosts.sort((a, b) => {
           const sort = input?.sort || 'popular';
           switch (sort) {
             case 'recommend':
@@ -3538,7 +3538,7 @@ export const appRouter = router({
         console.log('[DC Inside] New collection - collectedAt:', collectedAt);
         
         // Apply sorting based on input.sort
-        const sortedPosts = [...posts].sort((a, b) => {
+        const sortedPosts = input?.sort === 'source' ? [...posts] : [...posts].sort((a, b) => {
           const sort = input?.sort || 'popular';
           switch (sort) {
             case 'recommend':
@@ -3565,6 +3565,7 @@ export const appRouter = router({
         (global as any).dcinsideCache = {
           [cacheKey]: {
             posts: sortedPosts,
+            sourcePosts: posts,
             collectedAt: collectedAt,
             expiresAt: now + cacheDuration,
           },
@@ -3754,7 +3755,7 @@ export const appRouter = router({
      */
     getNatePann: publicProcedure
       .input(z.object({
-        sort: z.enum(["popular", "recommend", "views", "comments"]).default("popular"),
+        sort: z.enum(["source", "popular", "recommend", "views", "comments"]).default("popular"),
       }).optional())
       .query(async ({ input }) => {
       const cacheKey = 'natepann_posts_cache';
@@ -3765,13 +3766,13 @@ export const appRouter = router({
       const now = Date.now();
       
       // Check cache first
-      if (cache[cacheKey] && now < cache[cacheKey].expiresAt) {
+      if (cache[cacheKey] && now < cache[cacheKey].expiresAt && (input?.sort !== 'source' || cache[cacheKey].sourcePosts)) {
         console.log('[Nate Pann] Cache HIT - returning cached data');
         console.log('[Nate Pann] collectedAt:', cache[cacheKey].collectedAt);
         
         // Apply sorting to cached data
-        const cachedPosts = [...cache[cacheKey].posts];
-        const sortedPosts = cachedPosts.sort((a, b) => {
+        const cachedPosts = [...(input?.sort === 'source' ? cache[cacheKey].sourcePosts : cache[cacheKey].posts)];
+        const sortedPosts = input?.sort === 'source' ? cachedPosts : cachedPosts.sort((a, b) => {
           const sort = input?.sort || 'popular';
           switch (sort) {
             case 'recommend':
@@ -3865,7 +3866,7 @@ export const appRouter = router({
         console.log('[Nate Pann] New collection - collectedAt:', collectedAt);
         
         // Apply sorting based on input.sort
-        const sortedPosts = [...posts].sort((a, b) => {
+        const sortedPosts = input?.sort === 'source' ? [...posts] : [...posts].sort((a, b) => {
           const sort = input?.sort || 'popular';
           switch (sort) {
             case 'recommend':
@@ -3892,6 +3893,7 @@ export const appRouter = router({
         (global as any).natepannCache = {
           [cacheKey]: {
             posts: sortedPosts,
+            sourcePosts: posts,
             collectedAt: collectedAt,
             expiresAt: now + cacheDuration,
           },
@@ -3922,7 +3924,7 @@ export const appRouter = router({
      */
     getRuliweb: publicProcedure
       .input(z.object({
-        sort: z.enum(["popular", "recommend", "views", "comments"]).default("popular"),
+        sort: z.enum(["source", "popular", "recommend", "views", "comments"]).default("popular"),
       }).optional())
       .query(async ({ input }) => {
       const cacheKey = 'ruliweb_posts_cache';
@@ -3933,13 +3935,13 @@ export const appRouter = router({
       const now = Date.now();
       
       // Check cache first
-      if (cache[cacheKey] && now < cache[cacheKey].expiresAt) {
+      if (cache[cacheKey] && now < cache[cacheKey].expiresAt && (input?.sort !== 'source' || cache[cacheKey].sourcePosts)) {
         console.log('[Ruliweb] Cache HIT - returning cached data');
         console.log('[Ruliweb] collectedAt:', cache[cacheKey].collectedAt);
         
         // Apply sorting to cached data
-        const cachedPosts = [...cache[cacheKey].posts];
-        const sortedPosts = cachedPosts.sort((a, b) => {
+        const cachedPosts = [...(input?.sort === 'source' ? cache[cacheKey].sourcePosts : cache[cacheKey].posts)];
+        const sortedPosts = input?.sort === 'source' ? cachedPosts : cachedPosts.sort((a, b) => {
           const sort = input?.sort || 'popular';
           switch (sort) {
             case 'recommend':
@@ -4068,7 +4070,7 @@ export const appRouter = router({
         console.log('[Ruliweb] New collection - collectedAt:', collectedAt);
         
         // Apply sorting based on input.sort
-        const sortedPosts = [...posts].sort((a, b) => {
+        const sortedPosts = input?.sort === 'source' ? [...posts] : [...posts].sort((a, b) => {
           const sort = input?.sort || 'popular';
           switch (sort) {
             case 'recommend':
@@ -4095,6 +4097,7 @@ export const appRouter = router({
         (global as any).ruliwebCache = {
           [cacheKey]: {
             posts: sortedPosts,
+            sourcePosts: posts,
             collectedAt: collectedAt,
             expiresAt: now + cacheDuration,
           },
@@ -4121,7 +4124,7 @@ export const appRouter = router({
 
     getInven: publicProcedure
       .input(z.object({
-        sort: z.enum(["popular", "recommend", "views", "comments"]).default("popular"),
+        sort: z.enum(["source", "popular", "recommend", "views", "comments"]).default("popular"),
       }).optional())
       .query(async ({ input }) => {
       const cacheKey = 'inven_best';
@@ -4132,13 +4135,13 @@ export const appRouter = router({
       const now = Date.now();
       
       // Check cache first
-      if (cache[cacheKey] && now < cache[cacheKey].expiresAt) {
+      if (cache[cacheKey] && now < cache[cacheKey].expiresAt && (input?.sort !== 'source' || cache[cacheKey].sourcePosts)) {
         console.log('[Inven] Cache HIT - returning cached data');
         console.log('[Inven] collectedAt:', cache[cacheKey].collectedAt);
         
         // Apply sorting to cached data
-        const cachedPosts = [...cache[cacheKey].posts];
-        const sortedPosts = cachedPosts.sort((a, b) => {
+        const cachedPosts = [...(input?.sort === 'source' ? cache[cacheKey].sourcePosts : cache[cacheKey].posts)];
+        const sortedPosts = input?.sort === 'source' ? cachedPosts : cachedPosts.sort((a, b) => {
           const sort = input?.sort || 'popular';
           switch (sort) {
             case 'recommend':
@@ -4284,7 +4287,7 @@ export const appRouter = router({
           console.log('[Inven] New collection - collectedAt:', collectedAt);
           
           // Apply sorting based on input.sort
-          const sortedPosts = [...posts].sort((a, b) => {
+          const sortedPosts = input?.sort === 'source' ? [...posts] : [...posts].sort((a, b) => {
             const sort = input?.sort || 'popular';
             switch (sort) {
               case 'recommend':
@@ -4310,6 +4313,7 @@ export const appRouter = router({
           (global as any).invenCache = {
             [cacheKey]: {
               posts: sortedPosts,
+              sourcePosts: posts,
               collectedAt: collectedAt,
               expiresAt: now + cacheDuration,
             },
@@ -4335,7 +4339,7 @@ export const appRouter = router({
     }),
     getBobaedream: publicProcedure
       .input(z.object({
-        sort: z.enum(["popular", "recommend", "views", "comments"]).default("popular"),
+        sort: z.enum(["source", "popular", "recommend", "views", "comments"]).default("popular"),
       }).optional())
       .query(async ({ input }) => {
       const cacheKey = 'bobaedream_posts_cache';
@@ -4347,13 +4351,13 @@ export const appRouter = router({
       const cache = (global as any).bobaedreamCache || {};
       
       // Check cache first
-      if (cache[cacheKey] && now < cache[cacheKey].expiresAt) {
+      if (cache[cacheKey] && now < cache[cacheKey].expiresAt && (input?.sort !== 'source' || cache[cacheKey].sourcePosts)) {
         console.log('[Bobaedream] Cache HIT - returning cached data');
         console.log('[Bobaedream] collectedAt:', cache[cacheKey].collectedAt);
         
         // Apply sorting to cached data
-        const cachedPosts = [...cache[cacheKey].posts];
-        const sortedPosts = cachedPosts.sort((a, b) => {
+        const cachedPosts = [...(input?.sort === 'source' ? cache[cacheKey].sourcePosts : cache[cacheKey].posts)];
+        const sortedPosts = input?.sort === 'source' ? cachedPosts : cachedPosts.sort((a, b) => {
           const sort = input?.sort || 'popular';
           switch (sort) {
             case 'recommend':
@@ -4501,7 +4505,7 @@ export const appRouter = router({
         console.log('[Bobaedream] New collection - collectedAt:', collectedAt);
         
         // Apply sorting based on input.sort
-        const sortedPosts = [...posts].sort((a, b) => {
+        const sortedPosts = input?.sort === 'source' ? [...posts] : [...posts].sort((a, b) => {
           const sort = input?.sort || 'popular';
           switch (sort) {
             case 'recommend':
@@ -4527,6 +4531,7 @@ export const appRouter = router({
         (global as any).bobaedreamCache = {
           [cacheKey]: {
             posts: sortedPosts,
+            sourcePosts: posts,
             collectedAt: collectedAt,
             expiresAt: now + cacheDuration,
           },
@@ -4552,7 +4557,7 @@ export const appRouter = router({
     }),
     getHumorUniv: publicProcedure
       .input(z.object({
-        sort: z.enum(["popular", "recommend", "views", "comments"]).default("popular"),
+        sort: z.enum(["source", "popular", "recommend", "views", "comments"]).default("popular"),
       }).optional())
       .query(async ({ input }) => {
       const cacheKey = 'humoruniv_posts_cache';
@@ -4565,13 +4570,13 @@ export const appRouter = router({
       const cache = (global as any).humorunivCache || {};
       
       // Check cache first
-      if (cache[cacheKey] && now < cache[cacheKey].expiresAt) {
+      if (cache[cacheKey] && now < cache[cacheKey].expiresAt && (input?.sort !== 'source' || cache[cacheKey].sourcePosts)) {
         console.log('[HumorUniv] Cache HIT - returning cached data');
         console.log('[HumorUniv] collectedAt:', cache[cacheKey].collectedAt);
         
         // Apply sorting to cached data
-        const cachedPosts = [...cache[cacheKey].posts];
-        const sortedPosts = cachedPosts.sort((a, b) => {
+        const cachedPosts = [...(input?.sort === 'source' ? cache[cacheKey].sourcePosts : cache[cacheKey].posts)];
+        const sortedPosts = input?.sort === 'source' ? cachedPosts : cachedPosts.sort((a, b) => {
           const sort = input?.sort || 'popular';
           switch (sort) {
             case 'recommend':
@@ -4789,7 +4794,7 @@ export const appRouter = router({
         console.log('[HumorUniv] New collection - collectedAt:', collectedAt);
         
         // Apply sorting based on input.sort
-        const sortedPosts = [...posts].sort((a, b) => {
+        const sortedPosts = input?.sort === 'source' ? [...posts] : [...posts].sort((a, b) => {
           const sort = input?.sort || 'popular';
           switch (sort) {
             case 'recommend':
@@ -4815,6 +4820,7 @@ export const appRouter = router({
         (global as any).humorunivCache = {
           [cacheKey]: {
             posts: sortedPosts,
+            sourcePosts: posts,
             collectedAt: collectedAt,
             expiresAt: now + cacheDuration,
           },

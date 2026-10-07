@@ -8365,17 +8365,17 @@ input[type="date"].youtubeSelect {
   width: 32px;
   height: 32px;
   padding: 0;
-  border: 1px solid rgba(96, 165, 250, 0.26);
+  border: 1px solid rgba(96, 165, 250, 0.08);
   border-radius: 6px;
-  background: rgba(38, 57, 88, 0.5);
+  background: rgba(38, 57, 88, 0.06);
   color: #cbd8eb;
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .communityRefreshButton:hover:not(:disabled) {
-  border-color: rgba(96, 165, 250, 0.48);
-  background: rgba(48, 72, 108, 0.72);
+  border-color: rgba(96, 165, 250, 0.18);
+  background: rgba(48, 72, 108, 0.16);
   color: #ffffff;
 }
 
@@ -8922,6 +8922,109 @@ input[type="date"].youtubeSelect {
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+.communitySourceFilters {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  gap: 0;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 4px;
+  border: 1px solid rgba(71, 85, 105, 0.8);
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.55);
+  scrollbar-width: none;
+}
+
+.communitySourceFilters::-webkit-scrollbar {
+  display: none;
+}
+
+.communitySourceFilter {
+  flex: none;
+  height: 36px;
+  min-width: 92px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #8391a7;
+  font-size: 14px;
+  font-weight: 400;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.communitySourceFilter:hover {
+  color: #fff;
+}
+
+.communitySourceFilter.active {
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(15, 62, 150, 0.32);
+}
+
+.communitySourceFilter:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+.communitySourceList .communityListHeader,
+.communitySourceList .communityPostRow {
+  grid-template-columns: minmax(0, 1fr) 160px 110px 72px;
+}
+
+.communityMobileTime {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .communitySourceList .communityPostRow {
+    grid-template-columns: minmax(0, 1fr) 120px 44px;
+  }
+
+  .communitySourceList .communityPostRow .colViews {
+    display: none;
+  }
+
+  .communitySourceList .communityPostRow .colBookmark {
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+  }
+}
+
+@media (max-width: 767px) {
+  .communitySourceList .communityPostRow {
+    grid-template-columns: minmax(0, 1fr) 36px;
+    align-items: center;
+  }
+
+  .communitySourceList .communityPostRow .colTitle {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .communitySourceList .communityPostRow .colTime {
+    display: none;
+  }
+
+  .communitySourceList .communityPostRow .colBookmark {
+    grid-column: 2;
+    grid-row: 1;
+    width: 36px;
+    min-width: 36px;
+    max-width: 36px;
+  }
+
+  .communityMobileTime {
+    display: inline-flex;
+  }
 }
 
 @media (min-width: 640px) {
