@@ -257,6 +257,38 @@ export default function YouTubeTrends() {
     setSelectedVideo(video);
     setIsModalOpen(true);
   };
+  const guestLoginButton = (className = "") => (
+    <button
+      type="button"
+      className={`youtubeGuestLoginButton ${className}`.trim()}
+      onClick={() => { window.location.href = getLoginUrl(); }}
+    >
+      로그인
+    </button>
+  );
+  const renderGuestLoginNotice = (description: string) => (
+    <div className="emptyStateContainer">
+      <AlertCircle className="emptyStateIcon" size={48} />
+      <p className="emptyStateText">
+        로그인 후 서비스를 계속 이용해주세요
+        <br />
+        <span style={{ fontSize: "0.875rem", opacity: 0.8, marginTop: "0.5rem", display: "block" }}>
+          {description}
+        </span>
+      </p>
+      {guestLoginButton("youtubeGuestLoginButtonEmpty")}
+    </div>
+  );
+  const renderRisingGuestLogin = () => !authLoading && !isAuthenticated ? (
+    <div className="risingGuestLoginContent">
+      <p className="emptyStateText">
+        로그인 후 서비스를 계속 이용해주세요
+        <br />
+        <span className="risingGuestLoginDescription">급상승 영상 분석을 계속 이용하려면 로그인해주세요.</span>
+      </p>
+      {guestLoginButton()}
+    </div>
+  ) : null;
   const [analysisInput, setAnalysisInput] = useState("");
   const [submittedAnalysisKeyword, setSubmittedAnalysisKeyword] = useState("");
   const [submittedAnalysisVideoId, setSubmittedAnalysisVideoId] = useState("");
@@ -1554,7 +1586,9 @@ export default function YouTubeTrends() {
       return (
         <div className="emptyStateContainer">
           <Clock className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">수집된 급상승 영상을 불러오는 중입니다...</p>
+          {!authLoading && !isAuthenticated
+            ? renderRisingGuestLogin()
+            : <p className="emptyStateText">수집된 급상승 영상을 불러오는 중입니다...</p>}
         </div>
       );
     }
@@ -1564,7 +1598,9 @@ export default function YouTubeTrends() {
       return (
         <div className="emptyStateContainer">
           <AlertCircle className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">{risingDataError || "급상승 영상을 불러오지 못했습니다."}</p>
+          {!authLoading && !isAuthenticated
+            ? renderRisingGuestLogin()
+            : <p className="emptyStateText">{risingDataError || "급상승 영상을 불러오지 못했습니다."}</p>}
         </div>
       );
     }
@@ -1646,22 +1682,25 @@ export default function YouTubeTrends() {
       return (
         <div className="emptyStateContainer">
           <AlertCircle className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">선택한 조건의 수집된 급상승 영상이 없습니다.</p>
+          {!authLoading && !isAuthenticated
+            ? renderRisingGuestLogin()
+            : <p className="emptyStateText">선택한 조건의 수집된 급상승 영상이 없습니다.</p>}
         </div>
       );
     }
 
     return (
       <section className="risingDiscoverySection">
-        <div className="updateInfoSection updateInfoSectionMobile">
+        <div className="updateInfoSection updateInfoSectionMobile risingUpdateInfoSection">
           <span className="updateInfoText">
             {risingData?.collectedAt ? formatLastUpdateTime(new Date(risingData.collectedAt).getTime()) : "-"}
           </span>
           <button onClick={handleRefreshClick} disabled={isRefreshing || isRisingLoading} className="refreshButton refreshButtonIconOnly" title="새로고침">
             <RotateCw size={16} className={isRefreshing ? "refreshIconSpinning" : ""} />
           </button>
+          {renderRisingGuestLogin()}
         </div>
-        <div className="updateInfoSection updateInfoSectionDesktop">
+        <div className="updateInfoSection updateInfoSectionDesktop risingUpdateInfoSection">
           <div className="updateInfoContent">
             <span className="updateInfoText">
               {risingData?.collectedAt ? formatLastUpdateTime(new Date(risingData.collectedAt).getTime()) : "-"}
@@ -1675,6 +1714,7 @@ export default function YouTubeTrends() {
             <RotateCw size={16} className={isRefreshing ? "refreshIconSpinning" : ""} />
             {isRefreshing ? "분석 중..." : "새로고침"}
           </button>
+          {renderRisingGuestLogin()}
         </div>
 
         <div className="videosGrid">
@@ -2078,37 +2118,7 @@ export default function YouTubeTrends() {
           <p className="emptyStateText">인증 상태를 확인하는 중입니다...</p>
         </div>
       ) : activeTab !== "rising" && !isAuthenticated ? (
-        <div className="emptyStateContainer">
-          <AlertCircle className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">
-            로그인 후 서비스를 계속 이용해주세요
-            <br />
-            <span style={{ fontSize: "0.875rem", opacity: 0.8, marginTop: "0.5rem", display: "block" }}>
-              YouTube 트렌드와 개인 API 키 기능은 로그인 후 이용할 수 있습니다.
-            </span>
-          </p>
-          <button
-            onClick={() => {
-              window.location.href = getLoginUrl();
-            }}
-            style={{
-              marginTop: "1.5rem",
-              padding: "0.75rem 1.5rem",
-              backgroundColor: "#3b82f6",
-              color: "white",
-              border: "none",
-              borderRadius: "0.375rem",
-              fontSize: "0.875rem",
-              fontWeight: "500",
-              cursor: "pointer",
-              transition: "background-color 0.2s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2563eb")}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#3b82f6")}
-          >
-            로그인
-          </button>
-        </div>
+        renderGuestLoginNotice("YouTube 트렌드와 개인 API 키 기능은 로그인 후 이용할 수 있습니다.")
       ) : activeTab === "analysis" ? (
         renderAnalysisTab()
       ) : activeTab === "rising" ? (

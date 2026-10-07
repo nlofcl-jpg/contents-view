@@ -125,12 +125,12 @@ export default function Community() {
         <p className="pageDescription">커뮤니티별 신규 글과 반응을 한 곳에서 확인하고 컨텐츠로 만들어보세요.</p>
       </div>
 
-      <div className="communitySourceFilters" role="group" aria-label="커뮤니티 선택">
+      <div className="tabMenu communitySourceFilters" role="group" aria-label="커뮤니티 선택">
         {COMMUNITY_OPTIONS.map(option => (
           <button
             key={option.id}
             type="button"
-            className={`communitySourceFilter${selectedCommunity === option.id ? " active" : ""}`}
+            className={`tabButton communitySourceFilter${selectedCommunity === option.id ? " active" : ""}`}
             aria-pressed={selectedCommunity === option.id}
             onClick={() => selectCommunity(option.id)}
           >
