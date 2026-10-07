@@ -8976,7 +8976,7 @@ input[type="date"].youtubeSelect {
 
 .communitySourceList .communityListHeader,
 .communitySourceList .communityPostRow {
-  grid-template-columns: minmax(0, 1fr) 160px 110px 72px;
+  grid-template-columns: 72px minmax(0, 1fr) 160px 110px 72px;
 }
 
 .communityMobileTime {
@@ -8985,7 +8985,7 @@ input[type="date"].youtubeSelect {
 
 @media (max-width: 1023px) {
   .communitySourceList .communityPostRow {
-    grid-template-columns: minmax(0, 1fr) 120px 44px;
+    grid-template-columns: 40px minmax(0, 1fr) 120px 44px;
   }
 
   .communitySourceList .communityPostRow .colViews {
@@ -9001,12 +9001,12 @@ input[type="date"].youtubeSelect {
 
 @media (max-width: 767px) {
   .communitySourceList .communityPostRow {
-    grid-template-columns: minmax(0, 1fr) 36px;
+    grid-template-columns: 32px minmax(0, 1fr) 36px;
     align-items: center;
   }
 
   .communitySourceList .communityPostRow .colTitle {
-    grid-column: 1;
+    grid-column: 2;
     grid-row: 1;
   }
 
@@ -9015,7 +9015,7 @@ input[type="date"].youtubeSelect {
   }
 
   .communitySourceList .communityPostRow .colBookmark {
-    grid-column: 2;
+    grid-column: 3;
     grid-row: 1;
     width: 36px;
     min-width: 36px;

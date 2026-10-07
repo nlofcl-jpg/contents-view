@@ -157,6 +157,7 @@ export default function Community() {
 
       <div className="communityListWrapper communitySourceList">
         <div className="communityListHeader">
+          <div className="colRank">순번</div>
           <div className="colTitle">제목</div>
           <div className="colTime">시간</div>
           <div className="colViews">조회</div>
@@ -175,6 +176,7 @@ export default function Community() {
               const isBookmarked = bookmarkedPosts.has(postId);
               return (
                 <div key={postId} className="communityPostRow">
+                  <div className="colRank"><span className="rankBadge">{(visiblePage - 1) * PAGE_SIZE + index + 1}</span></div>
                   <div className="colTitle">
                     <div className="titleWrapper">
                       <a href={post.url} target="_blank" rel="noopener noreferrer" className="postTitleLink">

@@ -21,6 +21,13 @@ describe("consumeGuestRisingVideoView", () => {
     expect(storage.getItem(GUEST_RISING_VIDEO_VIEW_KEY)).toBe("2");
   });
 
+  it("allows one main-page view and blocks every later click, including the same video", () => {
+    const storage = createStorage();
+    expect(consumeGuestRisingVideoView(storage, 1)).toBe(true);
+    expect(consumeGuestRisingVideoView(storage, 1)).toBe(false);
+    expect(storage.getItem(GUEST_RISING_VIDEO_VIEW_KEY)).toBe("1");
+  });
+
   it("blocks access when the browser cannot persist the count", () => {
     const storage = {
       getItem: () => null,

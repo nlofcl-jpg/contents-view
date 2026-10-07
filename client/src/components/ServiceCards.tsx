@@ -316,7 +316,7 @@ export default function ServiceCards() {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const { canOpenRisingVideo, guestPrompt } = useGuestRisingVideoAccess(isAuthenticated, authLoading);
+  const { canOpenRisingVideo, guestPrompt } = useGuestRisingVideoAccess(isAuthenticated, authLoading, 1);
 
   useEffect(() => {
     const carousel = carouselRef.current;
