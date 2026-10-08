@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, useEffect, useRef, type FormEvent } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
@@ -247,7 +247,7 @@ export default function YouTubeTrends() {
     },
     onError: () => toast.error("채널 보관을 해제하지 못했습니다."),
   });
-  const [isMobileTabMenuOpen, setIsMobileTabMenuOpen] = useState(false);
+  const tabMenuRef = useRef<HTMLDivElement>(null);
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const openRisingVideo = (video: any) => {
@@ -768,16 +768,23 @@ export default function YouTubeTrends() {
     updateCurrentFilter("period", value);
     setVisiblePreviousRisingCount(0);
   };
-  const activeTabLabel = TABS.find((tab) => tab.id === activeTab)?.label || "유튜브 추천 영상";
-
   const handleTabChange = (tabId: TabType) => {
     setActiveTab(tabId);
-    setIsMobileTabMenuOpen(false);
     setVisiblePreviousRecommendedCount(0);
     setVisiblePreviousShortsCount(0);
     setIsExposureCountryInfoOpen(false);
     setLocation(tabId === "trending" ? "/trends/youtube" : `/trends/youtube?tab=${tabId}`);
   };
+
+  useEffect(() => {
+    const menu = tabMenuRef.current;
+    if (!menu || !window.matchMedia("(max-width: 768px)").matches) return;
+    const selected = menu.querySelector<HTMLButtonElement>(".tabButton.active");
+    if (!selected) return;
+    const menuBounds = menu.getBoundingClientRect();
+    const selectedBounds = selected.getBoundingClientRect();
+    menu.scrollTo({ left: menu.scrollLeft + selectedBounds.left - menuBounds.left - 8, behavior: "smooth" });
+  }, [activeTab]);
 
   const handleAnalysisKeywordSearch = () => {
     if (!canSearchAnalysisKeyword) return;
@@ -1944,38 +1951,14 @@ export default function YouTubeTrends() {
       </div>
 
       {/* Tab Menu */}
-      <div className="youtubeMobileTabFilter">
-        <button
-          type="button"
-          className={`youtubeMobileTabTrigger ${isMobileTabMenuOpen ? "open" : ""}`}
-          onClick={() => setIsMobileTabMenuOpen((isOpen) => !isOpen)}
-          aria-expanded={isMobileTabMenuOpen}
-        >
-          <span>{activeTabLabel}</span>
-          <ChevronDown size={22} strokeWidth={2.4} aria-hidden="true" />
-        </button>
-        {isMobileTabMenuOpen && (
-          <div className="youtubeMobileTabPanel">
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                className={`youtubeMobileTabOption ${activeTab === tab.id ? "active" : ""}`}
-                onClick={() => handleTabChange(tab.id as TabType)}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="tabMenu">
+      <div className="tabMenu youtubeTabMenu" ref={tabMenuRef} role="group" aria-label="YouTube 트렌드 선택">
         {TABS.map((tab) => (
           <button
             key={tab.id}
+            type="button"
             onClick={() => handleTabChange(tab.id as TabType)}
             className={`tabButton ${activeTab === tab.id ? "active" : ""}`}
+            aria-pressed={activeTab === tab.id}
           >
             {tab.label}
           </button>
