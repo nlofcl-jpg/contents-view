@@ -1,4 +1,4 @@
-import { useState, useEffect, type KeyboardEvent } from "react";
+import { useState, useEffect, useRef, type KeyboardEvent, type UIEvent } from "react";
 import { ChevronDown } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -138,10 +138,24 @@ export default function GoogleTrends() {
   const [visibleCount, setVisibleCount] = useState(GOOGLE_TRENDS_PAGE_SIZE);
   const [showGuestPrompt, setShowGuestPrompt] = useState(false);
   const [mobileTab, setMobileTab] = useState<"google" | "keywords">("google");
+  const mobilePanelsRef = useRef<HTMLDivElement>(null);
   const latestTrendTimestamp = popularSearches.reduce((latest, item) => {
     const timestamp = Date.parse(item.lastSeenAt);
     return Number.isFinite(timestamp) ? Math.max(latest, timestamp) : latest;
   }, 0);
+
+  const selectMobileTab = (tab: "google" | "keywords") => {
+    setMobileTab(tab);
+    const panels = mobilePanelsRef.current;
+    if (panels) {
+      panels.scrollTo({ left: tab === "google" ? 0 : panels.clientWidth, behavior: "smooth" });
+    }
+  };
+
+  const handleMobilePanelsScroll = (event: UIEvent<HTMLDivElement>) => {
+    const panels = event.currentTarget;
+    setMobileTab(panels.scrollLeft >= panels.clientWidth / 2 ? "keywords" : "google");
+  };
 
   const handleMobileTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     const nextTab = event.key === "ArrowRight" || event.key === "End"
@@ -151,7 +165,7 @@ export default function GoogleTrends() {
         : null;
     if (!nextTab) return;
     event.preventDefault();
-    setMobileTab(nextTab);
+    selectMobileTab(nextTab);
     document.getElementById(nextTab === "google" ? "google-trends-tab" : "search-keyword-trends-tab")?.focus();
   };
 
@@ -248,7 +262,7 @@ export default function GoogleTrends() {
           aria-selected={mobileTab === "google"}
           aria-controls="google-trends-panel"
           tabIndex={mobileTab === "google" ? 0 : -1}
-          onClick={() => setMobileTab("google")}
+          onClick={() => selectMobileTab("google")}
           onKeyDown={handleMobileTabKeyDown}
           className={`min-h-11 border-b-2 px-2 text-xs font-semibold transition-colors ${mobileTab === "google" ? "border-blue-400 text-blue-300" : "border-transparent text-slate-400"}`}
         >
@@ -261,7 +275,7 @@ export default function GoogleTrends() {
           aria-selected={mobileTab === "keywords"}
           aria-controls="search-keyword-trends-panel"
           tabIndex={mobileTab === "keywords" ? 0 : -1}
-          onClick={() => setMobileTab("keywords")}
+          onClick={() => selectMobileTab("keywords")}
           onKeyDown={handleMobileTabKeyDown}
           className={`min-h-11 border-b-2 px-2 text-xs font-semibold transition-colors ${mobileTab === "keywords" ? "border-blue-400 text-blue-300" : "border-transparent text-slate-400"}`}
         >
@@ -269,12 +283,16 @@ export default function GoogleTrends() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-2">
+      <div
+        ref={mobilePanelsRef}
+        onScroll={handleMobilePanelsScroll}
+        className="flex items-start overflow-x-auto overscroll-x-contain snap-x snap-mandatory lg:grid lg:grid-cols-2 lg:gap-8 lg:overflow-visible lg:snap-none"
+      >
         <section
           id="google-trends-panel"
           role="tabpanel"
           aria-labelledby="google-trends-tab"
-          className={`min-w-0 ${mobileTab === "google" ? "block" : "hidden"} lg:block`}
+          className="w-full min-w-0 flex-none snap-start lg:w-auto"
         >
           <h2 id="google-trends-heading" className="mb-5 hidden text-xl font-bold text-foreground lg:block">
             구글 트렌드
@@ -365,7 +383,7 @@ export default function GoogleTrends() {
           id="search-keyword-trends-panel"
           role="tabpanel"
           aria-labelledby="search-keyword-trends-tab"
-          className={`min-w-0 ${mobileTab === "keywords" ? "block" : "hidden"} lg:block`}
+          className="w-full min-w-0 flex-none snap-start lg:w-auto"
         >
           <SearchKeywordTrends />
         </div>
