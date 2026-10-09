@@ -171,7 +171,7 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
               target={row.externalHref ? "_blank" : undefined}
               rel={row.externalHref ? "noopener noreferrer" : undefined}
               className={`grid h-[72px] w-full grid-cols-[18px_40px_minmax(0,1fr)_auto] items-center gap-2 py-1.5 pl-1.5 pr-3.5 text-left ${glassRowClass}`}
-              aria-label={`${index + 1}위 ${row.label} 원문 보기`}
+              aria-label={`${row.communityName} 최신 글: ${row.label} 원문 보기`}
             >
               <span className="text-center text-base font-bold text-blue-300">{index + 1}</span>
               <CommunitySourceMark name={row.communityName} />
@@ -360,13 +360,13 @@ export default function ServiceCards() {
   );
 
   const communityQueryOptions = { retry: 1, staleTime: 10 * 60 * 1000, refetchOnWindowFocus: false } as const;
-  const dcinsideQuery = trpc.community.getDcinside.useQuery({ sort: "popular" }, communityQueryOptions);
+  const dcinsideQuery = trpc.community.getDcinside.useQuery({ sort: "source" }, communityQueryOptions);
   const ppomppuQuery = trpc.community.getPpomppu.useQuery(undefined, communityQueryOptions);
-  const natepannQuery = trpc.community.getNatePann.useQuery({ sort: "popular" }, communityQueryOptions);
-  const ruliwebQuery = trpc.community.getRuliweb.useQuery({ sort: "popular" }, communityQueryOptions);
-  const invenQuery = trpc.community.getInven.useQuery({ sort: "popular" }, communityQueryOptions);
-  const bobaedreamQuery = trpc.community.getBobaedream.useQuery({ sort: "popular" }, communityQueryOptions);
-  const humorunivQuery = trpc.community.getHumorUniv.useQuery({ sort: "popular" }, communityQueryOptions);
+  const natepannQuery = trpc.community.getNatePann.useQuery({ sort: "source" }, communityQueryOptions);
+  const ruliwebQuery = trpc.community.getRuliweb.useQuery({ sort: "source" }, communityQueryOptions);
+  const invenQuery = trpc.community.getInven.useQuery({ sort: "source" }, communityQueryOptions);
+  const bobaedreamQuery = trpc.community.getBobaedream.useQuery({ sort: "source" }, communityQueryOptions);
+  const humorunivQuery = trpc.community.getHumorUniv.useQuery({ sort: "source" }, communityQueryOptions);
   const communityLoading = [dcinsideQuery, ppomppuQuery, natepannQuery, ruliwebQuery, invenQuery, bobaedreamQuery, humorunivQuery]
     .some((query) => query.isPending);
 
@@ -432,14 +432,14 @@ export default function ServiceCards() {
 
   const communityRows = useMemo<TrendRow[]>(() => {
     const responses = [
-      dcinsideQuery.data, ppomppuQuery.data, natepannQuery.data, ruliwebQuery.data,
-      invenQuery.data, bobaedreamQuery.data, humorunivQuery.data,
+      dcinsideQuery.data, ppomppuQuery.data, ruliwebQuery.data, invenQuery.data,
+      humorunivQuery.data, bobaedreamQuery.data, natepannQuery.data,
     ];
-    const posts = responses.flatMap((response) => response?.success ? response.data || [] : []);
-    const popularity = (post: any) =>
-      Number(post.reactionCount || 0) * 2 + Number(post.commentCount || 0) * 1.5
-      + (typeof post.viewCount === "number" ? post.viewCount : 0) * 0.1;
-    return posts.sort((a: any, b: any) => popularity(b) - popularity(a)).slice(0, 5).map((post: any) => ({
+    const posts = responses
+      .map((response) => response?.success ? response.data?.[0] : null)
+      .filter((post): post is NonNullable<typeof post> => Boolean(post))
+      .slice(0, 5);
+    return posts.map((post) => ({
       label: stripHtml(post.title),
       meta: [post.community, formatCommunityDate(post.time)].filter(Boolean).join(" · "),
       externalHref: post.url && post.url !== "#" ? post.url : undefined,
@@ -498,7 +498,7 @@ export default function ServiceCards() {
       icon: <MessageCircleMore className="h-7 w-7 text-sky-400" />,
       rows: communityRows,
       loading: communityLoading,
-      emptyText: "커뮤니티 인기글을 불러오지 못했습니다.",
+      emptyText: "커뮤니티 최신 글을 불러오지 못했습니다.",
     },
     {
       id: "news",
