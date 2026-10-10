@@ -28,11 +28,27 @@ export default function Admin() {
     return adminTabs.some(tab => tab.id === requestedTab) ? requestedTab as AdminTab : "notices";
   });
   const isAdmin = isAuthenticated && user?.role === "admin";
+  const tabListRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const requestedTab = new URLSearchParams(window.location.search).get("tab");
     setActiveTab(adminTabs.some(tab => tab.id === requestedTab) ? requestedTab as AdminTab : "notices");
   }, [location]);
+
+  useEffect(() => {
+    const list = tabListRef.current;
+    if (!isAdmin || !list || !window.matchMedia("(max-width: 639px)").matches) return;
+    const selected = list.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!selected) return;
+
+    const listBounds = list.getBoundingClientRect();
+    const selectedBounds = selected.getBoundingClientRect();
+    if (selectedBounds.left < listBounds.left) {
+      list.scrollBy({ left: selectedBounds.left - listBounds.left, behavior: "smooth" });
+    } else if (selectedBounds.right > listBounds.right) {
+      list.scrollBy({ left: selectedBounds.right - listBounds.right, behavior: "smooth" });
+    }
+  }, [activeTab, isAdmin]);
 
   const handleAdminTabChange = (tab: AdminTab) => {
     setActiveTab(tab);
@@ -69,12 +85,13 @@ export default function Admin() {
         <h1 className="pageTitle">관리자 센터</h1>
       </div>
 
-      <div className="mb-5 flex flex-wrap gap-2 border-b border-slate-800">
+      <div ref={tabListRef} className="mb-5 flex flex-nowrap gap-2 overflow-x-auto border-b border-slate-800 sm:flex-wrap sm:overflow-visible">
         {adminTabs.map(tab => (
           <button
             key={tab.id}
             type="button"
-            className={`border-b-2 px-4 py-3 text-sm font-semibold transition ${
+            aria-current={activeTab === tab.id ? "page" : undefined}
+            className={`shrink-0 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold transition ${
               activeTab === tab.id
                 ? "border-blue-400 text-white"
                 : "border-transparent text-slate-400 hover:text-slate-100"
