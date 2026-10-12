@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, ChevronLeft, ChevronRight, CircleAlert, MessageCircle, MessageCircleMore, Newspaper, ThumbsUp, TrendingUp } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, CircleAlert, MessageCircle, MessageCircleMore, Newspaper, RefreshCw, ThumbsUp, TrendingUp } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
 import { GoogleTrendRankChange, type RankChange } from "@/components/GoogleTrendRankChange";
@@ -37,6 +37,9 @@ type TrendCard = {
   rows: TrendRow[];
   loading: boolean;
   emptyText: string;
+  error?: boolean;
+  retrying?: boolean;
+  onRetry?: () => void;
 };
 
 function stripHtml(value?: string | null) {
@@ -291,6 +294,20 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
               {row.tone === "hot" && <span className="shrink-0 text-xs font-bold text-red-400">급상승</span>}
             </div>
           ))
+        ) : card.error && card.onRetry ? (
+          <div className="flex min-h-[392px] flex-col items-center justify-center gap-3 text-slate-400">
+            <button
+              type="button"
+              className="text-blue-300 transition-colors hover:text-white disabled:cursor-wait disabled:opacity-60"
+              onClick={card.onRetry}
+              disabled={card.retrying}
+              aria-label="급상승 영상 다시 불러오기"
+              title="다시 불러오기"
+            >
+              <RefreshCw size={28} className={card.retrying ? "animate-spin" : ""} aria-hidden="true" />
+            </button>
+            <span className="text-sm">불러오기 실패</span>
+          </div>
         ) : (
           <div className={`p-4 text-sm text-slate-400 ${isFeaturedCard ? glassRowClass : "rounded-md border border-slate-800/70 bg-slate-900/25"}`}>
             {card.emptyText}
@@ -475,6 +492,9 @@ export default function ServiceCards() {
       brandIcon: true,
       rows: youtubeRows,
       loading: youtubeRisingQuery.isLoading,
+      error: youtubeRisingQuery.isError || youtubeRisingQuery.data?.success === false,
+      retrying: youtubeRisingQuery.isFetching,
+      onRetry: () => { void youtubeRisingQuery.refetch(); },
       emptyText: youtubeRisingQuery.data && "error" in youtubeRisingQuery.data
         ? youtubeRisingQuery.data.error
         : "수집된 급상승 영상이 없습니다.",

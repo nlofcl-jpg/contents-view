@@ -3,6 +3,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, adminProcedure, approvedProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { COOKIE_NAME } from "@shared/const";
 import { unifiedInsightProcedure } from "./naver.unifiedInsight";
 import { runDiagnostics } from "./naver.diagnostic";
@@ -1280,6 +1281,46 @@ function translateYouTubeError(error: string): string {
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
+  partnership: router({
+    submit: publicProcedure.input(z.object({
+      name: z.string().trim().min(1).max(100),
+      phone: z.string().trim().min(7).max(30).regex(/^[+\d()\s-]+$/).refine(value => value.replace(/\D/g, "").length >= 7),
+      email: z.email().trim().max(254),
+      message: z.string().trim().min(10).max(5000),
+    })).mutation(async ({ input }) => {
+      if (!supabaseAdmin) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "문의 접수를 사용할 수 없습니다." });
+
+      const email = input.email.toLowerCase();
+      const phone = input.phone.replace(/[^\d+]/g, "");
+      const { data: recent, error: lookupError } = await supabaseAdmin
+        .from("partnership_inquiries")
+        .select("id")
+        .eq("email", email)
+        .gte("created_at", new Date(Date.now() - 10 * 60 * 1000).toISOString())
+        .limit(1);
+      if (lookupError) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "문의 접수에 실패했습니다." });
+      if (recent?.length) throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "잠시 후 다시 제출해 주세요." });
+
+      const { error } = await supabaseAdmin.from("partnership_inquiries").insert({
+        name: input.name,
+        phone,
+        email,
+        message: input.message,
+      });
+      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "문의 접수에 실패했습니다." });
+      return { success: true } as const;
+    }),
+    list: adminProcedure.query(async () => {
+      if (!supabaseAdmin) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "문의 내역을 불러올 수 없습니다." });
+      const { data, error } = await supabaseAdmin
+        .from("partnership_inquiries")
+        .select("id,name,phone,email,message,created_at")
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "문의 내역을 불러올 수 없습니다." });
+      return data ?? [];
+    }),
+  }),
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

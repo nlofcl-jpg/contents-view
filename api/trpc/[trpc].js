@@ -1032,6 +1032,7 @@ var systemRouter = router({
 
 // server/routers.ts
 import { z as z3 } from "zod";
+import { TRPCError as TRPCError3 } from "@trpc/server";
 
 // server/naver.unifiedInsight.ts
 import { z as z2 } from "zod";
@@ -3735,6 +3736,35 @@ function translateYouTubeError(error) {
 var appRouter = router({
   // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
+  partnership: router({
+    submit: publicProcedure.input(z3.object({
+      name: z3.string().trim().min(1).max(100),
+      phone: z3.string().trim().min(7).max(30).regex(/^[+\d()\s-]+$/).refine((value) => value.replace(/\D/g, "").length >= 7),
+      email: z3.email().trim().max(254),
+      message: z3.string().trim().min(10).max(5e3)
+    })).mutation(async ({ input }) => {
+      if (!supabaseAdmin4) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uC811\uC218\uB97C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+      const email = input.email.toLowerCase();
+      const phone = input.phone.replace(/[^\d+]/g, "");
+      const { data: recent, error: lookupError } = await supabaseAdmin4.from("partnership_inquiries").select("id").eq("email", email).gte("created_at", new Date(Date.now() - 10 * 60 * 1e3).toISOString()).limit(1);
+      if (lookupError) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uC811\uC218\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4." });
+      if (recent?.length) throw new TRPCError3({ code: "TOO_MANY_REQUESTS", message: "\uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC81C\uCD9C\uD574 \uC8FC\uC138\uC694." });
+      const { error } = await supabaseAdmin4.from("partnership_inquiries").insert({
+        name: input.name,
+        phone,
+        email,
+        message: input.message
+      });
+      if (error) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uC811\uC218\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4." });
+      return { success: true };
+    }),
+    list: adminProcedure.query(async () => {
+      if (!supabaseAdmin4) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uB0B4\uC5ED\uC744 \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+      const { data, error } = await supabaseAdmin4.from("partnership_inquiries").select("id,name,phone,email,message,created_at").order("created_at", { ascending: false }).limit(100);
+      if (error) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uB0B4\uC5ED\uC744 \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+      return data ?? [];
+    })
+  }),
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

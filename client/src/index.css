@@ -325,7 +325,9 @@ a {
   color: #dbe7ff;
 }
 
-.siteFooterNavGroup a {
+.siteFooterNavGroup a,
+.siteFooterNavGroup span,
+.siteFooterNavGroup .siteFooterInquiryButton {
   width: fit-content;
   font-size: 13px;
   line-height: 1.4;
@@ -333,8 +335,20 @@ a {
   transition: color 0.15s ease;
 }
 
-.siteFooterNavGroup a:hover {
+.siteFooterNavGroup a:hover,
+.siteFooterNavGroup .siteFooterInquiryButton:hover {
   color: #ffffff;
+}
+
+.siteFooterInquiryButton {
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .siteFooterBottom {
@@ -348,7 +362,7 @@ a {
   color: #64748b;
 }
 
-.siteFooterMobileLegal {
+.siteFooterMobileLinks {
   display: none;
 }
 
@@ -482,20 +496,39 @@ a {
   }
 
   .siteFooterBottom {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
     margin-top: 0;
     padding-top: 8px;
     border-top: 0;
   }
 
-  .siteFooterBottom span:last-child {
+  .siteFooterBottom > span:last-child {
     display: none;
   }
 
-  .siteFooterMobileLegal {
-    display: inline-flex;
+  .siteFooterMobileLinks {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px 18px;
     color: #8fa3be;
     font-size: 11px;
+    line-height: 1.5;
+  }
+
+  .siteFooterMobileLinks a,
+  .siteFooterMobileLinks span,
+  .siteFooterMobileLinks .siteFooterInquiryButton {
+    transition: color 0.15s ease;
     white-space: nowrap;
+  }
+
+  .siteFooterMobileLinks a:hover,
+  .siteFooterMobileLinks .siteFooterInquiryButton:hover {
+    color: #ffffff;
   }
 
   .privacyPage {

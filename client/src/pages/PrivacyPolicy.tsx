@@ -29,6 +29,7 @@ export default function PrivacyPolicy() {
                   <tr><td>회원 계정</td><td>회원번호, 이름, 이메일, 프로필 이미지, 역할·승인 상태, 이용권 상태</td></tr>
                   <tr><td>보관함</td><td>저장한 YouTube 영상·채널의 식별값과 제목, 썸네일, 채널명, 저장 일시 등 콘텐츠 정보</td></tr>
                   <tr><td>API 연동</td><td>이용자가 등록한 외부 API 키, 키 일부 표시값, 연결 확인 상태·일시</td></tr>
+                  <tr><td>제휴 문의</td><td>이름 또는 상호명, 연락처, 이메일, 문의 내용, 접수 일시</td></tr>
                   <tr><td>서비스 운영</td><td>로그인 쿠키와 브라우저 저장정보. 접속 IP, 브라우저·기기 정보 및 요청 기록은 호스팅·보안 과정에서 처리될 수 있음</td></tr>
                 </tbody>
               </table>
@@ -43,6 +44,7 @@ export default function PrivacyPolicy() {
               <li>회원별 콘텐츠 접근과 YouTube 영상·채널 보관함 제공</li>
               <li>이용자가 등록한 API 키를 이용한 외부 서비스 연동과 연결 상태 확인</li>
               <li>공지 확인 상태와 화면 설정 유지 등 이용 편의 제공</li>
+              <li>제휴 문의 접수, 내용 확인 및 답변</li>
               <li>오류 대응, 부정 이용 방지 및 서비스 보안 유지</li>
             </ul>
           </section>
@@ -56,6 +58,7 @@ export default function PrivacyPolicy() {
                   <tr><td>회원 계정·프로필</td><td>회원 계정 삭제 요청이 처리될 때까지</td></tr>
                   <tr><td>보관한 영상·채널</td><td>이용자가 해당 보관 항목을 삭제하거나 계정 삭제 요청이 처리될 때까지</td></tr>
                   <tr><td>사용자가 등록한 API 키</td><td>이용자가 해당 키를 삭제하거나 계정 삭제 요청이 처리될 때까지</td></tr>
+                  <tr><td>제휴 문의</td><td>문의 처리 목적이 달성되거나 삭제 요청이 처리될 때까지</td></tr>
                   <tr><td>브라우저 저장정보</td><td>이용자가 삭제하거나 해당 정보의 유효기간이 끝날 때까지</td></tr>
                   <tr><td>접속·보안 기록</td><td>보안 및 장애 대응에 필요한 기간 동안 호스팅 사업자의 정책에 따라 처리</td></tr>
                 </tbody>
@@ -78,7 +81,7 @@ export default function PrivacyPolicy() {
                 <thead><tr><th>사업자</th><th>이용 기능</th><th>관련 정보</th></tr></thead>
                 <tbody>
                   <tr><td>Google</td><td>Google 계정 로그인 및 이용자가 선택한 Google·YouTube API 연동</td><td>로그인 계정 정보, API 요청에 필요한 키·입력값</td></tr>
-                  <tr><td>Supabase</td><td>회원 인증, 데이터베이스 및 이슈 이미지 저장</td><td>계정·프로필, 보관함, 사용자 API 키 등 서비스 저장정보</td></tr>
+                  <tr><td>Supabase</td><td>회원 인증, 데이터베이스 및 이슈 이미지 저장</td><td>계정·프로필, 보관함, 사용자 API 키, 제휴 문의 등 서비스 저장정보</td></tr>
                   <tr><td>Vercel</td><td>웹사이트 호스팅 및 서버 함수 실행</td><td>접속 정보, 인증 정보, API 요청에 포함되는 입력값</td></tr>
                 </tbody>
               </table>

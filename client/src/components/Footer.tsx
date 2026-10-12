@@ -1,4 +1,6 @@
 import { Link } from "wouter";
+import { useState } from "react";
+import PartnershipInquiryDialog from "@/components/PartnershipInquiryDialog";
 
 const trendLinks = [
   { label: "YouTube", href: "/trends/youtube" },
@@ -15,6 +17,7 @@ const serviceLinks = [
 
 export default function Footer({ onGuestMenuAccess }: { onGuestMenuAccess?: (path?: string) => boolean }) {
   const year = new Date().getFullYear();
+  const [inquiryOpen, setInquiryOpen] = useState(false);
 
   return (
     <footer className="siteFooter">
@@ -55,15 +58,24 @@ export default function Footer({ onGuestMenuAccess }: { onGuestMenuAccess?: (pat
           <div className="siteFooterNavGroup">
             <h2>Legal</h2>
             <Link href="/privacy">개인정보처리방침</Link>
+            <span>이용약관</span>
+            <a href="mailto:edenofcl@gmail.com">이메일</a>
+            <button type="button" className="siteFooterInquiryButton" onClick={() => setInquiryOpen(true)}>제휴 문의</button>
           </div>
         </nav>
       </div>
 
       <div className="siteFooterBottom">
+        <nav className="siteFooterMobileLinks" aria-label="모바일 하단 안내">
+          <Link href="/privacy">개인정보처리 방침</Link>
+          <span>이용약관</span>
+          <a href="mailto:edenofcl@gmail.com">이메일</a>
+          <button type="button" className="siteFooterInquiryButton" onClick={() => setInquiryOpen(true)}>제휴 문의</button>
+        </nav>
         <span>© {year} CONTENTS VIEW</span>
-        <Link href="/privacy" className="siteFooterMobileLegal">개인정보처리방침</Link>
         <span>Trend, news, community, and creator intelligence.</span>
       </div>
+      <PartnershipInquiryDialog open={inquiryOpen} onOpenChange={setInquiryOpen} />
     </footer>
   );
 }

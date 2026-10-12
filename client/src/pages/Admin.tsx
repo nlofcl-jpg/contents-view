@@ -2,6 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
 import { Bold, ChevronDown, X } from "lucide-react";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
 import HeroKeywordsPanel from "@/components/HeroKeywordsPanel";
@@ -9,7 +10,7 @@ import IssueBody from "@/components/IssueBody";
 import { removeStoredIssueImages, uploadIssueImage, validateIssueImage, validateIssueImageUrl } from "@/lib/issueImages";
 import { formatIssueBodyLines, parseIssueBodyLine, type IssueBodySize } from "@shared/issueBody";
 
-type AdminTab = "notices" | "issues" | "users" | "apiKeys" | "heroKeywords";
+type AdminTab = "notices" | "issues" | "users" | "apiKeys" | "heroKeywords" | "partnership";
 
 const adminTabs: Array<{ id: AdminTab; label: string }> = [
   { id: "notices", label: "공지" },
@@ -17,6 +18,7 @@ const adminTabs: Array<{ id: AdminTab; label: string }> = [
   { id: "apiKeys", label: "API 키" },
   { id: "issues", label: "이슈" },
   { id: "heroKeywords", label: "인기 검색어" },
+  { id: "partnership", label: "제휴 문의" },
 ];
 
 export default function Admin() {
@@ -108,7 +110,36 @@ export default function Admin() {
       {activeTab === "users" && <UsersPanel adminEmail={user?.email ?? ""} />}
       {activeTab === "apiKeys" && <ApiKeysPanel />}
       {activeTab === "heroKeywords" && <HeroKeywordsPanel />}
+      {activeTab === "partnership" && <PartnershipInquiriesPanel />}
     </div>
+  );
+}
+
+function PartnershipInquiriesPanel() {
+  const { data, isLoading, error, refetch, isFetching } = trpc.partnership.list.useQuery();
+
+  return (
+    <section className="space-y-5">
+      <header className="flex items-center justify-between gap-4">
+        <h2 className="text-2xl font-medium text-white">제휴 문의</h2>
+        <button type="button" onClick={() => void refetch()} disabled={isFetching} className="rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-sky-500 disabled:opacity-50">새로고침</button>
+      </header>
+      {isLoading && <p className="text-sm text-slate-400">문의 내역을 불러오는 중입니다.</p>}
+      {error && <p role="alert" className="text-sm text-rose-300">문의 내역을 불러오지 못했습니다.</p>}
+      {!isLoading && !error && data?.length === 0 && <p className="text-sm text-slate-400">접수된 제휴 문의가 없습니다.</p>}
+      <div className="space-y-3">
+        {data?.map(inquiry => (
+          <article key={inquiry.id} className="rounded-md border border-slate-700 bg-slate-900/50 p-4 text-sm">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <h3 className="font-semibold text-white">{inquiry.name}</h3>
+              <time className="text-xs text-slate-400" dateTime={inquiry.created_at}>{new Date(inquiry.created_at).toLocaleString("ko-KR")}</time>
+            </div>
+            <p className="mt-2 text-slate-300">{inquiry.phone} · {inquiry.email}</p>
+            <p className="mt-3 whitespace-pre-wrap break-words border-t border-slate-700 pt-3 leading-6 text-slate-100">{inquiry.message}</p>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
