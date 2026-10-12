@@ -52,11 +52,16 @@ export default function Footer({ onGuestMenuAccess }: { onGuestMenuAccess?: (pat
               </Link>
             ))}
           </div>
+          <div className="siteFooterNavGroup">
+            <h2>Legal</h2>
+            <Link href="/privacy">개인정보처리방침</Link>
+          </div>
         </nav>
       </div>
 
       <div className="siteFooterBottom">
         <span>© {year} CONTENTS VIEW</span>
+        <Link href="/privacy" className="siteFooterMobileLegal">개인정보처리방침</Link>
         <span>Trend, news, community, and creator intelligence.</span>
       </div>
     </footer>

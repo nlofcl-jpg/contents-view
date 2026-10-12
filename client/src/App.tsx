@@ -17,6 +17,7 @@ import AIStudio from "@/pages/AIStudio";
 import FlowAutomation from "@/pages/FlowAutomation";
 import Login from "@/pages/Login";
 import Admin from "@/pages/Admin";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import MyPageModal from "@/components/MyPageModal";
 import { MobileMenuDrawer } from "@/components/MobileMenuDrawer";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
@@ -48,6 +49,7 @@ function Router() {
       <Route path={"/ai-studio"} component={AIStudio} />
       <Route path={"/login"} component={Login} />
       <Route path={"/admin"} component={Admin} />
+      <Route path={"/privacy"} component={PrivacyPolicy} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
