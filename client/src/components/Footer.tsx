@@ -33,7 +33,7 @@ export default function Footer({ onGuestMenuAccess }: { onGuestMenuAccess?: (pat
 
         <nav className="siteFooterNav" aria-label="하단 메뉴">
           <div className="siteFooterNavGroup">
-            <h2>트렌드</h2>
+            <h2>Trends</h2>
             {trendLinks.map(link => (
               <Link key={link.href} href={link.href} onClick={(event) => {
                 if (onGuestMenuAccess?.(link.href)) event.preventDefault();
@@ -43,7 +43,7 @@ export default function Footer({ onGuestMenuAccess }: { onGuestMenuAccess?: (pat
             ))}
           </div>
           <div className="siteFooterNavGroup">
-            <h2>서비스</h2>
+            <h2>Services</h2>
             {serviceLinks.map(link => (
               <Link key={link.href} href={link.href} onClick={(event) => {
                 if (onGuestMenuAccess?.(link.href)) event.preventDefault();

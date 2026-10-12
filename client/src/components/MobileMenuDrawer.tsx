@@ -117,7 +117,7 @@ export function MobileMenuDrawer({
                       type="button"
                     >
                       <ShieldCheck size={18} />
-                      <span>어드민</span>
+                      <span>Admin</span>
                     </button>
                   )}
                   <button

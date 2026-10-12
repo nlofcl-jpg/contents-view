@@ -569,7 +569,7 @@ export default function Header({
                       className="dropdownItem"
                       onClick={() => setIsDropdownOpen(false)}
                     >
-                      어드민
+                      Admin
                     </Link>
                   )}
                   <button
