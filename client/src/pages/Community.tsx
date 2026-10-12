@@ -121,7 +121,7 @@ export default function Community() {
   return (
     <div className="communityPage">
       <div className="pageHeader">
-        <h1 className="pageTitle">커뮤니티 반응</h1>
+        <h1 className="pageTitle">커뮤니티 트렌드</h1>
         <p className="pageDescription">커뮤니티별 신규 글과 반응을 한 곳에서 확인하고 컨텐츠로 만들어보세요.</p>
       </div>
 

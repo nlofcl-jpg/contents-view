@@ -117,7 +117,7 @@ export function MobileMenuDrawer({
                       type="button"
                     >
                       <ShieldCheck size={18} />
-                      <span>관리자 센터</span>
+                      <span>어드민</span>
                     </button>
                   )}
                   <button
@@ -253,7 +253,7 @@ export function MobileMenuDrawer({
                 onClick={() => handleNavigation("/community")}
                 type="button"
               >
-                <span>커뮤니티 반응</span>
+                <span>커뮤니티 트렌드</span>
               </button>
 
               <button

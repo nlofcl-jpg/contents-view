@@ -418,7 +418,7 @@ export default function Header({
         </div>
 
         <a href="/community" onClick={(event) => handleNavLinkClick(event, "/community")} className={`headerNavItem headerNavLink ${location === "/community" ? "active" : ""}`}>
-          커뮤니티 반응
+          커뮤니티 트렌드
         </a>
 
         <div
@@ -562,6 +562,15 @@ export default function Header({
                     <a href="/mypage" className="dropdownItem">
                       마이페이지
                     </a>
+                  )}
+                  {user.role === "admin" && (
+                    <Link
+                      href="/admin"
+                      className="dropdownItem"
+                      onClick={() => setIsDropdownOpen(false)}
+                    >
+                      어드민
+                    </Link>
                   )}
                   <button
                     className="dropdownItem dropdownLogout"

@@ -1,4 +1,3 @@
-import { useAuth } from "@/_core/hooks/useAuth";
 import { Link } from "wouter";
 
 const trendLinks = [
@@ -9,14 +8,12 @@ const trendLinks = [
 
 const serviceLinks = [
   { label: "뉴스&이슈", href: "/news" },
-  { label: "커뮤니티 반응", href: "/community" },
+  { label: "커뮤니티 트렌드", href: "/community" },
   { label: "AI 스튜디오", href: "/ai-studio" },
   { label: "내 보관함", href: "/saved-contents" },
 ];
 
 export default function Footer({ onGuestMenuAccess }: { onGuestMenuAccess?: (path?: string) => boolean }) {
-  const { user, isAuthenticated } = useAuth();
-  const isAdmin = isAuthenticated && user?.role === "admin";
   const year = new Date().getFullYear();
 
   return (
@@ -34,13 +31,7 @@ export default function Footer({ onGuestMenuAccess }: { onGuestMenuAccess?: (pat
           </p>
         </div>
 
-        <nav className={`siteFooterNav${isAdmin ? " siteFooterNavWithAdmin" : ""}`} aria-label="하단 메뉴">
-          {isAdmin && (
-            <div className="siteFooterNavGroup siteFooterAdminGroup">
-              <h2>관리</h2>
-              <Link href="/admin">Admin</Link>
-            </div>
-          )}
+        <nav className="siteFooterNav" aria-label="하단 메뉴">
           <div className="siteFooterNavGroup">
             <h2>트렌드</h2>
             {trendLinks.map(link => (

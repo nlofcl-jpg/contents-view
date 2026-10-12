@@ -65,7 +65,7 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
 
         <Link href="/community" className={`navItem ${location === "/community" ? "active" : ""}`} onClick={handleLinkClick}>
           <span className="navIcon">☷</span>
-          <span className="navLabel">커뮤니티 반응</span>
+          <span className="navLabel">커뮤니티 트렌드</span>
         </Link>
 
         <Link href="/saved-contents" className={`navItem ${location === "/saved-contents" ? "active" : ""}`} onClick={handleLinkClick}>
