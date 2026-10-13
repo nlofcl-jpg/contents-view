@@ -122,7 +122,7 @@ export default function PrivacyPolicy() {
             <p>개인정보 열람·정정·삭제 요청과 관련 문의는 아래로 보내 주세요. 계정 정보 관련 요청은 본인 확인 후 처리합니다.</p>
             <ul>
               <li>담당: CONTENTS VIEW 개인정보 보호 담당자</li>
-              <li>이메일: edenofcl@gmail.com</li>
+              <li>이메일: edenofcls@gmail.com</li>
             </ul>
           </section>
 
