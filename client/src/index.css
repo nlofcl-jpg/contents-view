@@ -3832,23 +3832,6 @@ a {
   }
 }
 
-.youtubeSubNotice {
-  margin-top: 10px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 400;
-  color: #94a3b8;
-}
-
-.youtubeSubNoticeIcon {
-  color: #22d3ee;
-  opacity: 0.85;
-  flex-shrink: 0;
-  font-size: 14px;
-}
-
 /* Tab Menu */
 .tabMenu {
   display: flex;

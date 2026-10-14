@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { Bold, ChevronDown, X } from "lucide-react";
+import { Bold, ChevronDown, RefreshCw, X } from "lucide-react";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
 import HeroKeywordsPanel from "@/components/HeroKeywordsPanel";
 import IssueBody from "@/components/IssueBody";
@@ -122,7 +122,9 @@ function PartnershipInquiriesPanel() {
     <section className="space-y-5">
       <header className="flex items-center justify-between gap-4">
         <h2 className="text-2xl font-medium text-white">제휴 문의</h2>
-        <button type="button" onClick={() => void refetch()} disabled={isFetching} className="rounded-md border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:border-sky-500 disabled:opacity-50">새로고침</button>
+        <button type="button" onClick={() => void refetch()} disabled={isFetching} aria-label="제휴 문의 새로고침" title="새로고침" className="inline-flex h-8 w-8 shrink-0 items-center justify-center text-slate-400 transition-colors hover:text-white disabled:opacity-50">
+          <RefreshCw size={17} className={isFetching ? "animate-spin" : ""} aria-hidden="true" />
+        </button>
       </header>
       {isLoading && <p className="text-sm text-slate-400">문의 내역을 불러오는 중입니다.</p>}
       {error && <p role="alert" className="text-sm text-rose-300">문의 내역을 불러오지 못했습니다.</p>}

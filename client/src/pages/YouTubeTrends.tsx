@@ -25,9 +25,9 @@ const TABS = [
 ] as const;
 
 function getInitialYouTubeTab(): TabType {
-  if (typeof window === "undefined") return "trending";
+  if (typeof window === "undefined") return "rising";
   const requestedTab = new URLSearchParams(window.location.search).get("tab");
-  return TABS.some(tab => tab.id === requestedTab) ? requestedTab as TabType : "trending";
+  return TABS.some(tab => tab.id === requestedTab) ? requestedTab as TabType : "rising";
 }
 
 const ANALYSIS_SORT_OPTIONS: { value: AnalysisSortType; label: string }[] = [
@@ -301,7 +301,7 @@ export default function YouTubeTrends() {
     const keywordFromUrl = searchParams.get("keyword")?.trim() || "";
 
     if (!TABS.some(tab => tab.id === targetTab)) {
-      setActiveTab("trending");
+      setActiveTab("rising");
       return;
     }
 
@@ -773,7 +773,7 @@ export default function YouTubeTrends() {
     setVisiblePreviousRecommendedCount(0);
     setVisiblePreviousShortsCount(0);
     setIsExposureCountryInfoOpen(false);
-    setLocation(tabId === "trending" ? "/trends/youtube" : `/trends/youtube?tab=${tabId}`);
+    setLocation(tabId === "rising" ? "/trends/youtube" : `/trends/youtube?tab=${tabId}`);
   };
 
   useEffect(() => {
@@ -1590,7 +1590,11 @@ export default function YouTubeTrends() {
       return (
         <div className="emptyStateContainer">
           <AlertCircle className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">{risingDataError || "급상승 영상을 불러오지 못했습니다."}</p>
+          <p className="emptyStateText">
+            {risingDataError || "급상승 영상을 불러오지 못했습니다."}
+            <br />
+            새로고침 하세요.
+          </p>
         </div>
       );
     }
@@ -1942,12 +1946,6 @@ export default function YouTubeTrends() {
         <p className="pageDescription">
           국가별, 카테고리별 YouTube 콘텐츠 트렌드를 확인하세요.
         </p>
-        {activeTab === "shorts" && (
-          <div className="youtubeSubNotice">
-            <span className="youtubeSubNoticeIcon">ⓘ</span>
-            <span>쇼츠 트렌드는 최근 7일 인기 데이터를 기반으로 제공되고 있습니다.</span>
-          </div>
-        )}
       </div>
 
       {/* Tab Menu */}
