@@ -9560,7 +9560,22 @@ input[type="date"].youtubeSelect {
 
 @media (max-width: 767px) {
   .aiStudioVideoGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .aiStudioVideoGrid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .aiStudioVideoStyle {
+    flex: 0 0 min(52vw, 210px);
+    scroll-snap-align: start;
   }
 }
 
@@ -9584,11 +9599,6 @@ input[type="date"].youtubeSelect {
 
   .aiStudioVideoCatalog {
     gap: 32px;
-  }
-
-  .aiStudioVideoGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
   }
 
   .aiStudioVideoGroup h2 {
