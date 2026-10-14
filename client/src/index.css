@@ -9424,6 +9424,193 @@ input[type="date"].youtubeSelect {
   min-height: 300px;
 }
 
+.aiStudioCardNewsCatalog {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  width: 100%;
+  padding-top: 10px;
+}
+
+.aiStudioCardNewsThumbnail {
+  display: grid;
+  min-width: 0;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid rgba(85, 131, 185, 0.3);
+  border-radius: 8px;
+  background: linear-gradient(145deg, #1b3952, #0c1d32 72%);
+  color: rgba(166, 201, 226, 0.54);
+}
+
+.aiStudioCardNewsThumbnail:nth-child(4n + 2) {
+  background: linear-gradient(145deg, #354056, #172239 72%);
+  color: rgba(195, 190, 223, 0.55);
+}
+
+.aiStudioCardNewsThumbnail:nth-child(4n + 3) {
+  background: linear-gradient(145deg, #285452, #112b32 72%);
+  color: rgba(171, 221, 207, 0.55);
+}
+
+.aiStudioCardNewsThumbnail:nth-child(4n + 4) {
+  background: linear-gradient(145deg, #594a44, #292b39 72%);
+  color: rgba(229, 195, 172, 0.55);
+}
+
+.aiStudioCardNewsThumbnail svg {
+  width: 34px;
+  height: 34px;
+  stroke-width: 1.25;
+}
+
+.aiStudioVideoCatalog {
+  display: grid;
+  gap: 42px;
+  width: 100%;
+  padding-top: 10px;
+}
+
+.aiStudioVideoGroup h2 {
+  margin: 0 0 16px;
+  color: #edf4ff;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.aiStudioVideoGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.aiStudioVideoStyle {
+  position: relative;
+  min-width: 0;
+  aspect-ratio: 9 / 16;
+  overflow: hidden;
+  border: 1px solid rgba(78, 115, 168, 0.28);
+  border-radius: 8px;
+  background: #0d1c31;
+}
+
+.aiStudioVideoStyleThumbnail {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  width: 100%;
+  place-items: center;
+  overflow: hidden;
+  background: linear-gradient(0deg, rgba(3, 9, 20, 0.98), rgba(3, 9, 20, 0.08) 65%), linear-gradient(135deg, #294566, #13253d);
+  color: rgba(143, 188, 244, 0.65);
+}
+
+.aiStudioVideoStyleTone1 .aiStudioVideoStyleThumbnail {
+  background: linear-gradient(0deg, rgba(3, 9, 20, 0.98), rgba(3, 9, 20, 0.08) 65%), linear-gradient(135deg, #534366, #1b2944);
+  color: rgba(194, 159, 216, 0.65);
+}
+
+.aiStudioVideoStyleTone2 .aiStudioVideoStyleThumbnail {
+  background: linear-gradient(0deg, rgba(3, 9, 20, 0.98), rgba(3, 9, 20, 0.08) 65%), linear-gradient(135deg, #285862, #182e3d);
+  color: rgba(132, 212, 197, 0.65);
+}
+
+.aiStudioVideoStyleTone3 .aiStudioVideoStyleThumbnail {
+  background: linear-gradient(0deg, rgba(3, 9, 20, 0.98), rgba(3, 9, 20, 0.08) 65%), linear-gradient(135deg, #594a4a, #292942);
+  color: rgba(230, 178, 144, 0.65);
+}
+
+.aiStudioVideoStyleThumbnail svg {
+  width: 34px;
+  height: 34px;
+  stroke-width: 1.25;
+  opacity: 0.5;
+}
+
+.aiStudioVideoStyleText {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 20px 16px 18px;
+}
+
+.aiStudioVideoStyle h3 {
+  margin: 0 0 8px;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+  word-break: keep-all;
+}
+
+.aiStudioVideoStyleText p {
+  margin: 0;
+  color: #b7c3d5;
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+@media (max-width: 900px) {
+  .aiStudioVideoGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .aiStudioVideoGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 639px) {
+  .aiStudioCardNewsCatalog {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .aiStudioCardNewsCatalog::-webkit-scrollbar {
+    display: none;
+  }
+
+  .aiStudioCardNewsThumbnail {
+    flex: 0 0 min(56vw, 220px);
+    scroll-snap-align: start;
+  }
+
+  .aiStudioVideoCatalog {
+    gap: 32px;
+  }
+
+  .aiStudioVideoGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .aiStudioVideoGroup h2 {
+    margin-bottom: 12px;
+    font-size: 16px;
+  }
+
+  .aiStudioVideoStyle h3 {
+    margin-bottom: 6px;
+    font-size: 15px;
+  }
+
+  .aiStudioVideoStyleText {
+    padding: 14px 12px 13px;
+  }
+
+  .aiStudioVideoStyleText p {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+}
+
 @media (max-width: 639px) {
   .aiStudioFormatFilters {
     padding: 4px;
