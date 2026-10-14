@@ -54,6 +54,7 @@ export function MobileMenuDrawer({
   const isAIStudioPage = location?.startsWith("/ai-studio");
   const isVideoProductionPage = location === "/ai-studio/video" ||
     (location === "/ai-studio" && new URLSearchParams(window.location.search).get("tab") === "upcoming");
+  const isOpenSourcePage = location?.startsWith("/ai-studio/open-source");
   const isAdminPage = location === "/admin";
   const isAdmin = isAuthenticated && user?.role === "admin";
 
@@ -279,11 +280,18 @@ export function MobileMenuDrawer({
                     <span>영상 제작</span>
                   </button>
                   <button
-                    className={`mobileNavItem subNavItem ${isAIStudioPage && !isVideoProductionPage ? "active" : ""}`}
+                    className={`mobileNavItem subNavItem ${isAIStudioPage && !isVideoProductionPage && !isOpenSourcePage ? "active" : ""}`}
                     onClick={() => handleNavigation("/ai-studio/programs")}
                     type="button"
                   >
                     <span>프로그램</span>
+                  </button>
+                  <button
+                    className={`mobileNavItem subNavItem ${isOpenSourcePage ? "active" : ""}`}
+                    onClick={() => handleNavigation("/ai-studio/open-source")}
+                    type="button"
+                  >
+                    <span>오픈소스</span>
                   </button>
                 </div>
               )}

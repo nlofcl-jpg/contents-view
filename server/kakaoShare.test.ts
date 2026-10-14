@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildIssueKakaoFeed } from "../client/src/lib/kakaoShare";
+import { buildIssueKakaoFeed, buildOpenSourceKakaoFeed } from "../client/src/lib/kakaoShare";
 
 describe("buildIssueKakaoFeed", () => {
   it("uses the selected issue's displayed content and links to its detail page", () => {
@@ -43,5 +43,20 @@ describe("buildIssueKakaoFeed", () => {
     expect(feed.content.imageUrl).toBe("https://contents-view-chi.vercel.app/contents-view-symbol.png");
     expect(feed.content.imageWidth / feed.content.imageHeight).toBe(2);
     expect(feed.content.link.webUrl).toContain("/news/issues/second-issue");
+  });
+});
+
+describe("buildOpenSourceKakaoFeed", () => {
+  it("shares the selected project's title, summary, and detail URL", () => {
+    const feed = buildOpenSourceKakaoFeed({
+      slug: "ace-step-studio",
+      title: "ACE-Step Studio",
+      description: "내 컴퓨터에서 음악과 보컬을 생성하는 AI 스튜디오",
+    });
+
+    expect(feed.content.title).toBe("ACE-Step Studio");
+    expect(feed.content.description).toBe("내 컴퓨터에서 음악과 보컬을 생성하는 AI 스튜디오");
+    expect(feed.content.link.webUrl).toBe("https://contents-view-chi.vercel.app/ai-studio/open-source/ace-step-studio");
+    expect(feed.buttons).toEqual([{ title: "전체 보기", link: feed.content.link }]);
   });
 });

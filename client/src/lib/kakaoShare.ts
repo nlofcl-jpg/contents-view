@@ -73,6 +73,33 @@ export function buildIssueKakaoFeed(issue: ShareIssue): KakaoFeed {
   };
 }
 
+export function buildOpenSourceKakaoFeed(project: {
+  slug: string;
+  title: string;
+  description: string;
+}): KakaoFeed {
+  const pageUrl = `${SITE_ORIGIN}/ai-studio/open-source/${encodeURIComponent(project.slug)}`;
+  const iconUrl = `${SITE_ORIGIN}/contents-view-symbol.png`;
+  const link = { webUrl: pageUrl, mobileWebUrl: pageUrl };
+
+  return {
+    objectType: "feed",
+    content: {
+      title: project.title,
+      description: project.description,
+      imageUrl: `${SITE_ORIGIN}/ai-studio-video-hero.png`,
+      imageWidth: 800,
+      imageHeight: 450,
+      link,
+    },
+    itemContent: {
+      profileText: "CONTENTS VIEW",
+      profileImageUrl: iconUrl,
+    },
+    buttons: [{ title: "전체 보기", link }],
+  };
+}
+
 export function loadKakaoSdk(): Promise<KakaoSdk> {
   if (window.Kakao) return Promise.resolve(window.Kakao);
   if (sdkPromise) return sdkPromise;
@@ -93,10 +120,18 @@ export function loadKakaoSdk(): Promise<KakaoSdk> {
   return sdkPromise;
 }
 
-export function shareIssueOnKakao(issue: ShareIssue): void {
+function sendKakaoFeed(feed: KakaoFeed): void {
   const key = import.meta.env.VITE_KAKAO_JAVASCRIPT_KEY?.trim();
   if (!key) throw new Error("카카오톡 공유 키가 아직 설정되지 않았습니다.");
   if (!window.Kakao) throw new Error("카카오톡 공유를 준비 중입니다. 잠시 후 다시 시도해 주세요.");
   if (!window.Kakao.isInitialized()) window.Kakao.init(key);
-  window.Kakao.Share.sendDefault(buildIssueKakaoFeed(issue));
+  window.Kakao.Share.sendDefault(feed);
+}
+
+export function shareIssueOnKakao(issue: ShareIssue): void {
+  sendKakaoFeed(buildIssueKakaoFeed(issue));
+}
+
+export function shareOpenSourceOnKakao(project: Parameters<typeof buildOpenSourceKakaoFeed>[0]): void {
+  sendKakaoFeed(buildOpenSourceKakaoFeed(project));
 }

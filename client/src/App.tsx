@@ -14,6 +14,7 @@ import News from "@/pages/News";
 import NewsSearchResults from "@/pages/NewsSearchResults";
 import IssueDetail from "@/pages/IssueDetail";
 import AIStudio from "@/pages/AIStudio";
+import OpenSourceDetail from "@/pages/OpenSourceDetail";
 import FlowAutomation from "@/pages/FlowAutomation";
 import Login from "@/pages/Login";
 import Admin from "@/pages/Admin";
@@ -46,6 +47,8 @@ function Router() {
       <Route path={"/ai-studio/flow-automation"} component={FlowAutomation} />
       <Route path={"/ai-studio/video"} component={AIStudio} />
       <Route path={"/ai-studio/programs"} component={AIStudio} />
+      <Route path={"/ai-studio/open-source/:slug"} component={OpenSourceDetail} />
+      <Route path={"/ai-studio/open-source"} component={AIStudio} />
       <Route path={"/ai-studio"} component={AIStudio} />
       <Route path={"/login"} component={Login} />
       <Route path={"/admin"} component={Admin} />

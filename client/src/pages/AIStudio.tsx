@@ -1,10 +1,10 @@
-import { Download, ExternalLink, FolderDown, Sparkles } from "lucide-react";
+import { ArrowUpRight, Download, ExternalLink, FolderDown, Sparkles } from "lucide-react";
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 
-type StudioTab = "programs" | "upcoming";
+type StudioTab = "programs" | "upcoming" | "openSource";
 type ProductionFormat = "video" | "cardNews" | "motionGraphic";
 
 const productionFormats: { id: ProductionFormat; label: string; emptyMessage: string }[] = [
@@ -37,10 +37,12 @@ export default function AIStudio() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [guestProgramPath, setGuestProgramPath] = useState<string | null>(null);
   const [productionFormat, setProductionFormat] = useState<ProductionFormat>("video");
-  const activeTab: StudioTab = location === "/ai-studio/video" ||
-    (location === "/ai-studio" && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "upcoming")
-      ? "upcoming"
-      : "programs";
+  const activeTab: StudioTab = location === "/ai-studio/open-source"
+    ? "openSource"
+    : location === "/ai-studio/video" ||
+      (location === "/ai-studio" && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "upcoming")
+        ? "upcoming"
+        : "programs";
 
   const handleProgramDownload = (program: Program) => {
     if (authLoading) return;
@@ -71,6 +73,8 @@ export default function AIStudio() {
             <span className="aiStudioHeroEnglish">AI STUDIO</span>
             {activeTab === "upcoming" ? (
               <span className="aiStudioHeroKorean">아이디어를 콘텐츠로, <strong>더 빠르게</strong></span>
+            ) : activeTab === "openSource" ? (
+              <span className="aiStudioHeroKorean">열린 도구로, <strong>더 자유롭게</strong></span>
             ) : (
               <span className="aiStudioHeroKorean">반복 작업을 자동화로, <strong>더 간편하게</strong></span>
             )}
@@ -125,6 +129,23 @@ export default function AIStudio() {
               <p>등록된 프로그램이 없습니다.</p>
             </div>
           )}
+        </section>
+      ) : activeTab === "openSource" ? (
+        <section className="aiStudioPanel" aria-label="오픈소스 도구">
+          <div className="aiStudioProgramGrid">
+            <Link href="/ai-studio/open-source/hop" className="aiStudioProgramCard aiStudioOpenSourceCard">
+              <span className="aiStudioProgramCategory">오픈소스 문서 앱</span>
+              <h2>HOP (Open HWP)</h2>
+              <p>HWP/HWPX 문서를 보고 편집할 수 있는 데스크톱 앱입니다.</p>
+              <span className="aiStudioOpenSourceAction">자세히 보기 <ArrowUpRight aria-hidden="true" /></span>
+            </Link>
+            <Link href="/ai-studio/open-source/ace-step-studio" className="aiStudioProgramCard aiStudioOpenSourceCard">
+              <span className="aiStudioProgramCategory">오픈소스 AI 음악 제작</span>
+              <h2>ACE-Step Studio</h2>
+              <p>Windows에서 NVIDIA GPU로 보컬 음악을 로컬 생성하는 데스크톱 앱입니다.</p>
+              <span className="aiStudioOpenSourceAction">자세히 보기 <ArrowUpRight aria-hidden="true" /></span>
+            </Link>
+          </div>
         </section>
       ) : (
         <>
