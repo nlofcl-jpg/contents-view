@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useBookmark } from "@/contexts/BookmarkContext";
 import { trpc } from "@/lib/trpc";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 import { GoogleLogo, YouTubeLogo } from "@/components/ServiceLogos";
-import { Bookmark, ChevronDown, Trash2, ExternalLink, Instagram, MessageCircleMore, Music2, Newspaper, RefreshCw } from "lucide-react";
+import { Bookmark, ChevronDown, Trash2, ExternalLink, Instagram, LoaderCircle, MessageCircleMore, Music2, Newspaper, RefreshCw } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 
@@ -76,7 +76,7 @@ const VIDEO_PLATFORMS = [
 export default function SavedContents() {
   const [location, setLocation] = useLocation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
-  const { bookmarkedYouTubeVideos, removeYouTubeBookmark, isBookmarkPending } = useBookmark();
+  const { bookmarkedYouTubeVideos, removeYouTubeBookmark, isBookmarkPending, isLoading: bookmarksLoading } = useBookmark();
   const [showGuestPrompt, setShowGuestPrompt] = useState(true);
   const [activeSectionId, setActiveSectionId] = useState(() => {
     if (typeof window === "undefined") return SECTIONS[0].id;
@@ -89,13 +89,15 @@ export default function SavedContents() {
     return VIDEO_PLATFORMS.some(platform => platform.id === requestedPlatform) ? requestedPlatform! : VIDEO_PLATFORMS[0].id;
   });
   const [isVideoPlatformMenuOpen, setIsVideoPlatformMenuOpen] = useState(false);
+  const [videoUrlInput, setVideoUrlInput] = useState("");
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const activeSection = SECTIONS.find((section) => section.id === activeSectionId) || SECTIONS[0];
   const selectedVideoPlatform =
     VIDEO_PLATFORMS.find((platform) => platform.id === selectedVideoPlatformId) || VIDEO_PLATFORMS[0];
   const utils = trpc.useUtils();
-  const { data: channelBookmarks = [] } = trpc.youtubeBookmarks.listChannels.useQuery(undefined, {
+  const addVideoFromUrl = trpc.youtubeBookmarks.addFromUrl.useMutation();
+  const { data: channelBookmarks = [], isLoading: channelsLoading } = trpc.youtubeBookmarks.listChannels.useQuery(undefined, {
     enabled: isAuthenticated && activeSectionId === "youtube" && selectedVideoPlatformId === "youtube",
   });
   const removeChannelBookmark = trpc.youtubeBookmarks.removeChannel.useMutation({
@@ -147,6 +149,25 @@ export default function SavedContents() {
     setIsModalOpen(true);
   };
 
+  const saveVideoFromUrl = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (addVideoFromUrl.isPending) return;
+
+    try {
+      const result = await addVideoFromUrl.mutateAsync({ url: videoUrlInput.trim() });
+      if (result.alreadySaved) {
+        toast.info("이미 보관한 영상입니다.");
+        return;
+      }
+      setVideoUrlInput("");
+      await utils.youtubeBookmarks.list.invalidate();
+      void utils.youtubeBookmarks.trackSavedVideos.invalidate();
+      toast.success("영상을 보관했습니다.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "영상을 보관하지 못했습니다.");
+    }
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requestedSection = params.get("tab");
@@ -166,6 +187,15 @@ export default function SavedContents() {
   };
 
   const renderSectionContent = () => {
+    if (activeSection.id === "youtube" && selectedVideoPlatform.id === "youtube" && (bookmarksLoading || channelsLoading)) {
+      return (
+        <div className="savedContentsStatus" role="status">
+          <LoaderCircle className="refreshIconSpinning" aria-hidden="true" />
+          <span>저장된 내용을 불러오는 중</span>
+        </div>
+      );
+    }
+
     if (
       activeSection.id === "youtube" &&
       selectedVideoPlatform.id === "youtube" &&
@@ -321,8 +351,8 @@ export default function SavedContents() {
     }
 
     return (
-      <div className="emptyStateContainer">
-        <p className="emptyStateText">아직 저장된 콘텐츠가 없습니다.</p>
+      <div className="savedContentsStatus" role="status">
+        <p>저장된 내용이 없습니다.</p>
       </div>
     );
   };
@@ -431,13 +461,30 @@ export default function SavedContents() {
       </div>
 
       <section className="savedContentsSection" aria-labelledby="saved-contents-section-title">
-        <div className="sectionHeader">
+        <div className={`sectionHeader${activeSection.id === "youtube" && selectedVideoPlatform.id === "youtube" ? " savedContentsYouTubeHeader" : ""}`}>
           <span className="sectionIcon">
             {activeSection.id === "youtube" ? selectedVideoPlatform.icon : activeSection.icon}
           </span>
           <h2 id="saved-contents-section-title" className="sectionTitle">
             {activeSection.id === "youtube" ? selectedVideoPlatform.label : activeSection.label}
           </h2>
+          {activeSection.id === "youtube" && selectedVideoPlatform.id === "youtube" && (
+            <form className="savedContentsVideoUrlForm" onSubmit={saveVideoFromUrl}>
+              <input
+                type="url"
+                value={videoUrlInput}
+                onChange={event => setVideoUrlInput(event.target.value)}
+                placeholder="YouTube 영상 URL"
+                aria-label="보관할 YouTube 영상 URL"
+                autoComplete="url"
+                required
+              />
+              <button type="submit" disabled={addVideoFromUrl.isPending || !videoUrlInput.trim()}>
+                {addVideoFromUrl.isPending ? <LoaderCircle className="refreshIconSpinning" size={16} aria-hidden="true" /> : <Bookmark size={16} aria-hidden="true" />}
+                {addVideoFromUrl.isPending ? "저장 중" : "저장"}
+              </button>
+            </form>
+          )}
         </div>
 
         <div className="contentListArea">

@@ -132,8 +132,9 @@ export default function HeroKeywordsPanel() {
               rows={2}
               className="w-full resize-y rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-blue-400"
             />
-            <div className="flex justify-end">
-              <button type="button" onClick={applyBulkKeywords} disabled={!bulkInput.trim()} className="rounded-md border border-blue-400/50 px-3 py-2 text-sm text-blue-200 hover:bg-blue-500/10 disabled:cursor-not-allowed disabled:opacity-40">목록 교체</button>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={applyBulkKeywords} disabled={!bulkInput.trim()} className="rounded-md border border-blue-400/50 px-3 py-2 text-sm text-blue-200 hover:bg-blue-500/10 disabled:cursor-not-allowed disabled:opacity-40">추가</button>
+              <button type="button" onClick={saveKeywords} disabled={!isDirty || isSaving} className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"><Save size={16} /> {isSaving ? "저장 중" : "저장"}</button>
             </div>
           </div>
           <div className="space-y-2">
@@ -170,10 +171,7 @@ export default function HeroKeywordsPanel() {
 
           <div className="flex items-center justify-between gap-3 border-t border-slate-800 pt-4">
             <span className="text-xs text-slate-400">{keywords.length} / {MAX_HERO_KEYWORDS}</span>
-            <div className="flex gap-2">
-              {isDirty && <button type="button" onClick={() => { setKeywords(savedKeywords); setError(null); }} className="rounded-md px-3 py-2 text-sm text-slate-400 hover:text-white">취소</button>}
-              <button type="button" onClick={saveKeywords} disabled={!isDirty || isSaving} className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"><Save size={16} /> {isSaving ? "저장 중" : "저장"}</button>
-            </div>
+            {isDirty && <button type="button" onClick={() => { setKeywords(savedKeywords); setError(null); setMessage(null); }} className="rounded-md px-3 py-2 text-sm text-slate-400 hover:text-white">취소</button>}
           </div>
         </>
       )}

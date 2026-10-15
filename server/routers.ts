@@ -19,6 +19,7 @@ import type { InsertYouTubeBookmark, User, YouTubeBookmark } from "../drizzle/sc
 import { getStoredYouTubeRisingVideos, isYouTubeTopicChannel, scoreRisingCandidates, selectBalancedRisingVideos, syncYouTubeRecommendedHistory } from "./youtubeRising";
 import { GOOGLE_TREND_HISTORY_MS, compareGoogleTrendRanks, parseGoogleTrendTraffic, rankGoogleTrends, type GoogleTrendItem, type UnrankedGoogleTrendItem } from "./googleTrendsHistory";
 import { parseGoogleTrendsPage } from "./googleTrendsPage";
+import { fetchYouTubeBookmarkVideo, parseYouTubeVideoUrl } from "./youtubeBookmarkUrl";
 
 const require = createRequire(import.meta.url);
 
@@ -3210,6 +3211,38 @@ export const appRouter = router({
 
   // YouTube Bookmarks router
   youtubeBookmarks: router({
+    addFromUrl: protectedProcedure
+      .input(z.object({ url: z.string().trim().min(1).max(2048) }))
+      .mutation(async ({ ctx, input }) => {
+        const parsed = parseYouTubeVideoUrl(input.url);
+        if (!parsed) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "올바른 YouTube 영상 URL을 입력해 주세요." });
+        }
+
+        const existing = await listYouTubeBookmarks(ctx.user);
+        if (existing.some(bookmark => bookmark.videoId === parsed.videoId)) {
+          return { videoId: parsed.videoId, alreadySaved: true };
+        }
+
+        const apiKey = process.env.YOUTUBE_API_KEY?.trim();
+        if (!apiKey) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "영상 정보를 가져올 수 없습니다. 잠시 후 다시 시도해 주세요." });
+        }
+
+        let video;
+        try {
+          video = await fetchYouTubeBookmarkVideo(parsed, apiKey);
+        } catch (error) {
+          console.error("[YouTube bookmarks] Failed to fetch video metadata", error);
+          throw new TRPCError({ code: "BAD_GATEWAY", message: "영상 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." });
+        }
+        if (!video) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "영상을 찾을 수 없습니다. URL을 확인해 주세요." });
+        }
+
+        await addYouTubeBookmark(ctx.user, { userId: ctx.user.id, ...video });
+        return { videoId: parsed.videoId, alreadySaved: false };
+      }),
     listChannels: protectedProcedure.query(async ({ ctx }) => listYouTubeChannelBookmarks(ctx.user)),
     addChannel: protectedProcedure
       .input(z.object({ channelId: z.string().min(1), title: z.string().min(1), thumbnail: z.string().optional() }))

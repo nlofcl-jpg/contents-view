@@ -277,7 +277,7 @@ export function MobileMenuDrawer({
                     onClick={() => handleNavigation("/ai-studio/video")}
                     type="button"
                   >
-                    <span>영상 제작</span>
+                    <span>콘텐츠 제작</span>
                   </button>
                   <button
                     className={`mobileNavItem subNavItem ${isAIStudioPage && !isVideoProductionPage && !isOpenSourcePage ? "active" : ""}`}

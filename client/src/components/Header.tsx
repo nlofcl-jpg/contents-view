@@ -56,7 +56,7 @@ export default function Header({
   ];
 
   const studioItems = [
-    { name: "영상 제작", path: "/ai-studio/video" },
+    { name: "콘텐츠 제작", path: "/ai-studio/video" },
     { name: "프로그램", path: "/ai-studio/programs" },
     { name: "오픈소스", path: "/ai-studio/open-source" },
   ];

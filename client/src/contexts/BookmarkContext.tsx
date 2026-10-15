@@ -222,7 +222,7 @@ export function BookmarkProvider({ children }: { children: ReactNode }) {
         toggleYouTubeBookmark,
         isYouTubeVideoBookmarked,
         removeYouTubeBookmark,
-        isLoading,
+        isLoading: isLoading || (!!user && dbLoading),
         isBookmarkPending,
       }}
     >

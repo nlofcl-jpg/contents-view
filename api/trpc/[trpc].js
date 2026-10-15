@@ -2782,6 +2782,55 @@ function parseGoogleTrendsPage(html, countryCode, observedAt) {
   }
 }
 
+// server/youtubeBookmarkUrl.ts
+function parseYouTubeVideoUrl(value) {
+  let url;
+  try {
+    url = new URL(value.trim());
+  } catch {
+    return null;
+  }
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) return null;
+  const host = url.hostname.toLowerCase().replace(/^www\./, "");
+  const parts = url.pathname.split("/").filter(Boolean);
+  let videoId = "";
+  let contentType = "video";
+  if (host === "youtu.be") {
+    videoId = parts[0] || "";
+  } else if (["youtube.com", "m.youtube.com", "music.youtube.com"].includes(host)) {
+    if (parts[0] === "watch") videoId = url.searchParams.get("v") || "";
+    if (["shorts", "live", "embed"].includes(parts[0])) {
+      videoId = parts[1] || "";
+      if (parts[0] === "shorts") contentType = "shorts";
+    }
+  }
+  return /^[A-Za-z0-9_-]{11}$/.test(videoId) ? { videoId, contentType } : null;
+}
+async function fetchYouTubeBookmarkVideo(parsed, apiKey, fetcher = fetch) {
+  const params = new URLSearchParams({
+    part: "snippet,statistics,contentDetails",
+    id: parsed.videoId,
+    key: apiKey
+  });
+  const response = await fetcher(`https://www.googleapis.com/youtube/v3/videos?${params.toString()}`);
+  if (!response.ok) throw new Error(`YouTube videos.list failed: ${response.status}`);
+  const data = await response.json();
+  const item = data.items?.[0];
+  if (item?.id !== parsed.videoId || typeof item.snippet?.title !== "string") return null;
+  return {
+    videoId: parsed.videoId,
+    contentType: parsed.contentType,
+    title: item.snippet.title,
+    thumbnailUrl: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url || `https://i.ytimg.com/vi/${parsed.videoId}/hqdefault.jpg`,
+    channelId: item.snippet.channelId || "",
+    channelTitle: item.snippet.channelTitle || "",
+    videoUrl: `https://www.youtube.com/watch?v=${parsed.videoId}`,
+    duration: item.contentDetails?.duration || "",
+    viewCount: String(item.statistics?.viewCount || "0"),
+    publishedAt: item.snippet.publishedAt || ""
+  };
+}
+
 // server/routers.ts
 var require2 = createRequire(import.meta.url);
 var NAVER_SEARCH_AD_PROVIDER2 = "naver-search-ad";
@@ -5319,6 +5368,32 @@ var appRouter = router({
   }),
   // YouTube Bookmarks router
   youtubeBookmarks: router({
+    addFromUrl: protectedProcedure.input(z3.object({ url: z3.string().trim().min(1).max(2048) })).mutation(async ({ ctx, input }) => {
+      const parsed = parseYouTubeVideoUrl(input.url);
+      if (!parsed) {
+        throw new TRPCError3({ code: "BAD_REQUEST", message: "\uC62C\uBC14\uB978 YouTube \uC601\uC0C1 URL\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694." });
+      }
+      const existing = await listYouTubeBookmarks(ctx.user);
+      if (existing.some((bookmark) => bookmark.videoId === parsed.videoId)) {
+        return { videoId: parsed.videoId, alreadySaved: true };
+      }
+      const apiKey = process.env.YOUTUBE_API_KEY?.trim();
+      if (!apiKey) {
+        throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "\uC601\uC0C1 \uC815\uBCF4\uB97C \uAC00\uC838\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
+      }
+      let video;
+      try {
+        video = await fetchYouTubeBookmarkVideo(parsed, apiKey);
+      } catch (error) {
+        console.error("[YouTube bookmarks] Failed to fetch video metadata", error);
+        throw new TRPCError3({ code: "BAD_GATEWAY", message: "\uC601\uC0C1 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
+      }
+      if (!video) {
+        throw new TRPCError3({ code: "NOT_FOUND", message: "\uC601\uC0C1\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. URL\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694." });
+      }
+      await addYouTubeBookmark2(ctx.user, { userId: ctx.user.id, ...video });
+      return { videoId: parsed.videoId, alreadySaved: false };
+    }),
     listChannels: protectedProcedure.query(async ({ ctx }) => listYouTubeChannelBookmarks(ctx.user)),
     addChannel: protectedProcedure.input(z3.object({ channelId: z3.string().min(1), title: z3.string().min(1), thumbnail: z3.string().optional() })).mutation(async ({ ctx, input }) => {
       const userId = supabaseBookmarkUserId(ctx.user);
