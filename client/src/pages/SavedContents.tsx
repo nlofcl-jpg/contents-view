@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useBookmark } from "@/contexts/BookmarkContext";
 import { trpc } from "@/lib/trpc";
@@ -90,6 +90,8 @@ export default function SavedContents() {
   });
   const [isVideoPlatformMenuOpen, setIsVideoPlatformMenuOpen] = useState(false);
   const [videoUrlInput, setVideoUrlInput] = useState("");
+  const [tabsWidth, setTabsWidth] = useState<number | null>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const activeSection = SECTIONS.find((section) => section.id === activeSectionId) || SECTIONS[0];
@@ -177,6 +179,14 @@ export default function SavedContents() {
       VIDEO_PLATFORMS.some(platform => platform.id === requestedPlatform) ? requestedPlatform! : VIDEO_PLATFORMS[0].id,
     );
   }, [location]);
+
+  useEffect(() => {
+    const tabs = tabsRef.current;
+    if (!tabs) return;
+    const observer = new ResizeObserver(() => setTabsWidth(tabs.getBoundingClientRect().width));
+    observer.observe(tabs);
+    return () => observer.disconnect();
+  }, [authLoading, isAuthenticated]);
 
   const syncSavedContentsUrl = (sectionId: string, platformId = selectedVideoPlatformId) => {
     const params = new URLSearchParams();
@@ -388,7 +398,7 @@ export default function SavedContents() {
           }
         }}
       >
-        <div className="savedContentsTabs" role="tablist" aria-label="보관함 콘텐츠 분류">
+        <div ref={tabsRef} className="savedContentsTabs" role="tablist" aria-label="보관함 콘텐츠 분류">
           {SECTIONS.map((section) => {
             if (section.id === "youtube") {
               return (
@@ -406,8 +416,7 @@ export default function SavedContents() {
                     setIsVideoPlatformMenuOpen((isOpen) => !isOpen);
                   }}
                 >
-                  <span className="savedContentsTabIcon">{section.icon}</span>
-                  <span>{section.label}</span>
+                  <span>{selectedVideoPlatform.label}</span>
                   <ChevronDown
                     className={`savedContentsTabChevron ${isVideoPlatformMenuOpen ? "open" : ""}`}
                     size={14}
@@ -462,14 +471,16 @@ export default function SavedContents() {
 
       <section className="savedContentsSection" aria-labelledby="saved-contents-section-title">
         <div className={`sectionHeader${activeSection.id === "youtube" && selectedVideoPlatform.id === "youtube" ? " savedContentsYouTubeHeader" : ""}`}>
-          <span className="sectionIcon">
-            {activeSection.id === "youtube" ? selectedVideoPlatform.icon : activeSection.icon}
-          </span>
+          {activeSection.id !== "youtube" && <span className="sectionIcon">{activeSection.icon}</span>}
           <h2 id="saved-contents-section-title" className="sectionTitle">
             {activeSection.id === "youtube" ? selectedVideoPlatform.label : activeSection.label}
           </h2>
           {activeSection.id === "youtube" && selectedVideoPlatform.id === "youtube" && (
-            <form className="savedContentsVideoUrlForm" onSubmit={saveVideoFromUrl}>
+            <form
+              className="savedContentsVideoUrlForm"
+              style={tabsWidth ? { width: `min(100%, ${tabsWidth}px)` } : undefined}
+              onSubmit={saveVideoFromUrl}
+            >
               <input
                 type="url"
                 value={videoUrlInput}

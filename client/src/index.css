@@ -7742,13 +7742,15 @@ input[type="date"].youtubeSelect {
 /* Responsive */
 @media (max-width: 900px) {
   .savedContentsYouTubeHeader {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
   }
 
   .savedContentsVideoUrlForm {
     position: static;
-    flex: 0 0 100%;
-    max-width: 590px;
+    max-width: 100%;
+    justify-self: center;
     margin: 4px auto 0;
     transform: none;
   }
