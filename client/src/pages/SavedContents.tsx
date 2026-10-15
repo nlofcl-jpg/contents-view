@@ -3,6 +3,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { useBookmark } from "@/contexts/BookmarkContext";
 import { trpc } from "@/lib/trpc";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 import { GoogleLogo, YouTubeLogo } from "@/components/ServiceLogos";
 import { Bookmark, ChevronDown, Trash2, ExternalLink, Instagram, LoaderCircle, MessageCircleMore, Music2, Newspaper, RefreshCw } from "lucide-react";
@@ -73,6 +74,16 @@ const VIDEO_PLATFORMS = [
   { id: "instagram", label: "Instagram", icon: <Instagram className="savedContentsBrandIcon" aria-hidden="true" /> },
 ];
 
+type SavedTikTokVideo = {
+  videoId: string;
+  videoUrl: string;
+  title: string;
+  authorName: string;
+  authorUrl: string;
+  thumbnailUrl: string | null;
+  savedAt: string;
+};
+
 export default function SavedContents() {
   const [location, setLocation] = useLocation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
@@ -90,15 +101,25 @@ export default function SavedContents() {
   });
   const [isVideoPlatformMenuOpen, setIsVideoPlatformMenuOpen] = useState(false);
   const [videoUrlInput, setVideoUrlInput] = useState("");
+  const [tiktokUrlInput, setTikTokUrlInput] = useState("");
   const [tabsWidth, setTabsWidth] = useState<number | null>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTikTokVideo, setSelectedTikTokVideo] = useState<SavedTikTokVideo | null>(null);
   const activeSection = SECTIONS.find((section) => section.id === activeSectionId) || SECTIONS[0];
   const selectedVideoPlatform =
     VIDEO_PLATFORMS.find((platform) => platform.id === selectedVideoPlatformId) || VIDEO_PLATFORMS[0];
   const utils = trpc.useUtils();
   const addVideoFromUrl = trpc.youtubeBookmarks.addFromUrl.useMutation();
+  const addTikTokFromUrl = trpc.tiktokBookmarks.addFromUrl.useMutation();
+  const removeTikTokBookmark = trpc.tiktokBookmarks.remove.useMutation({
+    onSuccess: () => void utils.tiktokBookmarks.list.invalidate(),
+    onError: () => toast.error("TikTok 영상 보관을 해제하지 못했습니다."),
+  });
+  const { data: tiktokBookmarks = [], isLoading: tiktokLoading, error: tiktokError, refetch: refetchTikTok } = trpc.tiktokBookmarks.list.useQuery(undefined, {
+    enabled: isAuthenticated && activeSectionId === "youtube" && selectedVideoPlatformId === "tiktok",
+  });
   const { data: channelBookmarks = [], isLoading: channelsLoading } = trpc.youtubeBookmarks.listChannels.useQuery(undefined, {
     enabled: isAuthenticated && activeSectionId === "youtube" && selectedVideoPlatformId === "youtube",
   });
@@ -153,6 +174,26 @@ export default function SavedContents() {
 
   const saveVideoFromUrl = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!isAuthenticated) {
+      setShowGuestPrompt(true);
+      return;
+    }
+    if (selectedVideoPlatform.id === "tiktok") {
+      if (addTikTokFromUrl.isPending) return;
+      try {
+        const result = await addTikTokFromUrl.mutateAsync({ url: tiktokUrlInput.trim() });
+        if (result.alreadySaved) {
+          toast.info("이미 보관한 TikTok 영상입니다.");
+          return;
+        }
+        setTikTokUrlInput("");
+        await utils.tiktokBookmarks.list.invalidate();
+        toast.success("TikTok 영상을 보관했습니다.");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "TikTok 영상을 보관하지 못했습니다.");
+      }
+      return;
+    }
     if (addVideoFromUrl.isPending) return;
 
     try {
@@ -197,6 +238,55 @@ export default function SavedContents() {
   };
 
   const renderSectionContent = () => {
+    if (!isAuthenticated) {
+      return (
+        <div className="savedContentsStatus" role="status">
+          <p>로그인 후 저장한 내용을 확인할 수 있습니다.</p>
+        </div>
+      );
+    }
+
+    if (activeSection.id === "youtube" && selectedVideoPlatform.id === "tiktok") {
+      if (tiktokLoading) {
+        return <div className="savedContentsStatus" role="status"><LoaderCircle className="refreshIconSpinning" aria-hidden="true" /><span>저장된 내용을 불러오는 중</span></div>;
+      }
+      if (tiktokError) {
+        return <div className="savedContentsStatus" role="status"><p>TikTok 보관함을 불러오지 못했습니다.</p><button type="button" onClick={() => void refetchTikTok()}>다시 시도</button></div>;
+      }
+      if (tiktokBookmarks.length === 0) {
+        return <div className="savedContentsStatus" role="status"><p>저장된 내용이 없습니다.</p></div>;
+      }
+      return (
+        <div className="tiktokSavedGrid">
+          {tiktokBookmarks.map(video => (
+            <article key={video.videoId} className="tiktokSavedCard">
+              <div className="tiktokSavedThumbnail">
+                <button type="button" className="tiktokSavedPreview" onClick={() => setSelectedTikTokVideo(video)} aria-label={`${video.title} 재생`}>
+                  <Music2 size={26} aria-hidden="true" />
+                  {video.thumbnailUrl && <img src={video.thumbnailUrl} alt="" loading="lazy" onError={event => { event.currentTarget.style.display = "none"; }} />}
+                </button>
+                <button
+                  type="button"
+                  className="tiktokSavedRemove"
+                  title="보관 해제"
+                  aria-label={`${video.title} 보관 해제`}
+                  disabled={removeTikTokBookmark.isPending}
+                  onClick={() => removeTikTokBookmark.mutate({ videoId: video.videoId })}
+                >
+                  <Bookmark size={19} fill="currentColor" aria-hidden="true" />
+                </button>
+              </div>
+              <div className="tiktokSavedDetails">
+                <button type="button" className="tiktokSavedTitle" onClick={() => setSelectedTikTokVideo(video)}>{video.title}</button>
+                <a href={video.authorUrl} target="_blank" rel="noopener noreferrer">{video.authorName}</a>
+                <span>저장일: {formatSavedDate(video.savedAt)}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+      );
+    }
+
     if (activeSection.id === "youtube" && selectedVideoPlatform.id === "youtube" && (bookmarksLoading || channelsLoading)) {
       return (
         <div className="savedContentsStatus" role="status">
@@ -385,10 +475,10 @@ export default function SavedContents() {
       {/* Page Header */}
       <div className="pageHeader">
         <h1 className="pageTitle">내 보관함</h1>
-        {isAuthenticated && <p className="pageDescription">저장한 콘텐츠를 플랫폼별로 확인하고 관리하세요.</p>}
+        <p className="pageDescription">저장한 콘텐츠를 플랫폼별로 확인하고 관리하세요.</p>
       </div>
 
-      {!authLoading && isAuthenticated && (
+      {!authLoading && (
       <>
       <div
         className="savedContentsTabsArea"
@@ -416,6 +506,7 @@ export default function SavedContents() {
                     setIsVideoPlatformMenuOpen((isOpen) => !isOpen);
                   }}
                 >
+                  <span className="savedContentsTabIcon">{selectedVideoPlatform.icon}</span>
                   <span>{selectedVideoPlatform.label}</span>
                   <ChevronDown
                     className={`savedContentsTabChevron ${isVideoPlatformMenuOpen ? "open" : ""}`}
@@ -469,34 +560,36 @@ export default function SavedContents() {
         )}
       </div>
 
-      <section className="savedContentsSection" aria-labelledby="saved-contents-section-title">
-        <div className={`sectionHeader${activeSection.id === "youtube" && selectedVideoPlatform.id === "youtube" ? " savedContentsYouTubeHeader" : ""}`}>
-          {activeSection.id !== "youtube" && <span className="sectionIcon">{activeSection.icon}</span>}
-          <h2 id="saved-contents-section-title" className="sectionTitle">
-            {activeSection.id === "youtube" ? selectedVideoPlatform.label : activeSection.label}
-          </h2>
-          {activeSection.id === "youtube" && selectedVideoPlatform.id === "youtube" && (
+      <section className="savedContentsSection" aria-label={activeSection.id === "youtube" ? selectedVideoPlatform.label : activeSection.label}>
+        {activeSection.id !== "youtube" && (
+          <div className="sectionHeader">
+            <span className="sectionIcon">{activeSection.icon}</span>
+            <h2 className="sectionTitle">{activeSection.label}</h2>
+          </div>
+        )}
+        {activeSection.id === "youtube" && ["youtube", "tiktok"].includes(selectedVideoPlatform.id) && (
+          <div className="sectionHeader savedContentsVideoHeader">
             <form
               className="savedContentsVideoUrlForm"
               style={tabsWidth ? { width: `min(100%, ${tabsWidth}px)` } : undefined}
               onSubmit={saveVideoFromUrl}
+              noValidate={!isAuthenticated}
             >
               <input
                 type="url"
-                value={videoUrlInput}
-                onChange={event => setVideoUrlInput(event.target.value)}
-                placeholder="YouTube 영상 URL"
-                aria-label="보관할 YouTube 영상 URL"
+                value={selectedVideoPlatform.id === "tiktok" ? tiktokUrlInput : videoUrlInput}
+                onChange={event => selectedVideoPlatform.id === "tiktok" ? setTikTokUrlInput(event.target.value) : setVideoUrlInput(event.target.value)}
+                placeholder={`${selectedVideoPlatform.label} 영상 URL`}
+                aria-label={`보관할 ${selectedVideoPlatform.label} 영상 URL`}
                 autoComplete="url"
-                required
+                required={isAuthenticated}
               />
-              <button type="submit" disabled={addVideoFromUrl.isPending || !videoUrlInput.trim()}>
-                {addVideoFromUrl.isPending ? <LoaderCircle className="refreshIconSpinning" size={16} aria-hidden="true" /> : <Bookmark size={16} aria-hidden="true" />}
-                {addVideoFromUrl.isPending ? "저장 중" : "저장"}
+              <button type="submit" disabled={isAuthenticated && (selectedVideoPlatform.id === "tiktok" ? addTikTokFromUrl.isPending || !tiktokUrlInput.trim() : addVideoFromUrl.isPending || !videoUrlInput.trim())}>
+                {(selectedVideoPlatform.id === "tiktok" ? addTikTokFromUrl.isPending : addVideoFromUrl.isPending) ? "저장 중" : "저장"}
               </button>
             </form>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="contentListArea">
           {renderSectionContent()}
@@ -515,6 +608,27 @@ export default function SavedContents() {
           useStoredSnapshot={Boolean(selectedVideo.useStoredSnapshot)}
         />
       )}
+      <Dialog open={Boolean(selectedTikTokVideo)} onOpenChange={open => { if (!open) setSelectedTikTokVideo(null); }}>
+        {selectedTikTokVideo && (
+          <DialogContent className="tiktokSavedDialog">
+            <div className="tiktokSavedPlayer">
+              <iframe
+                src={`https://www.tiktok.com/player/v1/${encodeURIComponent(selectedTikTokVideo.videoId)}`}
+                title={selectedTikTokVideo.title}
+                allow="fullscreen; autoplay; encrypted-media"
+                allowFullScreen
+              />
+            </div>
+            <div className="tiktokSavedDialogDetails">
+              <DialogTitle>{selectedTikTokVideo.title}</DialogTitle>
+              <DialogDescription>저장한 TikTok 영상</DialogDescription>
+              <a href={selectedTikTokVideo.authorUrl} target="_blank" rel="noopener noreferrer">{selectedTikTokVideo.authorName}</a>
+              <span>저장일: {formatSavedDate(selectedTikTokVideo.savedAt)}</span>
+              <a className="tiktokSavedOriginal" href={selectedTikTokVideo.videoUrl} target="_blank" rel="noopener noreferrer">TikTok에서 보기 <ExternalLink size={15} aria-hidden="true" /></a>
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
       </>
       )}
       <GuestAccessPrompt

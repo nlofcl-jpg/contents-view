@@ -20,6 +20,7 @@ import { getStoredYouTubeRisingVideos, isYouTubeTopicChannel, scoreRisingCandida
 import { GOOGLE_TREND_HISTORY_MS, compareGoogleTrendRanks, parseGoogleTrendTraffic, rankGoogleTrends, type GoogleTrendItem, type UnrankedGoogleTrendItem } from "./googleTrendsHistory";
 import { parseGoogleTrendsPage } from "./googleTrendsPage";
 import { fetchYouTubeBookmarkVideo, parseYouTubeVideoUrl } from "./youtubeBookmarkUrl";
+import { fetchTikTokBookmarkVideo, parseTikTokVideoUrl } from "./tiktokBookmarkUrl";
 
 const require = createRequire(import.meta.url);
 
@@ -3206,6 +3207,88 @@ export const appRouter = router({
             credentialsConfigured: false,
           };
         }
+      }),
+  }),
+
+  tiktokBookmarks: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const userId = supabaseBookmarkUserId(ctx.user);
+      if (!userId || !supabaseAdmin) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "TikTok 보관함을 사용할 수 없습니다." });
+      }
+      const { data, error } = await supabaseAdmin
+        .from("tiktok_bookmarks")
+        .select("video_id,video_url,title,author_name,author_url,thumbnail_url,created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []).map(row => ({
+        videoId: String(row.video_id),
+        videoUrl: String(row.video_url),
+        title: String(row.title),
+        authorName: String(row.author_name),
+        authorUrl: String(row.author_url),
+        thumbnailUrl: row.thumbnail_url ? String(row.thumbnail_url) : null,
+        savedAt: String(row.created_at),
+      }));
+    }),
+    addFromUrl: protectedProcedure
+      .input(z.object({ url: z.string().trim().min(1).max(2048) }))
+      .mutation(async ({ ctx, input }) => {
+        const userId = supabaseBookmarkUserId(ctx.user);
+        if (!userId || !supabaseAdmin) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "TikTok 보관함을 사용할 수 없습니다." });
+        }
+        const parsed = parseTikTokVideoUrl(input.url);
+        if (!parsed) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "올바른 TikTok 영상 URL을 입력해 주세요." });
+        }
+
+        let video;
+        try {
+          video = await fetchTikTokBookmarkVideo(parsed);
+        } catch (error) {
+          console.error("[TikTok bookmarks] Failed to fetch video metadata", error);
+          throw new TRPCError({ code: "BAD_GATEWAY", message: "TikTok 영상 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." });
+        }
+        if (!video) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "공개된 TikTok 영상을 찾을 수 없습니다. URL을 확인해 주세요." });
+        }
+
+        const { data: existing, error: lookupError } = await supabaseAdmin
+          .from("tiktok_bookmarks")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("video_id", video.videoId)
+          .maybeSingle();
+        if (lookupError) throw lookupError;
+        if (existing) return { videoId: video.videoId, alreadySaved: true };
+
+        const { error } = await supabaseAdmin.from("tiktok_bookmarks").upsert({
+          user_id: userId,
+          video_id: video.videoId,
+          video_url: video.videoUrl,
+          title: video.title,
+          author_name: video.authorName,
+          author_url: video.authorUrl,
+          thumbnail_url: video.thumbnailUrl,
+        }, { onConflict: "user_id,video_id", ignoreDuplicates: true });
+        if (error) throw error;
+        return { videoId: video.videoId, alreadySaved: false };
+      }),
+    remove: protectedProcedure
+      .input(z.object({ videoId: z.string().regex(/^\d{10,25}$/) }))
+      .mutation(async ({ ctx, input }) => {
+        const userId = supabaseBookmarkUserId(ctx.user);
+        if (!userId || !supabaseAdmin) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "TikTok 보관함을 사용할 수 없습니다." });
+        }
+        const { error } = await supabaseAdmin.from("tiktok_bookmarks")
+          .delete()
+          .eq("user_id", userId)
+          .eq("video_id", input.videoId);
+        if (error) throw error;
+        return { success: true };
       }),
   }),
 

@@ -2831,6 +2831,69 @@ async function fetchYouTubeBookmarkVideo(parsed, apiKey, fetcher = fetch) {
   };
 }
 
+// server/tiktokBookmarkUrl.ts
+import { load as load2 } from "cheerio";
+var CANONICAL_HOSTS = /* @__PURE__ */ new Set(["tiktok.com", "www.tiktok.com", "m.tiktok.com"]);
+var SHORT_HOSTS = /* @__PURE__ */ new Set(["vm.tiktok.com", "vt.tiktok.com"]);
+function parseTikTokVideoUrl(value) {
+  let url;
+  try {
+    url = new URL(value.trim());
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:" || url.username || url.password || url.port) return null;
+  const host = url.hostname.toLowerCase();
+  if (CANONICAL_HOSTS.has(host)) {
+    const match = url.pathname.match(/^\/@[^/]+\/video\/(\d{10,25})\/?$/);
+    if (match) return { url: `https://www.tiktok.com${url.pathname.replace(/\/$/, "")}`, videoId: match[1] };
+    if (/^\/t\/[A-Za-z0-9]+\/?$/.test(url.pathname)) return { url: `https://www.tiktok.com${url.pathname}`, videoId: null };
+  }
+  if (SHORT_HOSTS.has(host) && /^\/[A-Za-z0-9]+\/?$/.test(url.pathname)) {
+    return { url: `https://${host}${url.pathname}`, videoId: null };
+  }
+  return null;
+}
+async function fetchTikTokBookmarkVideo(parsed, fetcher = fetch) {
+  const endpoint = new URL("https://www.tiktok.com/oembed");
+  endpoint.searchParams.set("url", parsed.url);
+  const response = await fetcher(endpoint.toString(), { signal: AbortSignal.timeout(1e4) });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`TikTok oEmbed failed: ${response.status}`);
+  const data = await response.json();
+  if (!data || typeof data !== "object") return null;
+  const item = data;
+  if (item.provider_name !== "TikTok" || typeof item.html !== "string") return null;
+  const embed = load2(item.html)("blockquote.tiktok-embed").first();
+  const canonical = parseTikTokVideoUrl(embed.attr("cite") || "");
+  const videoId = canonical?.videoId;
+  if (!videoId || embed.attr("data-video-id") !== videoId) return null;
+  if (parsed.videoId && parsed.videoId !== videoId) return null;
+  const authorUrl = typeof item.author_url === "string" ? item.author_url : "";
+  const author = parseTikTokAuthorUrl(authorUrl);
+  if (!author) return null;
+  const thumbnailUrl = typeof item.thumbnail_url === "string" && item.thumbnail_url.startsWith("https://") ? item.thumbnail_url : null;
+  return {
+    videoId,
+    videoUrl: canonical.url,
+    title: typeof item.title === "string" && item.title.trim() ? item.title.trim() : "TikTok \uC601\uC0C1",
+    authorName: typeof item.author_name === "string" && item.author_name.trim() ? item.author_name.trim() : author.handle,
+    authorUrl: author.url,
+    thumbnailUrl
+  };
+}
+function parseTikTokAuthorUrl(value) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:" || !CANONICAL_HOSTS.has(url.hostname.toLowerCase()) || url.username || url.password || url.port) return null;
+  const match = url.pathname.match(/^\/@([^/]+)\/?$/);
+  return match ? { url: `https://www.tiktok.com/@${match[1]}`, handle: match[1] } : null;
+}
+
 // server/routers.ts
 var require2 = createRequire(import.meta.url);
 var NAVER_SEARCH_AD_PROVIDER2 = "naver-search-ad";
@@ -5364,6 +5427,68 @@ var appRouter = router({
           credentialsConfigured: false
         };
       }
+    })
+  }),
+  tiktokBookmarks: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const userId = supabaseBookmarkUserId(ctx.user);
+      if (!userId || !supabaseAdmin4) {
+        throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "TikTok \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+      }
+      const { data, error } = await supabaseAdmin4.from("tiktok_bookmarks").select("video_id,video_url,title,author_name,author_url,thumbnail_url,created_at").eq("user_id", userId).order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []).map((row) => ({
+        videoId: String(row.video_id),
+        videoUrl: String(row.video_url),
+        title: String(row.title),
+        authorName: String(row.author_name),
+        authorUrl: String(row.author_url),
+        thumbnailUrl: row.thumbnail_url ? String(row.thumbnail_url) : null,
+        savedAt: String(row.created_at)
+      }));
+    }),
+    addFromUrl: protectedProcedure.input(z3.object({ url: z3.string().trim().min(1).max(2048) })).mutation(async ({ ctx, input }) => {
+      const userId = supabaseBookmarkUserId(ctx.user);
+      if (!userId || !supabaseAdmin4) {
+        throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "TikTok \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+      }
+      const parsed = parseTikTokVideoUrl(input.url);
+      if (!parsed) {
+        throw new TRPCError3({ code: "BAD_REQUEST", message: "\uC62C\uBC14\uB978 TikTok \uC601\uC0C1 URL\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694." });
+      }
+      let video;
+      try {
+        video = await fetchTikTokBookmarkVideo(parsed);
+      } catch (error2) {
+        console.error("[TikTok bookmarks] Failed to fetch video metadata", error2);
+        throw new TRPCError3({ code: "BAD_GATEWAY", message: "TikTok \uC601\uC0C1 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
+      }
+      if (!video) {
+        throw new TRPCError3({ code: "NOT_FOUND", message: "\uACF5\uAC1C\uB41C TikTok \uC601\uC0C1\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. URL\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694." });
+      }
+      const { data: existing, error: lookupError } = await supabaseAdmin4.from("tiktok_bookmarks").select("id").eq("user_id", userId).eq("video_id", video.videoId).maybeSingle();
+      if (lookupError) throw lookupError;
+      if (existing) return { videoId: video.videoId, alreadySaved: true };
+      const { error } = await supabaseAdmin4.from("tiktok_bookmarks").upsert({
+        user_id: userId,
+        video_id: video.videoId,
+        video_url: video.videoUrl,
+        title: video.title,
+        author_name: video.authorName,
+        author_url: video.authorUrl,
+        thumbnail_url: video.thumbnailUrl
+      }, { onConflict: "user_id,video_id", ignoreDuplicates: true });
+      if (error) throw error;
+      return { videoId: video.videoId, alreadySaved: false };
+    }),
+    remove: protectedProcedure.input(z3.object({ videoId: z3.string().regex(/^\d{10,25}$/) })).mutation(async ({ ctx, input }) => {
+      const userId = supabaseBookmarkUserId(ctx.user);
+      if (!userId || !supabaseAdmin4) {
+        throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "TikTok \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+      }
+      const { error } = await supabaseAdmin4.from("tiktok_bookmarks").delete().eq("user_id", userId).eq("video_id", input.videoId);
+      if (error) throw error;
+      return { success: true };
     })
   }),
   // YouTube Bookmarks router
