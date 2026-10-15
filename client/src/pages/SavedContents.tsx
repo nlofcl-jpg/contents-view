@@ -728,7 +728,7 @@ export default function SavedContents() {
       </Dialog>
       <Dialog open={Boolean(selectedInstagramPost)} onOpenChange={open => { if (!open) setSelectedInstagramPost(null); }}>
         {selectedInstagramPost && (
-          <DialogContent className="tiktokSavedDialog instagramSavedDialog">
+          <DialogContent overlayClassName="z-[10030]" className="tiktokSavedDialog instagramSavedDialog z-[10031]">
             <DialogTitle className="sr-only">{selectedInstagramPost.title}</DialogTitle>
             <DialogDescription className="sr-only">Instagram 릴스 상세보기</DialogDescription>
             <div className="tiktokSavedPlayer instagramSavedPlayer">
@@ -741,7 +741,6 @@ export default function SavedContents() {
             </div>
             <div className="instagramSavedDialogFooter">
               <span>저장일: {formatSavedDate(selectedInstagramPost.savedAt)}</span>
-              <a className="youtubeVideoModalButton" href={selectedInstagramPost.postUrl} target="_blank" rel="noopener noreferrer">인스타그램에서 보기</a>
             </div>
           </DialogContent>
         )}

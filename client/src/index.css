@@ -7956,12 +7956,6 @@ input[type="date"].youtubeSelect {
   font-size: 12px;
 }
 
-.instagramSavedDialogFooter .youtubeVideoModalButton {
-  display: flex;
-  justify-content: center;
-  margin: 0;
-}
-
 .tiktokSavedDialogDetails {
   display: flex;
   flex-direction: column;
