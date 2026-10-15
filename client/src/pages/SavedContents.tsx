@@ -84,6 +84,17 @@ type SavedTikTokVideo = {
   savedAt: string;
 };
 
+type SavedInstagramPost = {
+  shortcode: string;
+  mediaType: "p" | "reel";
+  postUrl: string;
+  title: string;
+  authorName: string | null;
+  authorUrl: string | null;
+  thumbnailUrl: string | null;
+  savedAt: string;
+};
+
 export default function SavedContents() {
   const [location, setLocation] = useLocation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
@@ -102,23 +113,33 @@ export default function SavedContents() {
   const [isVideoPlatformMenuOpen, setIsVideoPlatformMenuOpen] = useState(false);
   const [videoUrlInput, setVideoUrlInput] = useState("");
   const [tiktokUrlInput, setTikTokUrlInput] = useState("");
+  const [instagramUrlInput, setInstagramUrlInput] = useState("");
   const [tabsWidth, setTabsWidth] = useState<number | null>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTikTokVideo, setSelectedTikTokVideo] = useState<SavedTikTokVideo | null>(null);
+  const [selectedInstagramPost, setSelectedInstagramPost] = useState<SavedInstagramPost | null>(null);
   const activeSection = SECTIONS.find((section) => section.id === activeSectionId) || SECTIONS[0];
   const selectedVideoPlatform =
     VIDEO_PLATFORMS.find((platform) => platform.id === selectedVideoPlatformId) || VIDEO_PLATFORMS[0];
   const utils = trpc.useUtils();
   const addVideoFromUrl = trpc.youtubeBookmarks.addFromUrl.useMutation();
   const addTikTokFromUrl = trpc.tiktokBookmarks.addFromUrl.useMutation();
+  const addInstagramFromUrl = trpc.instagramBookmarks.addFromUrl.useMutation();
   const removeTikTokBookmark = trpc.tiktokBookmarks.remove.useMutation({
     onSuccess: () => void utils.tiktokBookmarks.list.invalidate(),
     onError: () => toast.error("TikTok 영상 보관을 해제하지 못했습니다."),
   });
   const { data: tiktokBookmarks = [], isLoading: tiktokLoading, error: tiktokError, refetch: refetchTikTok } = trpc.tiktokBookmarks.list.useQuery(undefined, {
     enabled: isAuthenticated && activeSectionId === "youtube" && selectedVideoPlatformId === "tiktok",
+  });
+  const removeInstagramBookmark = trpc.instagramBookmarks.remove.useMutation({
+    onSuccess: () => void utils.instagramBookmarks.list.invalidate(),
+    onError: () => toast.error("Instagram 보관을 해제하지 못했습니다."),
+  });
+  const { data: instagramBookmarks = [], isLoading: instagramLoading, error: instagramError, refetch: refetchInstagram } = trpc.instagramBookmarks.list.useQuery(undefined, {
+    enabled: isAuthenticated && activeSectionId === "youtube" && selectedVideoPlatformId === "instagram",
   });
   const { data: channelBookmarks = [], isLoading: channelsLoading } = trpc.youtubeBookmarks.listChannels.useQuery(undefined, {
     enabled: isAuthenticated && activeSectionId === "youtube" && selectedVideoPlatformId === "youtube",
@@ -191,6 +212,22 @@ export default function SavedContents() {
         toast.success("TikTok 영상을 보관했습니다.");
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "TikTok 영상을 보관하지 못했습니다.");
+      }
+      return;
+    }
+    if (selectedVideoPlatform.id === "instagram") {
+      if (addInstagramFromUrl.isPending) return;
+      try {
+        const result = await addInstagramFromUrl.mutateAsync({ url: instagramUrlInput.trim() });
+        if (result.alreadySaved) {
+          toast.info("이미 보관한 Instagram 게시물입니다.");
+          return;
+        }
+        setInstagramUrlInput("");
+        await utils.instagramBookmarks.list.invalidate();
+        toast.success("Instagram 게시물을 보관했습니다.");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Instagram 게시물을 보관하지 못했습니다.");
       }
       return;
     }
@@ -284,6 +321,59 @@ export default function SavedContents() {
                     <span className="tiktokSavedAuthorName">{video.authorName}</span>
                   </a>
                   <span className="tiktokSavedDate">{formatSavedDate(video.savedAt)} 저장</span>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      );
+    }
+
+    if (activeSection.id === "youtube" && selectedVideoPlatform.id === "instagram") {
+      if (instagramLoading) {
+        return <div className="savedContentsStatus" role="status"><LoaderCircle className="refreshIconSpinning" aria-hidden="true" /><span>저장된 내용을 불러오는 중</span></div>;
+      }
+      if (instagramError) {
+        return <div className="savedContentsStatus" role="status"><p>Instagram 보관함을 불러오지 못했습니다.</p><button type="button" onClick={() => void refetchInstagram()}>다시 시도</button></div>;
+      }
+      if (instagramBookmarks.length === 0) {
+        return <div className="savedContentsStatus" role="status"><p>저장된 내용이 없습니다.</p></div>;
+      }
+      return (
+        <div className="tiktokSavedGrid">
+          {instagramBookmarks.map(post => (
+            <article key={`${post.mediaType}-${post.shortcode}`} className="tiktokSavedCard">
+              <div className="tiktokSavedThumbnail">
+                <button type="button" className="tiktokSavedPreview instagramSavedPreview" onClick={() => setSelectedInstagramPost(post)} aria-label={`${post.title} 보기`}>
+                  <Instagram size={28} aria-hidden="true" />
+                  {post.thumbnailUrl && <img src={post.thumbnailUrl} alt="" loading="lazy" onError={event => { event.currentTarget.style.display = "none"; }} />}
+                </button>
+                <button
+                  type="button"
+                  className="tiktokSavedRemove"
+                  title="보관 해제"
+                  aria-label={`${post.title} 보관 해제`}
+                  disabled={removeInstagramBookmark.isPending}
+                  onClick={() => removeInstagramBookmark.mutate({ shortcode: post.shortcode, mediaType: post.mediaType })}
+                >
+                  <Bookmark size={19} fill="currentColor" aria-hidden="true" />
+                </button>
+              </div>
+              <div className="tiktokSavedDetails">
+                <button type="button" className="tiktokSavedTitle" onClick={() => setSelectedInstagramPost(post)}>{post.title}</button>
+                <div className="tiktokSavedMeta">
+                  {post.authorUrl ? (
+                    <a className="tiktokSavedAuthor" href={post.authorUrl} target="_blank" rel="noopener noreferrer">
+                      <span className="tiktokSavedAvatar" aria-hidden="true">{post.authorName?.trim().charAt(0).toUpperCase() || "I"}</span>
+                      <span className="tiktokSavedAuthorName">{post.authorName || "Instagram"}</span>
+                    </a>
+                  ) : (
+                    <span className="tiktokSavedAuthor">
+                      <span className="tiktokSavedAvatar" aria-hidden="true">I</span>
+                      <span className="tiktokSavedAuthorName">{post.authorName || "Instagram"}</span>
+                    </span>
+                  )}
+                  <span className="tiktokSavedDate">{formatSavedDate(post.savedAt)} 저장</span>
                 </div>
               </div>
             </article>
@@ -572,7 +662,7 @@ export default function SavedContents() {
             <h2 className="sectionTitle">{activeSection.label}</h2>
           </div>
         )}
-        {activeSection.id === "youtube" && ["youtube", "tiktok"].includes(selectedVideoPlatform.id) && (
+        {activeSection.id === "youtube" && ["youtube", "tiktok", "instagram"].includes(selectedVideoPlatform.id) && (
           <div className="sectionHeader savedContentsVideoHeader">
             <form
               className="savedContentsVideoUrlForm"
@@ -582,15 +672,15 @@ export default function SavedContents() {
             >
               <input
                 type="url"
-                value={selectedVideoPlatform.id === "tiktok" ? tiktokUrlInput : videoUrlInput}
-                onChange={event => selectedVideoPlatform.id === "tiktok" ? setTikTokUrlInput(event.target.value) : setVideoUrlInput(event.target.value)}
-                placeholder={`${selectedVideoPlatform.label} 영상 URL`}
-                aria-label={`보관할 ${selectedVideoPlatform.label} 영상 URL`}
+                value={selectedVideoPlatform.id === "tiktok" ? tiktokUrlInput : selectedVideoPlatform.id === "instagram" ? instagramUrlInput : videoUrlInput}
+                onChange={event => selectedVideoPlatform.id === "tiktok" ? setTikTokUrlInput(event.target.value) : selectedVideoPlatform.id === "instagram" ? setInstagramUrlInput(event.target.value) : setVideoUrlInput(event.target.value)}
+                placeholder={selectedVideoPlatform.id === "instagram" ? "Instagram 게시물·릴스 URL" : `${selectedVideoPlatform.label} 영상 URL`}
+                aria-label={selectedVideoPlatform.id === "instagram" ? "보관할 Instagram 게시물 또는 릴스 URL" : `보관할 ${selectedVideoPlatform.label} 영상 URL`}
                 autoComplete="url"
                 required={isAuthenticated}
               />
-              <button type="submit" disabled={isAuthenticated && (selectedVideoPlatform.id === "tiktok" ? addTikTokFromUrl.isPending || !tiktokUrlInput.trim() : addVideoFromUrl.isPending || !videoUrlInput.trim())}>
-                {(selectedVideoPlatform.id === "tiktok" ? addTikTokFromUrl.isPending : addVideoFromUrl.isPending) ? "저장 중" : "저장"}
+              <button type="submit" disabled={isAuthenticated && (selectedVideoPlatform.id === "tiktok" ? addTikTokFromUrl.isPending || !tiktokUrlInput.trim() : selectedVideoPlatform.id === "instagram" ? addInstagramFromUrl.isPending || !instagramUrlInput.trim() : addVideoFromUrl.isPending || !videoUrlInput.trim())}>
+                {(selectedVideoPlatform.id === "tiktok" ? addTikTokFromUrl.isPending : selectedVideoPlatform.id === "instagram" ? addInstagramFromUrl.isPending : addVideoFromUrl.isPending) ? "저장 중" : "저장"}
               </button>
             </form>
           </div>
@@ -624,12 +714,35 @@ export default function SavedContents() {
                 allowFullScreen
               />
             </div>
-            <div className="tiktokSavedDialogDetails">
+            <div className="tiktokSavedDialogDetails tiktokSavedVideoDialogDetails">
+              <span className="tiktokSavedDialogDate">저장일: {formatSavedDate(selectedTikTokVideo.savedAt)}</span>
               <DialogTitle>{selectedTikTokVideo.title}</DialogTitle>
-              <DialogDescription>저장한 TikTok 영상</DialogDescription>
-              <a href={selectedTikTokVideo.authorUrl} target="_blank" rel="noopener noreferrer">{selectedTikTokVideo.authorName}</a>
-              <span>저장일: {formatSavedDate(selectedTikTokVideo.savedAt)}</span>
-              <a className="tiktokSavedOriginal" href={selectedTikTokVideo.videoUrl} target="_blank" rel="noopener noreferrer">TikTok에서 보기 <ExternalLink size={15} aria-hidden="true" /></a>
+              <DialogDescription className="sr-only">TikTok 영상 상세보기</DialogDescription>
+              <div className="tiktokSavedDialogFooter">
+                <a className="tiktokSavedDialogAuthor" href={selectedTikTokVideo.authorUrl} target="_blank" rel="noopener noreferrer">{selectedTikTokVideo.authorName}</a>
+                <a className="tiktokSavedOriginal" href={selectedTikTokVideo.videoUrl} target="_blank" rel="noopener noreferrer">바로가기 <ExternalLink size={15} aria-hidden="true" /></a>
+              </div>
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
+      <Dialog open={Boolean(selectedInstagramPost)} onOpenChange={open => { if (!open) setSelectedInstagramPost(null); }}>
+        {selectedInstagramPost && (
+          <DialogContent className="tiktokSavedDialog">
+            <div className="tiktokSavedPlayer instagramSavedPlayer">
+              <iframe
+                src={`https://www.instagram.com/${selectedInstagramPost.mediaType}/${encodeURIComponent(selectedInstagramPost.shortcode)}/embed/`}
+                title={selectedInstagramPost.title}
+                allow="encrypted-media"
+                loading="lazy"
+              />
+            </div>
+            <div className="tiktokSavedDialogDetails">
+              <DialogTitle>{selectedInstagramPost.title}</DialogTitle>
+              <DialogDescription>저장한 Instagram {selectedInstagramPost.mediaType === "reel" ? "릴스" : "게시물"}</DialogDescription>
+              {selectedInstagramPost.authorName && <span>{selectedInstagramPost.authorName}</span>}
+              <span>저장일: {formatSavedDate(selectedInstagramPost.savedAt)}</span>
+              <a className="tiktokSavedOriginal" href={selectedInstagramPost.postUrl} target="_blank" rel="noopener noreferrer">Instagram에서 보기 <ExternalLink size={15} aria-hidden="true" /></a>
             </div>
           </DialogContent>
         )}

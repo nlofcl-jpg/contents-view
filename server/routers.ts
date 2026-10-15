@@ -21,6 +21,7 @@ import { GOOGLE_TREND_HISTORY_MS, compareGoogleTrendRanks, parseGoogleTrendTraff
 import { parseGoogleTrendsPage } from "./googleTrendsPage";
 import { fetchYouTubeBookmarkVideo, parseYouTubeVideoUrl } from "./youtubeBookmarkUrl";
 import { fetchTikTokBookmarkVideo, parseTikTokVideoUrl } from "./tiktokBookmarkUrl";
+import { fetchInstagramBookmarkMetadata, parseInstagramUrl } from "./instagramBookmarkUrl";
 
 const require = createRequire(import.meta.url);
 
@@ -3207,6 +3208,81 @@ export const appRouter = router({
             credentialsConfigured: false,
           };
         }
+      }),
+  }),
+
+  instagramBookmarks: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const userId = supabaseBookmarkUserId(ctx.user);
+      if (!userId || !supabaseAdmin) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Instagram 보관함을 사용할 수 없습니다." });
+      }
+      const { data, error } = await supabaseAdmin
+        .from("instagram_bookmarks")
+        .select("shortcode,media_type,post_url,title,author_name,author_url,thumbnail_url,created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []).map(row => ({
+        shortcode: String(row.shortcode),
+        mediaType: String(row.media_type) as "p" | "reel",
+        postUrl: String(row.post_url),
+        title: String(row.title),
+        authorName: row.author_name ? String(row.author_name) : null,
+        authorUrl: row.author_url ? String(row.author_url) : null,
+        thumbnailUrl: row.thumbnail_url ? String(row.thumbnail_url) : null,
+        savedAt: String(row.created_at),
+      }));
+    }),
+    addFromUrl: protectedProcedure
+      .input(z.object({ url: z.string().trim().min(1).max(2048) }))
+      .mutation(async ({ ctx, input }) => {
+        const userId = supabaseBookmarkUserId(ctx.user);
+        if (!userId || !supabaseAdmin) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Instagram 보관함을 사용할 수 없습니다." });
+        }
+        const parsed = parseInstagramUrl(input.url);
+        if (!parsed) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Instagram 게시물 또는 릴스 URL을 입력해 주세요." });
+        }
+        const { data: existing, error: lookupError } = await supabaseAdmin
+          .from("instagram_bookmarks")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("media_type", parsed.mediaType)
+          .eq("shortcode", parsed.shortcode)
+          .maybeSingle();
+        if (lookupError) throw lookupError;
+        if (existing) return { shortcode: parsed.shortcode, alreadySaved: true };
+
+        const metadata = await fetchInstagramBookmarkMetadata(parsed);
+        const { error } = await supabaseAdmin.from("instagram_bookmarks").upsert({
+          user_id: userId,
+          shortcode: parsed.shortcode,
+          media_type: parsed.mediaType,
+          post_url: parsed.url,
+          title: metadata.title,
+          author_name: metadata.authorName,
+          author_url: metadata.authorUrl,
+          thumbnail_url: metadata.thumbnailUrl,
+        }, { onConflict: "user_id,media_type,shortcode", ignoreDuplicates: true });
+        if (error) throw error;
+        return { shortcode: parsed.shortcode, alreadySaved: false };
+      }),
+    remove: protectedProcedure
+      .input(z.object({ shortcode: z.string().regex(/^[A-Za-z0-9_-]{5,32}$/), mediaType: z.enum(["p", "reel"]) }))
+      .mutation(async ({ ctx, input }) => {
+        const userId = supabaseBookmarkUserId(ctx.user);
+        if (!userId || !supabaseAdmin) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Instagram 보관함을 사용할 수 없습니다." });
+        }
+        const { error } = await supabaseAdmin.from("instagram_bookmarks")
+          .delete()
+          .eq("user_id", userId)
+          .eq("media_type", input.mediaType)
+          .eq("shortcode", input.shortcode);
+        if (error) throw error;
+        return { success: true };
       }),
   }),
 

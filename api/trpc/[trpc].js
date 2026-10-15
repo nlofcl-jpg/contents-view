@@ -2894,6 +2894,60 @@ function parseTikTokAuthorUrl(value) {
   return match ? { url: `https://www.tiktok.com/@${match[1]}`, handle: match[1] } : null;
 }
 
+// server/instagramBookmarkUrl.ts
+var INSTAGRAM_HOSTS = /* @__PURE__ */ new Set(["instagram.com", "www.instagram.com", "m.instagram.com"]);
+function parseInstagramUrl(value) {
+  let url;
+  try {
+    url = new URL(value.trim());
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:" || !INSTAGRAM_HOSTS.has(url.hostname.toLowerCase()) || url.username || url.password || url.port) return null;
+  const match = url.pathname.match(/^\/(p|reel|reels)\/([A-Za-z0-9_-]{5,32})\/?$/);
+  if (!match) return null;
+  const mediaType = match[1] === "p" ? "p" : "reel";
+  return { shortcode: match[2], mediaType, url: `https://www.instagram.com/${mediaType}/${match[2]}/` };
+}
+async function fetchInstagramBookmarkMetadata(parsed, fetcher = fetch) {
+  const fallback = {
+    title: parsed.mediaType === "reel" ? "Instagram \uB9B4\uC2A4" : "Instagram \uAC8C\uC2DC\uBB3C",
+    authorName: null,
+    authorUrl: null,
+    thumbnailUrl: null
+  };
+  try {
+    const endpoint = new URL("https://graph.facebook.com/v25.0/instagram_oembed");
+    endpoint.searchParams.set("url", parsed.url);
+    const response = await fetcher(endpoint.toString(), { signal: AbortSignal.timeout(4e3) });
+    if (!response.ok) return fallback;
+    const data = await response.json();
+    if (!data || typeof data !== "object") return fallback;
+    const item = data;
+    if (item.provider_name !== "Instagram") return fallback;
+    const authorName = typeof item.author_name === "string" && item.author_name.trim() ? item.author_name.trim().slice(0, 100) : null;
+    const authorUrl = typeof item.author_url === "string" ? parseInstagramProfileUrl(item.author_url) : null;
+    return {
+      title: typeof item.title === "string" && item.title.trim() ? item.title.trim().slice(0, 500) : fallback.title,
+      authorName,
+      authorUrl,
+      thumbnailUrl: typeof item.thumbnail_url === "string" && item.thumbnail_url.startsWith("https://") ? item.thumbnail_url : null
+    };
+  } catch {
+    return fallback;
+  }
+}
+function parseInstagramProfileUrl(value) {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || !INSTAGRAM_HOSTS.has(url.hostname.toLowerCase()) || url.username || url.password || url.port) return null;
+    const match = url.pathname.match(/^\/([A-Za-z0-9._]{1,30})\/?$/);
+    return match ? `https://www.instagram.com/${match[1]}/` : null;
+  } catch {
+    return null;
+  }
+}
+
 // server/routers.ts
 var require2 = createRequire(import.meta.url);
 var NAVER_SEARCH_AD_PROVIDER2 = "naver-search-ad";
@@ -5427,6 +5481,61 @@ var appRouter = router({
           credentialsConfigured: false
         };
       }
+    })
+  }),
+  instagramBookmarks: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const userId = supabaseBookmarkUserId(ctx.user);
+      if (!userId || !supabaseAdmin4) {
+        throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Instagram \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+      }
+      const { data, error } = await supabaseAdmin4.from("instagram_bookmarks").select("shortcode,media_type,post_url,title,author_name,author_url,thumbnail_url,created_at").eq("user_id", userId).order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []).map((row) => ({
+        shortcode: String(row.shortcode),
+        mediaType: String(row.media_type),
+        postUrl: String(row.post_url),
+        title: String(row.title),
+        authorName: row.author_name ? String(row.author_name) : null,
+        authorUrl: row.author_url ? String(row.author_url) : null,
+        thumbnailUrl: row.thumbnail_url ? String(row.thumbnail_url) : null,
+        savedAt: String(row.created_at)
+      }));
+    }),
+    addFromUrl: protectedProcedure.input(z3.object({ url: z3.string().trim().min(1).max(2048) })).mutation(async ({ ctx, input }) => {
+      const userId = supabaseBookmarkUserId(ctx.user);
+      if (!userId || !supabaseAdmin4) {
+        throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Instagram \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+      }
+      const parsed = parseInstagramUrl(input.url);
+      if (!parsed) {
+        throw new TRPCError3({ code: "BAD_REQUEST", message: "Instagram \uAC8C\uC2DC\uBB3C \uB610\uB294 \uB9B4\uC2A4 URL\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694." });
+      }
+      const { data: existing, error: lookupError } = await supabaseAdmin4.from("instagram_bookmarks").select("id").eq("user_id", userId).eq("media_type", parsed.mediaType).eq("shortcode", parsed.shortcode).maybeSingle();
+      if (lookupError) throw lookupError;
+      if (existing) return { shortcode: parsed.shortcode, alreadySaved: true };
+      const metadata = await fetchInstagramBookmarkMetadata(parsed);
+      const { error } = await supabaseAdmin4.from("instagram_bookmarks").upsert({
+        user_id: userId,
+        shortcode: parsed.shortcode,
+        media_type: parsed.mediaType,
+        post_url: parsed.url,
+        title: metadata.title,
+        author_name: metadata.authorName,
+        author_url: metadata.authorUrl,
+        thumbnail_url: metadata.thumbnailUrl
+      }, { onConflict: "user_id,media_type,shortcode", ignoreDuplicates: true });
+      if (error) throw error;
+      return { shortcode: parsed.shortcode, alreadySaved: false };
+    }),
+    remove: protectedProcedure.input(z3.object({ shortcode: z3.string().regex(/^[A-Za-z0-9_-]{5,32}$/), mediaType: z3.enum(["p", "reel"]) })).mutation(async ({ ctx, input }) => {
+      const userId = supabaseBookmarkUserId(ctx.user);
+      if (!userId || !supabaseAdmin4) {
+        throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Instagram \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+      }
+      const { error } = await supabaseAdmin4.from("instagram_bookmarks").delete().eq("user_id", userId).eq("media_type", input.mediaType).eq("shortcode", input.shortcode);
+      if (error) throw error;
+      return { success: true };
     })
   }),
   tiktokBookmarks: router({
