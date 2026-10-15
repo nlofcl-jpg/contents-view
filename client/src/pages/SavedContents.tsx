@@ -720,7 +720,7 @@ export default function SavedContents() {
               <DialogDescription className="sr-only">TikTok 영상 상세보기</DialogDescription>
               <div className="tiktokSavedDialogFooter">
                 <a className="tiktokSavedDialogAuthor" href={selectedTikTokVideo.authorUrl} target="_blank" rel="noopener noreferrer">{selectedTikTokVideo.authorName}</a>
-                <a className="tiktokSavedOriginal" href={selectedTikTokVideo.videoUrl} target="_blank" rel="noopener noreferrer">바로가기 <ExternalLink size={15} aria-hidden="true" /></a>
+                <a className="youtubeVideoModalButton" href={selectedTikTokVideo.videoUrl} target="_blank" rel="noopener noreferrer">틱톡에서 보기</a>
               </div>
             </div>
           </DialogContent>
@@ -728,7 +728,9 @@ export default function SavedContents() {
       </Dialog>
       <Dialog open={Boolean(selectedInstagramPost)} onOpenChange={open => { if (!open) setSelectedInstagramPost(null); }}>
         {selectedInstagramPost && (
-          <DialogContent className="tiktokSavedDialog">
+          <DialogContent className="tiktokSavedDialog instagramSavedDialog">
+            <DialogTitle className="sr-only">{selectedInstagramPost.title}</DialogTitle>
+            <DialogDescription className="sr-only">Instagram 릴스 상세보기</DialogDescription>
             <div className="tiktokSavedPlayer instagramSavedPlayer">
               <iframe
                 src={`https://www.instagram.com/${selectedInstagramPost.mediaType}/${encodeURIComponent(selectedInstagramPost.shortcode)}/embed/`}
@@ -737,12 +739,9 @@ export default function SavedContents() {
                 loading="lazy"
               />
             </div>
-            <div className="tiktokSavedDialogDetails">
-              <DialogTitle>{selectedInstagramPost.title}</DialogTitle>
-              <DialogDescription>저장한 Instagram {selectedInstagramPost.mediaType === "reel" ? "릴스" : "게시물"}</DialogDescription>
-              {selectedInstagramPost.authorName && <span>{selectedInstagramPost.authorName}</span>}
+            <div className="instagramSavedDialogFooter">
               <span>저장일: {formatSavedDate(selectedInstagramPost.savedAt)}</span>
-              <a className="tiktokSavedOriginal" href={selectedInstagramPost.postUrl} target="_blank" rel="noopener noreferrer">Instagram에서 보기 <ExternalLink size={15} aria-hidden="true" /></a>
+              <a className="youtubeVideoModalButton" href={selectedInstagramPost.postUrl} target="_blank" rel="noopener noreferrer">인스타그램에서 보기</a>
             </div>
           </DialogContent>
         )}

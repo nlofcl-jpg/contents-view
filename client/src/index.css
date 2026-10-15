@@ -7930,6 +7930,38 @@ input[type="date"].youtubeSelect {
 
 .instagramSavedPlayer { background: #0d1c31; }
 
+.instagramSavedDialog {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  width: min(390px, calc((100dvh - 140px) * 0.5625 + 24px), calc(100vw - 24px));
+  max-width: none;
+  padding: 12px;
+}
+
+.instagramSavedDialog .instagramSavedPlayer {
+  width: 100%;
+  margin: 0;
+}
+
+.instagramSavedDialogFooter {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 0 2px 2px;
+}
+
+.instagramSavedDialogFooter span {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.instagramSavedDialogFooter .youtubeVideoModalButton {
+  display: flex;
+  justify-content: center;
+  margin: 0;
+}
+
 .tiktokSavedDialogDetails {
   display: flex;
   flex-direction: column;
@@ -7970,20 +8002,9 @@ input[type="date"].youtubeSelect {
 
 .tiktokSavedDialogAuthor:hover { color: #93c5fd; }
 
-.tiktokSavedDialogFooter .tiktokSavedOriginal {
+.tiktokSavedDialogFooter .youtubeVideoModalButton {
   flex: 0 0 auto;
   margin-top: 0;
-  padding: 8px 12px;
-  border: 1px solid rgba(96, 165, 250, 0.42);
-  border-radius: 6px;
-  background: rgba(39, 73, 113, 0.55);
-  color: #e8f2ff;
-  font-weight: 600;
-}
-
-.tiktokSavedDialogFooter .tiktokSavedOriginal:hover {
-  border-color: #60a5fa;
-  background: rgba(39, 73, 113, 0.8);
 }
 
 .tiktokSavedOriginal {
