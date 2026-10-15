@@ -278,8 +278,13 @@ export default function SavedContents() {
               </div>
               <div className="tiktokSavedDetails">
                 <button type="button" className="tiktokSavedTitle" onClick={() => setSelectedTikTokVideo(video)}>{video.title}</button>
-                <a href={video.authorUrl} target="_blank" rel="noopener noreferrer">{video.authorName}</a>
-                <span>저장일: {formatSavedDate(video.savedAt)}</span>
+                <div className="tiktokSavedMeta">
+                  <a className="tiktokSavedAuthor" href={video.authorUrl} target="_blank" rel="noopener noreferrer">
+                    <span className="tiktokSavedAvatar" aria-hidden="true">{video.authorName.trim().charAt(0).toUpperCase() || "T"}</span>
+                    <span className="tiktokSavedAuthorName">{video.authorName}</span>
+                  </a>
+                  <span className="tiktokSavedDate">{formatSavedDate(video.savedAt)} 저장</span>
+                </div>
               </div>
             </article>
           ))}

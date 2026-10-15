@@ -7752,25 +7752,24 @@ input[type="date"].youtubeSelect {
 
 .tiktokSavedGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 18px;
 }
 
 .tiktokSavedCard {
   display: flex;
-  gap: 16px;
+  flex-direction: column;
   min-width: 0;
-  min-height: 198px;
-  padding: 12px;
-  border: 1px solid rgba(96, 165, 250, 0.2);
+  overflow: hidden;
+  border: 1px solid rgba(78, 115, 168, 0.28);
   border-radius: 8px;
-  background: rgba(15, 23, 42, 0.58);
+  background: #0d1c31;
 }
 
 .tiktokSavedThumbnail {
   position: relative;
-  flex: 0 0 98px;
-  align-self: stretch;
+  width: 100%;
+  aspect-ratio: 9 / 16;
 }
 
 .tiktokSavedPreview {
@@ -7780,11 +7779,10 @@ input[type="date"].youtubeSelect {
   justify-content: center;
   width: 100%;
   height: 100%;
-  min-height: 174px;
   overflow: hidden;
   border: 0;
-  border-radius: 5px;
-  background: #172943;
+  border-radius: 0;
+  background: linear-gradient(135deg, #294566, #13253d);
   color: #8db8ef;
   cursor: pointer;
 }
@@ -7817,10 +7815,9 @@ input[type="date"].youtubeSelect {
 .tiktokSavedDetails {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 9px;
+  gap: 10px;
   min-width: 0;
-  padding: 5px 0;
+  padding: 13px 12px 14px;
 }
 
 .tiktokSavedTitle {
@@ -7828,29 +7825,58 @@ input[type="date"].youtubeSelect {
   overflow: hidden;
   padding: 0;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   color: #f8fafc;
-  font-size: 14px;
-  font-weight: 650;
-  line-height: 1.45;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
   text-align: left;
   cursor: pointer;
 }
 
 .tiktokSavedTitle:hover,
-.tiktokSavedDetails a:hover { color: #93c5fd; }
+.tiktokSavedAuthor:hover .tiktokSavedAuthorName { color: #93c5fd; }
 
-.tiktokSavedDetails a {
+.tiktokSavedMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.tiktokSavedAuthor {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  text-decoration: none;
+}
+
+.tiktokSavedAvatar {
+  display: grid;
+  flex: 0 0 25px;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border-radius: 50%;
+  background: #274971;
+  color: #d9eaff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tiktokSavedAuthorName {
+  min-width: 0;
   overflow: hidden;
-  max-width: 100%;
   color: #cbd5e1;
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.tiktokSavedDetails > span {
-  margin-top: auto;
+.tiktokSavedDate {
+  flex: 0 0 auto;
   color: #94a3b8;
   font-size: 11px;
 }
@@ -7901,11 +7927,22 @@ input[type="date"].youtubeSelect {
   margin-top: auto;
 }
 
+@media (max-width: 1100px) {
+  .tiktokSavedGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
 @media (max-width: 760px) {
-  .tiktokSavedGrid { grid-template-columns: minmax(0, 1fr); }
+  .tiktokSavedGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
   .tiktokSavedDialog { grid-template-columns: minmax(0, 1fr); }
   .tiktokSavedPlayer { width: min(100%, 250px); margin: 0 auto; }
   .tiktokSavedDialogDetails { padding: 0; }
+}
+
+@media (max-width: 520px) {
+  .tiktokSavedGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .tiktokSavedDetails { padding: 10px; }
+  .tiktokSavedTitle { font-size: 13px; }
+  .tiktokSavedMeta { align-items: flex-start; flex-direction: column; gap: 5px; }
 }
 
 /* Responsive */
