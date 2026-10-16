@@ -20,7 +20,7 @@ const TABS = [
   { id: "trending", label: "유튜브 추천 영상" },
   { id: "category", label: "카테고리별 인기" },
   { id: "channels", label: "인기 채널" },
-  { id: "shorts", label: "쇼츠 트렌드" },
+  { id: "shorts", label: "인기 쇼츠" },
   { id: "rising", label: "급상승 영상" },
 ] as const;
 
@@ -1769,7 +1769,7 @@ export default function YouTubeTrends() {
       return (
         <div className="emptyStateContainer">
           <Clock className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">쇼츠 트렌드 데이터를 불러오는 중입니다...</p>
+          <p className="emptyStateText">인기 쇼츠 데이터를 불러오는 중입니다...</p>
         </div>
       );
     }
