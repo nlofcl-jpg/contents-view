@@ -3020,18 +3020,6 @@ async function removeYouTubeBookmark2(user, videoId, contentType) {
   const { error } = await supabaseAdmin4.from("youtube_bookmarks").delete().eq("user_id", userId).eq("video_id", videoId).eq("content_type", contentType);
   if (error) throw error;
 }
-async function listYouTubeChannelBookmarks(user) {
-  const userId = supabaseBookmarkUserId(user);
-  if (!userId || !supabaseAdmin4) throw new Error("Channel bookmark storage is not configured");
-  const { data, error } = await supabaseAdmin4.from("youtube_channel_bookmarks").select("channel_id,title,thumbnail_url,created_at").eq("user_id", userId).order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data || []).map((row) => ({
-    channelId: String(row.channel_id),
-    title: String(row.title),
-    thumbnail: String(row.thumbnail_url || ""),
-    savedAt: String(row.created_at)
-  }));
-}
 function parseNaverSearchAdCredentials2(value) {
   try {
     const parsed = JSON.parse(value);
@@ -4292,205 +4280,6 @@ var appRouter = router({
       }
     }),
     /**
-     * Get popular channels based on trending videos
-     * 1. Fetch top 50 popular videos
-     * 2. Extract unique channelIds
-     * 3. Fetch channel details (subscribers, views, etc.)
-     * 4. Calculate trending score based on frequency, views, and subscribers
-     */
-    getPopularChannels: protectedProcedure.input(z3.object({
-      regionCode: z3.string().min(2).max(2),
-      sortBy: z3.enum(["trending", "subscribers", "views"]).default("trending"),
-      maxResults: z3.number().min(1).max(50).default(12),
-      videoCategoryId: z3.number().optional()
-    })).query(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new Error("User not authenticated");
-      }
-      const apiKeyRecord = await getUserApiKey2(ctx.user, "youtube");
-      if (!apiKeyRecord) {
-        return {
-          success: false,
-          error: "API Key not found",
-          channels: []
-        };
-      }
-      if (apiKeyRecord.testStatus !== "success") {
-        return {
-          success: false,
-          error: "YouTube API \uD0A4 \uC624\uB958\uC785\uB2C8\uB2E4.\nAPI \uD0A4 \uD655\uC778 \uD6C4 \uB2E4\uC2DC \uC785\uB825\uD574\uC8FC\uC138\uC694.",
-          channels: []
-        };
-      }
-      try {
-        const videoParams = new URLSearchParams({
-          part: "snippet,statistics,contentDetails",
-          chart: "mostPopular",
-          regionCode: input.regionCode,
-          maxResults: "50",
-          key: apiKeyRecord.apiKey
-        });
-        if (input.videoCategoryId !== void 0) {
-          videoParams.append("videoCategoryId", input.videoCategoryId.toString());
-        }
-        const videoResponse = await fetch(
-          `https://www.googleapis.com/youtube/v3/videos?${videoParams.toString()}`,
-          { method: "GET" }
-        );
-        if (!videoResponse.ok) {
-          const errorData = await videoResponse.json();
-          const errorMsg = errorData.error?.message || "Failed to fetch trending videos";
-          return {
-            success: false,
-            error: translateYouTubeError(errorMsg),
-            channels: []
-          };
-        }
-        const videoData = await videoResponse.json();
-        if (videoData.error) {
-          const errorMsg = videoData.error.message || "YouTube API error";
-          return {
-            success: false,
-            error: translateYouTubeError(errorMsg),
-            channels: []
-          };
-        }
-        const channelMap = /* @__PURE__ */ new Map();
-        (videoData.items || []).forEach((item) => {
-          const channelId = item.snippet.channelId;
-          const viewCount = parseInt(item.statistics.viewCount || "0");
-          const videoTitle = item.snippet.title;
-          if (channelMap.has(channelId)) {
-            const existing = channelMap.get(channelId);
-            existing.videoCount += 1;
-            existing.totalVideoViews += viewCount;
-          } else {
-            channelMap.set(channelId, {
-              channelId,
-              channelTitle: item.snippet.channelTitle,
-              videoCount: 1,
-              totalVideoViews: viewCount,
-              topVideoTitle: videoTitle
-            });
-          }
-        });
-        if (channelMap.size === 0) {
-          return {
-            success: true,
-            channels: []
-          };
-        }
-        const channelIds = Array.from(channelMap.keys());
-        const channelParams = new URLSearchParams({
-          part: "snippet,statistics,contentDetails",
-          id: channelIds.join(","),
-          key: apiKeyRecord.apiKey
-        });
-        const channelResponse = await fetch(
-          `https://www.googleapis.com/youtube/v3/channels?${channelParams.toString()}`,
-          { method: "GET" }
-        );
-        if (!channelResponse.ok) {
-          const errorData = await channelResponse.json();
-          const errorMsg = errorData.error?.message || "Failed to fetch channel details";
-          return {
-            success: false,
-            error: translateYouTubeError(errorMsg),
-            channels: []
-          };
-        }
-        const channelData = await channelResponse.json();
-        if (channelData.error) {
-          const errorMsg = channelData.error.message || "YouTube API error";
-          return {
-            success: false,
-            error: translateYouTubeError(errorMsg),
-            channels: []
-          };
-        }
-        const channels = (channelData.items || []).map((item) => {
-          const aggregated = channelMap.get(item.id);
-          const subscriberCount = parseInt(item.statistics.subscriberCount || "0");
-          const viewCount = parseInt(item.statistics.viewCount || "0");
-          const videoCount = parseInt(item.statistics.videoCount || "0");
-          const frequencyScore = aggregated.videoCount * 100;
-          const popularVideoViewsScore = aggregated.totalVideoViews / 1e5;
-          const subscriberScore = subscriberCount / 1e4;
-          const channelViewsScore = viewCount / 1e6;
-          const trendingScore = frequencyScore + popularVideoViewsScore + subscriberScore + channelViewsScore;
-          return {
-            channelId: item.id,
-            channelTitle: item.snippet.title,
-            channelDescription: item.snippet.description,
-            thumbnail: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url,
-            subscriberCount,
-            viewCount,
-            videoCount,
-            videoCountInTrending: aggregated.videoCount,
-            topVideoTitle: aggregated.topVideoTitle,
-            trendingScore,
-            uploadsPlaylistId: item.contentDetails?.relatedPlaylists?.uploads || null
-          };
-        });
-        if (input.sortBy === "subscribers") {
-          channels.sort((a, b) => b.subscriberCount - a.subscriberCount);
-        } else if (input.sortBy === "views") {
-          channels.sort((a, b) => b.viewCount - a.viewCount);
-        } else {
-          channels.sort((a, b) => b.trendingScore - a.trendingScore);
-        }
-        const selectedChannels = channels.slice(0, input.maxResults);
-        const channelsWithLatestVideos = await Promise.all(
-          selectedChannels.map(async (channel) => {
-            const { uploadsPlaylistId, ...channelData2 } = channel;
-            if (!uploadsPlaylistId) {
-              return { ...channelData2, latestVideos: [] };
-            }
-            try {
-              const playlistParams = new URLSearchParams({
-                part: "snippet,contentDetails",
-                playlistId: uploadsPlaylistId,
-                maxResults: "4",
-                key: apiKeyRecord.apiKey
-              });
-              const playlistResponse = await fetch(
-                `https://www.googleapis.com/youtube/v3/playlistItems?${playlistParams.toString()}`,
-                { method: "GET" }
-              );
-              if (!playlistResponse.ok) {
-                return { ...channelData2, latestVideos: [] };
-              }
-              const playlistData = await playlistResponse.json();
-              const latestVideos = (playlistData.items || []).map((playlistItem) => {
-                const videoId = playlistItem.contentDetails?.videoId || playlistItem.snippet?.resourceId?.videoId;
-                if (!videoId) return null;
-                return {
-                  videoId,
-                  title: playlistItem.snippet?.title || "\uCD5C\uC2E0 \uC601\uC0C1",
-                  thumbnail: playlistItem.snippet?.thumbnails?.medium?.url || playlistItem.snippet?.thumbnails?.high?.url || playlistItem.snippet?.thumbnails?.default?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
-                  publishedAt: playlistItem.contentDetails?.videoPublishedAt || playlistItem.snippet?.publishedAt || null
-                };
-              }).filter(Boolean).slice(0, 4);
-              return { ...channelData2, latestVideos };
-            } catch {
-              return { ...channelData2, latestVideos: [] };
-            }
-          })
-        );
-        return {
-          success: true,
-          channels: channelsWithLatestVideos
-        };
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : "Connection failed";
-        return {
-          success: false,
-          error: translateYouTubeError(errorMsg),
-          channels: []
-        };
-      }
-    }),
-    /**
      * Get trending videos for a specific country
      */
     getTrendingVideos: protectedProcedure.input(z3.object({
@@ -5628,32 +5417,9 @@ var appRouter = router({
       await addYouTubeBookmark2(ctx.user, { userId: ctx.user.id, ...video });
       return { videoId: parsed.videoId, alreadySaved: false };
     }),
-    listChannels: protectedProcedure.query(async ({ ctx }) => listYouTubeChannelBookmarks(ctx.user)),
-    addChannel: protectedProcedure.input(z3.object({ channelId: z3.string().min(1), title: z3.string().min(1), thumbnail: z3.string().optional() })).mutation(async ({ ctx, input }) => {
-      const userId = supabaseBookmarkUserId(ctx.user);
-      if (!userId || !supabaseAdmin4) throw new Error("Channel bookmark storage is not configured");
-      const { error } = await supabaseAdmin4.from("youtube_channel_bookmarks").upsert({
-        user_id: userId,
-        channel_id: input.channelId,
-        title: input.title,
-        thumbnail_url: input.thumbnail || null
-      }, { onConflict: "user_id,channel_id", ignoreDuplicates: true });
-      if (error) throw error;
-      return { success: true };
-    }),
-    removeChannel: protectedProcedure.input(z3.object({ channelId: z3.string().min(1) })).mutation(async ({ ctx, input }) => {
-      const userId = supabaseBookmarkUserId(ctx.user);
-      if (!userId || !supabaseAdmin4) throw new Error("Channel bookmark storage is not configured");
-      const { error } = await supabaseAdmin4.from("youtube_channel_bookmarks").delete().eq("user_id", userId).eq("channel_id", input.channelId);
-      if (error) throw error;
-      return { success: true };
-    }),
     trackSavedVideos: protectedProcedure.input(z3.object({ accountKey: z3.string() })).query(async ({ ctx }) => {
-      const [bookmarks, savedChannels] = await Promise.all([
-        listYouTubeBookmarks(ctx.user),
-        listYouTubeChannelBookmarks(ctx.user)
-      ]);
-      if (bookmarks.length === 0 && savedChannels.length === 0) {
+      const bookmarks = await listYouTubeBookmarks(ctx.user);
+      if (bookmarks.length === 0) {
         return { checkedAt: (/* @__PURE__ */ new Date()).toISOString(), videos: [], channels: [] };
       }
       const userKey = await getUserApiKey2(ctx.user, "youtube");
@@ -5674,7 +5440,7 @@ var appRouter = router({
         }));
         for (const item of data.items || []) videoById.set(item.id, item);
       }
-      const channelIds = Array.from(/* @__PURE__ */ new Set([...bookmarks.map((bookmark) => videoById.get(bookmark.videoId)?.snippet?.channelId || bookmark.channelId).filter((id) => Boolean(id)), ...savedChannels.map((channel) => channel.channelId)]));
+      const channelIds = Array.from(new Set(bookmarks.map((bookmark) => videoById.get(bookmark.videoId)?.snippet?.channelId || bookmark.channelId).filter((id) => Boolean(id))));
       const channelById = /* @__PURE__ */ new Map();
       for (let offset = 0; offset < channelIds.length; offset += 50) {
         const data = await fetchYouTube("channels", new URLSearchParams({
@@ -5746,11 +5512,10 @@ var appRouter = router({
         channels: channelIds.map((channelId) => {
           const channel = channelById.get(channelId);
           const savedVideo = bookmarks.find((bookmark) => (videoById.get(bookmark.videoId)?.snippet?.channelId || bookmark.channelId) === channelId);
-          const savedChannel = savedChannels.find((item) => item.channelId === channelId);
           return {
             channelId,
-            title: channel?.snippet?.title || savedChannel?.title || savedVideo?.channelTitle || "\uCC44\uB110",
-            thumbnail: channel?.snippet?.thumbnails?.default?.url || savedChannel?.thumbnail || savedVideo?.channelThumbnailUrl || "",
+            title: channel?.snippet?.title || savedVideo?.channelTitle || "\uCC44\uB110",
+            thumbnail: channel?.snippet?.thumbnails?.default?.url || savedVideo?.channelThumbnailUrl || "",
             latestVideos: (latestByChannel.get(channelId) || []).map((recent) => {
               const current = recentVideoById.get(recent.videoId);
               return {

@@ -6,7 +6,7 @@ import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 import { GoogleLogo, YouTubeLogo } from "@/components/ServiceLogos";
-import { Bookmark, ChevronDown, Trash2, ExternalLink, Instagram, LoaderCircle, MessageCircleMore, Music2, Newspaper, RefreshCw } from "lucide-react";
+import { Bookmark, ChevronDown, Instagram, LoaderCircle, MessageCircleMore, Music2, Newspaper, RefreshCw } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 
@@ -141,18 +141,8 @@ export default function SavedContents() {
   const { data: instagramBookmarks = [], isLoading: instagramLoading, error: instagramError, refetch: refetchInstagram } = trpc.instagramBookmarks.list.useQuery(undefined, {
     enabled: isAuthenticated && activeSectionId === "youtube" && selectedVideoPlatformId === "instagram",
   });
-  const { data: channelBookmarks = [], isLoading: channelsLoading } = trpc.youtubeBookmarks.listChannels.useQuery(undefined, {
-    enabled: isAuthenticated && activeSectionId === "youtube" && selectedVideoPlatformId === "youtube",
-  });
-  const removeChannelBookmark = trpc.youtubeBookmarks.removeChannel.useMutation({
-    onSuccess: () => {
-      utils.youtubeBookmarks.listChannels.invalidate();
-      utils.youtubeBookmarks.trackSavedVideos.invalidate();
-    },
-    onError: () => toast.error("채널 보관을 해제하지 못했습니다."),
-  });
   const { data: trackedData, error: trackingError, isFetching: isTracking, refetch: refreshTracking } = trpc.youtubeBookmarks.trackSavedVideos.useQuery({ accountKey: user?.id || "" }, {
-    enabled: isAuthenticated && activeSectionId === "youtube" && selectedVideoPlatformId === "youtube" && (bookmarkedYouTubeVideos.length > 0 || channelBookmarks.length > 0),
+    enabled: isAuthenticated && activeSectionId === "youtube" && selectedVideoPlatformId === "youtube" && bookmarkedYouTubeVideos.length > 0,
     retry: false,
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -166,12 +156,6 @@ export default function SavedContents() {
       thumbnail: video.channelThumbnail || "",
       latestVideos: [],
     }])).values());
-  const savedChannels = channelBookmarks.map(bookmark =>
-    videoChannels.find(channel => channel.channelId === bookmark.channelId) || {
-      ...bookmark,
-      latestVideos: [],
-    },
-  );
 
   const openRecentVideo = (
     recent: { videoId: string; title: string; thumbnail: string; publishedAt: string; viewCount: number; commentCount: number; duration: string; categoryId: string; tags: string[] },
@@ -382,7 +366,7 @@ export default function SavedContents() {
       );
     }
 
-    if (activeSection.id === "youtube" && selectedVideoPlatform.id === "youtube" && (bookmarksLoading || channelsLoading)) {
+    if (activeSection.id === "youtube" && selectedVideoPlatform.id === "youtube" && bookmarksLoading) {
       return (
         <div className="savedContentsStatus" role="status">
           <LoaderCircle className="refreshIconSpinning" aria-hidden="true" />
@@ -394,7 +378,7 @@ export default function SavedContents() {
     if (
       activeSection.id === "youtube" &&
       selectedVideoPlatform.id === "youtube" &&
-      (bookmarkedYouTubeVideos.length > 0 || channelBookmarks.length > 0)
+      bookmarkedYouTubeVideos.length > 0
     ) {
       return (
         <div className="savedYouTubeGroups">
@@ -492,55 +476,6 @@ export default function SavedContents() {
           })}
           </div>
           </>}
-          {savedChannels.length > 0 && (
-            <section className="savedYouTubeChannelSection" aria-label="보관한 채널">
-              <div className="savedYouTubeGroupHeading">
-                <h3>보관한 채널</h3>
-              </div>
-              <div className="savedYouTubeChannelGrid">
-                {savedChannels.map(channel => (
-                  <article key={channel.channelId || channel.title} className="savedYouTubeChannelCard">
-                    <div className="savedYouTubeChannelHeader">
-                      {channel.thumbnail ? <img src={channel.thumbnail} alt="" /> : <span className="savedYouTubeChannelAvatar"><YouTubeLogo /></span>}
-                      <div>
-                        <h4>{channel.title}</h4>
-                        {channel.channelId && (
-                          <a href={`https://www.youtube.com/channel/${channel.channelId}`} target="_blank" rel="noopener noreferrer">채널 보기 <ExternalLink size={12} /></a>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        className="savedYouTubeChannelRemove"
-                        title="채널 보관 해제"
-                        aria-label={`${channel.title} 채널 보관 해제`}
-                        disabled={removeChannelBookmark.isPending}
-                        onClick={() => removeChannelBookmark.mutate({ channelId: channel.channelId })}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                    <div className="savedYouTubeRecentVideos">
-                      {channel.latestVideos.length > 0 ? channel.latestVideos.slice(0, 3).map(recent => (
-                        <button
-                          key={recent.videoId}
-                          type="button"
-                          className="savedYouTubeRecentVideo"
-                          onClick={() => openRecentVideo(recent, channel)}
-                          title={recent.title}
-                        >
-                          <img src={recent.thumbnail} alt="" />
-                          <span className="savedYouTubeRecentTitle">{recent.title}</span>
-                          <span className="savedYouTubeRecentViews">조회수 {formatViewCount(String(recent.viewCount))}</span>
-                        </button>
-                      )) : (
-                        <p className="savedYouTubeRecentEmpty">{isTracking ? "최근 영상을 확인하고 있습니다." : "최근 영상을 확인할 수 없습니다."}</p>
-                      )}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </section>
-          )}
         </div>
       );
     }

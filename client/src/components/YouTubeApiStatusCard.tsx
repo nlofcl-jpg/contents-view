@@ -5,7 +5,7 @@ import { KeyRound, CheckCircle, AlertCircle } from "lucide-react";
 import { YouTubeApiKeyModal } from "./YouTubeApiKeyModal";
 
 interface YouTubeApiStatusCardProps {
-  activeTab: "trending" | "category" | "channels" | "shorts" | "rising";
+  activeTab: "trending" | "category" | "shorts" | "rising";
   apiKeyMessage: string;
 }
 

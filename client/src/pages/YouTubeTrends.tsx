@@ -4,12 +4,11 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { YouTubeApiStatusCard } from "@/components/YouTubeApiStatusCard";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
-import { AlertCircle, CircleAlert, Clock, Play, ChevronDown, RotateCw, Users, Bookmark, Search, Copy, ExternalLink } from "lucide-react";
+import { AlertCircle, CircleAlert, Clock, Play, ChevronDown, RotateCw, Bookmark, Search, Copy, ExternalLink } from "lucide-react";
 import { useBookmark } from "@/contexts/BookmarkContext";
 import { useLocation } from "wouter";
-import { toast } from "sonner";
 
-type TabType = "analysis" | "trending" | "category" | "channels" | "shorts" | "rising";
+type TabType = "analysis" | "trending" | "category" | "shorts" | "rising";
 type AnalysisSortType = "relevance" | "publishedAt" | "viewCount";
 type AnalysisDurationType = "all" | "shorts" | "long";
 
@@ -19,7 +18,6 @@ const TABS = [
   { id: "analysis", label: "영상 분석" },
   { id: "trending", label: "유튜브 추천 영상" },
   { id: "category", label: "카테고리별 인기" },
-  { id: "channels", label: "인기 채널" },
   { id: "shorts", label: "인기 쇼츠" },
   { id: "rising", label: "급상승 영상" },
 ] as const;
@@ -80,11 +78,6 @@ const SORT_OPTIONS = {
     { value: "viewCount", label: "조회수순" },
     { value: "publishedAt", label: "최신순" },
   ],
-  channels: [
-    { value: "trending", label: "인기순" },
-    { value: "subscribers", label: "구독자순" },
-    { value: "views", label: "조회수순" },
-  ],
   shorts: [
     { value: "trending", label: "인기순" },
     { value: "viewCount", label: "조회수순" },
@@ -102,7 +95,6 @@ const TAB_MESSAGES = {
   analysis: "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.",
   trending: "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.",
   category: "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.",
-  channels: "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.",
   shorts: "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.",
   rising: "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.",
 };
@@ -111,7 +103,6 @@ const EMPTY_STATE_MESSAGES = {
   analysis: "분석할 YouTube 영상 URL이나 키워드를 입력해주세요.",
   trending: "선택한 국가의 인기 영상 데이터를 찾을 수 없습니다.",
   category: "선택한 국가와 카테고리의 인기 영상을 찾을 수 없습니다.",
-  channels: "선택한 조건에서 인기 채널을 찾을 수 없습니다.",
   shorts: "선택한 조건에서 쇼츠 영상을 찾을 수 없습니다.",
   rising: "선택한 조건에서 새롭게 상승하는 영상을 찾을 수 없습니다.",
 };
@@ -229,24 +220,6 @@ export default function YouTubeTrends() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { toggleYouTubeBookmark, isYouTubeVideoBookmarked, isBookmarkPending } = useBookmark();
   const [activeTab, setActiveTab] = useState<TabType>(getInitialYouTubeTab);
-  const bookmarkUtils = trpc.useUtils();
-  const { data: channelBookmarks = [] } = trpc.youtubeBookmarks.listChannels.useQuery(undefined, {
-    enabled: isAuthenticated && activeTab === "channels",
-  });
-  const addChannelBookmark = trpc.youtubeBookmarks.addChannel.useMutation({
-    onSuccess: () => {
-      bookmarkUtils.youtubeBookmarks.listChannels.invalidate();
-      bookmarkUtils.youtubeBookmarks.trackSavedVideos.invalidate();
-    },
-    onError: () => toast.error("채널을 보관하지 못했습니다."),
-  });
-  const removeChannelBookmark = trpc.youtubeBookmarks.removeChannel.useMutation({
-    onSuccess: () => {
-      bookmarkUtils.youtubeBookmarks.listChannels.invalidate();
-      bookmarkUtils.youtubeBookmarks.trackSavedVideos.invalidate();
-    },
-    onError: () => toast.error("채널 보관을 해제하지 못했습니다."),
-  });
   const tabMenuRef = useRef<HTMLDivElement>(null);
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -290,8 +263,6 @@ export default function YouTubeTrends() {
   const [lastUpdateTimesByKey, setLastUpdateTimesByKey] = useState<Record<string, number>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [videoCache, setVideoCache] = useState<Record<string, { data: any; previousData?: any[]; fetchedAt: number }>>({});
-  const [channelProfileCache, setChannelProfileCache] = useState<Record<string, { url: string; title: string }>>({});
-  const [channelCache, setChannelCache] = useState<Record<string, { data: any; fetchedAt: number }>>({});
   const [shortsCache, setShortsCache] = useState<Record<string, { data: any; previousData?: any[]; fetchedAt: number }>>({});
   const [shouldForceRefresh, setShouldForceRefresh] = useState(false);
 
@@ -345,11 +316,6 @@ export default function YouTubeTrends() {
     category: {
       country: "KR",
       category: "movies",
-      sort: "trending",
-    },
-    channels: {
-      country: "KR",
-      category: "all",
       sort: "trending",
     },
     shorts: {
@@ -442,18 +408,11 @@ export default function YouTubeTrends() {
   const regionCode = country;
 
   // Map sort value to API sort parameter
-  const apiSortBy =
-    activeTab === "channels"
-      ? sortBy === "trending"
-        ? "trending"
-        : sortBy === "subscribers"
-          ? "subscribers"
-          : "views"
-      : sortBy === "trending"
-        ? "trending"
-        : sortBy === "viewCount"
-          ? "viewCount"
-          : "publishedAt";
+  const apiSortBy = sortBy === "trending"
+    ? "trending"
+    : sortBy === "viewCount"
+      ? "viewCount"
+      : "publishedAt";
 
   // Query for trending videos (only on trending tab)
   // Get selected category's videoCategoryId
@@ -490,24 +449,6 @@ export default function YouTubeTrends() {
       enabled:
         isAuthenticated &&
         (activeTab === "trending" || activeTab === "category") &&
-        apiKeyData?.exists &&
-        apiKeyData?.testStatus === "success" &&
-        shouldCallAPI,
-    }
-  );
-
-  // Query for popular channels
-  const { data: channelsData, isLoading: isChannelsLoading, error: channelsError, refetch: refetchChannels } = trpc.youtube.getPopularChannels.useQuery(
-    {
-      regionCode,
-      sortBy: apiSortBy as "trending" | "subscribers" | "views",
-      maxResults: 24,
-      videoCategoryId,
-    },
-    {
-      enabled:
-        isAuthenticated &&
-        activeTab === "channels" &&
         apiKeyData?.exists &&
         apiKeyData?.testStatus === "success" &&
         shouldCallAPI,
@@ -557,16 +498,6 @@ export default function YouTubeTrends() {
     ? { success: true, videos: cached.data, previousVideos: cached.previousData || [] }
     : videosData;
 
-  // Check if we should use channel cache before making API call
-  const cachedChannels = channelCache[cacheKey];
-  const isChannelCacheValid = cachedChannels && (Date.now() - cachedChannels.fetchedAt) < 3600000; // 1 hour in ms
-
-  // Use cache if available and valid, otherwise use API response
-  // But propagate error from channelsData if it exists
-  const displayChannelsData = isChannelCacheValid && !shouldForceRefresh && !channelsData?.error
-    ? { success: true, channels: cachedChannels.data }
-    : channelsData;
-
   // Check if we should use shorts cache before making API call
   const cachedShorts = shortsCache[cacheKey];
   const isShortsCacheValid = cachedShorts && (Date.now() - cachedShorts.fetchedAt) < 3600000; // 1 hour in ms
@@ -599,16 +530,6 @@ export default function YouTubeTrends() {
     }
   }, [cacheKey, isCacheValid, shouldForceRefresh, cached]);
 
-  // When channel cache is used, update lastUpdateTimesByKey with cachedChannels.fetchedAt
-  useEffect(() => {
-    if (isChannelCacheValid && !shouldForceRefresh && cachedChannels) {
-      setLastUpdateTimesByKey((prev) => ({
-        ...prev,
-        [cacheKey]: cachedChannels.fetchedAt,
-      }));
-    }
-  }, [cacheKey, isChannelCacheValid, shouldForceRefresh, cachedChannels]);
-
   // When shorts cache is used, update lastUpdateTimesByKey with cachedShorts.fetchedAt
   useEffect(() => {
     if (isShortsCacheValid && !shouldForceRefresh && cachedShorts) {
@@ -638,24 +559,6 @@ export default function YouTubeTrends() {
     }
   }, [videosData, cacheKey, shouldCallAPI]);
 
-  // Update channel cache and last update time when data is fetched successfully (only on API call, not cache)
-  useEffect(() => {
-    if (channelsData?.success && channelsData?.channels && channelsData.channels.length > 0 && shouldCallAPI) {
-      const fetchedAt = Date.now();
-      setChannelCache((prev) => ({
-        ...prev,
-        [cacheKey]: {
-          data: channelsData.channels,
-          fetchedAt,
-        },
-      }));
-      setLastUpdateTimesByKey((prev) => ({
-        ...prev,
-        [cacheKey]: fetchedAt,
-      }));
-    }
-  }, [channelsData, cacheKey, shouldCallAPI]);
-
   // Update shorts cache and last update time when data is fetched successfully (only on API call, not cache)
   useEffect(() => {
     if (shortsData?.success && shortsData?.videos && shortsData.videos.length > 0 && shouldCallAPI) {
@@ -683,23 +586,6 @@ export default function YouTubeTrends() {
       // Force refetch by invalidating cache and bypassing 1-hour check
       if (activeTab === "rising") {
         await refetchRising();
-      } else if (activeTab === "channels") {
-        const result = await refetchChannels();
-        // Update time only if refetch was successful
-        if (result.data?.success && result.data?.channels && result.data.channels.length > 0) {
-          const fetchedAt = Date.now();
-          setChannelCache((prev) => ({
-            ...prev,
-            [cacheKey]: {
-              data: result.data.channels,
-              fetchedAt,
-            },
-          }));
-          setLastUpdateTimesByKey((prev) => ({
-            ...prev,
-            [cacheKey]: fetchedAt,
-          }));
-        }
       } else if (activeTab === "shorts") {
         const result = await refetchShorts();
         // Update time only if refetch was successful
@@ -1370,211 +1256,6 @@ export default function YouTubeTrends() {
     );
   };
 
-  // Render channels tab
-  const renderChannelsTab = () => {
-    // Check API Key status first (highest priority)
-    if (!apiKeyData?.exists || apiKeyData?.testStatus !== "success") {
-      return (
-        <div className="emptyStateContainer">
-          <AlertCircle className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">
-            YouTube API 키 오류입니다.
-            <br />
-            API 키 확인 후 다시 입력해주세요.
-          </p>
-        </div>
-      );
-    }
-
-    if (isChannelsLoading && !isChannelCacheValid) {
-      return (
-        <div className="emptyStateContainer">
-          <Clock className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">인기 채널 데이터를 불러오는 중입니다...</p>
-        </div>
-      );
-    }
-
-    if (channelsError && !isChannelCacheValid) {
-      return (
-        <div className="emptyStateContainer">
-          <AlertCircle className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">
-            YouTube API 키 오류입니다.
-            <br />
-            API 키 확인 후 다시 입력해주세요.
-          </p>
-        </div>
-      );
-    }
-
-    const displayChannelsError = displayChannelsData && "error" in displayChannelsData
-      ? displayChannelsData.error
-      : null;
-
-    // Check for API error first (higher priority than empty state)
-    if (displayChannelsError) {
-      return (
-        <div className="emptyStateContainer">
-          <AlertCircle className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">
-            {displayChannelsError.includes("\n") ? (
-              <>
-                {displayChannelsError.split("\n").map((line: string, idx: number) => (
-                  <span key={idx}>
-                    {line}
-                    {idx === 0 && <br />}
-                  </span>
-                ))}
-              </>
-            ) : (
-              displayChannelsError
-            )}
-          </p>
-        </div>
-      );
-    }
-
-    if (!displayChannelsData?.success || !displayChannelsData?.channels || displayChannelsData.channels.length === 0) {
-      return (
-        <div className="emptyStateContainer">
-          <AlertCircle className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">
-            선택한 조건에서 인기 채널을 찾을 수 없습니다.
-          </p>
-        </div>
-      );
-    }
-
-    return (
-      <div>
-        {/* Last Update Info - Mobile */}
-        {lastUpdateTime && (
-          <div className="updateInfoSection updateInfoSectionMobile">
-            <span className="updateInfoText">
-              {formatLastUpdateTime(lastUpdateTime)}
-            </span>
-            <button
-              onClick={handleRefreshClick}
-              disabled={isRefreshing}
-              className="refreshButton refreshButtonIconOnly"
-              title="새로고침"
-            >
-              <RotateCw size={16} className={isRefreshing ? "refreshIconSpinning" : ""} />
-            </button>
-          </div>
-        )}
-        {lastUpdateTime && (
-          <div className="updateInfoSubtextRow">
-            <span className="updateInfoSubtext">데이터는 최대 1시간 단위로 갱신됩니다</span>
-          </div>
-        )}
-        {/* Last Update Info - Desktop */}
-        {lastUpdateTime && (
-          <div className="updateInfoSection updateInfoSectionDesktop">
-            <div className="updateInfoContent">
-              <span className="updateInfoText">
-                {formatLastUpdateTime(lastUpdateTime)}
-              </span>
-              <span className="updateInfoDot">·</span>
-              <span className="updateInfoSubtext">데이터는 최대 1시간 단위로 갱신됩니다</span>
-            </div>
-            <button
-              onClick={handleRefreshClick}
-              disabled={isRefreshing}
-              className="refreshButton"
-              title="새로고침"
-            >
-              <RotateCw size={16} className={isRefreshing ? "refreshIconSpinning" : ""} />
-              {isRefreshing ? "새로고침 중..." : "새로고침"}
-            </button>
-          </div>
-        )}
-        <div className="channelsGrid">
-          {displayChannelsData.channels.map((channel: any) => (
-            <article key={channel.channelId} className="channelCard">
-              <div className="channelCardHeader">
-              <a
-                href={`https://www.youtube.com/channel/${channel.channelId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="channelSummaryLink"
-                aria-label={`${channel.channelTitle} 채널 보기`}
-              >
-                <div className="channelThumbnailWrapper">
-                  <img src={channel.thumbnail} alt="" className="channelThumbnail" />
-                </div>
-                <div className="channelInfo">
-                  <h3 className="channelTitle">{channel.channelTitle}</h3>
-                  <div className="channelStats">
-                    <span>{formatKoreanNumber(channel.subscriberCount)} 구독자</span>
-                    <span>·</span>
-                    <span>{formatKoreanNumber(channel.viewCount)} 조회</span>
-                    <span>·</span>
-                    <span>{channel.videoCount.toLocaleString("ko-KR")}개 영상</span>
-                  </div>
-                </div>
-              </a>
-              {isAuthenticated && (
-                <button
-                  type="button"
-                  className={`channelBookmarkButton${channelBookmarks.some(item => item.channelId === channel.channelId) ? " bookmarked" : ""}`}
-                  title={channelBookmarks.some(item => item.channelId === channel.channelId) ? "채널 보관 해제" : "채널 보관"}
-                  aria-label={`${channel.channelTitle} ${channelBookmarks.some(item => item.channelId === channel.channelId) ? "보관 해제" : "보관"}`}
-                  disabled={addChannelBookmark.isPending || removeChannelBookmark.isPending}
-                  onClick={() => {
-                    if (channelBookmarks.some(item => item.channelId === channel.channelId)) {
-                      removeChannelBookmark.mutate({ channelId: channel.channelId });
-                    } else {
-                      addChannelBookmark.mutate({ channelId: channel.channelId, title: channel.channelTitle, thumbnail: channel.thumbnail });
-                    }
-                  }}
-                >
-                  <Bookmark size={19} fill={channelBookmarks.some(item => item.channelId === channel.channelId) ? "currentColor" : "none"} />
-                </button>
-              )}
-              </div>
-
-              {channel.latestVideos?.length > 0 && (
-                <div className="channelLatestSection">
-                  <span className="channelLatestLabel">최신 영상</span>
-                  <div className="channelLatestGrid">
-                    {channel.latestVideos.slice(0, 4).map((video: any) => (
-                      <button
-                        type="button"
-                        key={video.videoId}
-                        className="channelLatestVideo"
-                        title={video.title}
-                        aria-label={`${video.title} 영상 분석 보기`}
-                        onClick={() => {
-                          setSelectedVideo({
-                            id: video.videoId,
-                            title: video.title,
-                            channelTitle: channel.channelTitle,
-                            channelThumbnail: channel.thumbnail,
-                            viewCount: 0,
-                            publishedAt: video.publishedAt || new Date().toISOString(),
-                            duration: "PT0S",
-                          });
-                          setIsModalOpen(true);
-                        }}
-                      >
-                        <img src={video.thumbnail} alt="" loading="lazy" />
-                        <span className="channelLatestPlay" aria-hidden="true">
-                          <Play size={14} fill="currentColor" />
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </article>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
   const renderRisingTab = () => {
     if (isRisingLoading) {
       return (
@@ -2007,7 +1688,7 @@ export default function YouTubeTrends() {
           </div>
         </div>
 
-        {(activeTab === "category" || activeTab === "channels") && (
+        {activeTab === "category" && (
           <div className="filterGroup">
             <label htmlFor="category-select" className="filterLabel">
               카테고리
@@ -2089,8 +1770,6 @@ export default function YouTubeTrends() {
         <YouTubeApiStatusCard activeTab={activeTab} apiKeyMessage={TAB_MESSAGES.trending} />
       ) : activeTab === "trending" || activeTab === "category" ? (
         renderTrendingTab()
-      ) : activeTab === "channels" ? (
-        renderChannelsTab()
       ) : activeTab === "shorts" ? (
         renderShortsTab()
       ) : null}

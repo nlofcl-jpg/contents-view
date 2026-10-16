@@ -41,7 +41,7 @@ export default function PrivacyPolicy() {
             <h2>2. 개인정보의 처리 목적</h2>
             <ul>
               <li>Google 로그인, 회원 식별 및 계정·권한 관리</li>
-              <li>회원별 콘텐츠 접근과 YouTube 영상·채널 보관함 제공</li>
+              <li>회원별 콘텐츠 접근과 YouTube 영상 보관함 제공</li>
               <li>이용자가 등록한 API 키를 이용한 외부 서비스 연동과 연결 상태 확인</li>
               <li>공지 확인 상태와 화면 설정 유지 등 이용 편의 제공</li>
               <li>제휴 문의 접수, 내용 확인 및 답변</li>
