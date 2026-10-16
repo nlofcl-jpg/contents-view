@@ -24,6 +24,28 @@
       "destination": "/api/issue-preview?id=:id"
     },
     {
+      "source": "/ai-studio",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|Twitterbot|Slackbot|Discordbot|LinkedInBot|WhatsApp|TelegramBot|KakaoTalk-Scrap|kakaotalk-scrap|naverbot|Googlebot|bingbot|Baiduspider|Yeti|Applebot).*"
+        }
+      ],
+      "destination": "/api/ai-studio-preview"
+    },
+    {
+      "source": "/ai-studio/:section",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|Twitterbot|Slackbot|Discordbot|LinkedInBot|WhatsApp|TelegramBot|KakaoTalk-Scrap|kakaotalk-scrap|naverbot|Googlebot|bingbot|Baiduspider|Yeti|Applebot).*"
+        }
+      ],
+      "destination": "/api/ai-studio-preview?section=:section"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
