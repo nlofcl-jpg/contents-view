@@ -25,7 +25,7 @@ describe("buildIssueKakaoFeed", () => {
       },
     });
     expect(feed.buttons).toEqual([{ title: "전체 보기", link: feed.content.link }]);
-    expect(feed.itemContent.profileText).toBe("CONTENTS VIEW");
+    expect(feed.itemContent).toBeUndefined();
   });
 
   it("falls back to the service image when an issue has no usable thumbnail", () => {

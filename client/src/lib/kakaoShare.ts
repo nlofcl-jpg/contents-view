@@ -19,7 +19,7 @@ type KakaoFeed = {
     imageHeight: number;
     link: { webUrl: string; mobileWebUrl: string };
   };
-  itemContent: { profileText: string; profileImageUrl: string };
+  itemContent?: { profileText: string; profileImageUrl: string };
   buttons: Array<{ title: string; link: { webUrl: string; mobileWebUrl: string } }>;
 };
 
@@ -64,10 +64,6 @@ export function buildIssueKakaoFeed(issue: ShareIssue): KakaoFeed {
       imageWidth: 800,
       imageHeight: 400,
       link,
-    },
-    itemContent: {
-      profileText: "CONTENTS VIEW",
-      profileImageUrl: iconUrl,
     },
     buttons: [{ title: "전체 보기", link }],
   };
