@@ -17,7 +17,6 @@ const videoStyleGroups = [
   {
     title: "지식 · 다큐",
     styles: [
-      { name: "건축사전st", description: "건축·도시·공간을 알기 쉽게 설명하는 스타일" },
       { name: "과학썰st", description: "흥미로운 과학 이야기를 풀어내는 스타일" },
       { name: "더다큐롱폼st", description: "하나의 주제를 깊이 있게 따라가는 스타일" },
     ],
@@ -27,18 +26,14 @@ const videoStyleGroups = [
     styles: [
       { name: "동물더쿠st", description: "동물의 매력과 일상을 담는 스타일" },
       { name: "랭킹st", description: "흥미로운 주제를 순위로 정리하는 스타일" },
-      { name: "무비st", description: "영화 이야기를 장면 중심으로 전하는 스타일" },
       { name: "비하인드스토리st", description: "알려지지 않은 뒷이야기를 들려주는 스타일" },
-      { name: "스포츠st", description: "경기와 선수 이야기를 생생하게 전하는 스타일" },
     ],
   },
   {
     title: "쇼핑 · 라이프",
     styles: [
       { name: "썰쇼핑st", description: "이야기와 함께 상품을 소개하는 스타일" },
-      { name: "연예인쇼핑st", description: "인물의 취향과 아이템을 살펴보는 스타일" },
       { name: "요즘PDst", description: "요즘 관심사를 가볍게 짚어보는 스타일" },
-      { name: "이게맏나st", description: "의외의 장면을 유쾌하게 풀어내는 스타일" },
     ],
   },
   {
@@ -47,7 +42,6 @@ const videoStyleGroups = [
       { name: "이라스토야st", description: "그림과 이야기로 장면을 전하는 스타일" },
       { name: "인스타릴스st", description: "짧고 빠르게 시선을 끄는 스타일" },
       { name: "잘난지st", description: "인물과 주제를 감각적으로 소개하는 스타일" },
-      { name: "정치채널st", description: "정치 이슈의 흐름을 짚어보는 스타일" },
       { name: "커뮤니티형st", description: "온라인 반응을 묶어 전달하는 스타일" },
     ],
   },
