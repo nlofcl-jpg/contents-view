@@ -15,29 +15,21 @@ const productionFormats: { id: ProductionFormat; label: string; emptyMessage: st
 
 const videoStyleGroups = [
   {
-    title: "지식 · 다큐",
+    title: "쇼츠 영상",
+    tone: 0,
     styles: [
       { name: "과학썰st", description: "흥미로운 과학 이야기를 풀어내는 스타일" },
       { name: "더다큐롱폼st", description: "하나의 주제를 깊이 있게 따라가는 스타일" },
-    ],
-  },
-  {
-    title: "엔터 · 스포츠",
-    styles: [
       { name: "동물더쿠st", description: "동물의 매력과 일상을 담는 스타일" },
       { name: "랭킹st", description: "흥미로운 주제를 순위로 정리하는 스타일" },
       { name: "비하인드스토리st", description: "알려지지 않은 뒷이야기를 들려주는 스타일" },
-    ],
-  },
-  {
-    title: "쇼핑 · 라이프",
-    styles: [
       { name: "썰쇼핑st", description: "이야기와 함께 상품을 소개하는 스타일" },
       { name: "요즘PDst", description: "요즘 관심사를 가볍게 짚어보는 스타일" },
     ],
   },
   {
-    title: "숏폼 · 이슈",
+    title: "릴스 · 이슈",
+    tone: 3,
     styles: [
       { name: "이라스토야st", description: "그림과 이야기로 장면을 전하는 스타일" },
       { name: "인스타릴스st", description: "짧고 빠르게 시선을 끄는 스타일" },
@@ -203,7 +195,7 @@ export default function AIStudio() {
                   <h2 id={`video-style-group-${groupIndex}`}>{group.title}</h2>
                   <div className="aiStudioVideoGrid">
                     {group.styles.map(style => (
-                      <article className={`aiStudioVideoStyle aiStudioVideoStyleTone${groupIndex}`} key={style.name}>
+                      <article className={`aiStudioVideoStyle aiStudioVideoStyleTone${group.tone}`} key={style.name}>
                         <div className="aiStudioVideoStyleThumbnail" aria-hidden="true">
                           <Video />
                         </div>
