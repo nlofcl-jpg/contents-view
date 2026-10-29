@@ -2,6 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { appRouter } from "./routers";
 import { clearCache } from "./naver.cache";
 
+vi.mock("./naverAnalysisQuota", async () => {
+  const { publicProcedure } = await import("./_core/trpc");
+  return { naverAnalysisProcedure: publicProcedure };
+});
+
 // Mock environment variables and clear cache
 beforeEach(() => {
   process.env.NAVER_CLIENT_ID = "test-client-id";

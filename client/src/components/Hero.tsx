@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { readHeroKeywords } from "@/lib/heroKeywords";
@@ -14,6 +14,8 @@ const searchPlatforms = [
 ];
 
 export default function Hero() {
+  const heroRef = useRef<HTMLElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
   const [, setLocation] = useLocation();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [selectedPlatform, setSelectedPlatform] = useState(searchPlatforms[0]);
@@ -21,6 +23,35 @@ export default function Hero() {
   const [keyword, setKeyword] = useState("");
   const [popularKeywords, setPopularKeywords] = useState<string[]>([]);
   const [guestKeyword, setGuestKeyword] = useState<string | null>(null);
+
+  useLayoutEffect(() => {
+    const hero = heroRef.current;
+    const backdrop = backdropRef.current;
+    if (!hero || !backdrop) return;
+    const scroller = hero.closest<HTMLElement>(".mainContent");
+
+    // Anchor all visual layers to the hero's unscrolled position.
+    const updateBounds = () => {
+      const bounds = hero.getBoundingClientRect();
+      const top = bounds.top + (scroller?.scrollTop ?? window.scrollY);
+      backdrop.style.top = `${top}px`;
+      backdrop.style.left = `${bounds.left + (scroller?.scrollLeft ?? window.scrollX)}px`;
+      backdrop.style.width = `${bounds.width}px`;
+      backdrop.style.height = `${bounds.height}px`;
+      backdrop.style.setProperty("--hero-backdrop-clip-top", `${(scroller?.getBoundingClientRect().top ?? 0) - top}px`);
+      backdrop.style.visibility = "visible";
+    };
+
+    const observer = new ResizeObserver(updateBounds);
+    observer.observe(hero);
+    if (scroller) observer.observe(scroller);
+    updateBounds();
+    window.addEventListener("resize", updateBounds);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateBounds);
+    };
+  }, []);
 
   useEffect(() => {
     if (!supabase) return;
@@ -72,7 +103,9 @@ export default function Hero() {
   };
 
   return (
-    <section className={`hero${isPlatformMenuOpen ? " heroMenuOpen" : ""}`}>
+    <>
+    <div ref={backdropRef} className="heroBackdrop" aria-hidden="true" />
+    <section ref={heroRef} className={`hero${isPlatformMenuOpen ? " heroMenuOpen" : ""}`}>
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
         <div className="heroCopy">
           <p className="heroKicker">TRACK. ANALYZE. DISCOVER.</p>
@@ -176,5 +209,6 @@ export default function Hero() {
         onSignup={() => goToGuestAuth("signup")}
       />
     </section>
+    </>
   );
 }

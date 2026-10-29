@@ -31,6 +31,7 @@ export default function PrivacyPolicy() {
                   <tr><td>API 연동</td><td>이용자가 등록한 외부 API 키, 키 일부 표시값, 연결 확인 상태·일시</td></tr>
                   <tr><td>제휴 문의</td><td>이름 또는 상호명, 연락처, 이메일, 문의 내용, 접수 일시</td></tr>
                   <tr><td>서비스 운영</td><td>로그인 쿠키와 브라우저 저장정보. 접속 IP, 브라우저·기기 정보 및 요청 기록은 호스팅·보안 과정에서 처리될 수 있음</td></tr>
+                  <tr><td>분석 이용 제한</td><td>일별 분석 횟수, 계정 또는 접속 IP를 기반으로 생성한 일별 해시 식별값</td></tr>
                 </tbody>
               </table>
             </div>
@@ -61,6 +62,7 @@ export default function PrivacyPolicy() {
                   <tr><td>제휴 문의</td><td>문의 처리 목적이 달성되거나 삭제 요청이 처리될 때까지</td></tr>
                   <tr><td>브라우저 저장정보</td><td>이용자가 삭제하거나 해당 정보의 유효기간이 끝날 때까지</td></tr>
                   <tr><td>접속·보안 기록</td><td>보안 및 장애 대응에 필요한 기간 동안 호스팅 사업자의 정책에 따라 처리</td></tr>
+                  <tr><td>분석 횟수 기록</td><td>일일 이용 제한에 사용하며, 7일이 지난 기록은 후속 분석 요청 시 삭제</td></tr>
                 </tbody>
               </table>
             </div>

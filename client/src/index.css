@@ -1498,6 +1498,18 @@ a {
   justify-content: center;
   padding: 28px 72px;
   overflow: visible;
+}
+
+.mainContent:has(.hero) {
+  isolation: isolate;
+}
+
+.heroBackdrop {
+  position: fixed;
+  z-index: -1;
+  visibility: hidden;
+  pointer-events: none;
+  clip-path: inset(var(--hero-backdrop-clip-top, 0px) -100vw -72px);
   background:
     radial-gradient(circle at 82% 34%, rgba(21, 140, 255, 0.13), transparent 42%),
     linear-gradient(90deg, rgba(7, 10, 17, 0.94) 0%, rgba(7, 10, 17, 0.82) 45%, rgba(7, 10, 17, 0.42) 100%);
@@ -1507,7 +1519,7 @@ a {
   z-index: 7;
 }
 
-.hero::before {
+.heroBackdrop::before {
   content: "";
   position: absolute;
   inset: -44px -72px -24px;
@@ -1519,7 +1531,7 @@ a {
   mask-image: radial-gradient(ellipse at 68% 45%, #000 0%, #000 48%, rgba(0, 0, 0, 0.64) 66%, transparent 92%);
 }
 
-.hero::after {
+.heroBackdrop::after {
   content: "";
   position: absolute;
   inset: -24px 0 -72px;
@@ -1896,7 +1908,7 @@ a {
     padding: 24px 72px;
   }
 
-  .hero::before {
+  .heroBackdrop::before {
     inset: -40px -180px -24px -56px;
     background-position: 72% 20%;
   }
@@ -2031,7 +2043,7 @@ a {
     padding: 24px 20px;
   }
 
-  .hero::before {
+  .heroBackdrop::before {
     inset: -36px -260px -24px -80px;
     opacity: 0.62;
     background-position: 74% 18%;
@@ -3126,6 +3138,19 @@ a {
   margin-top: 18px;
   color: #8fa2bc;
   font-size: 12px;
+}
+
+.issueDetailByline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  min-width: 0;
+}
+
+.issueDetailByline > span,
+.issueDetailByline > time {
+  white-space: nowrap;
 }
 
 .issueDetailHeader h1 {
@@ -10543,16 +10568,6 @@ input[type="date"].youtubeSelect {
 .trend-cards-carousel > article {
   min-width: 0;
   scroll-snap-align: start;
-}
-
-@media (min-width: 1280px) and (hover: hover) {
-  .trend-cards-carousel[data-at-start="true"] > article {
-    transition: transform 240ms ease;
-  }
-
-  .trend-section:hover .trend-cards-carousel[data-at-start="true"] > article {
-    transform: translateX(-3rem);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

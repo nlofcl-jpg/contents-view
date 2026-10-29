@@ -5,7 +5,8 @@ import * as db from "./db";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { COOKIE_NAME } from "@shared/const";
-import { unifiedInsightProcedure } from "./naver.unifiedInsight";
+import { unifiedInsightProcedure, unifiedInsightBatchProcedure } from "./naver.unifiedInsight";
+import { naverAnalysisProcedure } from "./naverAnalysisQuota";
 import { runDiagnostics } from "./naver.diagnostic";
 import * as userApiKeys from "./_core/userApiKeys";
 import * as cheerio from "cheerio";
@@ -2723,8 +2724,9 @@ export const appRouter = router({
       }),
 
     unifiedInsight: unifiedInsightProcedure,
+    unifiedInsightBatch: unifiedInsightBatchProcedure,
 
-    blogAnalysis: publicProcedure
+    blogAnalysis: naverAnalysisProcedure
       .input(z.object({
         blogUrl: z.string().min(1),
       }))
@@ -2742,7 +2744,7 @@ export const appRouter = router({
         }
       }),
 
-    blogPostDetails: publicProcedure
+    blogPostDetails: naverAnalysisProcedure
       .input(z.object({
         postUrl: z.string().min(1),
       }))
@@ -2784,7 +2786,7 @@ export const appRouter = router({
         }
       }),
 
-    blogPostAnalysis: publicProcedure
+    blogPostAnalysis: naverAnalysisProcedure
       .input(z.object({
         postUrl: z.string().min(1),
         title: z.string().optional(),

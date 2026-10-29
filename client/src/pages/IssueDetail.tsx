@@ -87,9 +87,12 @@ export default function IssueDetail() {
           <header className="issueDetailHeader">
             <h1>{issue.article_title || issue.title}</h1>
             <div className="issueDetailMeta">
-              <time dateTime={issue.created_at}>
-                {new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric" }).format(new Date(issue.created_at))}
-              </time>
+              <div className="issueDetailByline">
+                <span>CONTENTS VIEW</span>
+                <time dateTime={issue.created_at}>
+                  {new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric" }).format(new Date(issue.created_at))}
+                </time>
+              </div>
               <button
                 type="button"
                 className="issueKakaoShareButton"

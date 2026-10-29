@@ -1,4 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import GuestAccessPrompt from "@/components/GuestAccessPrompt";
+import { NAVER_GUEST_DAILY_LIMIT_MESSAGE, NAVER_MEMBER_DAILY_LIMIT_MESSAGE } from "@shared/naverAnalysisQuota";
 import { trpc } from "@/lib/trpc";
 import { UnifiedChart } from "@/components/UnifiedChart";
 import { ChevronDown, CircleAlert, ExternalLink, Heart, ListFilter, Loader2, MessageCircle } from "lucide-react";
@@ -168,6 +171,26 @@ const createEmptyTabSearchState = (): TabSearchState => ({
 export default function UnifiedInsights() {
   // State management
   const [location, setLocation] = useLocation();
+  const { loading: authLoading } = useAuth();
+  const [guestAnalysisPromptOpen, setGuestAnalysisPromptOpen] = useState(false);
+  const initialKeywordQueried = useRef(false);
+
+  const analysisErrorMessage = (error: unknown, fallback: string) => {
+    const message = error instanceof Error ? error.message : "";
+    if (message === NAVER_GUEST_DAILY_LIMIT_MESSAGE) {
+      setGuestAnalysisPromptOpen(true);
+      return "";
+    }
+    if (message === NAVER_MEMBER_DAILY_LIMIT_MESSAGE) return message;
+    return fallback;
+  };
+
+  const goToAnalysisAuth = (mode: "login" | "signup") => {
+    const params = new URLSearchParams({ redirect: `/trends/naver${window.location.search}` });
+    if (mode === "signup") params.set("mode", "signup");
+    setGuestAnalysisPromptOpen(false);
+    setLocation(`/login?${params.toString()}`);
+  };
   const [keywords, setKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState("");
   const [isKeywordInputFocused, setIsKeywordInputFocused] = useState(false);
@@ -551,7 +574,7 @@ export default function UnifiedInsights() {
       setIsLoading(false);
     },
     onError: (error) => {
-      setQueryError("조회 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+      setQueryError(analysisErrorMessage(error, "조회 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."));
       setQuerySuccess(false);
       setChartData(null);
       setTrendComparisonData(null);
@@ -559,7 +582,7 @@ export default function UnifiedInsights() {
     },
   });
 
-  const { mutateAsync: queryTrendFilterInsight } = trpc.naver.unifiedInsight.useMutation();
+  const { mutateAsync: queryTrendFilterInsight } = trpc.naver.unifiedInsightBatch.useMutation();
 
   const { mutate: queryBlogAnalysis } = trpc.naver.blogAnalysis.useMutation({
     onSuccess: (data: BlogAnalysisData) => {
@@ -572,9 +595,9 @@ export default function UnifiedInsights() {
       }
       setIsBlogLoading(false);
     },
-    onError: () => {
+    onError: (error) => {
       setBlogAnalysisData(null);
-      setQueryError("블로그 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+      setQueryError(analysisErrorMessage(error, "블로그 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요."));
       setIsBlogLoading(false);
     },
   });
@@ -621,8 +644,8 @@ export default function UnifiedInsights() {
       setBlogPostRankData(data);
       setBlogPostAnalysisOpen({ [data.post.link]: true });
       runBlogPostEngagement(data.post);
-    } catch {
-      setQueryError("게시글 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+    } catch (error) {
+      setQueryError(analysisErrorMessage(error, "게시글 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요."));
     } finally {
       setIsBlogPostRankLoading(false);
     }
@@ -690,9 +713,10 @@ export default function UnifiedInsights() {
         setBlogPostKeywordInputs(prev => ({ ...prev, [post.link]: "" }));
       }
     } catch (error) {
+      const message = analysisErrorMessage(error, "게시글 분석에 실패했습니다. 잠시 후 다시 시도해주세요.");
       setBlogPostAnalysisErrors(prev => ({
         ...prev,
-        [post.link]: error instanceof Error ? error.message : "게시글 분석에 실패했습니다. 잠시 후 다시 시도해주세요.",
+        [post.link]: message,
       }));
     } finally {
       setBlogPostAnalysisLoading(null);
@@ -749,6 +773,7 @@ export default function UnifiedInsights() {
   };
 
   const handleSearch = () => {
+    if (authLoading) return;
     const trimmed = keywordInput.trim();
     if (!trimmed) {
       setQueryError(
@@ -776,6 +801,8 @@ export default function UnifiedInsights() {
   };
 
   useEffect(() => {
+    if (authLoading || initialKeywordQueried.current) return;
+    initialKeywordQueried.current = true;
     const initialKeyword = getInitialKeywordFromUrl();
     if (!initialKeyword) return;
 
@@ -783,7 +810,7 @@ export default function UnifiedInsights() {
     runQuery([initialKeyword]);
     // URL로 들어온 최초 키워드만 자동 조회합니다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authLoading]);
 
   const handleApplyTrendFilters = async () => {
     const nextKeywords = keywords.length > 0 ? keywords : [keywordInput.trim()].filter(Boolean);
@@ -807,24 +834,18 @@ export default function UnifiedInsights() {
     setOpenTrendFilterMenu(null);
 
     try {
-      const results = await Promise.all(
-        combinations.map(async (combination) => {
-          const response: any = await queryTrendFilterInsight({
-            keywords: [baseKeyword],
-            startDate: startDateStr,
-            endDate: endDateStr,
-            timeUnit: timeUnit as any,
-            device: combination.device.value,
-            gender: combination.gender.value,
-            ages: combination.age.values,
-          });
-
-          return {
-            combination,
-            response,
-          };
-        })
-      );
+      const responses = await queryTrendFilterInsight({
+        requests: combinations.map(combination => ({
+          keywords: [baseKeyword],
+          startDate: startDateStr,
+          endDate: endDateStr,
+          timeUnit: timeUnit as any,
+          device: combination.device.value,
+          gender: combination.gender.value,
+          ages: combination.age.values,
+        })),
+      });
+      const results = combinations.map((combination, index) => ({ combination, response: responses[index] as any }));
 
       const trend: Record<string, InsightPoint[]> = {};
       const shopping: Record<string, InsightPoint[]> = {};
@@ -866,8 +887,8 @@ export default function UnifiedInsights() {
       setEndDateForChart(endDateStr);
       setTimeUnitForChart(timeUnit);
       setFilterLabelForChart(getFilterLabel());
-    } catch {
-      setTrendFilterError("필터 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+    } catch (error) {
+      setTrendFilterError(analysisErrorMessage(error, "필터 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요."));
     } finally {
       setIsTrendFilterLoading(false);
     }
@@ -1085,7 +1106,7 @@ export default function UnifiedInsights() {
           />
           <button
             onClick={handleSearch}
-            disabled={isLoading || isBlogLoading}
+            disabled={authLoading || isLoading || isBlogLoading || isBlogPostRankLoading}
             className="h-9 shrink-0 rounded-[14px] bg-blue-600 px-3 text-[13px] font-semibold text-white transition-colors hover:bg-blue-500 disabled:bg-slate-300 disabled:text-slate-500 md:h-10 md:w-24 md:text-sm"
           >
             분석
@@ -1821,6 +1842,13 @@ export default function UnifiedInsights() {
           </div>
         </div>
       )}
+      <GuestAccessPrompt
+        open={guestAnalysisPromptOpen}
+        description={NAVER_GUEST_DAILY_LIMIT_MESSAGE}
+        onBrowse={() => setGuestAnalysisPromptOpen(false)}
+        onLogin={() => goToAnalysisAuth("login")}
+        onSignup={() => goToAnalysisAuth("signup")}
+      />
     </div>
   );
 }

@@ -292,7 +292,7 @@ export default function Header({
           </button>
           <button
             className="mobileMenuButton mobileMenuButtonLeft"
-            onClick={() => { if (!onGuestMenuAccess?.()) onToggleMobileMenu?.("menu"); }}
+            onClick={() => onToggleMobileMenu?.("menu")}
             type="button"
             aria-label="메뉴"
           >
@@ -385,10 +385,6 @@ export default function Header({
             type="button"
             className={`headerNavButton ${location.startsWith("/news") ? "active" : ""}`}
             onClick={() => {
-              if (onGuestMenuAccess?.("/news", () => setOpenNewsMenu(true))) {
-                setOpenNewsMenu(false);
-                return;
-              }
               setOpenNewsMenu(!openNewsMenu);
             }}
           >

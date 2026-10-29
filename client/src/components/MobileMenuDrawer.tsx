@@ -9,6 +9,7 @@ interface MobileMenuDrawerProps {
   onClose: () => void;
   onOpenMyPageModal?: () => void;
   onNavigate?: () => void;
+  onGuestMenuAccess?: (path: string) => boolean;
 }
 
 export function MobileMenuDrawer({
@@ -16,6 +17,7 @@ export function MobileMenuDrawer({
   onClose,
   onOpenMyPageModal,
   onNavigate,
+  onGuestMenuAccess,
 }: MobileMenuDrawerProps) {
   const { user, isAuthenticated, logout } = useAuth();
   const [location, navigate] = useLocation();
@@ -31,7 +33,8 @@ export function MobileMenuDrawer({
   };
 
   const handleNavigation = (path: string) => {
-    navigate(path);
+    const showGuestPrompt = path !== "/" && !path.startsWith("/login") && onGuestMenuAccess?.(path);
+    if (!showGuestPrompt) navigate(path);
     onNavigate?.();
     onClose();
   };

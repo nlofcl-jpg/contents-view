@@ -561,7 +561,7 @@ export default function ServiceCards() {
           </div>
         </div>
 
-        <div ref={carouselRef} data-at-start={!canScrollLeft} className="trend-cards-carousel grid gap-5" role="region" aria-label="실시간 트렌드 카드" tabIndex={0}>
+        <div ref={carouselRef} className="trend-cards-carousel grid gap-5" role="region" aria-label="실시간 트렌드 카드" tabIndex={0}>
           {cards.map((card) => (
             <TrendDashboardCard
               key={card.id}

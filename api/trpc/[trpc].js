@@ -1032,7 +1032,81 @@ var systemRouter = router({
 
 // server/routers.ts
 import { z as z3 } from "zod";
+import { TRPCError as TRPCError4 } from "@trpc/server";
+
+// server/naverAnalysisQuota.ts
+import { createHmac } from "node:crypto";
+import { createClient as createClient2 } from "@supabase/supabase-js";
 import { TRPCError as TRPCError3 } from "@trpc/server";
+
+// shared/naverAnalysisQuota.ts
+var NAVER_GUEST_DAILY_LIMIT_MESSAGE = "\uBE44\uB85C\uADF8\uC778 \uBD84\uC11D\uC740 \uD558\uB8E8 1\uD68C\uAE4C\uC9C0 \uAC00\uB2A5\uD569\uB2C8\uB2E4. \uB85C\uADF8\uC778\uD558\uBA74 \uD558\uB8E8 10\uD68C\uAE4C\uC9C0 \uBD84\uC11D\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.";
+var NAVER_MEMBER_DAILY_LIMIT_MESSAGE = "\uC624\uB298\uC758 \uBD84\uC11D \uD55C\uB3C4 10\uD68C\uB97C \uBAA8\uB450 \uC0AC\uC6A9\uD588\uC2B5\uB2C8\uB2E4. \uB0B4\uC77C \uB2E4\uC2DC \uC774\uC6A9\uD574 \uC8FC\uC138\uC694.";
+
+// server/naverAnalysisQuota.ts
+var quotaStore = ENV.supabaseUrl && ENV.supabaseServiceRoleKey ? createClient2(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
+  auth: { persistSession: false, autoRefreshToken: false }
+}) : null;
+function getNaverQuotaDay(now = /* @__PURE__ */ new Date()) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(now);
+}
+function getNaverQuotaSubject(ctx, secret, day) {
+  let identity;
+  if (ctx.user) {
+    identity = `member:${ctx.user.loginMethod}:${ctx.user.openId || ctx.user.id}`;
+  } else {
+    const forwarded = process.env.VERCEL ? ctx.req.headers["x-vercel-forwarded-for"] || ctx.req.headers["x-forwarded-for"] : void 0;
+    const address = (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(",")[0]?.trim() || ctx.req.socket?.remoteAddress || ctx.req.ip;
+    if (!address) throw new TRPCError3({ code: "BAD_REQUEST", message: "\uC811\uC18D \uC815\uBCF4\uB97C \uD655\uC778\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uC0C8\uB85C\uACE0\uCE68 \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
+    identity = `guest:${address.replace(/^::ffff:/, "")}`;
+  }
+  return createHmac("sha256", secret).update(`${day}:${identity}`).digest("hex");
+}
+function hasSuccessfulAnalysis(data) {
+  if (Array.isArray(data)) return data.some(hasSuccessfulAnalysis);
+  return typeof data === "object" && data !== null && "success" in data && data.success === true;
+}
+var naverAnalysisProcedure = publicProcedure.use(async ({ ctx, next }) => {
+  if (!quotaStore) {
+    throw new TRPCError3({ code: "SERVICE_UNAVAILABLE", message: "\uBD84\uC11D \uC774\uC6A9 \uD69F\uC218\uB97C \uD655\uC778\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
+  }
+  const day = getNaverQuotaDay();
+  const subject = getNaverQuotaSubject(ctx, ENV.supabaseServiceRoleKey, day);
+  const { data, error } = await quotaStore.rpc("consume_naver_analysis_quota", {
+    p_subject_hash: subject,
+    p_actor_kind: ctx.user ? "member" : "guest",
+    p_usage_day: day
+  });
+  if (error || !data?.[0]) {
+    console.error("[Naver quota] Failed to reserve analysis", error?.code);
+    throw new TRPCError3({ code: "SERVICE_UNAVAILABLE", message: "\uBD84\uC11D \uC774\uC6A9 \uD69F\uC218\uB97C \uD655\uC778\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
+  }
+  if (!data[0].allowed) {
+    throw new TRPCError3({
+      code: "TOO_MANY_REQUESTS",
+      message: ctx.user ? NAVER_MEMBER_DAILY_LIMIT_MESSAGE : NAVER_GUEST_DAILY_LIMIT_MESSAGE
+    });
+  }
+  let succeeded = false;
+  try {
+    const result = await next();
+    succeeded = result.ok && hasSuccessfulAnalysis(result.data);
+    return result;
+  } finally {
+    if (!succeeded) {
+      const { error: refundError } = await quotaStore.rpc("refund_naver_analysis_quota", {
+        p_subject_hash: subject,
+        p_usage_day: day
+      });
+      if (refundError) console.error("[Naver quota] Failed to refund analysis", refundError.code);
+    }
+  }
+});
 
 // server/naver.unifiedInsight.ts
 import { z as z2 } from "zod";
@@ -1063,8 +1137,8 @@ function setInCache(key, data) {
 }
 
 // server/naver.unifiedInsight.ts
-import { createClient as createClient2 } from "@supabase/supabase-js";
-import { createHmac } from "crypto";
+import { createClient as createClient3 } from "@supabase/supabase-js";
+import { createHmac as createHmac2 } from "crypto";
 var REQUEST_TIMEOUT_MS = 8e3;
 var NAVER_SEARCH_AD_PROVIDER = "naver-search-ad";
 var NAVER_SEARCH_MAX_START = 901;
@@ -1167,7 +1241,7 @@ function getMatchedShoppingKeyword(shoppingData, fallbackKeyword) {
   );
   return matched?.keyword || matched?.title || fallbackKeyword;
 }
-var supabaseAdmin = ENV.supabaseUrl && ENV.supabaseServiceRoleKey ? createClient2(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
+var supabaseAdmin = ENV.supabaseUrl && ENV.supabaseServiceRoleKey ? createClient3(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
   auth: {
     persistSession: false,
     autoRefreshToken: false
@@ -1209,7 +1283,7 @@ async function getStoredNaverSearchAdCredentials() {
   return data?.encrypted_key ? parseNaverSearchAdCredentials(data.encrypted_key) : null;
 }
 function getNaverSearchAdSignature(timestamp2, method, uri, secretKey) {
-  return createHmac("sha256", secretKey).update(`${timestamp2}.${method}.${uri}`).digest("base64");
+  return createHmac2("sha256", secretKey).update(`${timestamp2}.${method}.${uri}`).digest("base64");
 }
 async function requestNaverSearchAdKeywordTool(credentials, keyword) {
   const method = "GET";
@@ -1474,7 +1548,7 @@ async function fetchWithTimeout(url, options, timeoutMs = REQUEST_TIMEOUT_MS) {
     throw error;
   }
 }
-var unifiedInsightProcedure = publicProcedure.input(z2.object({
+var unifiedInsightInput = z2.object({
   keywords: z2.array(z2.string()).min(0).max(5),
   category: z2.string().optional(),
   startDate: z2.string(),
@@ -1483,7 +1557,8 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
   device: z2.string().optional(),
   gender: z2.string().optional(),
   ages: z2.array(z2.string()).optional()
-})).mutation(async ({ input }) => {
+});
+async function fetchUnifiedInsight(input) {
   const requestedCategory = input.category || "auto";
   const normalizedKeywords = uniqueValues(input.keywords.map(normalizeKeywordInput)).slice(0, 5);
   const cacheKey = generateCacheKey(
@@ -2036,7 +2111,9 @@ var unifiedInsightProcedure = publicProcedure.input(z2.object({
       shopping: {}
     };
   }
-});
+}
+var unifiedInsightProcedure = naverAnalysisProcedure.input(unifiedInsightInput).mutation(({ input }) => fetchUnifiedInsight(input));
+var unifiedInsightBatchProcedure = naverAnalysisProcedure.input(z2.object({ requests: z2.array(unifiedInsightInput).min(1).max(12) })).mutation(({ input }) => Promise.all(input.requests.map(fetchUnifiedInsight)));
 
 // server/naver.diagnostic.ts
 async function testSearchTrendAPI(clientId, clientSecret, keywords, startDate, endDate, timeUnit) {
@@ -2302,8 +2379,8 @@ async function runDiagnostics(keywords, category, startDate, endDate, timeUnit) 
 }
 
 // server/_core/userApiKeys.ts
-import { createClient as createClient3 } from "@supabase/supabase-js";
-var supabaseAdmin2 = ENV.supabaseUrl && ENV.supabaseServiceRoleKey ? createClient3(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
+import { createClient as createClient4 } from "@supabase/supabase-js";
+var supabaseAdmin2 = ENV.supabaseUrl && ENV.supabaseServiceRoleKey ? createClient4(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
   auth: {
     persistSession: false,
     autoRefreshToken: false
@@ -2395,13 +2472,13 @@ async function updateApiKeyTestStatus2(user, provider, testStatus, testError = n
 
 // server/routers.ts
 import * as cheerio2 from "cheerio";
-import { createClient as createClient5 } from "@supabase/supabase-js";
+import { createClient as createClient6 } from "@supabase/supabase-js";
 import { createRequire } from "module";
-import { createHmac as createHmac2 } from "crypto";
+import { createHmac as createHmac3 } from "crypto";
 
 // server/youtubeRising.ts
-import { createClient as createClient4 } from "@supabase/supabase-js";
-var supabaseAdmin3 = ENV.supabaseUrl && ENV.supabaseServiceRoleKey ? createClient4(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
+import { createClient as createClient5 } from "@supabase/supabase-js";
+var supabaseAdmin3 = ENV.supabaseUrl && ENV.supabaseServiceRoleKey ? createClient5(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
   auth: { persistSession: false, autoRefreshToken: false }
 }) : null;
 var periodHours = {
@@ -2953,7 +3030,7 @@ var require2 = createRequire(import.meta.url);
 var NAVER_SEARCH_AD_PROVIDER2 = "naver-search-ad";
 var BLOG_ANALYSIS_POST_LIMIT = 6;
 var BLOG_RANK_SEARCH_LIMIT = 100;
-var supabaseAdmin4 = ENV.supabaseUrl && ENV.supabaseServiceRoleKey ? createClient5(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
+var supabaseAdmin4 = ENV.supabaseUrl && ENV.supabaseServiceRoleKey ? createClient6(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
   auth: {
     persistSession: false,
     autoRefreshToken: false
@@ -3043,7 +3120,7 @@ function maskNaverSearchAdCredentials(credentials) {
   };
 }
 function getNaverSearchAdSignature2(timestamp2, method, uri, secretKey) {
-  return createHmac2("sha256", secretKey).update(`${timestamp2}.${method}.${uri}`).digest("base64");
+  return createHmac3("sha256", secretKey).update(`${timestamp2}.${method}.${uri}`).digest("base64");
 }
 function getNaverSearchAdHeaders(credentials, method, uri) {
   const timestamp2 = Date.now().toString();
@@ -3897,25 +3974,25 @@ var appRouter = router({
       email: z3.email().trim().max(254),
       message: z3.string().trim().min(10).max(5e3)
     })).mutation(async ({ input }) => {
-      if (!supabaseAdmin4) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uC811\uC218\uB97C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+      if (!supabaseAdmin4) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uC811\uC218\uB97C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
       const email = input.email.toLowerCase();
       const phone = input.phone.replace(/[^\d+]/g, "");
       const { data: recent, error: lookupError } = await supabaseAdmin4.from("partnership_inquiries").select("id").eq("email", email).gte("created_at", new Date(Date.now() - 10 * 60 * 1e3).toISOString()).limit(1);
-      if (lookupError) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uC811\uC218\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4." });
-      if (recent?.length) throw new TRPCError3({ code: "TOO_MANY_REQUESTS", message: "\uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC81C\uCD9C\uD574 \uC8FC\uC138\uC694." });
+      if (lookupError) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uC811\uC218\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4." });
+      if (recent?.length) throw new TRPCError4({ code: "TOO_MANY_REQUESTS", message: "\uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC81C\uCD9C\uD574 \uC8FC\uC138\uC694." });
       const { error } = await supabaseAdmin4.from("partnership_inquiries").insert({
         name: input.name,
         phone,
         email,
         message: input.message
       });
-      if (error) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uC811\uC218\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4." });
+      if (error) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uC811\uC218\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4." });
       return { success: true };
     }),
     list: adminProcedure.query(async () => {
-      if (!supabaseAdmin4) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uB0B4\uC5ED\uC744 \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+      if (!supabaseAdmin4) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uB0B4\uC5ED\uC744 \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
       const { data, error } = await supabaseAdmin4.from("partnership_inquiries").select("id,name,phone,email,message,created_at").order("created_at", { ascending: false }).limit(100);
-      if (error) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uB0B4\uC5ED\uC744 \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+      if (error) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uB0B4\uC5ED\uC744 \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
       return data ?? [];
     })
   }),
@@ -5086,7 +5163,8 @@ var appRouter = router({
       }
     }),
     unifiedInsight: unifiedInsightProcedure,
-    blogAnalysis: publicProcedure.input(z3.object({
+    unifiedInsightBatch: unifiedInsightBatchProcedure,
+    blogAnalysis: naverAnalysisProcedure.input(z3.object({
       blogUrl: z3.string().min(1)
     })).mutation(async ({ input }) => {
       try {
@@ -5101,7 +5179,7 @@ var appRouter = router({
         };
       }
     }),
-    blogPostDetails: publicProcedure.input(z3.object({
+    blogPostDetails: naverAnalysisProcedure.input(z3.object({
       postUrl: z3.string().min(1)
     })).mutation(async ({ input }) => {
       try {
@@ -5137,7 +5215,7 @@ var appRouter = router({
         };
       }
     }),
-    blogPostAnalysis: publicProcedure.input(z3.object({
+    blogPostAnalysis: naverAnalysisProcedure.input(z3.object({
       postUrl: z3.string().min(1),
       title: z3.string().optional(),
       keywords: z3.array(z3.string()).min(1).max(10)
@@ -5276,7 +5354,7 @@ var appRouter = router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const userId = supabaseBookmarkUserId(ctx.user);
       if (!userId || !supabaseAdmin4) {
-        throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Instagram \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+        throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Instagram \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
       }
       const { data, error } = await supabaseAdmin4.from("instagram_bookmarks").select("shortcode,media_type,post_url,title,author_name,author_url,thumbnail_url,created_at").eq("user_id", userId).order("created_at", { ascending: false });
       if (error) throw error;
@@ -5294,11 +5372,11 @@ var appRouter = router({
     addFromUrl: protectedProcedure.input(z3.object({ url: z3.string().trim().min(1).max(2048) })).mutation(async ({ ctx, input }) => {
       const userId = supabaseBookmarkUserId(ctx.user);
       if (!userId || !supabaseAdmin4) {
-        throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Instagram \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+        throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Instagram \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
       }
       const parsed = parseInstagramUrl(input.url);
       if (!parsed) {
-        throw new TRPCError3({ code: "BAD_REQUEST", message: "Instagram \uAC8C\uC2DC\uBB3C \uB610\uB294 \uB9B4\uC2A4 URL\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694." });
+        throw new TRPCError4({ code: "BAD_REQUEST", message: "Instagram \uAC8C\uC2DC\uBB3C \uB610\uB294 \uB9B4\uC2A4 URL\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694." });
       }
       const { data: existing, error: lookupError } = await supabaseAdmin4.from("instagram_bookmarks").select("id").eq("user_id", userId).eq("media_type", parsed.mediaType).eq("shortcode", parsed.shortcode).maybeSingle();
       if (lookupError) throw lookupError;
@@ -5320,7 +5398,7 @@ var appRouter = router({
     remove: protectedProcedure.input(z3.object({ shortcode: z3.string().regex(/^[A-Za-z0-9_-]{5,32}$/), mediaType: z3.enum(["p", "reel"]) })).mutation(async ({ ctx, input }) => {
       const userId = supabaseBookmarkUserId(ctx.user);
       if (!userId || !supabaseAdmin4) {
-        throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Instagram \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+        throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Instagram \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
       }
       const { error } = await supabaseAdmin4.from("instagram_bookmarks").delete().eq("user_id", userId).eq("media_type", input.mediaType).eq("shortcode", input.shortcode);
       if (error) throw error;
@@ -5331,7 +5409,7 @@ var appRouter = router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const userId = supabaseBookmarkUserId(ctx.user);
       if (!userId || !supabaseAdmin4) {
-        throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "TikTok \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+        throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "TikTok \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
       }
       const { data, error } = await supabaseAdmin4.from("tiktok_bookmarks").select("video_id,video_url,title,author_name,author_url,thumbnail_url,created_at").eq("user_id", userId).order("created_at", { ascending: false });
       if (error) throw error;
@@ -5348,21 +5426,21 @@ var appRouter = router({
     addFromUrl: protectedProcedure.input(z3.object({ url: z3.string().trim().min(1).max(2048) })).mutation(async ({ ctx, input }) => {
       const userId = supabaseBookmarkUserId(ctx.user);
       if (!userId || !supabaseAdmin4) {
-        throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "TikTok \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+        throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "TikTok \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
       }
       const parsed = parseTikTokVideoUrl(input.url);
       if (!parsed) {
-        throw new TRPCError3({ code: "BAD_REQUEST", message: "\uC62C\uBC14\uB978 TikTok \uC601\uC0C1 URL\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694." });
+        throw new TRPCError4({ code: "BAD_REQUEST", message: "\uC62C\uBC14\uB978 TikTok \uC601\uC0C1 URL\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694." });
       }
       let video;
       try {
         video = await fetchTikTokBookmarkVideo(parsed);
       } catch (error2) {
         console.error("[TikTok bookmarks] Failed to fetch video metadata", error2);
-        throw new TRPCError3({ code: "BAD_GATEWAY", message: "TikTok \uC601\uC0C1 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
+        throw new TRPCError4({ code: "BAD_GATEWAY", message: "TikTok \uC601\uC0C1 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
       }
       if (!video) {
-        throw new TRPCError3({ code: "NOT_FOUND", message: "\uACF5\uAC1C\uB41C TikTok \uC601\uC0C1\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. URL\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694." });
+        throw new TRPCError4({ code: "NOT_FOUND", message: "\uACF5\uAC1C\uB41C TikTok \uC601\uC0C1\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. URL\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694." });
       }
       const { data: existing, error: lookupError } = await supabaseAdmin4.from("tiktok_bookmarks").select("id").eq("user_id", userId).eq("video_id", video.videoId).maybeSingle();
       if (lookupError) throw lookupError;
@@ -5382,7 +5460,7 @@ var appRouter = router({
     remove: protectedProcedure.input(z3.object({ videoId: z3.string().regex(/^\d{10,25}$/) })).mutation(async ({ ctx, input }) => {
       const userId = supabaseBookmarkUserId(ctx.user);
       if (!userId || !supabaseAdmin4) {
-        throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "TikTok \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+        throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "TikTok \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
       }
       const { error } = await supabaseAdmin4.from("tiktok_bookmarks").delete().eq("user_id", userId).eq("video_id", input.videoId);
       if (error) throw error;
@@ -5394,7 +5472,7 @@ var appRouter = router({
     addFromUrl: protectedProcedure.input(z3.object({ url: z3.string().trim().min(1).max(2048) })).mutation(async ({ ctx, input }) => {
       const parsed = parseYouTubeVideoUrl(input.url);
       if (!parsed) {
-        throw new TRPCError3({ code: "BAD_REQUEST", message: "\uC62C\uBC14\uB978 YouTube \uC601\uC0C1 URL\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694." });
+        throw new TRPCError4({ code: "BAD_REQUEST", message: "\uC62C\uBC14\uB978 YouTube \uC601\uC0C1 URL\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694." });
       }
       const existing = await listYouTubeBookmarks(ctx.user);
       if (existing.some((bookmark) => bookmark.videoId === parsed.videoId)) {
@@ -5402,17 +5480,17 @@ var appRouter = router({
       }
       const apiKey = process.env.YOUTUBE_API_KEY?.trim();
       if (!apiKey) {
-        throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "\uC601\uC0C1 \uC815\uBCF4\uB97C \uAC00\uC838\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
+        throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "\uC601\uC0C1 \uC815\uBCF4\uB97C \uAC00\uC838\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
       }
       let video;
       try {
         video = await fetchYouTubeBookmarkVideo(parsed, apiKey);
       } catch (error) {
         console.error("[YouTube bookmarks] Failed to fetch video metadata", error);
-        throw new TRPCError3({ code: "BAD_GATEWAY", message: "\uC601\uC0C1 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
+        throw new TRPCError4({ code: "BAD_GATEWAY", message: "\uC601\uC0C1 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
       }
       if (!video) {
-        throw new TRPCError3({ code: "NOT_FOUND", message: "\uC601\uC0C1\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. URL\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694." });
+        throw new TRPCError4({ code: "NOT_FOUND", message: "\uC601\uC0C1\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. URL\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694." });
       }
       await addYouTubeBookmark2(ctx.user, { userId: ctx.user.id, ...video });
       return { videoId: parsed.videoId, alreadySaved: false };

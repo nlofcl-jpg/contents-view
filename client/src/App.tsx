@@ -71,6 +71,7 @@ function App() {
   const guestBrowseAction = useRef<(() => void) | null>(null);
 
   const requestGuestMenuAccess = (path?: string, onBrowse?: () => void) => {
+    if (path === "/news/issues" || path?.startsWith("/news/issues/")) return false;
     if (path?.startsWith("/saved-contents")) return false;
     if (authLoading || isAuthenticated || guestMenuPromptSeen.current) return false;
 
@@ -139,6 +140,7 @@ function App() {
               onClose={() => setMobilePanelType(null)}
               onOpenMyPageModal={() => setIsMyPageModalOpen(true)}
               onNavigate={() => setMobilePanelType(null)}
+              onGuestMenuAccess={requestGuestMenuAccess}
             />
 
             <main className="mainContent">

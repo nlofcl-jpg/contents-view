@@ -1,4 +1,4 @@
-import { publicProcedure } from "./_core/trpc";
+import { naverAnalysisProcedure } from "./naverAnalysisQuota";
 import { z } from "zod";
 import { generateCacheKey, getFromCache, setInCache } from "./naver.cache";
 import { ENV } from "./_core/env";
@@ -567,8 +567,7 @@ async function fetchWithTimeout(
   }
 }
 
-export const unifiedInsightProcedure = publicProcedure
-  .input(z.object({
+const unifiedInsightInput = z.object({
     keywords: z.array(z.string()).min(0).max(5),
     category: z.string().optional(),
     startDate: z.string(),
@@ -577,8 +576,9 @@ export const unifiedInsightProcedure = publicProcedure
     device: z.string().optional(),
     gender: z.string().optional(),
     ages: z.array(z.string()).optional(),
-  }))
-  .mutation(async ({ input }) => {
+  });
+
+async function fetchUnifiedInsight(input: z.infer<typeof unifiedInsightInput>) {
     const requestedCategory = input.category || "auto";
     const normalizedKeywords = uniqueValues(input.keywords.map(normalizeKeywordInput)).slice(0, 5);
 
@@ -1241,4 +1241,12 @@ export const unifiedInsightProcedure = publicProcedure
         shopping: {},
       };
     }
-  });
+}
+
+export const unifiedInsightProcedure = naverAnalysisProcedure
+  .input(unifiedInsightInput)
+  .mutation(({ input }) => fetchUnifiedInsight(input));
+
+export const unifiedInsightBatchProcedure = naverAnalysisProcedure
+  .input(z.object({ requests: z.array(unifiedInsightInput).min(1).max(12) }))
+  .mutation(({ input }) => Promise.all(input.requests.map(fetchUnifiedInsight)));
