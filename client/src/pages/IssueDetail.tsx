@@ -113,22 +113,20 @@ export default function IssueDetail() {
       ) : (
         <article className="issueDetail">
           <header className="issueDetailHeader">
+            <div className="headerBrandText issueDetailBrand">CONTENTS <strong>VIEW</strong></div>
             <h1>{issue.article_title || issue.title}</h1>
             <div className="issueDetailMeta">
               <div className="issueDetailByline">
-                <span>CONTENTS VIEW</span>
                 <time dateTime={issue.created_at}>
                   {new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric" }).format(new Date(issue.created_at))}
                 </time>
               </div>
               <div className="issueDetailShareActions">
-                <button type="button" className="issueDetailShareAction" onClick={handleShare}>
+                <button type="button" className="issueDetailShareAction" onClick={handleShare} title="공유" aria-label="공유">
                   <Share2 size={15} aria-hidden="true" />
-                  공유
                 </button>
-                <button type="button" className="issueDetailShareAction" onClick={handleCopyUrl}>
+                <button type="button" className="issueDetailShareAction" onClick={handleCopyUrl} title="URL 주소 복사" aria-label="URL 주소 복사">
                   <Copy size={15} aria-hidden="true" />
-                  URL 주소 복사
                 </button>
               <button
                 type="button"

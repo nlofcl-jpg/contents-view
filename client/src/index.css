@@ -3137,6 +3137,12 @@ a {
   padding: 12px 0 30px;
 }
 
+.issueDetailHeader .issueDetailBrand {
+  margin-bottom: 14px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
 .issueDetailMeta {
   display: flex;
   align-items: center;
@@ -3170,6 +3176,9 @@ a {
 
 .issueDetailShareAction {
   display: inline-flex;
+  width: 32px;
+  height: 40px;
+  flex: none;
   align-items: center;
   justify-content: center;
   gap: 6px;
@@ -3194,14 +3203,14 @@ a {
 
 @media (max-width: 600px) {
   .issueDetailMeta {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
     gap: 8px;
   }
 
   .issueDetailShareActions {
     justify-content: flex-end;
-    gap: 14px;
+    gap: 8px;
   }
 }
 
