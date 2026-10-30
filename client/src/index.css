@@ -2973,7 +2973,7 @@ a {
   display: grid;
   width: 100%;
   min-height: 142px;
-  grid-template-columns: minmax(0, 1fr) 176px;
+  grid-template-columns: 240px minmax(0, 1fr);
   align-items: center;
   gap: 28px;
   padding: 20px 0;
@@ -2997,9 +2997,9 @@ a {
 
 .issueListImage {
   display: block;
-  width: 176px;
-  height: 176px;
-  aspect-ratio: 1;
+  width: 240px;
+  height: auto;
+  aspect-ratio: 16 / 10;
   border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: 4px;
   background: #111d31;
@@ -3030,6 +3030,21 @@ a {
   line-height: 1.6;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+@media (max-width: 767px) {
+  .issueListItem {
+    grid-template-columns: 120px minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .issueListImage {
+    width: 120px;
+  }
+
+  .issueListBody p {
+    display: none;
+  }
 }
 
 .issuePagination {
@@ -3063,6 +3078,17 @@ a {
 .issueDetailPage {
   max-width: 1120px;
   gap: 0;
+}
+
+@media (max-width: 768px) {
+  .pageContainer.newsPageContainer,
+  .pageContainer.issueDetailPage {
+    padding-top: 32px;
+  }
+
+  .issueDetailPage .issueBackButton {
+    margin-bottom: 20px;
+  }
 }
 
 .issueBackButton {
@@ -3658,23 +3684,9 @@ a {
   }
 
   .issuesFeaturedGrid {
-    grid-template-columns: none;
-    grid-auto-flow: column;
-    grid-auto-columns: min(78vw, 340px);
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     margin-bottom: 22px;
-  }
-
-  .issuesFeaturedGrid::-webkit-scrollbar {
-    display: none;
-  }
-
-  .issuesFeaturedGrid .issueFeaturedCard {
-    scroll-snap-align: start;
   }
 
   .issueFeaturedOverlay {
@@ -3687,14 +3699,13 @@ a {
 
   .issueListItem {
     min-height: 100px;
-    grid-template-columns: minmax(0, 1fr) 100px;
+    grid-template-columns: 120px minmax(0, 1fr);
     gap: 14px;
     padding: 14px 0;
   }
 
   .issueListImage {
-    width: 100px;
-    height: 100px;
+    width: 120px;
   }
 
   .issueListBody .issueListTitle {
@@ -3703,9 +3714,7 @@ a {
   }
 
   .issueListBody p {
-    margin-top: 5px;
-    font-size: 12px;
-    line-height: 1.45;
+    display: none;
   }
 
   .issueDetailHeader {

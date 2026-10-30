@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowUp, Copy, LoaderCircle, Share2 } from "lucide-react";
+import { ArrowUp, ChevronLeft, Copy, LoaderCircle, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation, useRoute } from "wouter";
 import { supabase } from "@/lib/supabase";
@@ -102,8 +102,8 @@ export default function IssueDetail() {
   return (
     <div className="pageContainer issueDetailPage">
       <button type="button" className="issueBackButton" onClick={() => setLocation("/news/issues")}>
-        <ArrowLeft size={15} aria-hidden="true" />
-        뉴스 & 이슈
+        <ChevronLeft size={15} aria-hidden="true" />
+        이슈
       </button>
 
       {isLoading ? (

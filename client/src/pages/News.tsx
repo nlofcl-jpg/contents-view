@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { stripIssueBodyFormatting } from "@shared/issueBody";
+import { useIsMobile } from "@/hooks/useMobile";
 
 interface NewsItem {
   title: string;
@@ -71,6 +72,7 @@ function readNewsSessionCache(): NewsSessionCache | null {
 }
 
 export default function News() {
+  const isMobile = useIsMobile();
   const [location, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -246,8 +248,9 @@ export default function News() {
 
   const isLoadingNews = isLoadingLatest || (selectedCategory === "all" && shouldFetchFeaturedNews
     && (!nationNewsData || !businessNewsData || !technologyNewsData || !entertainmentNewsData));
-  const featuredIssues = issues.slice(0, 3);
-  const remainingIssues = issues.slice(3);
+  const featuredCount = isMobile ? 2 : 3;
+  const featuredIssues = issues.slice(0, featuredCount);
+  const remainingIssues = issues.slice(featuredCount);
   const issuePageCount = Math.max(1, Math.ceil(remainingIssues.length / 10));
   const visibleIssueList = remainingIssues.slice((issuesPage - 1) * 10, issuesPage * 10);
 
@@ -284,7 +287,7 @@ export default function News() {
   };
 
   return (
-    <div className="pageContainer">
+    <div className="pageContainer newsPageContainer">
       {/* Page Header */}
       <div className="pageHeader">
         <h1 className="pageTitle">뉴스 & 이슈</h1>
@@ -430,15 +433,15 @@ export default function News() {
                       href={`/news/issues/${issue.id}`}
                       className="issueListItem"
                     >
-                      <div className="issueListBody">
-                        <h2 className="issueListTitle">{getIssueDisplayTitle(issue)}</h2>
-                        {getIssueDisplaySummary(issue) && <p>{getIssueDisplaySummary(issue)}</p>}
-                      </div>
                       {issue.thumbnail_url ? (
                         <img className="issueListImage" src={issue.thumbnail_url} alt="" />
                       ) : (
                         <div className="issueListImage issueCardImageFallback" aria-hidden="true" />
                       )}
+                      <div className="issueListBody">
+                        <h2 className="issueListTitle">{getIssueDisplayTitle(issue)}</h2>
+                        {getIssueDisplaySummary(issue) && <p>{getIssueDisplaySummary(issue)}</p>}
+                      </div>
                     </Link>
                   ))}
                 </div>
