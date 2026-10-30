@@ -246,8 +246,8 @@ export default function News() {
 
   const isLoadingNews = isLoadingLatest || (selectedCategory === "all" && shouldFetchFeaturedNews
     && (!nationNewsData || !businessNewsData || !technologyNewsData || !entertainmentNewsData));
-  const featuredIssues = issues.slice(0, 4);
-  const remainingIssues = issues.slice(4);
+  const featuredIssues = issues.slice(0, 3);
+  const remainingIssues = issues.slice(3);
   const issuePageCount = Math.max(1, Math.ceil(remainingIssues.length / 10));
   const visibleIssueList = remainingIssues.slice((issuesPage - 1) * 10, issuesPage * 10);
 

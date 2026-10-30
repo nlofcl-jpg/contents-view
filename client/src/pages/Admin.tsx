@@ -6,7 +6,6 @@ import { trpc } from "@/lib/trpc";
 import { Bold, ChevronDown, RefreshCw, X } from "lucide-react";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
 import HeroKeywordsPanel from "@/components/HeroKeywordsPanel";
-import IssueBody from "@/components/IssueBody";
 import { removeStoredIssueImages, uploadIssueImage, validateIssueImage, validateIssueImageUrl } from "@/lib/issueImages";
 import { formatIssueBodyLines, parseIssueBodyLine, type IssueBodySize } from "@shared/issueBody";
 
@@ -633,20 +632,12 @@ function IssuesPanel() {
             onSelect={event => setBodyCursor(event.currentTarget.selectionStart)}
           />
         </div>
-        {summary.trim() && (
-          <div className="issueBodyPreview">
-            <span className="issueBodyPreviewLabel">상세페이지 미리보기</span>
-            <div className="issueBodyPreviewContent">
-              <IssueBody value={summary.trim()} />
-            </div>
-          </div>
-        )}
         <div>
           <label htmlFor="issue-image-url" className="mb-2 block text-sm font-medium text-slate-200">대표 이미지</label>
           <input
             id="issue-image-url"
             type="url"
-            className="h-11 w-full rounded-md border border-[#30234b] bg-[#141021] px-3 text-sm text-slate-100 outline-none placeholder:text-slate-400 focus:border-blue-400"
+            className="h-11 w-full rounded-md border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none placeholder:text-slate-400 focus:border-blue-400"
             placeholder="이미지 URL을 입력하세요 (예: https://example.com/image.jpg)"
             value={thumbnailUrl}
             onChange={event => {
@@ -662,7 +653,7 @@ function IssuesPanel() {
             ref={imageInputRef}
             type="file"
             accept="image/jpeg,image/png,image/webp"
-            className="block h-11 w-full cursor-pointer rounded-md border border-[#30234b] bg-[#141021] text-sm leading-[42px] text-slate-300 file:mr-3 file:h-[42px] file:cursor-pointer file:border-0 file:bg-transparent file:px-3 file:text-sm file:font-medium file:text-slate-200 focus:border-blue-400"
+            className="block h-11 w-full cursor-pointer rounded-md border border-slate-700 bg-slate-950/70 text-sm leading-[42px] text-slate-300 file:mr-3 file:h-[42px] file:cursor-pointer file:border-0 file:bg-transparent file:px-3 file:text-sm file:font-medium file:text-slate-200 focus:border-blue-400"
             aria-label="썸네일 이미지 파일"
             onChange={event => {
               const file = event.target.files?.[0];

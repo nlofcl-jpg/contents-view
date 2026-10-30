@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowUp, LoaderCircle } from "lucide-react";
+import { ArrowLeft, ArrowUp, Copy, LoaderCircle, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation, useRoute } from "wouter";
 import { supabase } from "@/lib/supabase";
@@ -58,6 +58,34 @@ export default function IssueDetail() {
     return () => { cancelled = true; };
   }, [issue]);
 
+  const handleCopyUrl = async () => {
+    if (!issue) return;
+    try {
+      await navigator.clipboard.writeText(new URL(`/news/issues/${issue.id}`, window.location.origin).href);
+      toast.success("URL 주소를 복사했습니다.");
+    } catch {
+      toast.error("주소를 복사하지 못했습니다. 브라우저의 복사 권한을 확인해 주세요.");
+    }
+  };
+
+  const handleShare = async () => {
+    if (!issue) return;
+    if (!navigator.share) {
+      await handleCopyUrl();
+      return;
+    }
+    try {
+      await navigator.share({
+        title: issue.article_title || issue.title,
+        url: new URL(`/news/issues/${issue.id}`, window.location.origin).href,
+      });
+    } catch (error) {
+      if (!(error instanceof Error && error.name === "AbortError")) {
+        toast.error("공유를 시작하지 못했습니다. URL 주소 복사를 이용해 주세요.");
+      }
+    }
+  };
+
   const handleKakaoShare = () => {
     if (!issue) return;
     if (kakaoSdkStatus === "error") {
@@ -93,6 +121,15 @@ export default function IssueDetail() {
                   {new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric" }).format(new Date(issue.created_at))}
                 </time>
               </div>
+              <div className="issueDetailShareActions">
+                <button type="button" className="issueDetailShareAction" onClick={handleShare}>
+                  <Share2 size={15} aria-hidden="true" />
+                  공유
+                </button>
+                <button type="button" className="issueDetailShareAction" onClick={handleCopyUrl}>
+                  <Copy size={15} aria-hidden="true" />
+                  URL 주소 복사
+                </button>
               <button
                 type="button"
                 className="issueKakaoShareButton"
@@ -109,6 +146,7 @@ export default function IssueDetail() {
                   </svg>
                 )}
               </button>
+              </div>
             </div>
           </header>
           <div className="issueDetailArticle">

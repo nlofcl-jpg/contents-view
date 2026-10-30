@@ -1,4 +1,41 @@
+import { Lexer, type Tokens } from "marked";
+
 export type IssueBodySize = "body" | "subtitle" | "large";
+
+export type IssueBodyBlock =
+  | { type: "text"; value: string }
+  | { type: "table"; headers: string[]; align: Array<"left" | "center" | "right" | null>; rows: string[][] };
+
+export function parseIssueBodyBlocks(value: string): IssueBodyBlock[] {
+  const source = value.replace(/\r\n?/g, "\n");
+  const blocks: IssueBodyBlock[] = [];
+  let cursor = 0;
+  let textStart = 0;
+
+  // Use token ranges so content outside tables keeps its existing formatting.
+  for (const token of Lexer.lex(source, { gfm: true })) {
+    const start = source.indexOf(token.raw, cursor);
+    if (start === -1) continue;
+    cursor = start + token.raw.length;
+    if (token.type !== "table") continue;
+    const table = token as Tokens.Table;
+
+    let text = source.slice(textStart, start).replace(/\n+$/, "");
+    if (blocks.length) text = text.replace(/^\n+/, "");
+    if (text) blocks.push({ type: "text", value: text });
+    blocks.push({
+      type: "table",
+      headers: table.header.map(cell => cell.text),
+      align: table.align,
+      rows: table.rows.map(row => row.map(cell => cell.text)),
+    });
+    textStart = cursor;
+  }
+
+  const trailingText = blocks.length ? source.slice(textStart).replace(/^\n+/, "") : source;
+  if (trailingText) blocks.push({ type: "text", value: trailingText });
+  return blocks;
+}
 
 const headingPrefixes: Record<IssueBodySize, string> = {
   body: "",
@@ -35,8 +72,10 @@ export function formatIssueBodyLines(value: string, start: number, end: number, 
 }
 
 export function stripIssueBodyFormatting(value: string) {
-  return value
-    .split("\n")
+  return parseIssueBodyBlocks(value)
+    .flatMap(block => block.type === "table"
+      ? [block.headers.join(" "), ...block.rows.map(row => row.join(" "))]
+      : block.value.split("\n"))
     .map(line => parseIssueBodyLine(line).text)
     .join(" ")
     .replace(/\*\*(.*?)\*\*/g, "$1")
