@@ -18,8 +18,8 @@ describe("AI studio share preview", () => {
     const { html, response } = renderPreview();
 
     expect(response.status).toHaveBeenCalledWith(200);
-    expect(html).toContain('<meta property="og:title" content="AI 콘텐츠 제작 | CONTENTS VIEW AI 스튜디오" />');
-    expect(html).toContain('<meta property="og:description" content="쇼츠, 카드뉴스, 모션그래픽 등 AI 콘텐츠 제작을 위한 스타일과 도구를 CONTENTS VIEW AI 스튜디오에서 확인하세요." />');
+    expect(html).toContain('<meta property="og:title" content="AI 콘텐츠 제작 | CONTENTS VIEW 스튜디오" />');
+    expect(html).toContain('<meta property="og:description" content="쇼츠, 카드뉴스, 모션그래픽 등 AI 콘텐츠 제작을 위한 스타일과 도구를 CONTENTS VIEW 스튜디오에서 확인하세요." />');
     expect(html).toContain('<meta property="og:url" content="https://contents-view-chi.vercel.app/ai-studio" />');
     expect(html).toContain('<meta property="og:image" content="https://contents-view-chi.vercel.app/ai-studio-video-hero.png" />');
     expect(html).toContain('<meta name="twitter:card" content="summary_large_image" />');

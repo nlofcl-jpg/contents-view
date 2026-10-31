@@ -1,6 +1,6 @@
 const SITE_ORIGIN = "https://contents-view-chi.vercel.app";
-const PREVIEW_TITLE = "AI 콘텐츠 제작 | CONTENTS VIEW AI 스튜디오";
-const PREVIEW_DESCRIPTION = "쇼츠, 카드뉴스, 모션그래픽 등 AI 콘텐츠 제작을 위한 스타일과 도구를 CONTENTS VIEW AI 스튜디오에서 확인하세요.";
+const PREVIEW_TITLE = "AI 콘텐츠 제작 | CONTENTS VIEW 스튜디오";
+const PREVIEW_DESCRIPTION = "쇼츠, 카드뉴스, 모션그래픽 등 AI 콘텐츠 제작을 위한 스타일과 도구를 CONTENTS VIEW 스튜디오에서 확인하세요.";
 const PREVIEW_IMAGE = `${SITE_ORIGIN}/ai-studio-video-hero.png`;
 const SECTIONS = new Set(["video", "programs", "open-source", "flow-automation"]);
 
@@ -32,7 +32,7 @@ export default function handler(req: any, res: any) {
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1672" />
     <meta property="og:image:height" content="941" />
-    <meta property="og:image:alt" content="CONTENTS VIEW AI 스튜디오 콘텐츠 제작" />
+    <meta property="og:image:alt" content="CONTENTS VIEW 스튜디오 콘텐츠 제작" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${PREVIEW_TITLE}" />
     <meta name="twitter:description" content="${PREVIEW_DESCRIPTION}" />

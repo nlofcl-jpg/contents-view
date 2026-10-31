@@ -3025,6 +3025,28 @@ function parseInstagramProfileUrl(value) {
   }
 }
 
+// server/newsSource.ts
+import { loadBuffer } from "cheerio";
+function parseNewsSource(buffer, contentType = "") {
+  const charset = contentType.match(/charset\s*=\s*["']?([^\s;"']+)/i)?.[1];
+  const $ = loadBuffer(buffer, {
+    encoding: { defaultEncoding: "utf-8", transportLayerEncodingLabel: charset }
+  });
+  for (const key of ["og:site_name", "application-name", "twitter:site"]) {
+    const candidates = $("meta").filter((_, element) => {
+      const tag = $(element);
+      return (tag.attr("property") || tag.attr("name") || "").toLowerCase() === key;
+    });
+    for (const element of candidates.toArray()) {
+      const value = ($(element).attr("content") || "").replace(/\s+/g, " ").trim();
+      if (value.length < 2 || value.length > 40 || /[\uFFFD\u0000-\u001F\u007F-\u009F<>]/.test(value)) continue;
+      if (/https?:\/\//i.test(value)) continue;
+      return value;
+    }
+  }
+  return null;
+}
+
 // server/routers.ts
 var require2 = createRequire(import.meta.url);
 var NAVER_SEARCH_AD_PROVIDER2 = "naver-search-ad";
@@ -7040,45 +7062,18 @@ var appRouter = router({
         };
         const extractMetaSiteName = async (urlString) => {
           try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2e3);
             const response = await fetch(urlString, {
-              signal: controller.signal,
+              signal: AbortSignal.timeout(2e3),
               headers: {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
               }
             });
-            clearTimeout(timeoutId);
             if (!response.ok) {
               console.log("[News Search] Meta fetch failed, status:", response.status);
               return null;
             }
-            const html = await response.text();
-            let match = html.match(/<meta\s+property=["']og:site_name["']\s+content=["']([^"']+)["']/i);
-            if (match && match[1]) {
-              console.log("[News Search] Found og:site_name:", match[1]);
-              return match[1];
-            }
-            match = html.match(/<meta\s+name=["']application-name["']\s+content=["']([^"']+)["']/i);
-            if (match && match[1]) {
-              console.log("[News Search] Found application-name:", match[1]);
-              return match[1];
-            }
-            match = html.match(/<meta\s+name=["']twitter:site["']\s+content=["']([^"']+)["']/i);
-            if (match && match[1]) {
-              console.log("[News Search] Found twitter:site:", match[1]);
-              return match[1];
-            }
-            match = html.match(/<title>([^<]+)<\/title>/i);
-            if (match && match[1]) {
-              const titleText = match[1].trim();
-              const siteMatch = titleText.match(/([가-힣\w]+(?:뉴스|TV|신문|일보|경제|매체|미디어))/);
-              if (siteMatch && siteMatch[1]) {
-                console.log("[News Search] Extracted from title:", siteMatch[1]);
-                return siteMatch[1];
-              }
-            }
-            return null;
+            const buffer = Buffer.from(await response.arrayBuffer());
+            return parseNewsSource(buffer, response.headers.get("content-type") || "");
           } catch (error) {
             console.log("[News Search] Meta fetch error (timeout or network):", error instanceof Error ? error.message : "unknown");
             return null;

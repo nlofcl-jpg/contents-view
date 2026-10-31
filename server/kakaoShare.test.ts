@@ -51,11 +51,11 @@ describe("buildOpenSourceKakaoFeed", () => {
     const feed = buildOpenSourceKakaoFeed({
       slug: "ace-step-studio",
       title: "ACE-Step Studio",
-      description: "내 컴퓨터에서 음악과 보컬을 생성하는 AI 스튜디오",
+      description: "내 컴퓨터에서 음악과 보컬을 생성하는 AI 음악 제작 도구",
     });
 
     expect(feed.content.title).toBe("ACE-Step Studio");
-    expect(feed.content.description).toBe("내 컴퓨터에서 음악과 보컬을 생성하는 AI 스튜디오");
+    expect(feed.content.description).toBe("내 컴퓨터에서 음악과 보컬을 생성하는 AI 음악 제작 도구");
     expect(feed.content.link.webUrl).toBe("https://contents-view-chi.vercel.app/ai-studio/open-source/ace-step-studio");
     expect(feed.buttons).toEqual([{ title: "전체 보기", link: feed.content.link }]);
   });

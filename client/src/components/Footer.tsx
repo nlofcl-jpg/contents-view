@@ -11,7 +11,7 @@ const trendLinks = [
 const serviceLinks = [
   { label: "뉴스&이슈", href: "/news" },
   { label: "커뮤니티 트렌드", href: "/community" },
-  { label: "AI 스튜디오", href: "/ai-studio" },
+  { label: "스튜디오", href: "/ai-studio" },
   { label: "내 보관함", href: "/saved-contents" },
 ];
 

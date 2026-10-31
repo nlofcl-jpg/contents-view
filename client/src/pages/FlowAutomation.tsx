@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { downloadFlowAutomationFile } from "@/lib/protectedDownload";
+import StudioSubnav from "@/components/StudioSubnav";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 
 const installSteps = [
@@ -62,9 +63,10 @@ export default function FlowAutomation() {
 
   return (
     <div className="flowAutomationPage">
+      <StudioSubnav active="programs" />
       <Link href="/ai-studio" className="flowAutomationBackLink">
         <ArrowLeft aria-hidden="true" />
-        AI 스튜디오
+        스튜디오
       </Link>
 
       <section className="flowAutomationIntro">

@@ -3,6 +3,7 @@ import { ArrowLeft, ExternalLink, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Link, useParams } from "wouter";
 import NotFound from "@/pages/NotFound";
+import StudioSubnav from "@/components/StudioSubnav";
 import { loadKakaoSdk, shareOpenSourceOnKakao } from "@/lib/kakaoShare";
 
 const projects = {
@@ -19,7 +20,7 @@ const projects = {
   "ace-step-studio": {
     category: "오픈소스 AI 음악 제작",
     name: "ACE-Step Studio",
-    summary: "내 컴퓨터에서 음악과 보컬을 생성하는 AI 스튜디오",
+    summary: "내 컴퓨터에서 음악과 보컬을 생성하는 AI 음악 제작 도구",
     description: "아이디어나 가사를 입력해 음악을 만들고, 커버와 리믹스, 스템 분리, 뮤직비디오 제작 등을 한 앱에서 진행할 수 있습니다.",
     features: ["가사와 설명으로 보컬 음악 생성", "커버·리믹스 및 스템 작업", "뮤직비디오 제작"],
     environment: "Windows · NVIDIA GPU (VRAM 4GB 이상)",
@@ -59,6 +60,7 @@ export default function OpenSourceDetail() {
 
   return (
     <main className="openSourceDetailPage">
+      <StudioSubnav active="openSource" />
       <Link href="/ai-studio/open-source" className="openSourceDetailBack">
         <ArrowLeft aria-hidden="true" />
         오픈소스

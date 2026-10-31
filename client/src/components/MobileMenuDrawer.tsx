@@ -267,7 +267,7 @@ export function MobileMenuDrawer({
                 aria-expanded={isStudioOpen}
                 aria-controls="mobile-studio-submenu"
               >
-                <span>AI 스튜디오</span>
+                <span>스튜디오</span>
                 <span style={{ marginLeft: "auto", transition: "transform 0.2s" }}>
                   {isStudioOpen ? "⌄" : "⌃"}
                 </span>

@@ -292,53 +292,20 @@ export default function News() {
       <div className="pageHeader">
         <h1 className="pageTitle">뉴스 & 이슈</h1>
         <p className="pageDescription">오늘 주목받는 이슈를 빠르게 확인하고 콘텐츠 아이디어로 연결해보세요.</p>
-        <div className="newsContentTabs" role="tablist" aria-label="뉴스 및 이슈 분류">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeContentTab === "news"}
-            className={`newsContentTab ${activeContentTab === "news" ? "active" : ""}`}
-            onClick={() => {
-              setActiveContentTab("news");
-              setLocation("/news");
-            }}
-          >
-            뉴스
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeContentTab === "issues"}
-            className={`newsContentTab ${activeContentTab === "issues" ? "active" : ""}`}
-            onClick={() => {
-              setActiveContentTab("issues");
-              setLocation("/news/issues");
-            }}
-          >
-            이슈
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeContentTab === "search"}
-            className={`newsContentTab ${activeContentTab === "search" ? "active" : ""}`}
-            onClick={() => setLocation("/news/search")}
-          >
-            검색
-          </button>
-        </div>
       </div>
 
       {activeContentTab === "news" ? (
         <>
       <div>
-        {getLatestUpdateTime && (
-          <p className="newsCardsUpdateTime">{formatUpdateTime(getLatestUpdateTime)}</p>
-        )}
-        <h2 className="text-2xl font-bold text-white mb-6">최신 뉴스</h2>
+        <div className="newsLatestHeader">
+          {getLatestUpdateTime && (
+            <p className="newsCardsUpdateTime">{formatUpdateTime(getLatestUpdateTime)}</p>
+          )}
+          <h2 className="text-2xl font-bold text-white mb-6">최신 뉴스</h2>
+        </div>
 
         {/* Category Tabs */}
-        <div className="mb-8 flex flex-wrap gap-2 border-b border-gray-700 pb-4">
+        <div className="newsCategoryFilters mb-8 flex flex-wrap gap-2 border-b border-gray-700 pb-4">
           {categories.map((cat) => (
             <button
               key={cat.id}

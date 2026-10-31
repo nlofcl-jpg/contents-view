@@ -177,6 +177,7 @@ export default function Hero() {
           {popularKeywords.length > 0 && (
             <div className="heroPopularKeywordSection" aria-labelledby="heroPopularKeywordTitle">
               <p id="heroPopularKeywordTitle" className="heroPopularKeywordTitle">인기 검색어</p>
+              <div className="heroPopularKeywordRow">
               <div className="heroPopularKeywords">
                 {popularKeywords.map(popularKeyword => (
                   <button
@@ -198,6 +199,7 @@ export default function Hero() {
                 더보기
                 <ChevronRight size={14} aria-hidden="true" />
               </button>
+              </div>
             </div>
           )}
         </div>

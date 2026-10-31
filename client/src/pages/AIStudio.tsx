@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
+import StudioSubnav from "@/components/StudioSubnav";
 
 type StudioTab = "programs" | "upcoming" | "openSource";
 type ProductionFormat = "video" | "cardNews" | "motionGraphic";
@@ -92,17 +93,18 @@ export default function AIStudio() {
 
   return (
     <div className="aiStudioPageContainer">
+      <StudioSubnav active={activeTab === "upcoming" ? "production" : activeTab} />
       <section className={`aiStudioHero ${activeTab === "upcoming" ? "aiStudioHeroVideo" : ""}`} aria-labelledby="ai-studio-title">
         <div className="aiStudioHeroContent">
           <span className="aiStudioHeroEyebrow">CONTENTS VIEW</span>
           <h1 id="ai-studio-title" className="aiStudioHeroTitle">
-            <span className="aiStudioHeroEnglish">AI STUDIO</span>
+            <span className="aiStudioHeroEnglish">STUDIO</span>
             {activeTab === "upcoming" ? (
               <span className="aiStudioHeroKorean">아이디어를 콘텐츠로, <strong>더 빠르게</strong></span>
             ) : activeTab === "openSource" ? (
               <span className="aiStudioHeroKorean">열린 도구로, <strong>더 자유롭게</strong></span>
             ) : (
-              <span className="aiStudioHeroKorean">반복 작업을 자동화로, <strong>더 간편하게</strong></span>
+              <span className="aiStudioHeroKorean">다양한 도구로, <strong>제작을 더 효율적으로</strong></span>
             )}
           </h1>
         </div>

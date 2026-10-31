@@ -4,7 +4,8 @@ import { trpc } from "@/lib/trpc";
 import { supabase } from "@/lib/supabase";
 import { useState, useRef, useEffect } from "react";
 import { useLocation, Link } from "wouter";
-import { ChevronDown, Download, Menu } from "lucide-react";
+import { ChevronDown, Menu } from "lucide-react";
+import FlowDownloadBanner from "@/components/FlowDownloadBanner";
 
 interface HeaderProps {
   onOpenMyPageModal?: () => void;
@@ -436,7 +437,7 @@ export default function Header({
               setOpenStudioMenu(true);
             }}
           >
-            AI 스튜디오
+            스튜디오
             <ChevronDown className={`headerNavChevron ${openStudioMenu ? "open" : ""}`} aria-hidden="true" />
           </button>
           {openStudioMenu && (
@@ -594,19 +595,7 @@ export default function Header({
         </div>
       </div>
       </header>
-      <Link
-        href="/ai-studio"
-        className="flowDownloadBanner"
-        aria-label="Google Flow 오토메이션 크롬 확장 프로그램 다운로드 페이지로 이동"
-      >
-        <div className="flowDownloadBannerContent">
-          <Download aria-hidden="true" />
-          <div className="flowDownloadBannerMarquee">
-            <span>구글 FLOW 오토메이션 크롬 확장 프로그램 다운로드 받기</span>
-            <span aria-hidden="true">구글 FLOW 오토메이션 크롬 확장 프로그램 다운로드 받기</span>
-          </div>
-        </div>
-      </Link>
+      <FlowDownloadBanner />
     </>
   );
 }

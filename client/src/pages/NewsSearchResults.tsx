@@ -74,34 +74,6 @@ export default function NewsSearchResults() {
       <div className="pageHeader">
         <h1 className="pageTitle">뉴스 & 이슈</h1>
         <p className="pageDescription">오늘 주목받는 이슈를 빠르게 확인하고 콘텐츠 아이디어로 연결해보세요.</p>
-        <div className="newsContentTabs" role="tablist" aria-label="뉴스 및 이슈 분류">
-          <button
-            type="button"
-            role="tab"
-            aria-selected="false"
-            className="newsContentTab"
-            onClick={() => setLocation("/news")}
-          >
-            뉴스
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected="false"
-            className="newsContentTab"
-            onClick={() => setLocation("/news/issues")}
-          >
-            이슈
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected="true"
-            className="newsContentTab active"
-          >
-            검색
-          </button>
-        </div>
       </div>
 
       <section className="newsSearchSection" aria-labelledby="news-search-result-title">
@@ -148,9 +120,9 @@ export default function NewsSearchResults() {
                     </div>
                   )}
                   <div className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs text-gray-500">{news.source}</span>
-                      <span className="text-xs text-gray-500">{formatDate(news.publishedAt || news.pubDate)}</span>
+                    <div className="flex min-w-0 items-center gap-2 mb-2">
+                      <span className="min-w-0 flex-1 truncate text-xs text-gray-500" title={news.source}>{news.source}</span>
+                      <span className="shrink-0 whitespace-nowrap text-xs text-gray-500">{formatDate(news.publishedAt || news.pubDate)}</span>
                     </div>
                     <h3 className="text-base font-semibold text-white mb-2 line-clamp-2">
                       {news.title}

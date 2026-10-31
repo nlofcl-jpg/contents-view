@@ -7,6 +7,7 @@ import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
 import { AlertCircle, CircleAlert, Clock, Play, ChevronDown, RotateCw, Bookmark, Search, Copy, ExternalLink } from "lucide-react";
 import { useBookmark } from "@/contexts/BookmarkContext";
 import { useLocation } from "wouter";
+import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 
 type TabType = "analysis" | "trending" | "category" | "shorts" | "rising";
 type AnalysisSortType = "relevance" | "publishedAt" | "viewCount";
@@ -250,6 +251,7 @@ export default function YouTubeTrends() {
     </div>
   );
   const [analysisInput, setAnalysisInput] = useState("");
+  const [isAnalysisGuestPromptOpen, setIsAnalysisGuestPromptOpen] = useState(false);
   const [submittedAnalysisKeyword, setSubmittedAnalysisKeyword] = useState("");
   const [submittedAnalysisVideoId, setSubmittedAnalysisVideoId] = useState("");
   const [analysisMode, setAnalysisMode] = useState<"keyword" | "url" | null>(null);
@@ -673,7 +675,11 @@ export default function YouTubeTrends() {
   }, [activeTab]);
 
   const handleAnalysisKeywordSearch = () => {
-    if (!canSearchAnalysisKeyword) return;
+    if (!canSearchAnalysisKeyword || authLoading) return;
+    if (!isAuthenticated) {
+      setIsAnalysisGuestPromptOpen(true);
+      return;
+    }
     setAnalysisMode("keyword");
     setSubmittedAnalysisVideoId("");
     setSubmittedAnalysisKeyword(analysisInputValue);
@@ -683,7 +689,11 @@ export default function YouTubeTrends() {
   };
 
   const handleAnalysisUrlAnalyze = () => {
-    if (!analysisVideoId) return;
+    if (!analysisVideoId || authLoading) return;
+    if (!isAuthenticated) {
+      setIsAnalysisGuestPromptOpen(true);
+      return;
+    }
     setAnalysisMode("url");
     setSubmittedAnalysisKeyword("");
     setSubmittedAnalysisVideoId(analysisVideoId);
@@ -763,7 +773,7 @@ export default function YouTubeTrends() {
             <button
               type="button"
               className="youtubeAnalysisActionButton"
-              disabled={!canSearchAnalysisKeyword}
+              disabled={authLoading || !canSearchAnalysisKeyword}
               onClick={handleAnalysisKeywordSearch}
             >
               검색
@@ -771,7 +781,7 @@ export default function YouTubeTrends() {
             <button
               type="button"
               className="youtubeAnalysisActionButton"
-              disabled={!canAnalyzeVideoUrl}
+              disabled={authLoading || !canAnalyzeVideoUrl}
               onClick={handleAnalysisUrlAnalyze}
             >
               분석
@@ -779,7 +789,7 @@ export default function YouTubeTrends() {
           </div>
         </form>
 
-        {!apiKeyData?.exists || apiKeyData?.testStatus !== "success" ? (
+        {!isAuthenticated ? null : !apiKeyData?.exists || apiKeyData?.testStatus !== "success" ? (
           <div className="emptyStateContainer youtubeAnalysisState">
             <AlertCircle className="emptyStateIcon" size={42} />
             <p className="emptyStateText">
@@ -1206,11 +1216,10 @@ export default function YouTubeTrends() {
             <button
               onClick={handleRefreshClick}
               disabled={isRefreshing}
-              className="refreshButton"
+              className="refreshButton refreshButtonIconOnly"
               title="새로고침"
             >
               <RotateCw size={16} className={isRefreshing ? "refreshIconSpinning" : ""} />
-              {isRefreshing ? "새로고침 중..." : "새로고침"}
             </button>
           </div>
         )}
@@ -1382,9 +1391,8 @@ export default function YouTubeTrends() {
               {risingData?.metricMode === "snapshot" ? `${RISING_PERIOD_OPTIONS.find(option => option.value === risingPeriod)?.label} 증가 속도 기준` : "기준 스냅샷 수집 중"}
             </span>
           </div>
-          <button onClick={handleRefreshClick} disabled={isRefreshing || isRisingLoading} className="refreshButton" title="새로고침">
+          <button onClick={handleRefreshClick} disabled={isRefreshing || isRisingLoading} className="refreshButton refreshButtonIconOnly" title="새로고침" aria-label="새로고침">
             <RotateCw size={16} className={isRefreshing ? "refreshIconSpinning" : ""} />
-            {isRefreshing ? "분석 중..." : "새로고침"}
           </button>
         </div>
 
@@ -1569,11 +1577,10 @@ export default function YouTubeTrends() {
             <button
               onClick={handleRefreshClick}
               disabled={isRefreshing}
-              className="refreshButton"
+              className="refreshButton refreshButtonIconOnly"
               title="새로고침"
             >
               <RotateCw size={16} className={isRefreshing ? "refreshIconSpinning" : ""} />
-              {isRefreshing ? "새로고침 중..." : "새로고침"}
             </button>
           </div>
         )}
@@ -1753,7 +1760,9 @@ export default function YouTubeTrends() {
       </div>}
 
       {/* Content Section */}
-      {authLoading ? (
+      {activeTab === "analysis" ? (
+        renderAnalysisTab()
+      ) : authLoading ? (
         <div className="emptyStateContainer">
           <Clock className="emptyStateIcon" size={48} />
           <p className="emptyStateText">인증 상태를 확인하는 중입니다...</p>
@@ -1762,8 +1771,6 @@ export default function YouTubeTrends() {
         renderGuestLoginNotice(activeTab === "rising"
           ? "급상승 영상은 로그인 후 이용할 수 있습니다."
           : "YouTube 트렌드와 개인 API 키 기능은 로그인 후 이용할 수 있습니다.")
-      ) : activeTab === "analysis" ? (
-        renderAnalysisTab()
       ) : activeTab === "rising" ? (
         renderRisingTab()
       ) : isAuthenticated && !apiKeyData?.exists ? (
@@ -1773,6 +1780,19 @@ export default function YouTubeTrends() {
       ) : activeTab === "shorts" ? (
         renderShortsTab()
       ) : null}
+
+      <GuestAccessPrompt
+        open={isAnalysisGuestPromptOpen}
+        onBrowse={() => setIsAnalysisGuestPromptOpen(false)}
+        onLogin={() => {
+          setIsAnalysisGuestPromptOpen(false);
+          setLocation("/login?redirect=" + encodeURIComponent("/trends/youtube?tab=analysis"));
+        }}
+        onSignup={() => {
+          setIsAnalysisGuestPromptOpen(false);
+          setLocation("/login?mode=signup&redirect=" + encodeURIComponent("/trends/youtube?tab=analysis"));
+        }}
+      />
 
       {/* Video Detail Modal */}
       <YouTubeVideoDetailModal

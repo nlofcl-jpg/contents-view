@@ -23,6 +23,7 @@ import { parseGoogleTrendsPage } from "./googleTrendsPage";
 import { fetchYouTubeBookmarkVideo, parseYouTubeVideoUrl } from "./youtubeBookmarkUrl";
 import { fetchTikTokBookmarkVideo, parseTikTokVideoUrl } from "./tiktokBookmarkUrl";
 import { fetchInstagramBookmarkMetadata, parseInstagramUrl } from "./instagramBookmarkUrl";
+import { parseNewsSource } from "./newsSource";
 
 const require = createRequire(import.meta.url);
 
@@ -5096,58 +5097,20 @@ export const appRouter = router({
           // Helper: Extract meta site_name from HTML with timeout
           const extractMetaSiteName = async (urlString: string): Promise<string | null> => {
             try {
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
-              
               const response = await fetch(urlString, {
-                signal: controller.signal,
+                signal: AbortSignal.timeout(2000),
                 headers: {
                   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 },
               });
-              clearTimeout(timeoutId);
               
               if (!response.ok) {
                 console.log('[News Search] Meta fetch failed, status:', response.status);
                 return null;
               }
               
-              const html = await response.text();
-              
-              // Try og:site_name first
-              let match = html.match(/<meta\s+property=["']og:site_name["']\s+content=["']([^"']+)["']/i);
-              if (match && match[1]) {
-                console.log('[News Search] Found og:site_name:', match[1]);
-                return match[1];
-              }
-              
-              // Try application-name
-              match = html.match(/<meta\s+name=["']application-name["']\s+content=["']([^"']+)["']/i);
-              if (match && match[1]) {
-                console.log('[News Search] Found application-name:', match[1]);
-                return match[1];
-              }
-              
-              // Try twitter:site
-              match = html.match(/<meta\s+name=["']twitter:site["']\s+content=["']([^"']+)["']/i);
-              if (match && match[1]) {
-                console.log('[News Search] Found twitter:site:', match[1]);
-                return match[1];
-              }
-              
-              // Try to extract from title (e.g., "뉴스 - 서울경제TV")
-              match = html.match(/<title>([^<]+)<\/title>/i);
-              if (match && match[1]) {
-                const titleText = match[1].trim();
-                // Look for common news site patterns in title
-                const siteMatch = titleText.match(/([가-힣\w]+(?:뉴스|TV|신문|일보|경제|매체|미디어))/);
-                if (siteMatch && siteMatch[1]) {
-                  console.log('[News Search] Extracted from title:', siteMatch[1]);
-                  return siteMatch[1];
-                }
-              }
-              
-              return null;
+              const buffer = Buffer.from(await response.arrayBuffer());
+              return parseNewsSource(buffer, response.headers.get("content-type") || "");
             } catch (error) {
               console.log('[News Search] Meta fetch error (timeout or network):', error instanceof Error ? error.message : 'unknown');
               return null;

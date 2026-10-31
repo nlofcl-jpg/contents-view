@@ -1,5 +1,5 @@
 import { isSupabaseConfigured, signInWithGoogle } from "@/lib/supabase";
-import { Check, ChevronRight } from "lucide-react";
+import { Check, ChevronRight, X } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 
@@ -62,6 +62,15 @@ export default function Login() {
   const [isStarting, setIsStarting] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(true);
 
+  const handleClose = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    const redirectPath = new URLSearchParams(window.location.search).get("redirect");
+    setLocation(redirectPath?.startsWith("/") && !redirectPath.startsWith("//") && !redirectPath.startsWith("/login") ? redirectPath : "/");
+  };
+
   const handleGoogleLogin = async () => {
     if (!isSupabaseConfigured) {
       setError("Supabase 로그인 환경변수가 아직 설정되지 않았습니다.");
@@ -104,6 +113,15 @@ export default function Login() {
   return (
     <div className="loginPage">
       <section className="loginPanel" aria-labelledby="login-title">
+        <button
+          type="button"
+          className="loginCloseButton"
+          aria-label="로그인 화면 닫기"
+          title="닫기"
+          onClick={handleClose}
+        >
+          <X size={18} aria-hidden="true" />
+        </button>
         <button
           className="loginBrand"
           type="button"
