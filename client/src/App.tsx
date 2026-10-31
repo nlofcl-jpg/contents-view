@@ -151,7 +151,7 @@ function App() {
             <main className="mainContent">
               <WouterRouter>
                 <Router />
-                <Footer onGuestMenuAccess={requestGuestMenuAccess} />
+                <Footer />
               </WouterRouter>
             </main>
 

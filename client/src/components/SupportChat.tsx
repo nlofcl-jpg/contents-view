@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowUpRight, MessageCircle, RotateCcw, Send, X } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import PartnershipInquiryDialog from "@/components/PartnershipInquiryDialog";
 import { getSupportReply, supportQuestions, type SupportReply } from "@/lib/supportGuide";
 
@@ -12,6 +12,7 @@ const welcome: Message = {
 };
 
 export default function SupportChat() {
+  const [location] = useLocation();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([welcome]);
@@ -21,6 +22,38 @@ export default function SupportChat() {
   const logRef = useRef<HTMLDivElement>(null);
   const latestReplyRef = useRef<HTMLDivElement>(null);
   const nextId = useRef(1);
+
+  useLayoutEffect(() => {
+    const launcher = launcherRef.current;
+    const footer = document.querySelector<HTMLElement>(".siteFooter");
+    const scroller = document.querySelector<HTMLElement>(".mainContent");
+    if (!launcher || !footer || !scroller) return;
+    let frame = 0;
+    const update = () => {
+      const footerTop = footer.getBoundingClientRect().top;
+      const bottom = parseFloat(getComputedStyle(launcher).bottom) || 0;
+      const lift = Math.max(0, window.innerHeight - footerTop + 12 - bottom);
+      launcher.style.transform = `translateY(-${lift}px)`;
+      launcher.style.visibility = footerTop < launcher.offsetHeight + 12 ? "hidden" : "visible";
+    };
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(update);
+    };
+    const observer = new ResizeObserver(schedule);
+    observer.observe(footer);
+    observer.observe(scroller);
+    for (const child of Array.from(scroller.children)) observer.observe(child);
+    scroller.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    update();
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      scroller.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+    };
+  }, [location]);
 
   const close = () => {
     setOpen(false);

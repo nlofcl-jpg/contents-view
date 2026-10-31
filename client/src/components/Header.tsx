@@ -456,9 +456,6 @@ export default function Header({
           )}
         </div>
 
-        <a href="/saved-contents" onClick={(event) => handleNavLinkClick(event, "/saved-contents")} className={`headerNavItem headerNavLink ${location === "/saved-contents" ? "active" : ""}`}>
-          내 보관함
-        </a>
         </nav>
 
         {/* 오른쪽 영역 */}
@@ -561,6 +558,9 @@ export default function Header({
                       마이페이지
                     </a>
                   )}
+                  <Link href="/saved-contents" className="dropdownItem" onClick={() => setIsDropdownOpen(false)}>
+                    내 보관함
+                  </Link>
                   {user.role === "admin" && (
                     <Link
                       href="/admin"

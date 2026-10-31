@@ -2,20 +2,7 @@ import { Link } from "wouter";
 import { useState } from "react";
 import PartnershipInquiryDialog from "@/components/PartnershipInquiryDialog";
 
-const trendLinks = [
-  { label: "YouTube", href: "/trends/youtube" },
-  { label: "네이버 트렌드", href: "/trends/naver" },
-  { label: "검색 트렌드", href: "/trends/google" },
-];
-
-const serviceLinks = [
-  { label: "뉴스&이슈", href: "/news" },
-  { label: "커뮤니티 트렌드", href: "/community" },
-  { label: "스튜디오", href: "/ai-studio" },
-  { label: "내 보관함", href: "/saved-contents" },
-];
-
-export default function Footer({ onGuestMenuAccess }: { onGuestMenuAccess?: (path?: string) => boolean }) {
+export default function Footer() {
   const year = new Date().getFullYear();
   const [inquiryOpen, setInquiryOpen] = useState(false);
 
@@ -34,44 +21,15 @@ export default function Footer({ onGuestMenuAccess }: { onGuestMenuAccess?: (pat
           </p>
         </div>
 
-        <nav className="siteFooterNav" aria-label="하단 메뉴">
-          <div className="siteFooterNavGroup">
-            <h2>Trends</h2>
-            {trendLinks.map(link => (
-              <Link key={link.href} href={link.href} onClick={(event) => {
-                if (onGuestMenuAccess?.(link.href)) event.preventDefault();
-              }}>
-                {link.label}
-              </Link>
-            ))}
-          </div>
-          <div className="siteFooterNavGroup">
-            <h2>Services</h2>
-            {serviceLinks.map(link => (
-              <Link key={link.href} href={link.href} onClick={(event) => {
-                if (onGuestMenuAccess?.(link.href)) event.preventDefault();
-              }}>
-                {link.label}
-              </Link>
-            ))}
-          </div>
-          <div className="siteFooterNavGroup">
-            <h2>Legal</h2>
+        <nav className="siteFooterLegalLinks" aria-label="하단 안내">
             <Link href="/privacy">개인정보처리방침</Link>
             <span>이용약관</span>
             <a href="mailto:edenofcls@gmail.com">이메일</a>
             <button type="button" className="siteFooterInquiryButton" onClick={() => setInquiryOpen(true)}>제휴 문의</button>
-          </div>
         </nav>
       </div>
 
       <div className="siteFooterBottom">
-        <nav className="siteFooterMobileLinks" aria-label="모바일 하단 안내">
-          <Link href="/privacy">개인정보처리 방침</Link>
-          <span>이용약관</span>
-          <a href="mailto:edenofcls@gmail.com">이메일</a>
-          <button type="button" className="siteFooterInquiryButton" onClick={() => setInquiryOpen(true)}>제휴 문의</button>
-        </nav>
         <span>© {year} CONTENTS VIEW</span>
         <span>Trend, news, community, and creator intelligence.</span>
       </div>

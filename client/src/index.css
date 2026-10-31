@@ -266,7 +266,7 @@ a {
 
 .siteFooterInner {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 32px;
   align-items: start;
 }
@@ -306,28 +306,19 @@ a {
   color: #8492ad;
 }
 
-.siteFooterNav {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
-}
-
-.siteFooterNavGroup {
+.siteFooterLegalLinks {
   display: flex;
-  flex-direction: column;
-  gap: 9px;
+  align-items: center;
+  align-self: end;
+  justify-content: flex-end;
+  gap: 20px;
+  padding-bottom: 2px;
+  white-space: nowrap;
 }
 
-.siteFooterNavGroup h2 {
-  margin: 0 0 2px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #dbe7ff;
-}
-
-.siteFooterNavGroup a,
-.siteFooterNavGroup span,
-.siteFooterNavGroup .siteFooterInquiryButton {
+.siteFooterLegalLinks a,
+.siteFooterLegalLinks span,
+.siteFooterLegalLinks .siteFooterInquiryButton {
   width: fit-content;
   font-size: 13px;
   line-height: 1.4;
@@ -335,8 +326,8 @@ a {
   transition: color 0.15s ease;
 }
 
-.siteFooterNavGroup a:hover,
-.siteFooterNavGroup .siteFooterInquiryButton:hover {
+.siteFooterLegalLinks a:hover,
+.siteFooterLegalLinks .siteFooterInquiryButton:hover {
   color: #ffffff;
 }
 
@@ -360,10 +351,6 @@ a {
   border-top: 1px solid rgba(148, 163, 184, 0.08);
   font-size: 12px;
   color: #64748b;
-}
-
-.siteFooterMobileLinks {
-  display: none;
 }
 
 .privacyPage {
@@ -492,6 +479,10 @@ a {
   }
 
   .siteFooterInner {
+    display: block;
+  }
+
+  .siteFooterBrand {
     display: none;
   }
 
@@ -508,26 +499,25 @@ a {
     display: none;
   }
 
-  .siteFooterMobileLinks {
-    display: flex;
-    align-items: center;
+  .siteFooterLegalLinks {
     justify-content: center;
-    flex-wrap: wrap;
-    gap: 8px 18px;
+    gap: 12px;
+    padding-bottom: 0;
     color: #8fa3be;
     font-size: 11px;
     line-height: 1.5;
   }
 
-  .siteFooterMobileLinks a,
-  .siteFooterMobileLinks span,
-  .siteFooterMobileLinks .siteFooterInquiryButton {
+  .siteFooterLegalLinks a,
+  .siteFooterLegalLinks span,
+  .siteFooterLegalLinks .siteFooterInquiryButton {
+    font-size: inherit;
     transition: color 0.15s ease;
     white-space: nowrap;
   }
 
-  .siteFooterMobileLinks a:hover,
-  .siteFooterMobileLinks .siteFooterInquiryButton:hover {
+  .siteFooterLegalLinks a:hover,
+  .siteFooterLegalLinks .siteFooterInquiryButton:hover {
     color: #ffffff;
   }
 
@@ -11007,7 +10997,7 @@ input[type="date"].youtubeSelect {
 
 .supportChatLauncher {
   position: fixed;
-  z-index: 40;
+  z-index: 39;
   right: 24px;
   bottom: max(24px, env(safe-area-inset-bottom));
   display: grid;

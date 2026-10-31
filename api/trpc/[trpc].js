@@ -1031,7 +1031,7 @@ var systemRouter = router({
 });
 
 // server/routers.ts
-import { z as z3 } from "zod";
+import { z as z4 } from "zod";
 import { TRPCError as TRPCError4 } from "@trpc/server";
 
 // server/naverAnalysisQuota.ts
@@ -3047,6 +3047,46 @@ function parseNewsSource(buffer, contentType = "") {
   return null;
 }
 
+// shared/partnershipConsent.ts
+import { z as z3 } from "zod";
+var PARTNERSHIP_CONSENT_VERSION = "2026-10-31-v1";
+var PARTNERSHIP_RETENTION_NOTICE = "\uC811\uC218\uC77C\uB85C\uBD80\uD130 1\uB144 \uBCF4\uAD00 \uD6C4 \uB2E4\uC74C \uC77C\uC77C \uC0AD\uC81C \uC791\uC5C5\uC5D0\uC11C \uD30C\uAE30";
+var PARTNERSHIP_COLLECTION_NOTICE = {
+  controller: "\uC5D0\uB374 \uCEF4\uD37C\uB2C8",
+  purpose: "\uC81C\uD734 \uBB38\uC758 \uC811\uC218, \uAC80\uD1A0 \uBC0F \uD68C\uC2E0",
+  items: "\uC774\uB984(\uC0C1\uD638\uBA85), \uC5F0\uB77D\uCC98, \uC774\uBA54\uC77C, \uBB38\uC758 \uB0B4\uC6A9, \uC811\uC218 \uC77C\uC2DC \uBC0F \uB3D9\uC758 \uAE30\uB85D",
+  retention: PARTNERSHIP_RETENTION_NOTICE,
+  refusal: "\uB3D9\uC758\uB97C \uAC70\uBD80\uD560 \uC218 \uC788\uC73C\uBA70, \uAC70\uBD80 \uC2DC \uC628\uB77C\uC778 \uBB38\uC758\uB97C \uC81C\uCD9C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uC0AC\uC774\uD2B8\uC758 \uB2E4\uB978 \uAE30\uB2A5 \uC774\uC6A9\uC5D0\uB294 \uC601\uD5A5\uC774 \uC5C6\uC2B5\uB2C8\uB2E4."
+};
+var PARTNERSHIP_TRANSFER_NOTICE = {
+  recipient: "Vercel Inc. (privacy@vercel.com)",
+  country: "\uBBF8\uAD6D (\uD604\uC7AC \uC11C\uBC84 \uC2E4\uD589 \uC9C0\uC5ED: \uC6CC\uC2F1\uD134 D.C. \uAD8C\uC5ED)",
+  items: "\uC774\uB984(\uC0C1\uD638\uBA85), \uC5F0\uB77D\uCC98, \uC774\uBA54\uC77C, \uBB38\uC758 \uB0B4\uC6A9, \uB3D9\uC758 \uC815\uBCF4 \uBC0F \uC694\uCCAD \uCC98\uB9AC\uC5D0 \uD544\uC694\uD55C \uC811\uC18D \uC815\uBCF4",
+  purpose: "\uBB38\uC758 \uC81C\uCD9C \uC694\uCCAD\uC758 \uC11C\uBC84 \uCC98\uB9AC \uBC0F \uD55C\uAD6D \uC18C\uC7AC \uB370\uC774\uD130\uBCA0\uC774\uC2A4\uB85C\uC758 \uC804\uB2EC",
+  method: "\uBB38\uC758 \uC81C\uCD9C \uC2DC \uC554\uD638\uD654\uB41C \uD1B5\uC2E0\uC744 \uD1B5\uD55C \uC804\uC1A1",
+  retention: "\uBB38\uC758 \uBCF8\uBB38\uC740 \uC694\uCCAD \uCC98\uB9AC\uC5D0 \uC0AC\uC6A9\uB418\uBA70 \uBCC4\uB3C4\uC758 \uBCF8\uBB38 \uB85C\uADF8\uB85C \uC800\uC7A5\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uC11C\uBE44\uC2A4 \uC0DD\uC131\xB7\uBCF4\uC548 \uC815\uBCF4\uB294 Vercel\uC758 \uCC98\uB9AC \uBAA9\uC801 \uB2EC\uC131 \uC2DC \uC0AD\uC81C \uB610\uB294 \uC775\uBA85\uD654\uB418\uBA70, \uB7F0\uD0C0\uC784 \uB85C\uADF8\uC758 \uC5F4\uB78C \uAE30\uAC04\uC740 \uC774\uC6A9 \uC694\uAE08\uC81C\uC5D0 \uB530\uB77C \uB2E4\uB985\uB2C8\uB2E4.",
+  refusal: "\uB3D9\uC758\uB97C \uAC70\uBD80\uD560 \uC218 \uC788\uC73C\uBA70, \uAC70\uBD80 \uC2DC \uC628\uB77C\uC778 \uBB38\uC758\uB97C \uC81C\uCD9C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uC81C\uCD9C \uD6C4 \uCCA0\uD68C\xB7\uC0AD\uC81C \uC694\uCCAD\uC740 edenofcls@gmail.com\uC73C\uB85C \uBCF4\uB0B4 \uC8FC\uC138\uC694."
+};
+var partnershipInquiryInput = z3.object({
+  name: z3.string().trim().min(1).max(100),
+  phone: z3.string().trim().min(7).max(30).regex(/^[+\d()\s-]+$/).refine((value) => value.replace(/\D/g, "").length >= 7),
+  email: z3.email().trim().max(254),
+  message: z3.string().trim().min(10).max(5e3),
+  privacyConsent: z3.literal(true),
+  overseasConsent: z3.literal(true),
+  consentVersion: z3.literal(PARTNERSHIP_CONSENT_VERSION)
+});
+function partnershipConsentRecord() {
+  return {
+    privacy_consent_version: PARTNERSHIP_CONSENT_VERSION,
+    overseas_consent_version: PARTNERSHIP_CONSENT_VERSION,
+    consent_notice: {
+      collection: PARTNERSHIP_COLLECTION_NOTICE,
+      overseas: PARTNERSHIP_TRANSFER_NOTICE
+    }
+  };
+}
+
 // server/routers.ts
 var require2 = createRequire(import.meta.url);
 var NAVER_SEARCH_AD_PROVIDER2 = "naver-search-ad";
@@ -3990,12 +4030,7 @@ var appRouter = router({
   // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   partnership: router({
-    submit: publicProcedure.input(z3.object({
-      name: z3.string().trim().min(1).max(100),
-      phone: z3.string().trim().min(7).max(30).regex(/^[+\d()\s-]+$/).refine((value) => value.replace(/\D/g, "").length >= 7),
-      email: z3.email().trim().max(254),
-      message: z3.string().trim().min(10).max(5e3)
-    })).mutation(async ({ input }) => {
+    submit: publicProcedure.input(partnershipInquiryInput).mutation(async ({ input }) => {
       if (!supabaseAdmin4) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uC811\uC218\uB97C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
       const email = input.email.toLowerCase();
       const phone = input.phone.replace(/[^\d+]/g, "");
@@ -4006,7 +4041,8 @@ var appRouter = router({
         name: input.name,
         phone,
         email,
-        message: input.message
+        message: input.message,
+        ...partnershipConsentRecord()
       });
       if (error) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uC811\uC218\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4." });
       return { success: true };
@@ -4032,7 +4068,7 @@ var appRouter = router({
     /**
      * Update user name
      */
-    updateName: protectedProcedure.input(z3.object({ name: z3.string().min(1).max(50) })).mutation(async ({ ctx, input }) => {
+    updateName: protectedProcedure.input(z4.object({ name: z4.string().min(1).max(50) })).mutation(async ({ ctx, input }) => {
       if (!ctx.user?.openId) {
         throw new Error("User not authenticated");
       }
@@ -4043,7 +4079,7 @@ var appRouter = router({
      * API Key management
      */
     apiKey: router({
-      save: protectedProcedure.input(z3.object({ provider: z3.string().min(1), apiKey: z3.string().min(1) })).mutation(async ({ ctx, input }) => {
+      save: protectedProcedure.input(z4.object({ provider: z4.string().min(1), apiKey: z4.string().min(1) })).mutation(async ({ ctx, input }) => {
         if (!ctx.user) {
           throw new Error("User not authenticated");
         }
@@ -4054,7 +4090,7 @@ var appRouter = router({
         await saveUserApiKey2(ctx.user, input.provider, trimmedKey);
         return { success: true };
       }),
-      delete: protectedProcedure.input(z3.object({ provider: z3.string().min(1) })).mutation(async ({ ctx, input }) => {
+      delete: protectedProcedure.input(z4.object({ provider: z4.string().min(1) })).mutation(async ({ ctx, input }) => {
         if (!ctx.user) {
           throw new Error("User not authenticated");
         }
@@ -4064,7 +4100,7 @@ var appRouter = router({
       /**
        * Test YouTube API connection
        */
-      testConnection: protectedProcedure.input(z3.object({ provider: z3.string().min(1) })).mutation(async ({ ctx, input }) => {
+      testConnection: protectedProcedure.input(z4.object({ provider: z4.string().min(1) })).mutation(async ({ ctx, input }) => {
         if (!ctx.user) {
           throw new Error("User not authenticated");
         }
@@ -4108,7 +4144,7 @@ var appRouter = router({
       /**
        * Get API key with test status
        */
-      getWithStatus: protectedProcedure.input(z3.object({ provider: z3.string().min(1) })).query(async ({ ctx, input }) => {
+      getWithStatus: protectedProcedure.input(z4.object({ provider: z4.string().min(1) })).query(async ({ ctx, input }) => {
         if (!ctx.user) {
           throw new Error("User not authenticated");
         }
@@ -4132,10 +4168,10 @@ var appRouter = router({
           updatedAt: apiKey.updatedAt
         };
       }),
-      saveNaverSearchAd: adminProcedure.input(z3.object({
-        customerId: z3.string().min(1),
-        accessLicense: z3.string().min(1),
-        secretKey: z3.string().min(1)
+      saveNaverSearchAd: adminProcedure.input(z4.object({
+        customerId: z4.string().min(1),
+        accessLicense: z4.string().min(1),
+        secretKey: z4.string().min(1)
       })).mutation(async ({ ctx, input }) => {
         if (!ctx.user) {
           throw new Error("User not authenticated");
@@ -4252,7 +4288,7 @@ var appRouter = router({
     /**
      * Admin: Approve a pending user
      */
-    approve: adminProcedure.input(z3.object({ userId: z3.number() })).mutation(async ({ input }) => {
+    approve: adminProcedure.input(z4.object({ userId: z4.number() })).mutation(async ({ input }) => {
       const db = await require2("./db").getDb();
       if (!db) {
         throw new Error("Database not available");
@@ -4265,7 +4301,7 @@ var appRouter = router({
     /**
      * Admin: Reject a pending user
      */
-    reject: adminProcedure.input(z3.object({ userId: z3.number() })).mutation(async ({ input }) => {
+    reject: adminProcedure.input(z4.object({ userId: z4.number() })).mutation(async ({ input }) => {
       const db = await require2("./db").getDb();
       if (!db) {
         throw new Error("Database not available");
@@ -4277,13 +4313,13 @@ var appRouter = router({
     })
   }),
   youtube: router({
-    getCollectedRisingVideos: publicProcedure.input(z3.object({
-      regionCode: z3.string().min(2).max(2),
-      videoCategoryId: z3.number().optional(),
-      period: z3.enum(["realtime", "1h", "6h", "24h"]).default("1h"),
-      subscriberRange: z3.enum(["all", "lt10k", "10k-100k", "100k-1m", "gt1m"]).default("all"),
-      sortBy: z3.enum(["score", "hourly", "outlier", "newest"]).default("score"),
-      maxResults: z3.number().min(1).max(50).default(30)
+    getCollectedRisingVideos: publicProcedure.input(z4.object({
+      regionCode: z4.string().min(2).max(2),
+      videoCategoryId: z4.number().optional(),
+      period: z4.enum(["realtime", "1h", "6h", "24h"]).default("1h"),
+      subscriberRange: z4.enum(["all", "lt10k", "10k-100k", "100k-1m", "gt1m"]).default("all"),
+      sortBy: z4.enum(["score", "hourly", "outlier", "newest"]).default("score"),
+      maxResults: z4.number().min(1).max(50).default(30)
     })).query(async ({ input }) => {
       try {
         const result = await getStoredYouTubeRisingVideos(input);
@@ -4310,7 +4346,7 @@ var appRouter = router({
     /**
      * Fetch a fresh, normalized analysis payload for every YouTube video modal.
      */
-    getVideoAnalysis: protectedProcedure.input(z3.object({ videoId: z3.string().min(1).max(32) })).query(async ({ ctx, input }) => {
+    getVideoAnalysis: protectedProcedure.input(z4.object({ videoId: z4.string().min(1).max(32) })).query(async ({ ctx, input }) => {
       if (!ctx.user) throw new Error("User not authenticated");
       const apiKeyRecord = await getUserApiKey2(ctx.user, "youtube");
       if (!apiKeyRecord || apiKeyRecord.testStatus !== "success") {
@@ -4381,11 +4417,11 @@ var appRouter = router({
     /**
      * Get trending videos for a specific country
      */
-    getTrendingVideos: protectedProcedure.input(z3.object({
-      regionCode: z3.string().min(2).max(2),
-      sortBy: z3.enum(["trending", "viewCount", "publishedAt"]).default("trending"),
-      maxResults: z3.number().min(1).max(50).default(12),
-      videoCategoryId: z3.number().optional()
+    getTrendingVideos: protectedProcedure.input(z4.object({
+      regionCode: z4.string().min(2).max(2),
+      sortBy: z4.enum(["trending", "viewCount", "publishedAt"]).default("trending"),
+      maxResults: z4.number().min(1).max(50).default(12),
+      videoCategoryId: z4.number().optional()
     })).query(async ({ ctx, input }) => {
       if (!ctx.user) {
         throw new Error("User not authenticated");
@@ -4541,13 +4577,13 @@ var appRouter = router({
      * Discover recently published videos that are outperforming their channel size.
      * This is an on-demand discovery score. Snapshot-based velocity is added separately.
      */
-    getRisingVideos: protectedProcedure.input(z3.object({
-      regionCode: z3.string().min(2).max(2),
-      videoCategoryId: z3.number().optional(),
-      period: z3.enum(["realtime", "1h", "6h", "24h"]).default("1h"),
-      subscriberRange: z3.enum(["all", "lt10k", "10k-100k", "100k-1m", "gt1m"]).default("all"),
-      sortBy: z3.enum(["score", "hourly", "outlier", "newest"]).default("score"),
-      maxResults: z3.number().min(1).max(50).default(30)
+    getRisingVideos: protectedProcedure.input(z4.object({
+      regionCode: z4.string().min(2).max(2),
+      videoCategoryId: z4.number().optional(),
+      period: z4.enum(["realtime", "1h", "6h", "24h"]).default("1h"),
+      subscriberRange: z4.enum(["all", "lt10k", "10k-100k", "100k-1m", "gt1m"]).default("all"),
+      sortBy: z4.enum(["score", "hourly", "outlier", "newest"]).default("score"),
+      maxResults: z4.number().min(1).max(50).default(30)
     })).query(async ({ ctx, input }) => {
       if (!ctx.user) throw new Error("User not authenticated");
       try {
@@ -4686,12 +4722,12 @@ var appRouter = router({
     /**
      * Search popular YouTube videos by keyword
      */
-    searchVideos: protectedProcedure.input(z3.object({
-      query: z3.string().min(1).max(120),
-      regionCode: z3.string().min(2).max(2).default("KR"),
-      sortBy: z3.enum(["relevance", "publishedAt", "viewCount"]).default("relevance"),
-      durationType: z3.enum(["all", "shorts", "long"]).default("all"),
-      maxResults: z3.number().min(1).max(50).default(50)
+    searchVideos: protectedProcedure.input(z4.object({
+      query: z4.string().min(1).max(120),
+      regionCode: z4.string().min(2).max(2).default("KR"),
+      sortBy: z4.enum(["relevance", "publishedAt", "viewCount"]).default("relevance"),
+      durationType: z4.enum(["all", "shorts", "long"]).default("all"),
+      maxResults: z4.number().min(1).max(50).default(50)
     })).query(async ({ ctx, input }) => {
       if (!ctx.user) {
         throw new Error("User not authenticated");
@@ -4863,10 +4899,10 @@ var appRouter = router({
      * Get trending shorts (videos <= 60 seconds)
      * Uses videos.list with duration filtering
      */
-    getTrendingShorts: protectedProcedure.input(z3.object({
-      regionCode: z3.string().min(2).max(2),
-      sortBy: z3.enum(["trending", "viewCount", "publishedAt"]).default("trending"),
-      maxResults: z3.number().min(1).max(50).default(24)
+    getTrendingShorts: protectedProcedure.input(z4.object({
+      regionCode: z4.string().min(2).max(2),
+      sortBy: z4.enum(["trending", "viewCount", "publishedAt"]).default("trending"),
+      maxResults: z4.number().min(1).max(50).default(24)
     })).query(async ({ ctx, input }) => {
       if (!ctx.user) {
         throw new Error("User not authenticated");
@@ -5059,8 +5095,8 @@ var appRouter = router({
     })
   }),
   googleTrends: router({
-    realtimeTrending: publicProcedure.input(z3.object({
-      country: z3.string().default("KR")
+    realtimeTrending: publicProcedure.input(z4.object({
+      country: z4.string().default("KR")
     })).query(async ({ input }) => {
       try {
         const data = await getGoogleTrendingSearches(input.country);
@@ -5080,14 +5116,14 @@ var appRouter = router({
     })
   }),
   naver: router({
-    categoryTrend: publicProcedure.input(z3.object({
-      categoryCode: z3.string(),
-      startDate: z3.string(),
-      endDate: z3.string(),
-      timeUnit: z3.enum(["date", "week", "month"]),
-      device: z3.string().optional(),
-      gender: z3.string().optional(),
-      ages: z3.array(z3.string()).optional()
+    categoryTrend: publicProcedure.input(z4.object({
+      categoryCode: z4.string(),
+      startDate: z4.string(),
+      endDate: z4.string(),
+      timeUnit: z4.enum(["date", "week", "month"]),
+      device: z4.string().optional(),
+      gender: z4.string().optional(),
+      ages: z4.array(z4.string()).optional()
     })).mutation(async ({ input }) => {
       try {
         const clientId = process.env.NAVER_CLIENT_ID;
@@ -5186,8 +5222,8 @@ var appRouter = router({
     }),
     unifiedInsight: unifiedInsightProcedure,
     unifiedInsightBatch: unifiedInsightBatchProcedure,
-    blogAnalysis: naverAnalysisProcedure.input(z3.object({
-      blogUrl: z3.string().min(1)
+    blogAnalysis: naverAnalysisProcedure.input(z4.object({
+      blogUrl: z4.string().min(1)
     })).mutation(async ({ input }) => {
       try {
         return await fetchNaverBlogRss(input.blogUrl);
@@ -5201,8 +5237,8 @@ var appRouter = router({
         };
       }
     }),
-    blogPostDetails: naverAnalysisProcedure.input(z3.object({
-      postUrl: z3.string().min(1)
+    blogPostDetails: naverAnalysisProcedure.input(z4.object({
+      postUrl: z4.string().min(1)
     })).mutation(async ({ input }) => {
       try {
         return await fetchNaverBlogPostDetails(input.postUrl);
@@ -5217,8 +5253,8 @@ var appRouter = router({
         };
       }
     }),
-    blogPostEngagement: publicProcedure.input(z3.object({
-      postUrl: z3.string().min(1)
+    blogPostEngagement: publicProcedure.input(z4.object({
+      postUrl: z4.string().min(1)
     })).mutation(async ({ input }) => {
       try {
         const engagement = await fetchNaverBlogPostEngagement(input.postUrl);
@@ -5237,10 +5273,10 @@ var appRouter = router({
         };
       }
     }),
-    blogPostAnalysis: naverAnalysisProcedure.input(z3.object({
-      postUrl: z3.string().min(1),
-      title: z3.string().optional(),
-      keywords: z3.array(z3.string()).min(1).max(10)
+    blogPostAnalysis: naverAnalysisProcedure.input(z4.object({
+      postUrl: z4.string().min(1),
+      title: z4.string().optional(),
+      keywords: z4.array(z4.string()).min(1).max(10)
     })).mutation(async ({ input }) => {
       try {
         const clientId = process.env.NAVER_CLIENT_ID;
@@ -5323,12 +5359,12 @@ var appRouter = router({
         };
       }
     }),
-    diagnostic: publicProcedure.input(z3.object({
-      keywords: z3.array(z3.string()).min(1).max(5),
-      category: z3.string(),
-      startDate: z3.string(),
-      endDate: z3.string(),
-      timeUnit: z3.enum(["date", "week", "month"])
+    diagnostic: publicProcedure.input(z4.object({
+      keywords: z4.array(z4.string()).min(1).max(5),
+      category: z4.string(),
+      startDate: z4.string(),
+      endDate: z4.string(),
+      timeUnit: z4.enum(["date", "week", "month"])
     })).mutation(async ({ input }) => {
       try {
         const result = await runDiagnostics(
@@ -5391,7 +5427,7 @@ var appRouter = router({
         savedAt: String(row.created_at)
       }));
     }),
-    addFromUrl: protectedProcedure.input(z3.object({ url: z3.string().trim().min(1).max(2048) })).mutation(async ({ ctx, input }) => {
+    addFromUrl: protectedProcedure.input(z4.object({ url: z4.string().trim().min(1).max(2048) })).mutation(async ({ ctx, input }) => {
       const userId = supabaseBookmarkUserId(ctx.user);
       if (!userId || !supabaseAdmin4) {
         throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Instagram \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
@@ -5417,7 +5453,7 @@ var appRouter = router({
       if (error) throw error;
       return { shortcode: parsed.shortcode, alreadySaved: false };
     }),
-    remove: protectedProcedure.input(z3.object({ shortcode: z3.string().regex(/^[A-Za-z0-9_-]{5,32}$/), mediaType: z3.enum(["p", "reel"]) })).mutation(async ({ ctx, input }) => {
+    remove: protectedProcedure.input(z4.object({ shortcode: z4.string().regex(/^[A-Za-z0-9_-]{5,32}$/), mediaType: z4.enum(["p", "reel"]) })).mutation(async ({ ctx, input }) => {
       const userId = supabaseBookmarkUserId(ctx.user);
       if (!userId || !supabaseAdmin4) {
         throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Instagram \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
@@ -5445,7 +5481,7 @@ var appRouter = router({
         savedAt: String(row.created_at)
       }));
     }),
-    addFromUrl: protectedProcedure.input(z3.object({ url: z3.string().trim().min(1).max(2048) })).mutation(async ({ ctx, input }) => {
+    addFromUrl: protectedProcedure.input(z4.object({ url: z4.string().trim().min(1).max(2048) })).mutation(async ({ ctx, input }) => {
       const userId = supabaseBookmarkUserId(ctx.user);
       if (!userId || !supabaseAdmin4) {
         throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "TikTok \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
@@ -5479,7 +5515,7 @@ var appRouter = router({
       if (error) throw error;
       return { videoId: video.videoId, alreadySaved: false };
     }),
-    remove: protectedProcedure.input(z3.object({ videoId: z3.string().regex(/^\d{10,25}$/) })).mutation(async ({ ctx, input }) => {
+    remove: protectedProcedure.input(z4.object({ videoId: z4.string().regex(/^\d{10,25}$/) })).mutation(async ({ ctx, input }) => {
       const userId = supabaseBookmarkUserId(ctx.user);
       if (!userId || !supabaseAdmin4) {
         throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "TikTok \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
@@ -5491,7 +5527,7 @@ var appRouter = router({
   }),
   // YouTube Bookmarks router
   youtubeBookmarks: router({
-    addFromUrl: protectedProcedure.input(z3.object({ url: z3.string().trim().min(1).max(2048) })).mutation(async ({ ctx, input }) => {
+    addFromUrl: protectedProcedure.input(z4.object({ url: z4.string().trim().min(1).max(2048) })).mutation(async ({ ctx, input }) => {
       const parsed = parseYouTubeVideoUrl(input.url);
       if (!parsed) {
         throw new TRPCError4({ code: "BAD_REQUEST", message: "\uC62C\uBC14\uB978 YouTube \uC601\uC0C1 URL\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694." });
@@ -5517,7 +5553,7 @@ var appRouter = router({
       await addYouTubeBookmark2(ctx.user, { userId: ctx.user.id, ...video });
       return { videoId: parsed.videoId, alreadySaved: false };
     }),
-    trackSavedVideos: protectedProcedure.input(z3.object({ accountKey: z3.string() })).query(async ({ ctx }) => {
+    trackSavedVideos: protectedProcedure.input(z4.object({ accountKey: z4.string() })).query(async ({ ctx }) => {
       const bookmarks = await listYouTubeBookmarks(ctx.user);
       if (bookmarks.length === 0) {
         return { checkedAt: (/* @__PURE__ */ new Date()).toISOString(), videos: [], channels: [] };
@@ -5641,9 +5677,9 @@ var appRouter = router({
      * Check if a specific video is bookmarked
      */
     isBookmarked: protectedProcedure.input(
-      z3.object({
-        videoId: z3.string(),
-        contentType: z3.enum(["video", "shorts"])
+      z4.object({
+        videoId: z4.string(),
+        contentType: z4.enum(["video", "shorts"])
       })
     ).query(async ({ ctx, input }) => {
       return await isYouTubeBookmark(ctx.user, input.videoId, input.contentType);
@@ -5652,18 +5688,18 @@ var appRouter = router({
      * Add a video to bookmarks
      */
     add: protectedProcedure.input(
-      z3.object({
-        videoId: z3.string(),
-        contentType: z3.enum(["video", "shorts"]),
-        title: z3.string(),
-        thumbnailUrl: z3.string().optional(),
-        channelId: z3.string().optional(),
-        channelTitle: z3.string().optional(),
-        channelThumbnailUrl: z3.string().optional(),
-        videoUrl: z3.string().optional(),
-        duration: z3.string().optional(),
-        viewCount: z3.union([z3.string(), z3.number()]).optional(),
-        publishedAt: z3.string().optional()
+      z4.object({
+        videoId: z4.string(),
+        contentType: z4.enum(["video", "shorts"]),
+        title: z4.string(),
+        thumbnailUrl: z4.string().optional(),
+        channelId: z4.string().optional(),
+        channelTitle: z4.string().optional(),
+        channelThumbnailUrl: z4.string().optional(),
+        videoUrl: z4.string().optional(),
+        duration: z4.string().optional(),
+        viewCount: z4.union([z4.string(), z4.number()]).optional(),
+        publishedAt: z4.string().optional()
       })
     ).mutation(async ({ ctx, input }) => {
       const bookmarkData = {
@@ -5688,9 +5724,9 @@ var appRouter = router({
      * Remove a video from bookmarks
      */
     remove: protectedProcedure.input(
-      z3.object({
-        videoId: z3.string(),
-        contentType: z3.enum(["video", "shorts"])
+      z4.object({
+        videoId: z4.string(),
+        contentType: z4.enum(["video", "shorts"])
       })
     ).mutation(async ({ ctx, input }) => {
       await removeYouTubeBookmark2(ctx.user, input.videoId, input.contentType);
@@ -5702,8 +5738,8 @@ var appRouter = router({
      * Fetch popular posts from DC Inside Best Gallery
      * Returns normalized data for the community content list
      */
-    getDcinside: publicProcedure.input(z3.object({
-      sort: z3.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
+    getDcinside: publicProcedure.input(z4.object({
+      sort: z4.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
     }).optional()).query(async ({ input }) => {
       console.log("[DC Inside] getDcinside called");
       const cacheKey = "dcinside_posts_cache";
@@ -5846,7 +5882,7 @@ var appRouter = router({
      * Returns normalized data for the community content list
      * Handles EUC-KR encoding
      */
-    getPpomppu: publicProcedure.input(z3.object({ forceRefresh: z3.boolean().optional() }).optional()).query(async ({ input }) => {
+    getPpomppu: publicProcedure.input(z4.object({ forceRefresh: z4.boolean().optional() }).optional()).query(async ({ input }) => {
       const cacheKey = "ppomppu_posts_cache";
       const cacheDuration = 10 * 60 * 1e3;
       const forceRefresh = input?.forceRefresh || false;
@@ -5963,8 +5999,8 @@ var appRouter = router({
      * Fetch popular posts from Nate Pann Ranking
      * Returns normalized data for the community content list
      */
-    getNatePann: publicProcedure.input(z3.object({
-      sort: z3.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
+    getNatePann: publicProcedure.input(z4.object({
+      sort: z4.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
     }).optional()).query(async ({ input }) => {
       const cacheKey = "natepann_posts_cache";
       const cacheDuration = 10 * 60 * 1e3;
@@ -6093,8 +6129,8 @@ var appRouter = router({
      * Fetch popular posts from Ruliweb Best
      * Returns normalized data for the community content list
      */
-    getRuliweb: publicProcedure.input(z3.object({
-      sort: z3.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
+    getRuliweb: publicProcedure.input(z4.object({
+      sort: z4.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
     }).optional()).query(async ({ input }) => {
       const cacheKey = "ruliweb_posts_cache";
       const cacheDuration = 10 * 60 * 1e3;
@@ -6242,8 +6278,8 @@ var appRouter = router({
         };
       }
     }),
-    getInven: publicProcedure.input(z3.object({
-      sort: z3.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
+    getInven: publicProcedure.input(z4.object({
+      sort: z4.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
     }).optional()).query(async ({ input }) => {
       const cacheKey = "inven_best";
       const cacheDuration = 10 * 60 * 1e3;
@@ -6399,8 +6435,8 @@ var appRouter = router({
         };
       }
     }),
-    getBobaedream: publicProcedure.input(z3.object({
-      sort: z3.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
+    getBobaedream: publicProcedure.input(z4.object({
+      sort: z4.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
     }).optional()).query(async ({ input }) => {
       const cacheKey = "bobaedream_posts_cache";
       const cacheDuration = 10 * 60 * 1e3;
@@ -6569,8 +6605,8 @@ var appRouter = router({
         };
       }
     }),
-    getHumorUniv: publicProcedure.input(z3.object({
-      sort: z3.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
+    getHumorUniv: publicProcedure.input(z4.object({
+      sort: z4.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
     }).optional()).query(async ({ input }) => {
       const cacheKey = "humoruniv_posts_cache";
       const cacheDuration = 10 * 60 * 1e3;
@@ -6805,7 +6841,7 @@ var appRouter = router({
     /**
      * Get latest news from RSS
      */
-    getLatestNews: publicProcedure.input(z3.object({ limit: z3.number().default(20), category: z3.string().default("all") }).optional()).query(async ({ input }) => {
+    getLatestNews: publicProcedure.input(z4.object({ limit: z4.number().default(20), category: z4.string().default("all") }).optional()).query(async ({ input }) => {
       try {
         const limit = input?.limit || 20;
         const category = input?.category || "all";
@@ -6933,9 +6969,9 @@ var appRouter = router({
     /**
      * Search news from Naver News API
      */
-    searchNews: publicProcedure.input(z3.object({
-      query: z3.string().min(1).max(100),
-      limit: z3.number().default(10)
+    searchNews: publicProcedure.input(z4.object({
+      query: z4.string().min(1).max(100),
+      limit: z4.number().default(10)
     })).query(async ({ input }) => {
       try {
         const { query, limit } = input;

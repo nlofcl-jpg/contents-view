@@ -24,6 +24,7 @@ import { fetchYouTubeBookmarkVideo, parseYouTubeVideoUrl } from "./youtubeBookma
 import { fetchTikTokBookmarkVideo, parseTikTokVideoUrl } from "./tiktokBookmarkUrl";
 import { fetchInstagramBookmarkMetadata, parseInstagramUrl } from "./instagramBookmarkUrl";
 import { parseNewsSource } from "./newsSource";
+import { partnershipInquiryInput, partnershipConsentRecord } from "../shared/partnershipConsent";
 
 const require = createRequire(import.meta.url);
 
@@ -1270,12 +1271,7 @@ export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   partnership: router({
-    submit: publicProcedure.input(z.object({
-      name: z.string().trim().min(1).max(100),
-      phone: z.string().trim().min(7).max(30).regex(/^[+\d()\s-]+$/).refine(value => value.replace(/\D/g, "").length >= 7),
-      email: z.email().trim().max(254),
-      message: z.string().trim().min(10).max(5000),
-    })).mutation(async ({ input }) => {
+    submit: publicProcedure.input(partnershipInquiryInput).mutation(async ({ input }) => {
       if (!supabaseAdmin) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "문의 접수를 사용할 수 없습니다." });
 
       const email = input.email.toLowerCase();
@@ -1294,6 +1290,7 @@ export const appRouter = router({
         phone,
         email,
         message: input.message,
+        ...partnershipConsentRecord(),
       });
       if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "문의 접수에 실패했습니다." });
       return { success: true } as const;

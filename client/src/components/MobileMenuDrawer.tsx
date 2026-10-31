@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
-import { X, Home, LogOut, User, ShieldCheck } from "lucide-react";
+import { X, Home, LogOut, User, ShieldCheck, Bookmark } from "lucide-react";
 import { useState } from "react";
 
 interface MobileMenuDrawerProps {
@@ -113,6 +113,10 @@ export function MobileMenuDrawer({
                   >
                     <User size={18} />
                     <span>마이페이지</span>
+                  </button>
+                  <button className={`mobileMenuAction ${isSavedContentsPage ? "active" : ""}`} onClick={() => handleNavigation("/saved-contents")} type="button">
+                    <Bookmark size={18} />
+                    <span>내 보관함</span>
                   </button>
                   {isAdmin && (
                     <button
@@ -299,14 +303,6 @@ export function MobileMenuDrawer({
                 </div>
               )}
 
-              <button
-                className={`mobileNavItem ${isSavedContentsPage ? "active" : ""}`}
-                onClick={() => handleNavigation("/saved-contents")}
-                type="button"
-              >
-                <span>내 보관함</span>
-              </button>
-
               {isAdmin && (
                 <button
                   className={`mobileNavItem ${isAdminPage ? "active" : ""}`}
@@ -326,6 +322,10 @@ export function MobileMenuDrawer({
                   >
                     <User size={18} />
                     <span>마이페이지</span>
+                  </button>
+                  <button className={`mobileMenuAction ${isSavedContentsPage ? "active" : ""}`} onClick={() => handleNavigation("/saved-contents")} type="button">
+                    <Bookmark size={18} />
+                    <span>내 보관함</span>
                   </button>
                   <button
                     className="mobileMenuAction logout"
