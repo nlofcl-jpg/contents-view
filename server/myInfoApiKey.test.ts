@@ -7,6 +7,7 @@ const state = vi.hoisted(() => ({
   exists: false,
   loading: false,
   error: null as Error | null,
+  testStatus: "untested",
 }));
 
 vi.mock("../client/src/_core/hooks/useAuth", () => ({
@@ -19,7 +20,7 @@ vi.mock("../client/src/lib/trpc", () => ({
       updateName: { useMutation: () => ({ mutateAsync: vi.fn() }) },
       apiKey: {
         getWithStatus: { useQuery: () => ({
-          data: state.loading || state.error ? undefined : { exists: state.exists, maskedKey: state.exists ? "AIza****1234" : null, testStatus: "untested", testError: null },
+          data: state.loading || state.error ? undefined : { exists: state.exists, maskedKey: state.exists ? "AIza****1234" : null, testStatus: state.testStatus, testError: null },
           isLoading: state.loading,
           error: state.error,
           refetch: vi.fn(),
@@ -40,6 +41,7 @@ describe("my info API settings", () => {
     state.exists = false;
     state.loading = false;
     state.error = null;
+    state.testStatus = "untested";
   });
   afterAll(() => vi.unstubAllGlobals());
 
@@ -58,6 +60,19 @@ describe("my info API settings", () => {
     const html = render();
     expect(html).toContain('aria-label="유튜브 API 키 수정"');
     expect(html).not.toContain('aria-label="유튜브 API 키 등록"');
+    expect(html).not.toContain("AIza****1234");
+  });
+
+  it("places the connection status between the label and action without exposing the saved key", () => {
+    state.exists = true;
+    state.testStatus = "success";
+    const html = render();
+    const label = html.indexOf('class="mypageModalLabel">유튜브 API 키');
+    const status = html.indexOf("YouTube API 연결이 확인되었습니다.");
+    const action = html.indexOf('aria-label="유튜브 API 키 수정"');
+    expect(label).toBeLessThan(status);
+    expect(status).toBeLessThan(action);
+    expect(html).not.toContain("AIza****1234");
   });
 
   it("disables key changes while the saved state is being checked", () => {

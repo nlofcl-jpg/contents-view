@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -61,6 +61,7 @@ export function YouTubeApiKeySettingsPanel({
   const [testStatus, setTestStatus] = useState<"untested" | "success" | "failed" | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
   const [isTesting, setIsTesting] = useState(false);
+  const compactInputRef = useRef<HTMLInputElement>(null);
 
   // Query to get existing API key with test status
   const { data: apiKeyData, isLoading: isQueryLoading, error: queryError, refetch } = trpc.user.apiKey.getWithStatus.useQuery(
@@ -248,39 +249,46 @@ export function YouTubeApiKeySettingsPanel({
   if (compact) {
     const hasSavedKey = Boolean(apiKeyData?.exists);
     const canCancelApiKeyEdit = isEditing && !isLoading && !isTesting;
+    const currentStatus = testStatus ?? apiKeyData?.testStatus;
     const statusClass =
-      testStatus === "success"
-        ? "mypageApiStatus success"
-        : testStatus === "failed"
-          ? "mypageApiStatus failed"
-          : "mypageApiStatus neutral";
+      currentStatus === "success" && !isEditing
+        ? "mypageApiStatus mypageApiInlineStatus success"
+        : currentStatus === "failed" && !isEditing
+          ? "mypageApiStatus mypageApiInlineStatus failed"
+          : "mypageApiStatus mypageApiInlineStatus neutral";
     const statusText = isQueryLoading
-      ? "YouTube API key 상태 확인 중"
+      ? "상태 확인 중"
+      : queryError
+        ? "상태 확인 실패"
+      : isLoading || isTesting
+        ? "저장 및 연결 확인 중"
       : isEditing
-        ? "저장하면 YouTube API 연결 확인이 진행됩니다."
-        : testStatus === "success"
+        ? "새 키를 입력해 주세요."
+        : currentStatus === "success"
           ? "YouTube API 연결이 확인되었습니다."
-          : testStatus === "failed"
-            ? testError || "YouTube API key가 올바르지 않습니다."
-            : maskedKey
-              ? "YouTube API 연결 확인이 필요합니다."
-              : "등록된 YouTube API 키가 없습니다.";
+          : currentStatus === "failed"
+            ? "연결 확인 실패"
+            : hasSavedKey
+              ? "연결 확인이 필요합니다."
+              : "미등록";
 
     return (
-      <div className="mypageApiKeyPanel">
-        <div className="mypageSettingsRow">
+      <form className="mypageApiKeyPanel" onSubmit={event => {
+        event.preventDefault();
+        if (isEditing && canSaveInputValue && !isLoading && !isTesting && !isQueryLoading && !queryError) void handleSave();
+      }}>
+        <div className="mypageSettingsRow mypageApiSettingsRow">
           <span className="mypageModalLabel">유튜브 API 키</span>
-          {!isEditing && (
+          <p className={statusClass} role="status">{statusText}</p>
             <button
               className="mypageModalEditButton mypageApiManageButton"
-              onClick={handleEdit}
-              disabled={isQueryLoading || Boolean(queryError) || isLoading || isTesting}
-              type="button"
-              aria-label={hasSavedKey ? "유튜브 API 키 수정" : "유튜브 API 키 등록"}
+              onClick={isEditing ? undefined : handleEdit}
+              disabled={isQueryLoading || Boolean(queryError) || isLoading || isTesting || (isEditing && !canSaveInputValue)}
+              type={isEditing ? "submit" : "button"}
+              aria-label={isEditing ? "유튜브 API 키 저장" : hasSavedKey ? "유튜브 API 키 수정" : "유튜브 API 키 등록"}
             >
-              {isQueryLoading ? "확인 중" : hasSavedKey ? "수정" : "등록"}
+              {isLoading || isTesting ? "저장 중" : isQueryLoading ? "확인 중" : isEditing ? "저장" : hasSavedKey ? "수정" : "등록"}
             </button>
-          )}
         </div>
         {queryError && (
           <p className="mypageApiStatus failed" role="alert">
@@ -293,10 +301,15 @@ export function YouTubeApiKeySettingsPanel({
             {error}
           </div>
         )}
+        {!isEditing && currentStatus === "failed" && (testError || apiKeyData?.testError) && (
+          <p className="mypageApiStatus failed">{testError || apiKeyData?.testError}</p>
+        )}
         {isEditing && (
+          <div className="mypageApiInputWrapper">
           <input
-            type={isEditing && !isMaskedValue ? "password" : "text"}
-            className="mypageModalNameInput"
+            ref={compactInputRef}
+            type="password"
+            className="mypageModalNameInput mypageApiInput"
             value={inputValue}
             onChange={(event) => setInputValue(event.target.value)}
             disabled={isLoading || isTesting}
@@ -304,31 +317,35 @@ export function YouTubeApiKeySettingsPanel({
             aria-label="유튜브 API 키 입력"
             autoComplete="off"
             spellCheck={false}
+            autoFocus
           />
-        )}
-        {!isEditing && hasSavedKey && maskedKey && <p className="mypageApiMaskedKey">{maskedKey}</p>}
-        {!queryError && <p className={statusClass} role="status">{statusText}</p>}
-        {isEditing && (
-        <div className="mypageModalActionRow">
           <button
-            className="mypageModalEditButton mypageModalEditButtonSecondary"
+            type="button"
+            className="mypageApiClearButton"
+            aria-label="API 키 입력 지우기"
+            title="입력 지우기"
+            disabled={!inputValue || isLoading || isTesting}
+            onClick={() => {
+              setInputValue("");
+              setError(null);
+              compactInputRef.current?.focus();
+            }}
+          >
+            <X size={14} aria-hidden="true" />
+          </button>
+          </div>
+        )}
+        {isEditing && (
+          <button
+            className="mypageApiCancelButton"
             onClick={handleCancel}
             disabled={!canCancelApiKeyEdit}
             type="button"
           >
             취소
           </button>
-          <button
-            className="mypageModalEditButton"
-            onClick={isEditing ? handleSave : handleEdit}
-            disabled={isLoading || isTesting || isQueryLoading || !canSaveInputValue}
-            type="button"
-          >
-            {isLoading || isTesting ? "저장 중" : "저장"}
-          </button>
-        </div>
         )}
-      </div>
+      </form>
     );
   }
 

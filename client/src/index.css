@@ -2581,11 +2581,66 @@ a {
   min-width: 62px;
 }
 
-.mypageApiMaskedKey {
+.mypageApiSettingsRow {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.mypageApiSettingsRow .mypageApiInlineStatus {
   margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.mypageApiSettingsRow .mypageApiManageButton {
+  width: 76px;
+}
+
+.mypageApiInputWrapper {
+  position: relative;
+}
+
+.mypageApiInputWrapper .mypageApiInput {
+  padding-right: 40px;
+}
+
+.mypageApiClearButton {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.mypageApiClearButton:hover:not(:disabled) {
+  color: #fff;
+}
+
+.mypageApiClearButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.mypageApiCancelButton {
+  align-self: flex-end;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
   color: #94a3b8;
   font-size: 12px;
-  overflow-wrap: anywhere;
+  cursor: pointer;
 }
 
 .mypageModalField {
