@@ -4936,7 +4936,7 @@ export const appRouter = router({
     /**
      * Search news from Naver News API
      */
-    searchNews: publicProcedure
+    searchNews: protectedProcedure
       .input(z.object({
         query: z.string().min(1).max(100),
         limit: z.number().default(10),

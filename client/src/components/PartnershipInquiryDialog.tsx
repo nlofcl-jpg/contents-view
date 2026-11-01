@@ -172,7 +172,7 @@ export default function PartnershipInquiryDialog({
                 />
               </div>
               <div className="space-y-3 border-t border-slate-700 pt-4 text-xs leading-relaxed text-slate-300">
-                <details open>
+                <details>
                   <summary className="cursor-pointer font-medium text-slate-100">
                     개인정보 수집·이용 안내
                   </summary>
@@ -216,7 +216,7 @@ export default function PartnershipInquiryDialog({
                   />
                   <span>[필수] 개인정보 수집·이용에 동의합니다.</span>
                 </label>
-                <details open>
+                <details>
                   <summary className="cursor-pointer font-medium text-slate-100">
                     개인정보 국외 이전 안내
                   </summary>

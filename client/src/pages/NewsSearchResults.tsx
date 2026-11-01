@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { ChevronDown, Loader2, Search } from "lucide-react";
-import { useLocation } from "wouter";
+import { ChevronDown, Loader2, RotateCcw, Search } from "lucide-react";
+import { useLocation, useSearch } from "wouter";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 interface NewsItem {
   title: string;
@@ -11,11 +12,6 @@ interface NewsItem {
   description: string;
   source: string;
   thumbnail: string | null;
-}
-
-function getKeywordFromUrl() {
-  if (typeof window === "undefined") return "";
-  return new URLSearchParams(window.location.search).get("keyword")?.trim() || "";
 }
 
 function formatDate(dateString: string | undefined) {
@@ -40,14 +36,22 @@ function formatDate(dateString: string | undefined) {
 
 export default function NewsSearchResults() {
   const [, setLocation] = useLocation();
-  const keyword = getKeywordFromUrl();
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const search = useSearch();
+  const keyword = new URLSearchParams(search).get("keyword")?.trim() || "";
   const [searchQuery, setSearchQuery] = useState(keyword);
   const [visibleSearchCount, setVisibleSearchCount] = useState(6);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: searchResultsData, isLoading: isLoadingSearch } = trpc.news.searchNews.useQuery(
+  useEffect(() => {
+    setSearchQuery(keyword);
+    setVisibleSearchCount(6);
+  }, [keyword]);
+
+  const { data: searchResultsData, isLoading: isLoadingSearch, error: searchError } = trpc.news.searchNews.useQuery(
     { query: keyword, limit: 80 },
     {
-      enabled: keyword.length > 0,
+      enabled: keyword.length > 0 && !authLoading && isAuthenticated,
       retry: 1,
       refetchOnWindowFocus: false,
     },
@@ -69,6 +73,18 @@ export default function NewsSearchResults() {
     setLocation(`/news/search?keyword=${encodeURIComponent(trimmedQuery)}`);
   };
 
+  const goToAuth = () => {
+    const params = new URLSearchParams({ redirect: `/news/search?keyword=${encodeURIComponent(keyword)}` });
+    setLocation(`/login?${params.toString()}`);
+  };
+
+  const resetSearch = () => {
+    setSearchQuery("");
+    setVisibleSearchCount(6);
+    setLocation("/news/search", { replace: true });
+    searchInputRef.current?.focus();
+  };
+
   return (
     <div className="pageContainer">
       <div className="pageHeader">
@@ -80,6 +96,7 @@ export default function NewsSearchResults() {
         <h2 id="news-search-result-title" className="newsSearchTitle">뉴스 검색</h2>
         <form onSubmit={handleSearch} className="newsSearchForm">
           <input
+            ref={searchInputRef}
             type="text"
             placeholder="관심 키워드를 검색해보세요."
             value={searchQuery}
@@ -93,15 +110,37 @@ export default function NewsSearchResults() {
       </section>
 
       <section className="newsSearchResultsSection">
-        {keyword && <h2 className="newsSearchResultTitle">뉴스 검색결과: {keyword}</h2>}
+        {keyword && (
+          <div className="newsSearchResultsHeader">
+            <h2 className="newsSearchResultTitle">뉴스 검색결과: {keyword}</h2>
+            <button type="button" className="newsSearchResetButton" onClick={resetSearch} aria-label="뉴스 검색 초기화" title="검색 초기화">
+              <RotateCcw size={17} strokeWidth={1.8} aria-hidden="true" />
+            </button>
+          </div>
+        )}
 
-        {isLoadingSearch ? (
+        {authLoading ? (
+          <div className="newsSearchLoading" role="status" aria-live="polite">
+            <Loader2 className="newsSearchLoadingIcon" aria-hidden="true" />
+            <span>로그인 상태를 확인하는 중</span>
+          </div>
+        ) : keyword && (!isAuthenticated || searchError?.data?.code === "UNAUTHORIZED") ? (
+          <div className="py-10 text-center" role="status">
+            <p className="text-base font-medium text-slate-100">로그인 후 뉴스 검색 서비스를 이용해 주세요.</p>
+            <p className="mt-2 text-sm leading-6 text-slate-400">간편 회원가입 후 컨텐츠뷰의 더욱 다양한 서비스를 이용해 보세요.</p>
+            <div className="mt-5 flex justify-center">
+              <button type="button" className="youtubeGuestLoginButton" onClick={goToAuth}>로그인</button>
+            </div>
+          </div>
+        ) : isLoadingSearch ? (
           <div className="newsSearchLoading" role="status" aria-live="polite">
             <Loader2 className="newsSearchLoadingIcon" aria-hidden="true" />
             <span>데이터를 불러오는 중</span>
           </div>
         ) : !keyword ? (
           <div className="text-center text-gray-400">검색할 키워드를 입력해 주세요.</div>
+        ) : searchError ? (
+          <div className="text-center text-gray-400">뉴스 검색결과를 불러오지 못했습니다. 잠시 후 다시 검색해 주세요.</div>
         ) : searchResults.length > 0 ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

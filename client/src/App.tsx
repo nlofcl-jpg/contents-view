@@ -66,7 +66,8 @@ function Router() {
 }
 
 function App() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  const isPrivacyPage = location === "/privacy" || location === "/privacy/";
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [isMyPageModalOpen, setIsMyPageModalOpen] = useState(false);
 
@@ -132,6 +133,11 @@ function App() {
         >
           <TooltipProvider>
             <Toaster />
+            {isPrivacyPage ? (
+              <main className="privacyStandalone">
+                <PrivacyPolicy />
+              </main>
+            ) : (
             <div className="app">
             <Header
               onOpenMyPageModal={() => setIsMyPageModalOpen(true)}
@@ -165,6 +171,7 @@ function App() {
               onSignup={() => goToGuestAuth("signup")}
             />
             </div>
+            )}
           </TooltipProvider>
         </ThemeProvider>
       </BookmarkProvider>

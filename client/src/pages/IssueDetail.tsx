@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowUp, ChevronLeft, Copy, LoaderCircle, Share2 } from "lucide-react";
+import { ChevronLeft, Copy, LoaderCircle, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation, useRoute } from "wouter";
 import { supabase } from "@/lib/supabase";
@@ -154,15 +154,6 @@ export default function IssueDetail() {
             {(issue.summary || issue.article_summary) && (
               <div className="issueDetailBody">
                 <IssueBody value={issue.summary || issue.article_summary || ""} />
-                <button
-                  type="button"
-                  className="issueScrollTopButton"
-                  onClick={(event) => event.currentTarget.closest(".mainContent")?.scrollTo({ top: 0, behavior: "smooth" })}
-                  title="맨 위로"
-                  aria-label="맨 위로"
-                >
-                  <ArrowUp size={14} aria-hidden="true" />
-                </button>
               </div>
             )}
           </div>

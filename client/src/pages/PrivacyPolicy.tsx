@@ -13,7 +13,7 @@ export default function PrivacyPolicy() {
   return (
     <div className="privacyPage">
       <header className="privacyHeader">
-        <p className="privacyEyebrow">CONTENTS VIEW · LEGAL</p>
+        <p className="privacyEyebrow">CONTENTS VIEW</p>
         <h1>개인정보처리방침</h1>
         <p>에덴 컴퍼니(이하 “운영자”)는 CONTENTS VIEW(컨텐츠뷰)의 회원 기능과 콘텐츠 분석 서비스를 제공하는 데 필요한 범위에서 개인정보를 처리하고, 관련 법령에 따라 이용자의 권리를 보호합니다.</p>
       </header>

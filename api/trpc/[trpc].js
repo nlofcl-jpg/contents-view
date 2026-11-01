@@ -6969,7 +6969,7 @@ var appRouter = router({
     /**
      * Search news from Naver News API
      */
-    searchNews: publicProcedure.input(z4.object({
+    searchNews: protectedProcedure.input(z4.object({
       query: z4.string().min(1).max(100),
       limit: z4.number().default(10)
     })).query(async ({ input }) => {

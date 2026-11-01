@@ -292,12 +292,6 @@ a {
   color: #158cff;
 }
 
-.siteFooterLogoMark {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-}
-
 .siteFooterDescription {
   max-width: 480px;
   margin: 0;
@@ -353,11 +347,20 @@ a {
   color: #64748b;
 }
 
+.privacyStandalone {
+  width: 100%;
+  height: 100dvh;
+  overflow-y: auto;
+  background: #ffffff;
+  color: #27313d;
+  color-scheme: light;
+}
+
 .privacyPage {
   width: min(100% - 48px, 900px);
   margin: 0 auto;
   padding: 76px 0 112px;
-  color: #dbe7f7;
+  color: #27313d;
 }
 
 .privacyHeader {
@@ -366,22 +369,22 @@ a {
 
 .privacyEyebrow {
   margin: 0 0 14px;
-  color: #68aeff;
-  font-size: 12px;
+  color: #2563b8;
+  font-size: 16px;
   font-weight: 700;
 }
 
 .privacyHeader h1 {
   margin: 0;
-  color: #fff;
-  font-size: clamp(30px, 3.5vw, 44px);
+  color: #18212d;
+  font-size: 32px;
   font-weight: 750;
   line-height: 1.25;
 }
 
 .privacyHeader > p:not(.privacyEyebrow) {
   margin: 16px 0 0;
-  color: #aebed4;
+  color: #536171;
   font-size: 15px;
   line-height: 1.8;
 }
@@ -389,8 +392,8 @@ a {
 .privacyContent .privacyEffectiveDate {
   margin: 0;
   padding-top: 20px;
-  border-top: 1px solid rgba(153, 178, 208, 0.15);
-  color: #7891ae;
+  border-top: 1px solid #dce2e8;
+  color: #657181;
   font-size: 13px;
 }
 
@@ -398,7 +401,7 @@ a {
   scroll-margin-top: 28px;
   padding: 0 0 36px;
   margin: 0 0 36px;
-  border-bottom: 1px solid rgba(153, 178, 208, 0.15);
+  border-bottom: 1px solid #e3e7ed;
 }
 
 .privacyContent section:last-of-type {
@@ -408,7 +411,7 @@ a {
 
 .privacyContent h2 {
   margin: 0 0 18px;
-  color: #f3f8ff;
+  color: #202c3a;
   font-size: 21px;
   font-weight: 700;
   line-height: 1.4;
@@ -417,7 +420,7 @@ a {
 .privacyContent p,
 .privacyContent li {
   margin: 0 0 12px;
-  color: #aebed4;
+  color: #465464;
   font-size: 14px;
   line-height: 1.85;
 }
@@ -428,13 +431,13 @@ a {
 }
 
 .privacyContent a {
-  color: #78b7ff;
+  color: #205eb1;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
 .privacyContent a:hover {
-  color: #b6d9ff;
+  color: #163f79;
 }
 
 .privacyTableWrap {
@@ -454,22 +457,22 @@ a {
 .privacyContent th,
 .privacyContent td {
   padding: 13px 14px;
-  border-bottom: 1px solid rgba(153, 178, 208, 0.14);
+  border-bottom: 1px solid #dfe5eb;
   vertical-align: top;
 }
 
 .privacyContent th {
-  color: #d9e8ff;
-  background: rgba(70, 123, 192, 0.12);
+  color: #26374b;
+  background: #f2f5f8;
 }
 
 .privacyContent td {
-  color: #aebed4;
+  color: #465464;
 }
 
 .privacyContent td:first-child {
   width: 190px;
-  color: #e0eaff;
+  color: #293a4d;
 }
 
 @media (max-width: 768px) {
@@ -528,6 +531,10 @@ a {
 
   .privacyHeader {
     margin-bottom: 34px;
+  }
+
+  .privacyHeader h1 {
+    font-size: 26px;
   }
 
   .privacyContent h2 {
@@ -3161,43 +3168,6 @@ a {
   margin: 0 auto;
 }
 
-.issueScrollTopButton {
-  position: sticky;
-  bottom: max(12px, env(safe-area-inset-bottom));
-  z-index: 1;
-  display: grid;
-  width: 40px;
-  height: 40px;
-  margin: 24px 0 0 auto;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #dbeafe;
-  opacity: 0.7;
-  cursor: pointer;
-  transition: opacity 0.2s ease;
-}
-
-.issueScrollTopButton::before {
-  content: "";
-  position: absolute;
-  inset: 5px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  border-radius: 50%;
-  background: rgba(15, 23, 42, 0.68);
-  backdrop-filter: blur(8px);
-}
-
-.issueScrollTopButton svg {
-  position: relative;
-}
-
-.issueScrollTopButton:hover,
-.issueScrollTopButton:focus-visible {
-  opacity: 1;
-}
-
 .issueDetailHeader {
   padding: 12px 0 30px;
 }
@@ -3696,13 +3666,42 @@ a {
   color: #bfdbfe;
 }
 
+.newsSearchResultsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
 .newsSearchResultTitle {
-  margin: 0 0 16px;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
   color: #cbd5e1;
   font-size: 14px;
   font-weight: 400;
   letter-spacing: 0;
   text-align: left;
+}
+
+.newsSearchResetButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.newsSearchResetButton:hover {
+  color: #ffffff;
 }
 
 .newsSearchMoreButton {

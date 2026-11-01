@@ -11,13 +11,14 @@ export default function Footer() {
       <div className="siteFooterInner">
         <div className="siteFooterBrand">
           <Link href="/" className="siteFooterLogo" aria-label="CONTENTS VIEW 홈">
-            <img src="/contents-view-symbol.png" alt="" className="siteFooterLogoMark" />
             <span>
               CONTENTS <strong>VIEW</strong>
             </span>
           </Link>
           <p className="siteFooterDescription">
-            실시간 트렌드와 이슈 흐름을 한 곳에서 확인하는 콘텐츠 인사이트 서비스
+            실시간 트렌드와 이슈 흐름을
+            <br />
+            한 곳에서 확인하는 콘텐츠 인사이트 서비스
           </p>
         </div>
 
