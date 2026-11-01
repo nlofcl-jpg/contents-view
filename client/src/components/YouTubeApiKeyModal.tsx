@@ -271,13 +271,15 @@ export function YouTubeApiKeySettingsPanel({
             : "연결 필요";
 
     return (
-      <form className="mypageApiKeyPanel" onSubmit={event => {
+      <form className="mypageApiKeyPanel mypageSettingsBox" onSubmit={event => {
         event.preventDefault();
         if (isEditing && canSaveInputValue && !isLoading && !isTesting && !isQueryLoading && !queryError) void handleSave();
       }}>
         <div className="mypageSettingsRow mypageApiSettingsRow">
-          <span className="mypageModalLabel">유튜브 API 키</span>
-          <p className={statusClass} role="status">{statusText}</p>
+          <div className="mypageApiLabelGroup">
+            <span className="mypageModalLabel">YouTube API Key</span>
+            <p className={statusClass} role="status">{statusText}</p>
+          </div>
             <button
               className="mypageModalEditButton mypageApiManageButton"
               onClick={isEditing ? undefined : handleEdit}

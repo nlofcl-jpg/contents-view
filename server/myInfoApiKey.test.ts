@@ -49,7 +49,7 @@ describe("my info API settings", () => {
     const html = render();
     expect(html).toContain("내 정보");
     expect(html).toContain("일반 회원");
-    expect(html.indexOf("일반 회원")).toBeLessThan(html.indexOf("유튜브 API 키"));
+    expect(html.indexOf("일반 회원")).toBeLessThan(html.indexOf("YouTube API Key"));
     expect(html).toContain('aria-label="유튜브 API 키 등록"');
     expect(html).not.toContain("API 키 발급 방법 보기");
     expect(html).not.toContain('aria-label="유튜브 API 키 입력"');
@@ -67,12 +67,15 @@ describe("my info API settings", () => {
     state.exists = true;
     state.testStatus = "success";
     const html = render();
-    const label = html.indexOf('class="mypageModalLabel">유튜브 API 키');
+    const label = html.indexOf('class="mypageModalLabel">YouTube API Key');
     const status = html.indexOf("연결 완료");
     const action = html.indexOf('aria-label="유튜브 API 키 수정"');
     expect(label).toBeLessThan(status);
     expect(status).toBeLessThan(action);
     expect(html).not.toContain("AIza****1234");
+    expect(html).toContain('class="mypageApiLabelGroup"');
+    expect(html).toContain('class="mypageSettingsRow mypageSettingsBox"');
+    expect(html).toContain('class="mypageApiKeyPanel mypageSettingsBox"');
   });
 
   it("shows concise connection states for missing or failed keys", () => {

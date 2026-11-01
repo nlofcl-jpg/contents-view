@@ -2557,7 +2557,7 @@ a {
 }
 
 .mypageApiField {
-  padding: 0 2px;
+  padding: 0;
 }
 
 .mypageSettingsRow {
@@ -2566,8 +2566,18 @@ a {
   justify-content: space-between;
   gap: 16px;
   min-height: 48px;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  padding: 0;
+}
+
+.mypageSettingsBox {
+  padding: 10px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.mypageSettingsBox.mypageSettingsRow {
+  min-height: 64px;
 }
 
 .mypageMembershipValue {
@@ -2583,15 +2593,29 @@ a {
 
 .mypageApiSettingsRow {
   display: grid;
-  grid-template-columns: max-content minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
+}
+
+.mypageApiLabelGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+}
+
+.mypageApiLabelGroup .mypageModalLabel {
+  white-space: nowrap;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .mypageApiSettingsRow .mypageApiInlineStatus {
   margin: 0;
   font-size: 11px;
   line-height: 1.5;
-  text-align: center;
+  text-align: left;
   overflow-wrap: anywhere;
 }
 
