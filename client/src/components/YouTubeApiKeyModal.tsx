@@ -63,7 +63,7 @@ export function YouTubeApiKeySettingsPanel({
   const [isTesting, setIsTesting] = useState(false);
 
   // Query to get existing API key with test status
-  const { data: apiKeyData, isLoading: isQueryLoading, refetch } = trpc.user.apiKey.getWithStatus.useQuery(
+  const { data: apiKeyData, isLoading: isQueryLoading, error: queryError, refetch } = trpc.user.apiKey.getWithStatus.useQuery(
     { provider: "youtube" },
     { enabled: isAuthenticated && isActive }
   );
@@ -86,13 +86,13 @@ export function YouTubeApiKeySettingsPanel({
         setMaskedKey(null);
         setTestStatus(null);
         setTestError(null);
-        setIsEditing(true);
+        setIsEditing(!compact);
         setInputValue("");
       }
       setError(null);
       setShowHelpBox(false);
     }
-  }, [isActive, apiKeyData]);
+  }, [isActive, apiKeyData, compact]);
 
   const handleSave = async () => {
     if (!inputValue.trim()) {
@@ -222,7 +222,7 @@ export function YouTubeApiKeySettingsPanel({
 
   const handleEdit = () => {
     setError(null);
-    setInputValue(maskedKey ?? "");
+    setInputValue(compact ? "" : maskedKey ?? "");
     setIsEditing(true);
   };
 
@@ -246,9 +246,8 @@ export function YouTubeApiKeySettingsPanel({
   }
 
   if (compact) {
-    const apiKeyInputValue = isEditing ? inputValue : maskedKey || "";
+    const hasSavedKey = Boolean(apiKeyData?.exists);
     const canCancelApiKeyEdit = isEditing && !isLoading && !isTesting;
-    const hasApiKeyChanged = !maskedKey || canSaveInputValue;
     const statusClass =
       testStatus === "success"
         ? "mypageApiStatus success"
@@ -265,33 +264,51 @@ export function YouTubeApiKeySettingsPanel({
             ? testError || "YouTube API key가 올바르지 않습니다."
             : maskedKey
               ? "YouTube API 연결 확인이 필요합니다."
-              : "YouTube API key를 입력하세요.";
+              : "등록된 YouTube API 키가 없습니다.";
 
     return (
       <div className="mypageApiKeyPanel">
+        <div className="mypageSettingsRow">
+          <span className="mypageModalLabel">유튜브 API 키</span>
+          {!isEditing && (
+            <button
+              className="mypageModalEditButton mypageApiManageButton"
+              onClick={handleEdit}
+              disabled={isQueryLoading || Boolean(queryError) || isLoading || isTesting}
+              type="button"
+              aria-label={hasSavedKey ? "유튜브 API 키 수정" : "유튜브 API 키 등록"}
+            >
+              {isQueryLoading ? "확인 중" : hasSavedKey ? "수정" : "등록"}
+            </button>
+          )}
+        </div>
+        {queryError && (
+          <p className="mypageApiStatus failed" role="alert">
+            API 키 정보를 확인하지 못했습니다.
+            <button type="button" className="ml-2 underline" onClick={() => void refetch()}>다시 확인</button>
+          </p>
+        )}
         {error && (
           <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
             {error}
           </div>
         )}
-        {isQueryLoading ? (
-          <input
-            className="mypageModalNameInput"
-            value="로딩 중..."
-            disabled
-            readOnly
-          />
-        ) : (
+        {isEditing && (
           <input
             type={isEditing && !isMaskedValue ? "password" : "text"}
             className="mypageModalNameInput"
-            value={apiKeyInputValue}
+            value={inputValue}
             onChange={(event) => setInputValue(event.target.value)}
-            disabled={!isEditing}
-            placeholder="YouTube Data API Key"
+            disabled={isLoading || isTesting}
+            placeholder={hasSavedKey ? "새 YouTube Data API 키" : "YouTube Data API 키"}
+            aria-label="유튜브 API 키 입력"
+            autoComplete="off"
+            spellCheck={false}
           />
         )}
-        <p className={statusClass}>{statusText}</p>
+        {!isEditing && hasSavedKey && maskedKey && <p className="mypageApiMaskedKey">{maskedKey}</p>}
+        {!queryError && <p className={statusClass} role="status">{statusText}</p>}
+        {isEditing && (
         <div className="mypageModalActionRow">
           <button
             className="mypageModalEditButton mypageModalEditButtonSecondary"
@@ -304,48 +321,12 @@ export function YouTubeApiKeySettingsPanel({
           <button
             className="mypageModalEditButton"
             onClick={isEditing ? handleSave : handleEdit}
-            disabled={isLoading || isTesting || isQueryLoading || (isEditing && !hasApiKeyChanged)}
+            disabled={isLoading || isTesting || isQueryLoading || !canSaveInputValue}
             type="button"
           >
-            {isEditing
-              ? isLoading || isTesting
-                ? "저장 중"
-                : hasApiKeyChanged
-                  ? "저장"
-                  : "수정"
-              : "수정"}
+            {isLoading || isTesting ? "저장 중" : "저장"}
           </button>
         </div>
-        <button
-          onClick={() => setShowHelpBox(!showHelpBox)}
-          className="apiHelpToggle apiHelpToggleCompact"
-          type="button"
-        >
-          <span>API 키 발급 방법 보기</span>
-          <ChevronDown
-            size={16}
-            style={{
-              transform: showHelpBox ? "rotate(180deg)" : "rotate(0deg)",
-              transition: "transform 0.2s ease",
-            }}
-          />
-        </button>
-        {showHelpBox && (
-          <div className="apiHelpBox">
-            <div className="apiHelpList">
-              {[
-                "Google Cloud Console에 접속합니다.",
-                "API 및 서비스에서 YouTube Data API v3를 사용 설정합니다.",
-                "사용자 인증 정보 메뉴에서 API 키를 생성합니다.",
-                "생성된 API Key를 복사해 입력창에 붙여넣습니다.",
-              ].map((step, index) => (
-                <div key={index} className="apiHelpStep">
-                  <span className="apiHelpStepNumber">{index + 1}</span>
-                  <span>{step}</span>
-                </div>
-              ))}
-            </div>
-          </div>
         )}
       </div>
     );

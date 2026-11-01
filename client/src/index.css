@@ -2373,15 +2373,19 @@ a {
 .mypageModalHeader {
   position: absolute;
   top: 18px;
+  left: 28px;
   right: 18px;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .mypageModalTitle {
-  font-size: 24px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 600;
   color: #f8fafc;
-  margin-bottom: 8px;
+  margin: 0;
 }
 
 .mypageModalDescription {
@@ -2416,7 +2420,7 @@ a {
 }
 
 .mypageModalBody {
-  padding: 38px 28px 26px;
+  padding: 70px 28px 26px;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -2554,6 +2558,34 @@ a {
 
 .mypageApiField {
   padding: 0 2px;
+}
+
+.mypageSettingsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 48px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.mypageMembershipValue {
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.mypageSettingsRow .mypageApiManageButton {
+  width: auto;
+  min-width: 62px;
+}
+
+.mypageApiMaskedKey {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .mypageModalField {
@@ -2785,15 +2817,16 @@ a {
 
   .mypageModalHeader {
     top: 14px;
+    left: 20px;
     right: 14px;
   }
 
   .mypageModalTitle {
-    font-size: 20px;
+    font-size: 16px;
   }
 
   .mypageModalBody {
-    padding: 34px 20px 22px;
+    padding: 64px 20px 22px;
     gap: 22px;
   }
 

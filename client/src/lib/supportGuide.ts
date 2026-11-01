@@ -71,12 +71,12 @@ export function getSupportReply(question: string): SupportReply {
     questions: supportMenuQuestions,
   };
   if (/api키받는법|api키발급|api키만들/.test(text)) return {
-    text: "유튜브 API 키 받는 법\n\n1. Google Cloud Console에 Google 계정으로 로그인하세요.\n2. 프로젝트를 새로 만들거나 사용할 프로젝트를 선택하세요.\n3. ‘API 및 서비스 → 라이브러리’에서 ‘YouTube Data API v3’를 찾아 사용 설정하세요.\n4. ‘API 및 서비스 → 사용자 인증 정보’에서 ‘사용자 인증 정보 만들기 → API 키’를 선택하세요.\n5. 키의 API 제한사항에서 ‘YouTube Data API v3’를 선택하고 저장하세요. 애플리케이션 제한은 실제 키를 사용하는 환경에 맞춰 설정해야 합니다.\n6. 발급된 키를 컨텐츠뷰의 프로필 메뉴 → 마이페이지 → YouTube API key에 입력하고 저장해 연결 결과를 확인하세요.\n\n기존에 발급한 키도 같은 사용자 인증 정보 화면에서 확인할 수 있습니다. 키는 공개 게시물이나 채팅에 올리지 마세요. 화면 이름이 다르면 아래 Google 공식 안내를 참고하세요.",
+    text: "유튜브 API 키 받는 법\n\n1. Google Cloud Console에 Google 계정으로 로그인하세요.\n2. 프로젝트를 새로 만들거나 사용할 프로젝트를 선택하세요.\n3. ‘API 및 서비스 → 라이브러리’에서 ‘YouTube Data API v3’를 찾아 사용 설정하세요.\n4. ‘API 및 서비스 → 사용자 인증 정보’에서 ‘사용자 인증 정보 만들기 → API 키’를 선택하세요.\n5. 키의 API 제한사항에서 ‘YouTube Data API v3’를 선택하고 저장하세요. 애플리케이션 제한은 실제 키를 사용하는 환경에 맞춰 설정해야 합니다.\n6. 컨텐츠뷰의 프로필 메뉴 → 내 정보 → 유튜브 API 키에서 ‘등록’을 누르고 발급된 키를 입력해 저장하세요.\n\n기존에 발급한 키도 같은 사용자 인증 정보 화면에서 확인할 수 있습니다. 키는 공개 게시물이나 채팅에 올리지 마세요. 화면 이름이 다르면 아래 Google 공식 안내를 참고하세요.",
     questions: ["API 키 설정", "유튜브 트렌드 사용법"],
     actions: [{ label: "Google 공식 발급 안내", href: "https://developers.google.com/youtube/registering_an_application" }],
   };
   if (/api|에이피아이|연결키|인증키/.test(text)) return {
-    text: "YouTube API 키 설정 방법\n\n1. Google 계정으로 컨텐츠뷰에 로그인하세요.\n2. 상단 프로필 메뉴에서 ‘마이페이지’를 여세요.\n3. ‘YouTube API key’ 항목에 본인의 키를 입력하고 ‘저장’을 누르세요.\n4. 자동으로 진행되는 연결 확인 결과를 확인하세요. 실패하면 키 값과 Google Cloud 프로젝트의 YouTube Data API v3 활성화·키 제한 설정을 확인해 주세요.\n\n이미 저장한 키를 바꿀 때는 새 키를 입력해 저장하면 됩니다. API 키는 이 채팅창이나 문의 이메일에 보내지 마세요.",
+    text: "YouTube API 키 설정 방법\n\n1. Google 계정으로 컨텐츠뷰에 로그인하세요.\n2. 상단 프로필 메뉴에서 ‘내 정보’를 여세요.\n3. ‘유튜브 API 키’ 항목의 ‘등록’을 누르고 본인의 키를 입력해 ‘저장’을 누르세요. 이미 등록했다면 ‘수정’ 버튼이 표시됩니다.\n4. 자동으로 진행되는 연결 확인 결과를 확인하세요. 실패하면 키 값과 Google Cloud 프로젝트의 YouTube Data API v3 활성화·키 제한 설정을 확인해 주세요.\n\n이미 저장한 키를 바꿀 때는 ‘수정’을 누르고 새 키를 입력해 저장하면 됩니다. API 키는 이 채팅창이나 문의 이메일에 보내지 마세요.",
     questions: ["유튜브 트렌드 사용법", "유튜브 API 키 받는 법"],
   };
   if (/문의|제휴|연락|이메일|상담원/.test(text)) return {

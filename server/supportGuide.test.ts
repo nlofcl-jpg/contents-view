@@ -23,8 +23,8 @@ describe("support guide", () => {
   });
   it("routes API key questions to the profile setup instructions", () => {
     const reply = getSupportReply("유튜브 API 키는 로그인 후 어디서 등록하나요?");
-    expect(reply.text).toContain("마이페이지");
-    expect(reply.text).toContain("YouTube API key");
+    expect(reply.text).toContain("내 정보");
+    expect(reply.text).toContain("유튜브 API 키");
     expect(reply.text).toContain("채팅창이나 문의 이메일에 보내지 마세요");
     expect(reply.questions).toEqual(["유튜브 트렌드 사용법", "유튜브 API 키 받는 법"]);
   });

@@ -85,6 +85,7 @@ export default function MyPageModal({ isOpen, onClose }: MyPageModalProps) {
       <div className="mypageModalContainer">
         <div className="mypageModalContent">
           <div className="mypageModalHeader">
+            <h2 className="mypageModalTitle">내 정보</h2>
             <button
               className="mypageModalCloseButton"
               onClick={onClose}
@@ -169,8 +170,11 @@ export default function MyPageModal({ isOpen, onClose }: MyPageModalProps) {
               </div>
             </section>
 
+            <div className="mypageSettingsRow" aria-label="회원 등급">
+              <span className="mypageModalLabel">등급</span>
+              <strong className="mypageMembershipValue">일반 회원</strong>
+            </div>
             <div className="mypageModalField mypageApiField">
-              <label className="mypageModalLabel">YouTube API key</label>
               <YouTubeApiKeySettingsPanel isActive={isOpen} compact />
             </div>
           </div>

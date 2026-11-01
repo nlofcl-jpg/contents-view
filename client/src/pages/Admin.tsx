@@ -264,8 +264,6 @@ function IssuesPanel() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [visibility, setVisibility] = useState<VisibilityFilter>("all");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("newest");
   const [publicationChangingIssueId, setPublicationChangingIssueId] = useState<string | null>(null);
   const [selectedIssueIds, setSelectedIssueIds] = useState<Set<string>>(() => new Set());
 
@@ -504,24 +502,15 @@ function IssuesPanel() {
     }
   };
 
-  const filteredIssues = useMemo(() => {
-    return [...issues]
-      .filter(issue => visibility === "all" || (visibility === "published" ? issue.is_published : !issue.is_published))
-      .sort((left, right) => {
-        const difference = new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
-        return sortDirection === "newest" ? difference : -difference;
-      });
-  }, [issues, sortDirection, visibility]);
-
-  const isAllFilteredSelected = filteredIssues.length > 0 && filteredIssues.every(issue => selectedIssueIds.has(issue.id));
+  const isAllFilteredSelected = issues.length > 0 && issues.every(issue => selectedIssueIds.has(issue.id));
 
   const toggleAllIssues = () => {
     setSelectedIssueIds(current => {
       const next = new Set(current);
       if (isAllFilteredSelected) {
-        filteredIssues.forEach(issue => next.delete(issue.id));
+        issues.forEach(issue => next.delete(issue.id));
       } else {
-        filteredIssues.forEach(issue => next.add(issue.id));
+        issues.forEach(issue => next.add(issue.id));
       }
       return next;
     });
@@ -552,21 +541,19 @@ function IssuesPanel() {
 
   return (
     <section className="space-y-6">
-      <ManagementToolbar
-        title="이슈 관리"
-        description="등록된 이슈를 관리하세요."
-        createLabel="새 이슈 등록"
-        visibility={visibility}
-        sortDirection={sortDirection}
-        onCreate={handleCreate}
-        onVisibilityChange={setVisibility}
-        onSortChange={setSortDirection}
-        onReset={() => {
-          setVisibility("all");
-          setSortDirection("newest");
-        }}
-        placeCreateActionsInFilters
-      />
+      <header>
+        <h2 className="text-2xl font-medium text-white">이슈 관리</h2>
+        <div className="mt-2 flex items-center justify-between gap-4">
+          <p className="min-w-0 text-sm font-normal text-slate-400">등록된 이슈를 관리하세요.</p>
+          <button
+            type="button"
+            className="inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-blue-400/60 bg-blue-500/15 px-3 text-sm font-normal text-blue-100 transition hover:bg-blue-500/25"
+            onClick={handleCreate}
+          >
+            <span aria-hidden="true">+</span> 새 이슈 등록
+          </button>
+        </div>
+      </header>
 
       {message && <p className="text-sm text-emerald-300">{message}</p>}
       {error && <p className="text-sm text-red-300">{error}</p>}
@@ -718,7 +705,7 @@ function IssuesPanel() {
       )}
 
       {!isFormOpen && <div>
-        {filteredIssues.length > 0 && (
+        {issues.length > 0 && (
           <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
             <button type="button" className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-slate-500 hover:text-white" onClick={toggleAllIssues}>
               {isAllFilteredSelected ? "전체 선택 해제" : "전체 선택"}
@@ -733,7 +720,7 @@ function IssuesPanel() {
             </button>
           </div>
         )}
-        {filteredIssues.length > 0 ? (
+        {issues.length > 0 ? (
           <div className="overflow-x-auto rounded-md border border-slate-800">
             <div className="min-w-[850px]">
             <div className="grid grid-cols-[28px_minmax(260px,1fr)_112px_120px_210px] gap-4 border-b border-slate-800 bg-slate-950/70 px-4 py-3 text-xs text-slate-500">
@@ -743,7 +730,7 @@ function IssuesPanel() {
               <span>생성일</span>
               <span className="text-right">관리</span>
             </div>
-            {filteredIssues.map(issue => (
+            {issues.map(issue => (
               <article key={issue.id} className="grid grid-cols-[28px_minmax(260px,1fr)_112px_120px_210px] items-center gap-4 border-b border-slate-800/80 px-4 py-3 last:border-b-0">
                 <input
                   type="checkbox"

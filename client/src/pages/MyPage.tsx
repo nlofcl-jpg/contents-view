@@ -53,7 +53,7 @@ export default function MyPage() {
     <main className="mainContent">
       <div className="mypageContainer">
         <div className="mypageHeader">
-          <h1 className="mypageTitle">마이페이지</h1>
+          <h1 className="mypageTitle">내 정보</h1>
           <p className="mypageDescription">
             계정 정보를 확인하고 닉네임을 수정할 수 있습니다.
           </p>

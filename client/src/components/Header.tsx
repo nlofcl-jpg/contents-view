@@ -551,11 +551,11 @@ export default function Header({
                       onClick={handleMyPage}
                       type="button"
                     >
-                      마이페이지
+                      내 정보
                     </button>
                   ) : (
                     <a href="/mypage" className="dropdownItem">
-                      마이페이지
+                      내 정보
                     </a>
                   )}
                   <Link href="/saved-contents" className="dropdownItem" onClick={() => setIsDropdownOpen(false)}>

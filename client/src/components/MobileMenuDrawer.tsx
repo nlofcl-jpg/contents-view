@@ -112,7 +112,7 @@ export function MobileMenuDrawer({
                     type="button"
                   >
                     <User size={18} />
-                    <span>마이페이지</span>
+                    <span>내 정보</span>
                   </button>
                   <button className={`mobileMenuAction ${isSavedContentsPage ? "active" : ""}`} onClick={() => handleNavigation("/saved-contents")} type="button">
                     <Bookmark size={18} />
@@ -321,7 +321,7 @@ export function MobileMenuDrawer({
                     type="button"
                   >
                     <User size={18} />
-                    <span>마이페이지</span>
+                    <span>내 정보</span>
                   </button>
                   <button className={`mobileMenuAction ${isSavedContentsPage ? "active" : ""}`} onClick={() => handleNavigation("/saved-contents")} type="button">
                     <Bookmark size={18} />
