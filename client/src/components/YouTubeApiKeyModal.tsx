@@ -223,12 +223,12 @@ export function YouTubeApiKeySettingsPanel({
 
   const handleEdit = () => {
     setError(null);
-    setInputValue(compact ? "" : maskedKey ?? "");
+    setInputValue(maskedKey ?? apiKeyData?.maskedKey ?? "");
     setIsEditing(true);
   };
 
   const isMaskedValue = Boolean(maskedKey && inputValue === maskedKey);
-  const canSaveInputValue = inputValue.trim().length > 0 && !isMaskedValue;
+  const canSaveInputValue = inputValue.trim().length > 0 && !isMaskedValue && !inputValue.includes("*");
 
   // Show login prompt if not authenticated
   if (!isAuthenticated) {
@@ -259,18 +259,16 @@ export function YouTubeApiKeySettingsPanel({
     const statusText = isQueryLoading
       ? "상태 확인 중"
       : queryError
-        ? "상태 확인 실패"
+        ? "연결 오류"
       : isLoading || isTesting
         ? "저장 및 연결 확인 중"
       : isEditing
-        ? "새 키를 입력해 주세요."
+        ? "연결 필요"
         : currentStatus === "success"
-          ? "YouTube API 연결이 확인되었습니다."
+          ? "연결 완료"
           : currentStatus === "failed"
-            ? "연결 확인 실패"
-            : hasSavedKey
-              ? "연결 확인이 필요합니다."
-              : "미등록";
+            ? "연결 오류"
+            : "연결 필요";
 
     return (
       <form className="mypageApiKeyPanel" onSubmit={event => {
@@ -308,7 +306,7 @@ export function YouTubeApiKeySettingsPanel({
           <div className="mypageApiInputWrapper">
           <input
             ref={compactInputRef}
-            type="password"
+            type={isMaskedValue ? "text" : "password"}
             className="mypageModalNameInput mypageApiInput"
             value={inputValue}
             onChange={(event) => setInputValue(event.target.value)}

@@ -68,11 +68,18 @@ describe("my info API settings", () => {
     state.testStatus = "success";
     const html = render();
     const label = html.indexOf('class="mypageModalLabel">유튜브 API 키');
-    const status = html.indexOf("YouTube API 연결이 확인되었습니다.");
+    const status = html.indexOf("연결 완료");
     const action = html.indexOf('aria-label="유튜브 API 키 수정"');
     expect(label).toBeLessThan(status);
     expect(status).toBeLessThan(action);
     expect(html).not.toContain("AIza****1234");
+  });
+
+  it("shows concise connection states for missing or failed keys", () => {
+    expect(render()).toContain("연결 필요");
+    state.exists = true;
+    state.testStatus = "failed";
+    expect(render()).toContain("연결 오류");
   });
 
   it("disables key changes while the saved state is being checked", () => {
