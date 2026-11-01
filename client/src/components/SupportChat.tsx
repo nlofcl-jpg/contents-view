@@ -18,6 +18,7 @@ export default function SupportChat() {
   const [messages, setMessages] = useState<Message[]>([welcome]);
   const [inquiryOpen, setInquiryOpen] = useState(false);
   const launcherRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const logRef = useRef<HTMLDivElement>(null);
   const latestReplyRef = useRef<HTMLDivElement>(null);
@@ -69,7 +70,10 @@ export default function SupportChat() {
 
   useEffect(() => {
     if (!open || inquiryOpen) return;
-    inputRef.current?.focus({ preventScroll: true });
+    const focusTarget = window.matchMedia("(max-width: 768px), (pointer: coarse)").matches
+      ? panelRef.current
+      : inputRef.current;
+    focusTarget?.focus({ preventScroll: true });
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpen(false);
@@ -97,7 +101,7 @@ export default function SupportChat() {
   return (
     <>
       {open && (
-        <section id="support-chat-panel" className="supportChat" role="dialog" aria-modal="false" aria-labelledby="support-chat-title">
+        <section ref={panelRef} tabIndex={-1} id="support-chat-panel" className="supportChat" role="dialog" aria-modal="false" aria-labelledby="support-chat-title">
           <header className="supportChatHeader">
             <div className="supportChatAvatar" aria-hidden="true"><MessageCircle size={20} /></div>
             <div className="supportChatHeading">
