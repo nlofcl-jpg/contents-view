@@ -50,10 +50,31 @@ describe("rich issue documents", () => {
   it("rejects malformed rich documents and constrains numeric size", () => {
     expect(readIssueDocument(ISSUE_DOCUMENT_PREFIX + '{"type":"doc","content":[{"type":"paragraph","content":"bad"}]}')).toBeNull();
     expect(readIssueDocument(ISSUE_DOCUMENT_PREFIX + "bad JSON")).toBeNull();
+    expect(issueFontSize("10px")).toBe("10px");
     expect(issueFontSize("12px")).toBe("12px");
     expect(issueFontSize("72px")).toBe("72px");
     expect(issueFontSize("73px")).toBeUndefined();
+    expect(issueFontSize("9px")).toBeUndefined();
     expect(issueFontSize("-5px")).toBeUndefined();
     expect(stripIssueBodyFormatting(serialize({ type: "doc", content: [{ type: "paragraph" }] }))).toBe("");
+  });
+
+  it("activates plain URLs even when saved before entering a space", () => {
+    const value = serialize({ type: "doc", content: [{ type: "paragraph", content: [
+      { type: "text", text: "관련 내용: https://example.com/news?id=1", marks: [{ type: "bold" }] },
+    ] }] });
+    const html = renderToStaticMarkup(createElement(IssueBody, { value }));
+    expect(html).toContain('href="https://example.com/news?id=1" target="_blank" rel="noopener noreferrer"');
+    expect(html).toContain("<strong>관련 내용:");
+  });
+
+  it("keeps existing link marks without nesting links or linking code", () => {
+    const value = serialize({ type: "doc", content: [{ type: "paragraph", content: [
+      { type: "text", text: "https://example.com", marks: [{ type: "link", attrs: { href: "https://example.com" } }] },
+      { type: "text", text: "https://example.org", marks: [{ type: "code" }] },
+    ] }] });
+    const html = renderToStaticMarkup(createElement(IssueBody, { value }));
+    expect(html.match(/<a /g)).toHaveLength(1);
+    expect(html).toContain("<code>https://example.org</code>");
   });
 });

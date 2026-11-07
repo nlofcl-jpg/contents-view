@@ -9,6 +9,15 @@ describe("issue body formatting", () => {
     expect(parseIssueBodyLine("기존 이슈 본문")).toEqual({ size: "body", text: "기존 이슈 본문" });
   });
 
+  it("activates URLs in legacy text, bold text and table cells", () => {
+    const value = "관련 주소: https://example.com/news\n**www.example.org**\n\n| 링크 |\n|---|\n| https://example.net |";
+    const html = renderToStaticMarkup(createElement(IssueBody, { value }));
+    expect(html).toContain('href="https://example.com/news"');
+    expect(html).toContain('href="https://www.example.org/"');
+    expect(html).toContain('href="https://example.net/"');
+    expect(html.match(/<a /g)).toHaveLength(3);
+  });
+
   it("changes a selected line between body and heading sizes", () => {
     const heading = formatIssueBodyLines("첫 문장\n소제목\n끝 문장", 6, 6, "subtitle");
     expect(heading.value).toBe("첫 문장\n### 소제목\n끝 문장");

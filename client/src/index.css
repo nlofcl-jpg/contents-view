@@ -3408,7 +3408,7 @@ a {
   font-size: 12px;
   font-weight: 400;
   line-height: 1.6;
-  text-align: right;
+  text-align: center;
   overflow-wrap: anywhere;
 }
 
@@ -3542,6 +3542,12 @@ a {
 .issueFontSize { display: flex; align-items: center; height: 34px; border: 1px solid #334155; border-radius: 4px; padding-right: 8px; color: #94a3b8; font-size: 12px; }
 .issueFontSize input { width: 58px; height: 32px; padding: 0 4px 0 8px; background: transparent; color: #e2e8f0; font-size: 13px; outline: none; }
 .issueFontSize:focus-within { border-color: #60a5fa; }
+.issueBodyToolbar .issueFontSizeTrigger { width: 24px; min-height: 30px; border: 0; background: transparent; }
+.issueFontSizeMenu { width: 88px; padding: 4px; border-color: #334155; background: #0f172a; color: #e2e8f0; }
+.issueFontSizeMenu > div { max-height: 224px; overflow-y: auto; }
+.issueFontSizeMenu button { display: block; width: 100%; padding: 5px 10px; border-radius: 3px; text-align: left; font-size: 13px; cursor: pointer; }
+.issueFontSizeMenu button:hover, .issueFontSizeMenu button:focus-visible { background: #1e293b; outline: none; }
+.issueFontSizeMenu button[aria-selected="true"] { background: #1d4ed8; color: #fff; }
 .issueEditor .tiptap { min-height: 240px; max-height: 640px; overflow-y: auto; resize: vertical; padding: 16px; outline: none; }
 .issueEditorStatus, .issueEditorError { margin: 0; padding: 8px 16px; font-size: 13px; }
 .issueEditorStatus { color: #93c5fd; }
@@ -3561,7 +3567,7 @@ a {
 .issueRichContent blockquote { margin: 16px 0; padding-left: 16px; border-left: 3px solid #64748b; }
 .issueRichContent pre { overflow-x: auto; padding: 12px; background: #0f172a; white-space: pre; }
 .issueRichContent hr { margin: 20px 0; border-color: #334155; }
-.issueRichContent a { color: #93c5fd; text-decoration: underline; }
+.issueDetailSummary a, .issueRichContent a { color: #93c5fd; text-decoration: underline; text-underline-offset: 3px; }
 .issueRichContent table { width: 100%; border-collapse: collapse; line-height: 1.6; }
 .issueRichContent th, .issueRichContent td { min-width: 110px; padding: 14px 16px; border-bottom: 1px solid rgba(148, 163, 184, 0.16); vertical-align: top; }
 .issueRichContent th { font-weight: 600; color: #f8fbff; border-bottom-color: rgba(148, 163, 184, 0.38); }

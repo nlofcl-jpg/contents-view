@@ -1,13 +1,28 @@
 import React from "react";
+import { find } from "linkifyjs";
 import { readIssueDocument, safeIssueUrl, issueFontSize, type IssueNode } from "@shared/issueDocument";
 import { parseIssueBodyBlocks, parseIssueBodyLine } from "@shared/issueBody";
 
 function renderInlineText(text: string) {
   return text.split(/(\*\*[^*]+\*\*)/g).map((part, index) =>
     part.startsWith("**") && part.endsWith("**")
-      ? <strong key={index}>{part.slice(2, -2)}</strong>
-      : part,
+      ? <strong key={index}>{renderLinkedText(part.slice(2, -2))}</strong>
+      : <React.Fragment key={index}>{renderLinkedText(part)}</React.Fragment>,
   );
+}
+
+function renderLinkedText(text: string) {
+  const parts: React.ReactNode[] = [];
+  let cursor = 0;
+  for (const match of find(text, "url", { defaultProtocol: "https" })) {
+    const href = safeIssueUrl(match.href);
+    if (!href) continue;
+    parts.push(text.slice(cursor, match.start));
+    parts.push(<a key={match.start} href={href} target="_blank" rel="noopener noreferrer">{match.value}</a>);
+    cursor = match.end;
+  }
+  parts.push(text.slice(cursor));
+  return parts;
 }
 
 export default function IssueBody({ value }: { value: string }) {
@@ -50,7 +65,8 @@ export default function IssueBody({ value }: { value: string }) {
 function RichNode({ node }: { node: IssueNode }) {
   const children = node.content?.map((child, index) => <RichNode key={index} node={child} />);
   if (node.type === "text") {
-    let text: React.ReactNode = node.text || "";
+    const hasLinkOrCode = node.marks?.some(mark => mark.type === "link" || mark.type === "code");
+    let text: React.ReactNode = hasLinkOrCode ? node.text || "" : renderLinkedText(node.text || "");
     for (const mark of node.marks || []) {
       if (mark.type === "bold") text = <strong>{text}</strong>;
       if (mark.type === "italic") text = <em>{text}</em>;

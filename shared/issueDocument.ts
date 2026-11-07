@@ -33,7 +33,7 @@ export function safeIssueUrl(value: unknown): string | undefined {
 export function issueFontSize(value: unknown): string | undefined {
   if (typeof value !== "string" || !/^\d+(?:\.\d+)?px$/.test(value)) return;
   const size = Number.parseFloat(value);
-  return size >= 12 && size <= 72 ? `${size}px` : undefined;
+  return size >= 10 && size <= 72 ? `${size}px` : undefined;
 }
 
 export function issueDocumentText(node: IssueNode): string {
