@@ -5,6 +5,7 @@ import { Link, useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { stripIssueBodyFormatting } from "@shared/issueBody";
 import { useIsMobile } from "@/hooks/useMobile";
+import IssueDate from "@/components/IssueDate";
 
 interface NewsItem {
   title: string;
@@ -23,6 +24,7 @@ interface PublishedIssue {
   thumbnail_url: string | null;
   article_title: string | null;
   article_summary: string | null;
+  created_at: string;
 }
 
 interface NewsSessionCache {
@@ -180,7 +182,7 @@ export default function News() {
 
     supabase
       .from("issues")
-      .select("id,title,summary,thumbnail_url,article_title,article_summary")
+      .select("id,title,summary,thumbnail_url,article_title,article_summary,created_at")
       .eq("is_published", true)
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
@@ -387,6 +389,7 @@ export default function News() {
                     )}
                     <div className="issueFeaturedOverlay">
                       <h2 className="issueFeaturedTitle">{getIssueDisplayTitle(issue)}</h2>
+                      <IssueDate value={issue.created_at} />
                     </div>
                   </Link>
                 ))}
@@ -408,6 +411,7 @@ export default function News() {
                       <div className="issueListBody">
                         <h2 className="issueListTitle">{getIssueDisplayTitle(issue)}</h2>
                         {getIssueDisplaySummary(issue) && <p>{getIssueDisplaySummary(issue)}</p>}
+                        <IssueDate value={issue.created_at} />
                       </div>
                     </Link>
                   ))}

@@ -6,7 +6,7 @@ export default function IssueThumbnail({ src, credit }: { src: string | null; cr
   return (
     <figure className="issueDetailFigure">
       <img className="issueDetailImage" src={src} alt="" />
-      {caption && <figcaption className="issueDetailImageCredit">출처: {caption}</figcaption>}
+      {caption && <figcaption className="issueDetailImageCredit">{caption}</figcaption>}
     </figure>
   );
 }
