@@ -1,13 +1,16 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
-import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { Bold, ChevronDown, RefreshCw, X } from "lucide-react";
+import { ChevronDown, RefreshCw, X } from "lucide-react";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
 import HeroKeywordsPanel from "@/components/HeroKeywordsPanel";
 import { removeStoredIssueImages, uploadIssueImage, validateIssueImage, validateIssueImageUrl } from "@/lib/issueImages";
-import { formatIssueBodyLines, parseIssueBodyLine, type IssueBodySize } from "@shared/issueBody";
+import { stripIssueBodyFormatting } from "@shared/issueBody";
+import { issueBodyImages } from "@shared/issueDocument";
+
+const IssueBodyEditor = lazy(() => import("@/components/IssueBodyEditor"));
 
 type AdminTab = "notices" | "issues" | "users" | "apiKeys" | "heroKeywords" | "partnership";
 
@@ -149,6 +152,7 @@ type IssueRecord = {
   title: string;
   summary: string;
   thumbnail_url: string | null;
+  thumbnail_credit: string | null;
   is_published: boolean;
   registration_status: "connecting" | "complete" | "failed";
   created_at: string;
@@ -253,19 +257,32 @@ function IssuesPanel() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
-  const bodyInputRef = useRef<HTMLTextAreaElement>(null);
+  const bodyUploadsRef = useRef<string[]>([]);
+  const draftStateRef = useRef({ mounted: true, saving: false });
+  const [bodyUploading, setBodyUploading] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const [bodyCursor, setBodyCursor] = useState(0);
   const [thumbnailUrl, setThumbnailUrl] = useState("");
+  const [thumbnailCredit, setThumbnailCredit] = useState("");
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null);
   const [imagePreviewError, setImagePreviewError] = useState(false);
-  const [isPublished, setIsPublished] = useState(false);
+  const [isPublished, setIsPublished] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [publicationChangingIssueId, setPublicationChangingIssueId] = useState<string | null>(null);
   const [selectedIssueIds, setSelectedIssueIds] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    draftStateRef.current.mounted = true;
+    return () => {
+      draftStateRef.current.mounted = false;
+      if (!draftStateRef.current.saving) {
+        void removeStoredIssueImages(bodyUploadsRef.current).catch(error => console.error("[Issue image] Failed to remove draft images", error));
+        bodyUploadsRef.current = [];
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!thumbnailFile) {
@@ -281,47 +298,12 @@ function IssuesPanel() {
     setImagePreviewError(false);
   }, [thumbnailFile, thumbnailUrl]);
 
-  const currentBodyLineStart = summary.lastIndexOf("\n", bodyCursor - 1) + 1;
-  const currentBodyLineEnd = summary.indexOf("\n", bodyCursor);
-  const currentBodySize = parseIssueBodyLine(summary.slice(currentBodyLineStart, currentBodyLineEnd === -1 ? undefined : currentBodyLineEnd)).size;
-
-  const updateBodySelection = (value: string, start: number, end: number) => {
-    setSummary(value);
-    setBodyCursor(start);
-    requestAnimationFrame(() => {
-      bodyInputRef.current?.focus();
-      bodyInputRef.current?.setSelectionRange(start, end);
-    });
-  };
-
-  const handleBodySizeChange = (size: IssueBodySize) => {
-    const input = bodyInputRef.current;
-    if (!input) return;
-    const formatted = formatIssueBodyLines(summary, input.selectionStart, input.selectionEnd, size);
-    updateBodySelection(formatted.value, formatted.selectionStart, formatted.selectionEnd);
-  };
-
-  const handleBodyBold = () => {
-    const input = bodyInputRef.current;
-    if (!input) return;
-    const { selectionStart: start, selectionEnd: end } = input;
-    const selected = summary.slice(start, end);
-    if (!selected) {
-      updateBodySelection(summary.slice(0, start) + "****" + summary.slice(end), start + 2, start + 2);
-      return;
-    }
-    const lines = selected.split("\n");
-    const isBold = lines.every(line => !line || (line.startsWith("**") && line.endsWith("**")));
-    const formatted = lines.map(line => !line ? line : isBold ? line.slice(2, -2) : `**${line}**`).join("\n");
-    updateBodySelection(summary.slice(0, start) + formatted + summary.slice(end), start, start + formatted.length);
-  };
-
   const loadIssues = async () => {
     if (!supabase) return;
 
     const { data, error: loadError } = await supabase
       .from("issues")
-      .select("id,title,summary,thumbnail_url,is_published,registration_status,created_at")
+      .select("id,title,summary,thumbnail_url,thumbnail_credit,is_published,registration_status,created_at")
       .order("created_at", { ascending: false });
 
     if (loadError) {
@@ -337,13 +319,18 @@ function IssuesPanel() {
   }, []);
 
   const resetForm = () => {
+    if (bodyUploading || isSaving) return;
+    const unused = bodyUploadsRef.current;
+    bodyUploadsRef.current = [];
+    void removeStoredIssueImages(unused).catch(error => console.error("[Issue image] Failed to remove draft images", error));
     setEditingId(null);
     setTitle("");
     setSummary("");
     setThumbnailUrl("");
+    setThumbnailCredit("");
     setThumbnailFile(null);
     if (imageInputRef.current) imageInputRef.current.value = "";
-    setIsPublished(false);
+    setIsPublished(true);
     setIsFormOpen(false);
   };
 
@@ -352,6 +339,7 @@ function IssuesPanel() {
     setTitle(issue.title);
     setSummary(issue.summary);
     setThumbnailUrl(issue.thumbnail_url ?? "");
+    setThumbnailCredit(issue.thumbnail_credit ?? "");
     setThumbnailFile(null);
     if (imageInputRef.current) imageInputRef.current.value = "";
     setIsPublished(issue.is_published);
@@ -368,8 +356,8 @@ function IssuesPanel() {
   };
 
   const handleSave = async () => {
-    if (!supabase || !user) return;
-    if (!title.trim() || !summary.trim()) {
+    if (!supabase || !user || bodyUploading || isSaving) return;
+    if (!title.trim() || (!stripIssueBodyFormatting(summary) && issueBodyImages(summary).length === 0)) {
       setError("제목과 본문을 입력하세요.");
       setMessage(null);
       return;
@@ -384,10 +372,11 @@ function IssuesPanel() {
     }
 
     setIsSaving(true);
+    draftStateRef.current.saving = true;
     setError(null);
     setMessage(null);
 
-    const previousImageUrl = editingId ? issues.find(issue => issue.id === editingId)?.thumbnail_url ?? null : null;
+    const previousIssue = issues.find(issue => issue.id === editingId);
     let uploadedImageUrl: string | null = null;
 
     try {
@@ -397,6 +386,11 @@ function IssuesPanel() {
       }
     } catch (uploadError) {
       setIsSaving(false);
+      draftStateRef.current.saving = false;
+      if (!draftStateRef.current.mounted) {
+        void removeStoredIssueImages(bodyUploadsRef.current).catch(error => console.error("[Issue image] Failed to remove draft images", error));
+        bodyUploadsRef.current = [];
+      }
       setError(uploadError instanceof Error ? uploadError.message : "이미지를 업로드하지 못했습니다.");
       return;
     }
@@ -409,6 +403,7 @@ function IssuesPanel() {
       article_title: null,
       article_summary: null,
       thumbnail_url: uploadedImageUrl || thumbnailUrl.trim() || null,
+      thumbnail_credit: thumbnailCredit.trim() || null,
       is_published: isPublished,
       registration_status: "complete" as const,
     };
@@ -424,6 +419,11 @@ function IssuesPanel() {
     }
 
     if (saveErrorMessage) {
+      draftStateRef.current.saving = false;
+      if (!draftStateRef.current.mounted) {
+        void removeStoredIssueImages(bodyUploadsRef.current).catch(error => console.error("[Issue image] Failed to remove draft images", error));
+        bodyUploadsRef.current = [];
+      }
       if (uploadedImageUrl) {
         try { await removeStoredIssueImages([uploadedImageUrl]); } catch (cleanupError) { console.error("[Issue image] Failed to remove unused upload", cleanupError); }
       }
@@ -432,12 +432,26 @@ function IssuesPanel() {
       return;
     }
 
-    if (previousImageUrl && previousImageUrl !== values.thumbnail_url) {
-      try { await removeStoredIssueImages([previousImageUrl]); } catch (cleanupError) { console.error("[Issue image] Failed to remove replaced image", cleanupError); }
-    }
+    const retained = new Set([
+      values.thumbnail_url, ...issueBodyImages(values.summary),
+      ...issues.filter(issue => issue.id !== editingId).flatMap(issue => [issue.thumbnail_url, ...issueBodyImages(issue.summary)]),
+    ]);
+    const unused = [...bodyUploadsRef.current, ...(previousIssue ? [previousIssue.thumbnail_url, ...issueBodyImages(previousIssue.summary)] : [])]
+      .filter((url): url is string => Boolean(url) && !retained.has(url));
+    bodyUploadsRef.current = [];
+    try { await removeStoredIssueImages(Array.from(new Set(unused))); } catch (cleanupError) { console.error("[Issue image] Failed to remove unused images", cleanupError); }
 
     setIsSaving(false);
-    resetForm();
+    draftStateRef.current.saving = false;
+    // This save is complete; resetForm's busy guard applies to user cancellation only.
+    setEditingId(null);
+    setTitle("");
+    setSummary("");
+    setThumbnailUrl("");
+    setThumbnailFile(null);
+    setIsPublished(true);
+    setThumbnailCredit("");
+    setIsFormOpen(false);
     setMessage(editingId ? "이슈 수정 완료" : "이슈 등록 완료");
     await loadIssues();
   };
@@ -454,7 +468,8 @@ function IssuesPanel() {
       return;
     }
 
-    try { await removeStoredIssueImages([issue.thumbnail_url]); } catch (cleanupError) { console.error("[Issue image] Failed to remove deleted issue image", cleanupError); }
+    const retainedImages = new Set(issues.filter(item => item.id !== issue.id).flatMap(item => [item.thumbnail_url, ...issueBodyImages(item.summary)]));
+    try { await removeStoredIssueImages([issue.thumbnail_url, ...issueBodyImages(issue.summary)].filter(url => !retainedImages.has(url))); } catch (cleanupError) { console.error("[Issue image] Failed to remove deleted issue image", cleanupError); }
 
     if (editingId === issue.id) resetForm();
     setSelectedIssueIds(current => {
@@ -527,7 +542,8 @@ function IssuesPanel() {
       return;
     }
 
-    const deletedImageUrls = issues.filter(issue => ids.includes(issue.id)).map(issue => issue.thumbnail_url);
+    const retainedImages = new Set(issues.filter(issue => !ids.includes(issue.id)).flatMap(issue => [issue.thumbnail_url, ...issueBodyImages(issue.summary)]));
+    const deletedImageUrls = issues.filter(issue => ids.includes(issue.id)).flatMap(issue => [issue.thumbnail_url, ...issueBodyImages(issue.summary)]).filter(url => !retainedImages.has(url));
     try { await removeStoredIssueImages(deletedImageUrls); } catch (cleanupError) { console.error("[Issue image] Failed to remove deleted issue images", cleanupError); }
 
     setSelectedIssueIds(current => {
@@ -543,16 +559,7 @@ function IssuesPanel() {
     <section className="space-y-6">
       <header>
         <h2 className="text-2xl font-medium text-white">이슈 관리</h2>
-        <div className="mt-2 flex items-center justify-between gap-4">
-          <p className="min-w-0 text-sm font-normal text-slate-400">등록된 이슈를 관리하세요.</p>
-          <button
-            type="button"
-            className="inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-blue-400/60 bg-blue-500/15 px-3 text-sm font-normal text-blue-100 transition hover:bg-blue-500/25"
-            onClick={handleCreate}
-          >
-            <span aria-hidden="true">+</span> 새 이슈 등록
-          </button>
-        </div>
+        <p className="mt-2 text-sm font-normal text-slate-400">등록된 이슈를 관리하세요.</p>
       </header>
 
       {message && <p className="text-sm text-emerald-300">{message}</p>}
@@ -565,6 +572,7 @@ function IssuesPanel() {
             type="button"
             className="text-xs text-slate-400 hover:text-slate-100"
             onClick={resetForm}
+            disabled={isSaving || bodyUploading}
           >
             닫기
           </button>
@@ -591,33 +599,18 @@ function IssuesPanel() {
         </label>
         <div>
           <label htmlFor="issue-body" className="mb-2 block text-sm font-medium text-slate-300">본문</label>
-          <div className="issueBodyToolbar">
-            <button type="button" onClick={handleBodyBold} title="선택한 글자 굵게" aria-label="선택한 글자 굵게">
-              <Bold size={16} aria-hidden="true" />
-            </button>
-            <AdminSelect
-              aria-label="본문 글자 크기"
-              title="현재 줄 글자 크기"
-              value={currentBodySize}
-              onChange={event => handleBodySizeChange(event.target.value as IssueBodySize)}
-            >
-              <option value="body">본문</option>
-              <option value="subtitle">소제목</option>
-              <option value="large">큰 소제목</option>
-            </AdminSelect>
-          </div>
-          <textarea
-            id="issue-body"
-            ref={bodyInputRef}
-            className="min-h-32 w-full resize-y rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-400"
-            placeholder="이슈 상세 페이지에 표시할 본문을 입력"
-            value={summary}
-            onChange={event => {
-              setSummary(event.target.value);
-              setBodyCursor(event.target.selectionStart);
-            }}
-            onSelect={event => setBodyCursor(event.currentTarget.selectionStart)}
-          />
+          <Suspense fallback={<p className="text-sm text-slate-400" role="status">편집기 불러오는 중…</p>}>
+            <IssueBodyEditor
+              value={summary}
+              disabled={isSaving}
+              onChange={setSummary}
+              onUpload={url => {
+                if (draftStateRef.current.mounted) bodyUploadsRef.current.push(url);
+                else void removeStoredIssueImages([url]).catch(error => console.error("[Issue image] Failed to remove draft image", error));
+              }}
+              onBusyChange={setBodyUploading}
+            />
+          </Suspense>
         </div>
         <div>
           <label htmlFor="issue-image-url" className="mb-2 block text-sm font-medium text-slate-200">대표 이미지</label>
@@ -657,6 +650,16 @@ function IssuesPanel() {
             }}
           />
           <p className="mt-2 text-xs text-slate-400">JPG, PNG, WebP 이미지를 업로드할 수 있습니다.</p>
+          <label htmlFor="issue-image-credit" className="mb-2 mt-4 block text-sm font-medium text-slate-300">이미지 출처 <span className="text-xs font-normal text-slate-500">(선택)</span></label>
+          <input
+            id="issue-image-credit"
+            type="text"
+            maxLength={200}
+            className="h-10 w-full rounded-md border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none placeholder:text-slate-400 focus:border-blue-400"
+            placeholder="예: 공식 홈페이지, 직접 촬영"
+            value={thumbnailCredit}
+            onChange={event => setThumbnailCredit(event.target.value)}
+          />
           {(thumbnailFile || thumbnailUrl) && (
             <div className="mt-2 flex items-center gap-3">
               <button
@@ -688,7 +691,7 @@ function IssuesPanel() {
             type="button"
             className="secondaryButton issueFormAction"
             onClick={resetForm}
-            disabled={isSaving}
+            disabled={isSaving || bodyUploading}
           >
             취소
           </button>
@@ -696,7 +699,7 @@ function IssuesPanel() {
             type="button"
             className="primaryButton issueFormAction"
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || bodyUploading}
           >
             {isSaving ? "저장 중" : editingId ? "수정 저장" : "등록"}
           </button>
@@ -705,21 +708,32 @@ function IssuesPanel() {
       )}
 
       {!isFormOpen && <div>
-        {issues.length > 0 && (
-          <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
-            <button type="button" className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-slate-500 hover:text-white" onClick={toggleAllIssues}>
+        <div className="mb-3 flex items-center justify-between gap-3 overflow-x-auto">
+          <div className="flex shrink-0 items-center gap-2">
+          {issues.length > 0 && (
+            <>
+            <button type="button" className="h-9 whitespace-nowrap rounded-md border border-slate-700 px-3 text-xs text-slate-300 hover:border-slate-500 hover:text-white" onClick={toggleAllIssues}>
               {isAllFilteredSelected ? "전체 선택 해제" : "전체 선택"}
             </button>
             <button
               type="button"
-              className="rounded-md border border-red-400/50 px-3 py-1.5 text-xs text-red-200 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+              className="h-9 whitespace-nowrap rounded-md border border-red-400/50 px-3 text-xs text-red-200 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-40"
               disabled={selectedIssueIds.size === 0}
               onClick={() => deleteIssues(Array.from(selectedIssueIds), `선택한 ${selectedIssueIds.size}개 이슈를 삭제할까요?`)}
             >
               선택 삭제{selectedIssueIds.size > 0 ? ` (${selectedIssueIds.size})` : ""}
             </button>
+            </>
+          )}
           </div>
-        )}
+          <button
+            type="button"
+            className="inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-blue-400/60 bg-blue-500/15 px-3 text-sm font-normal text-blue-100 transition hover:bg-blue-500/25"
+            onClick={handleCreate}
+          >
+            <span aria-hidden="true">+</span> 새 이슈 등록
+          </button>
+        </div>
         {issues.length > 0 ? (
           <div className="overflow-x-auto rounded-md border border-slate-800">
             <div className="min-w-[850px]">

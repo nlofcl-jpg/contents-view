@@ -5,12 +5,14 @@ import { useLocation, useRoute } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { loadKakaoSdk, shareIssueOnKakao } from "@/lib/kakaoShare";
 import IssueBody from "@/components/IssueBody";
+import IssueThumbnail from "@/components/IssueThumbnail";
 
 type IssueDetailRecord = {
   id: string;
   title: string;
   summary: string;
   thumbnail_url: string | null;
+  thumbnail_credit: string | null;
   article_title: string | null;
   article_summary: string | null;
   created_at: string;
@@ -32,7 +34,7 @@ export default function IssueDetail() {
     let cancelled = false;
     supabase
       .from("issues")
-      .select("id,title,summary,thumbnail_url,article_title,article_summary,created_at")
+      .select("id,title,summary,thumbnail_url,thumbnail_credit,article_title,article_summary,created_at")
       .eq("id", params.id)
       .eq("is_published", true)
       .maybeSingle()
@@ -148,9 +150,7 @@ export default function IssueDetail() {
             </div>
           </header>
           <div className="issueDetailArticle">
-            {issue.thumbnail_url && (
-              <img className="issueDetailImage" src={issue.thumbnail_url} alt="" />
-            )}
+            <IssueThumbnail src={issue.thumbnail_url} credit={issue.thumbnail_credit} />
             {(issue.summary || issue.article_summary) && (
               <div className="issueDetailBody">
                 <IssueBody value={issue.summary || issue.article_summary || ""} />

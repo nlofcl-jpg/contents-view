@@ -1,4 +1,5 @@
 import { Lexer, type Tokens } from "marked";
+import { issueDocumentText, readIssueDocument, type IssueNode } from "./issueDocument";
 
 export type IssueBodySize = "body" | "subtitle" | "large";
 
@@ -72,6 +73,8 @@ export function formatIssueBodyLines(value: string, start: number, end: number, 
 }
 
 export function stripIssueBodyFormatting(value: string) {
+  const doc = readIssueDocument(value);
+  if (doc) return issueDocumentText(doc).replace(/\s+/g, " ").trim();
   return parseIssueBodyBlocks(value)
     .flatMap(block => block.type === "table"
       ? [block.headers.join(" "), ...block.rows.map(row => row.join(" "))]
@@ -81,4 +84,40 @@ export function stripIssueBodyFormatting(value: string) {
     .replace(/\*\*(.*?)\*\*/g, "$1")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function inlineText(value: string): IssueNode[] {
+  return value.split(/(\*\*[^*]+\*\*)/g).filter(Boolean).map(text =>
+    text.startsWith("**") && text.endsWith("**")
+      ? { type: "text", text: text.slice(2, -2), marks: [{ type: "bold" }] }
+      : { type: "text", text }
+  );
+}
+
+export function issueEditorDocument(value: string): IssueNode {
+  const rich = readIssueDocument(value);
+  if (rich) return rich;
+  return {
+    type: "doc",
+    content: parseIssueBodyBlocks(value).flatMap((block): IssueNode[] => {
+      if (block.type === "table") {
+        const row = (cells: string[], header: boolean): IssueNode => ({
+          type: "tableRow", content: cells.map((cell, index) => ({
+            type: header ? "tableHeader" : "tableCell",
+            attrs: { textAlign: block.align[index] || "left" },
+            content: [{ type: "paragraph", content: inlineText(cell) }],
+          })),
+        });
+        return [{ type: "table", content: [row(block.headers, true), ...block.rows.map(cells => row(cells, false))] }];
+      }
+      return block.value.split("\n").map(line => {
+        const { size, text } = parseIssueBodyLine(line);
+        return {
+          type: size === "body" ? "paragraph" : "heading",
+          ...(size !== "body" ? { attrs: { level: size === "large" ? 2 : 3 } } : {}),
+          content: inlineText(text),
+        };
+      });
+    }),
+  };
 }

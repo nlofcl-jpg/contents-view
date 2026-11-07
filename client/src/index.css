@@ -3397,6 +3397,21 @@ a {
   margin: 0 auto;
 }
 
+.issueDetailFigure {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.issueDetailImageCredit {
+  margin-top: 8px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
 .issueDetailSummary {
   max-width: 700px;
   margin: 36px auto 0;
@@ -3511,6 +3526,46 @@ a {
 .issueBodyToolbar select:hover {
   border-color: #60a5fa;
 }
+
+.issueEditor {
+  overflow: hidden;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  background: rgba(2, 6, 23, 0.7);
+}
+
+.issueEditor:focus-within { border-color: #60a5fa; }
+.issueEditor .issueBodyToolbar { margin: 0; padding: 8px; border-bottom: 1px solid #334155; }
+.issueEditorControls { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0; padding: 0; border: 0; }
+.issueEditorControls button[aria-pressed="true"] { background: #1d4ed8; border-color: #60a5fa; }
+.issueEditorControls button:disabled { opacity: 0.4; cursor: default; }
+.issueFontSize { display: flex; align-items: center; height: 34px; border: 1px solid #334155; border-radius: 4px; padding-right: 8px; color: #94a3b8; font-size: 12px; }
+.issueFontSize input { width: 58px; height: 32px; padding: 0 4px 0 8px; background: transparent; color: #e2e8f0; font-size: 13px; outline: none; }
+.issueFontSize:focus-within { border-color: #60a5fa; }
+.issueEditor .tiptap { min-height: 240px; max-height: 640px; overflow-y: auto; resize: vertical; padding: 16px; outline: none; }
+.issueEditorStatus, .issueEditorError { margin: 0; padding: 8px 16px; font-size: 13px; }
+.issueEditorStatus { color: #93c5fd; }
+.issueEditorError { color: #fca5a5; }
+.issueRichContent { white-space: normal; overflow-wrap: anywhere; color: #d8e0ec; font-size: 17px; line-height: 1.9; }
+.issueDetailSummary.issueRichContent { font-size: 17px; }
+.issueRichContent p { margin: 0; min-height: 1.9em; white-space: pre-wrap; }
+.issueRichContent h2, .issueRichContent h3 { margin: 0; font-weight: 700; color: #f8fbff; letter-spacing: 0; }
+.issueRichContent h2 { font-size: 24px; line-height: 1.5; }
+.issueRichContent h3 { font-size: 20px; line-height: 1.6; }
+.issueRichContent strong { font-weight: 700; color: #f8fbff; }
+.issueRichContent img { display: block; max-width: 100%; height: auto; margin: 20px auto; }
+.issueRichContent img.ProseMirror-selectednode { outline: 2px solid #60a5fa; outline-offset: 3px; }
+.issueRichContent ul, .issueRichContent ol { padding-left: 26px; margin: 8px 0; }
+.issueRichContent ul { list-style: disc; }
+.issueRichContent ol { list-style: decimal; }
+.issueRichContent blockquote { margin: 16px 0; padding-left: 16px; border-left: 3px solid #64748b; }
+.issueRichContent pre { overflow-x: auto; padding: 12px; background: #0f172a; white-space: pre; }
+.issueRichContent hr { margin: 20px 0; border-color: #334155; }
+.issueRichContent a { color: #93c5fd; text-decoration: underline; }
+.issueRichContent table { width: 100%; border-collapse: collapse; line-height: 1.6; }
+.issueRichContent th, .issueRichContent td { min-width: 110px; padding: 14px 16px; border-bottom: 1px solid rgba(148, 163, 184, 0.16); vertical-align: top; }
+.issueRichContent th { font-weight: 600; color: #f8fbff; border-bottom-color: rgba(148, 163, 184, 0.38); }
+.issueEditor .tableWrapper { max-width: 100%; overflow-x: auto; margin: 24px 0; }
 
 .issueBodyPreview {
   border-top: 1px solid rgba(148, 163, 184, 0.18);
