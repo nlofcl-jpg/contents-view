@@ -3136,6 +3136,68 @@ a {
   border-top: 1px solid rgba(148, 163, 184, 0.22);
 }
 
+.newsClipsPage {
+  gap: 24px;
+}
+
+.newsClipsList {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.newsClipRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: clamp(10px, 3vw, 32px);
+  min-height: 52px;
+  padding: 12px 4px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+  font-size: 13px;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.newsClipRow:hover .newsClipTitle,
+.newsClipRow:focus-visible .newsClipTitle {
+  color: #93c5fd;
+}
+
+.newsClipRow:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: -2px;
+}
+
+.newsClipLabel {
+  color: #93c5fd;
+  font-weight: 600;
+}
+
+.newsClipTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #f2f5fb;
+}
+
+.newsClipMeta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: clamp(10px, 3vw, 28px);
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.newsClipMeta .issueRegistrationDate,
+.issueDetailByline .issueRegistrationDate {
+  margin-top: 0;
+  color: inherit;
+}
+
 .issueListItem {
   display: grid;
   width: 100%;
@@ -4370,20 +4432,17 @@ a {
 }
 
 .youtubeAnalysisSearchForm {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
+  width: 100%;
 }
 
 .youtubeAnalysisInputWrap {
   position: relative;
   min-width: 0;
-  min-height: 46px;
+  min-height: 50px;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 16px;
+  padding: 4px 5px 4px 14px;
   border: 1px solid rgba(41, 151, 255, 0.92);
   border-radius: 999px;
   background: #ffffff;
@@ -4429,9 +4488,9 @@ a {
 }
 
 .youtubeAnalysisInput {
-  width: 100%;
+  flex: 1 1 0;
   min-width: 0;
-  height: 44px;
+  height: 40px;
   border: 0;
   outline: 0;
   background: transparent;
@@ -4444,22 +4503,18 @@ a {
   color: #8b95a1;
 }
 
-.youtubeAnalysisActions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .youtubeAnalysisActionButton {
-  min-width: 74px;
-  height: 44px;
-  padding: 0 18px;
+  flex: none;
+  min-width: 112px;
+  height: 38px;
+  padding: 0 12px;
   border: 1px solid rgba(59, 130, 246, 0.34);
   border-radius: 999px;
   background: #1d4ed8;
   color: #ffffff;
   font-size: 14px;
   font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     background 0.18s ease,
@@ -4474,11 +4529,44 @@ a {
 }
 
 .youtubeAnalysisActionButton:disabled {
-  background: rgba(15, 23, 42, 0.76);
-  border-color: rgba(71, 85, 105, 0.56);
-  color: #64748b;
+  background: #eef2f6;
+  border-color: #dbe2ea;
+  color: #586779;
   cursor: not-allowed;
-  opacity: 0.9;
+}
+
+.youtubeAnalysisInputWrap:focus-within {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .youtubeAnalysisInput::placeholder {
+    font-size: 14px;
+  }
+
+  .youtubeAnalysisActionButton {
+    min-width: 54px;
+    padding-inline: 8px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .youtubeAnalysisInputWrap {
+    gap: 6px;
+    padding-left: 11px;
+  }
+
+  .youtubeAnalysisInputWrap > svg {
+    display: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .youtubeAnalysisInput::placeholder {
+    font-size: 12px;
+  }
 }
 
 .youtubeAnalysisState {
@@ -6637,20 +6725,8 @@ input[type="date"].youtubeSelect {
     gap: 16px;
   }
 
-  .youtubeAnalysisSearchForm {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .youtubeAnalysisActions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    width: 100%;
-  }
-
-  .youtubeAnalysisActionButton {
-    width: 100%;
-    min-width: 0;
+  .youtubeAnalysisInput {
+    font-size: 16px;
   }
 
   .youtubeUrlAnalysisOverview {
@@ -9650,12 +9726,6 @@ input[type="date"].youtubeSelect {
   padding-top: 0;
 }
 
-.aiStudioPageContainer:has(> .studioSubnav),
-.flowAutomationPage:has(> .studioSubnav),
-.openSourceDetailPage:has(> .studioSubnav) {
-  padding-top: 0;
-}
-
 .studioSubnav {
   display: flex;
   align-items: center;
@@ -9666,14 +9736,45 @@ input[type="date"].youtubeSelect {
   margin-top: 0;
 }
 
-@media (max-width: 1360px) {
+@media (min-width: 769px) {
   .studioSubnav {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .aiStudioPageContainer:has(> .studioSubnav),
+  .flowAutomationPage:has(> .studioSubnav),
+  .openSourceDetailPage:has(> .studioSubnav) {
+    padding-top: 0;
+  }
+
+  .studioSubnav {
+    --subnav-line-inset: 12px;
+    position: relative;
+    align-items: flex-end;
     min-height: 64px;
+    padding-bottom: var(--subnav-line-inset);
+  }
+
+  .studioSubnav::before {
+    content: "";
+    position: absolute;
+    inset: auto 0 var(--subnav-line-inset);
+    height: 1px;
+    background: rgba(148, 163, 184, 0.24);
+    pointer-events: none;
+  }
+
+  .studioSubnav > .studioSubnavLink {
+    position: relative;
+    border-bottom-width: 2px;
   }
 }
 
 @media (max-width: 480px) {
   .studioSubnav {
+    --subnav-line-inset: 8px;
     min-height: 56px;
   }
 }
@@ -9708,6 +9809,10 @@ input[type="date"].youtubeSelect {
 .sectionSubnav {
   max-width: 1280px;
   margin-inline: auto;
+}
+
+.newsSectionSubnav {
+  gap: clamp(10px, 4vw, 28px);
 }
 
 .mainContent:has(> .sectionSubnav) > .pageContainer,

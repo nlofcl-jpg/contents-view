@@ -1,7 +1,9 @@
+import { newsLinks } from "./newsNavigation";
+
 export type SupportAction = { label: string; href: string } | { label: string; inquiry: true };
 export type SupportReply = { text: string; actions?: SupportAction[]; questions?: string[] };
 
-export const supportMenuQuestions = ["유튜브 트렌드 사용법", "네이버 트렌드 사용법", "검색 트렌드 사용법", "뉴스·이슈 사용법", "커뮤니티 트렌드 사용법", "스튜디오 사용법"];
+export const supportMenuQuestions = ["유튜브 트렌드 사용법", "네이버 트렌드 사용법", "검색 트렌드 사용법", "뉴스 트렌드 사용법", "커뮤니티 트렌드 사용법", "스튜디오 사용법"];
 export const supportQuestions = ["메뉴별 사용법", "보관함", "API 키 설정", "로그인·가입", "문의하기"];
 
 export const trendTabQuestions = {
@@ -111,8 +113,8 @@ export function getSupportReply(question: string): SupportReply {
     questions: trendTabQuestions.search,
   };
   if (/뉴스|이슈|기사/.test(text)) return {
-    text: "뉴스·이슈 사용 순서\n\n1. 상단 메뉴에서 뉴스·이슈·검색 중 하나를 선택하세요.\n2. 뉴스는 카테고리를 선택해 목록을 바꾸고 ‘원문 보기’로 기사를 확인하세요. 모바일 카테고리는 좌우로 넘길 수 있습니다.\n3. 이슈는 썸네일이나 제목을 눌러 정리된 본문을 읽으세요.\n4. 상세페이지 날짜 오른쪽의 공유·URL 복사·카카오톡 아이콘으로 이슈를 공유하세요.\n5. 특정 기사를 찾으려면 검색 메뉴에서 키워드를 입력하세요.",
-    actions: [{ label: "뉴스", href: "/news" }, { label: "이슈", href: "/news/issues" }, { label: "뉴스 검색", href: "/news/search" }],
+    text: "뉴스 트렌드 이용 안내\n\n최신 뉴스에서는 카테고리별 기사와 원문을 확인할 수 있습니다. 뉴스 픽에서는 썸네일이나 제목을 눌러 정리된 이슈를 읽고 공유할 수 있습니다. 뉴스 클립은 별도 탭으로 제공되며, 특정 기사를 찾으려면 검색에 키워드를 입력하세요.",
+    actions: newsLinks,
   };
   if (/커뮤니티|커뮤/.test(text)) return {
     text: "커뮤니티 트렌드 사용 순서\n\n1. 상단에서 원하는 커뮤니티를 선택하세요. 모바일에서는 메뉴를 좌우로 넘길 수 있습니다.\n2. 게시물 제목과 제공되는 반응 정보를 확인하세요.\n3. 게시물을 선택해 원문을 확인하고, 하단 페이지 번호로 다음 목록을 살펴보세요.\n4. 새로고침 아이콘으로 목록을 다시 불러올 수 있습니다.\n\n커뮤니티별 수집 순서를 보여주며 여러 커뮤니티를 합산한 인기 순위는 아닙니다. 일부 필터와 추가 목록 열람에는 로그인이 필요합니다.",
@@ -128,7 +130,7 @@ export function getSupportReply(question: string): SupportReply {
   };
   if (/서비스|이용안내|사용법|처음|안녕/.test(text)) return {
     text: "컨텐츠뷰는 트렌드와 뉴스·이슈를 확인하고 콘텐츠 아이디어를 찾는 서비스입니다.\n\n유튜브·네이버·검색 트렌드에서 관심 주제를 살펴보고, 커뮤니티 트렌드에서 반응을 확인해 보세요. 마음에 드는 영상은 로그인 후 내 보관함에 저장할 수 있습니다.\n\n궁금한 메뉴 이름이나 ‘영상 분석 사용법’처럼 질문을 입력해 주세요.",
-    actions: [{ label: "유튜브 트렌드", href: "/trends/youtube" }, { label: "뉴스·이슈", href: "/news" }],
+    actions: [{ label: "유튜브 트렌드", href: "/trends/youtube" }, { label: "뉴스 트렌드", href: "/news" }],
   };
   return {
     text: "아직 이 질문에 대한 기본 안내를 찾지 못했습니다. ‘로그인’, ‘영상 분석’, ‘보관함’, ‘뉴스’, ‘스튜디오’처럼 메뉴나 기능 이름을 함께 입력해 주세요.\n\n직접 확인이 필요한 문의는 이메일로 남겨주세요. 현재는 실시간 AI 상담이나 상담원 연결을 제공하지 않습니다.",

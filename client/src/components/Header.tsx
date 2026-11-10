@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { ChevronDown, Menu } from "lucide-react";
 import FlowDownloadBanner from "@/components/FlowDownloadBanner";
+import { newsLinks } from "@/lib/newsNavigation";
 
 interface HeaderProps {
   onOpenMyPageModal?: () => void;
@@ -48,12 +49,6 @@ export default function Header({
     { name: "YouTube", path: "/trends/youtube" },
     { name: "네이버 트렌드", path: "/trends/naver" },
     { name: "검색 트렌드", path: "/trends/google" },
-  ];
-
-  const newsItems = [
-    { name: "뉴스", path: "/news" },
-    { name: "이슈", path: "/news/issues" },
-    { name: "검색", path: "/news/search" },
   ];
 
   const studioItems = [
@@ -389,7 +384,7 @@ export default function Header({
               setOpenNewsMenu(!openNewsMenu);
             }}
           >
-            뉴스&이슈
+            뉴스 트렌드
             <ChevronDown
               className={`headerNavChevron ${openNewsMenu ? "open" : ""}`}
               aria-hidden="true"
@@ -401,14 +396,14 @@ export default function Header({
               onMouseEnter={() => handleNewsMenuHover(true)}
               onMouseLeave={() => handleNewsMenuHover(false)}
             >
-              {newsItems.map((item) => (
+              {newsLinks.map((item) => (
                 <button
-                  key={item.name}
+                  key={item.href}
                   type="button"
                   className="headerNavDropdownItem"
-                  onClick={() => handleNewsItemClick(item.path)}
+                  onClick={() => handleNewsItemClick(item.href)}
                 >
-                  {item.name}
+                  {item.label}
                 </button>
               ))}
             </div>

@@ -292,7 +292,7 @@ export default function News() {
     <div className="pageContainer newsPageContainer">
       {/* Page Header */}
       <div className="pageHeader">
-        <h1 className="pageTitle">뉴스 & 이슈</h1>
+        <h1 className="pageTitle">뉴스 트렌드</h1>
         <p className="pageDescription">오늘 주목받는 이슈를 빠르게 확인하고 콘텐츠 아이디어로 연결해보세요.</p>
       </div>
 

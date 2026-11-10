@@ -3,6 +3,7 @@ import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 import { X, Home, LogOut, User, ShieldCheck, Bookmark } from "lucide-react";
 import { useState } from "react";
+import { getActiveNewsPath, newsLinks } from "@/lib/newsNavigation";
 
 interface MobileMenuDrawerProps {
   panelType: "account" | "menu" | null;
@@ -49,9 +50,7 @@ export function MobileMenuDrawer({
   // 현재 페이지 확인
   const isHomePage = location === "/";
   const isYouTubePage = location?.startsWith("/trends/youtube");
-  const isNewsPage = location === "/news";
-  const isIssuesPage = location?.startsWith("/news/issues");
-  const isNewsSearchPage = location?.startsWith("/news/search");
+  const activeNewsPath = getActiveNewsPath(location);
   const isSavedContentsPage = location === "/saved-contents";
   const isCommunityPage = location === "/community";
   const isAIStudioPage = location?.startsWith("/ai-studio");
@@ -224,7 +223,7 @@ export function MobileMenuDrawer({
                 aria-expanded={isNewsOpen}
                 aria-controls="mobile-news-submenu"
               >
-                <span>뉴스 &amp; 이슈</span>
+                <span>뉴스 트렌드</span>
                 <span style={{ marginLeft: "auto", transition: "transform 0.2s" }}>
                   {isNewsOpen ? "⌄" : "⌃"}
                 </span>
@@ -232,27 +231,17 @@ export function MobileMenuDrawer({
 
               {isNewsOpen && (
                 <div id="mobile-news-submenu">
-                  <button
-                    className={`mobileNavItem subNavItem ${isNewsPage ? "active" : ""}`}
-                    onClick={() => handleNavigation("/news")}
-                    type="button"
-                  >
-                    <span>뉴스</span>
-                  </button>
-                  <button
-                    className={`mobileNavItem subNavItem ${isIssuesPage ? "active" : ""}`}
-                    onClick={() => handleNavigation("/news/issues")}
-                    type="button"
-                  >
-                    <span>이슈</span>
-                  </button>
-                  <button
-                    className={`mobileNavItem subNavItem ${isNewsSearchPage ? "active" : ""}`}
-                    onClick={() => handleNavigation("/news/search")}
-                    type="button"
-                  >
-                    <span>검색</span>
-                  </button>
+                  {newsLinks.map(({ label, href }) => (
+                    <button
+                      key={href}
+                      className={`mobileNavItem subNavItem ${activeNewsPath === href ? "active" : ""}`}
+                      aria-current={activeNewsPath === href ? "page" : undefined}
+                      onClick={() => handleNavigation(href)}
+                      type="button"
+                    >
+                      <span>{label}</span>
+                    </button>
+                  ))}
                 </div>
               )}
 

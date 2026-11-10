@@ -8,6 +8,7 @@ import { AlertCircle, CircleAlert, Clock, Play, ChevronDown, RotateCw, Bookmark,
 import { useBookmark } from "@/contexts/BookmarkContext";
 import { useLocation } from "wouter";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
+import { useIsMobile } from "@/hooks/useMobile";
 
 type TabType = "analysis" | "trending" | "category" | "shorts" | "rising";
 type AnalysisSortType = "relevance" | "publishedAt" | "viewCount";
@@ -17,10 +18,10 @@ const YOUTUBE_API_KEY_ERROR_MESSAGE = "YouTube API 키 오류입니다.\nAPI 키
 
 const TABS = [
   { id: "analysis", label: "영상 분석" },
+  { id: "rising", label: "급상승 영상" },
   { id: "trending", label: "유튜브 추천 영상" },
   { id: "category", label: "카테고리별 인기" },
   { id: "shorts", label: "인기 쇼츠" },
-  { id: "rising", label: "급상승 영상" },
 ] as const;
 
 function getInitialYouTubeTab(): TabType {
@@ -217,6 +218,7 @@ function formatDate(dateString: string): string {
 }
 
 export default function YouTubeTrends() {
+  const isMobile = useIsMobile();
   const [location, setLocation] = useLocation();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { toggleYouTubeBookmark, isYouTubeVideoBookmarked, isBookmarkPending } = useBookmark();
@@ -765,24 +767,14 @@ export default function YouTubeTrends() {
               type="text"
               value={analysisInput}
               onChange={(event) => setAnalysisInput(event.target.value)}
-              placeholder="키워드 또는 YouTube URL을 입력하세요"
+              placeholder={isMobile ? "키워드·URL을 입력하세요" : "키워드 또는 YouTube URL을 입력하세요"}
+              aria-label="키워드 또는 YouTube URL"
               className="youtubeAnalysisInput"
             />
-          </div>
-          <div className="youtubeAnalysisActions">
             <button
-              type="button"
+              type="submit"
               className="youtubeAnalysisActionButton"
-              disabled={authLoading || !canSearchAnalysisKeyword}
-              onClick={handleAnalysisKeywordSearch}
-            >
-              검색
-            </button>
-            <button
-              type="button"
-              className="youtubeAnalysisActionButton"
-              disabled={authLoading || !canAnalyzeVideoUrl}
-              onClick={handleAnalysisUrlAnalyze}
+              disabled={authLoading || !(canSearchAnalysisKeyword || canAnalyzeVideoUrl)}
             >
               분석
             </button>

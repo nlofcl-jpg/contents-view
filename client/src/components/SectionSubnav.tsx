@@ -1,14 +1,10 @@
 import { Link, useLocation } from "wouter";
+import { getActiveNewsPath, newsLinks } from "@/lib/newsNavigation";
 
 const trendLinks = [
   { label: "유튜브 트렌드", href: "/trends/youtube" },
   { label: "네이버 트렌드", href: "/trends/naver" },
   { label: "검색 트렌드", href: "/trends/google" },
-];
-const newsLinks = [
-  { label: "뉴스", href: "/news" },
-  { label: "이슈", href: "/news/issues" },
-  { label: "검색", href: "/news/search" },
 ];
 
 export default function SectionSubnav() {
@@ -19,9 +15,9 @@ export default function SectionSubnav() {
   if (!isTrends && !isNews) return null;
 
   const links = isTrends ? trendLinks : newsLinks;
-  const selectedPath = path.startsWith("/news/issues/") ? "/news/issues" : path;
+  const selectedPath = isNews ? getActiveNewsPath(path) : path;
   return (
-    <nav className="studioSubnav sectionSubnav" aria-label={isTrends ? "실시간 트렌드 하위 메뉴" : "뉴스 및 이슈 하위 메뉴"}>
+    <nav className={`studioSubnav sectionSubnav${isNews ? " newsSectionSubnav" : ""}`} aria-label={isTrends ? "실시간 트렌드 하위 메뉴" : "뉴스 트렌드 하위 메뉴"}>
       {links.map(link => (
         <Link key={link.href} href={link.href} className={`studioSubnavLink${selectedPath === link.href ? " active" : ""}`} aria-current={selectedPath === link.href ? "page" : undefined}>
           {link.label}

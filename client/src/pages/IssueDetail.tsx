@@ -105,7 +105,7 @@ export default function IssueDetail() {
     <div className="pageContainer issueDetailPage">
       <button type="button" className="issueBackButton" onClick={() => setLocation("/news/issues")}>
         <ChevronLeft size={15} aria-hidden="true" />
-        이슈
+        뉴스 픽
       </button>
 
       {isLoading ? (

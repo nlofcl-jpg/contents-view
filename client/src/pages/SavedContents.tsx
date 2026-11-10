@@ -64,7 +64,7 @@ const SECTIONS = [
   { id: "youtube", label: "YouTube", icon: <YouTubeLogo className="savedContentsBrandIcon" /> },
   { id: "naver", label: "네이버", icon: <img className="savedContentsBrandIcon" src="/naver-favicon.png" alt="" /> },
   { id: "google-trends", label: "검색 트렌드", icon: <GoogleLogo className="savedContentsBrandIcon" /> },
-  { id: "news-issues", label: "뉴스 & 이슈", icon: <Newspaper className="savedContentsBrandIcon" aria-hidden="true" /> },
+  { id: "news-issues", label: "뉴스 트렌드", icon: <Newspaper className="savedContentsBrandIcon" aria-hidden="true" /> },
   { id: "community", label: "커미니티 반응", icon: <MessageCircleMore className="savedContentsBrandIcon" aria-hidden="true" /> },
 ];
 

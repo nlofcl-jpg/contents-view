@@ -1,24 +1,25 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { ChevronDown, RefreshCw, X } from "lucide-react";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
 import HeroKeywordsPanel from "@/components/HeroKeywordsPanel";
-import { removeStoredIssueImages, uploadIssueImage, validateIssueImage, validateIssueImageUrl } from "@/lib/issueImages";
+import { getStoredIssueImagePath, removeStoredIssueImages, uploadIssueImage, validateIssueImage, validateIssueImageUrl } from "@/lib/issueImages";
 import { stripIssueBodyFormatting } from "@shared/issueBody";
 import { issueBodyImages } from "@shared/issueDocument";
 
 const IssueBodyEditor = lazy(() => import("@/components/IssueBodyEditor"));
 
-type AdminTab = "notices" | "issues" | "users" | "apiKeys" | "heroKeywords" | "partnership";
+type AdminTab = "notices" | "issues" | "newsClips" | "users" | "apiKeys" | "heroKeywords" | "partnership";
 
 const adminTabs: Array<{ id: AdminTab; label: string }> = [
   { id: "notices", label: "공지" },
   { id: "users", label: "사용자" },
   { id: "apiKeys", label: "API 키" },
   { id: "issues", label: "이슈" },
+  { id: "newsClips", label: "뉴스 클립 관리" },
   { id: "heroKeywords", label: "인기 검색어" },
   { id: "partnership", label: "제휴 문의" },
 ];
@@ -108,7 +109,8 @@ export default function Admin() {
       </div>
 
       {activeTab === "notices" && <NoticePanel />}
-      {activeTab === "issues" && <IssuesPanel />}
+      {activeTab === "issues" && <IssuesPanel key="issues" />}
+      {activeTab === "newsClips" && <IssuesPanel key="news-clips" table="news_clips" />}
       {activeTab === "users" && <UsersPanel adminEmail={user?.email ?? ""} />}
       {activeTab === "apiKeys" && <ApiKeysPanel />}
       {activeTab === "heroKeywords" && <HeroKeywordsPanel />}
@@ -154,7 +156,7 @@ type IssueRecord = {
   thumbnail_url: string | null;
   thumbnail_credit: string | null;
   is_published: boolean;
-  registration_status: "connecting" | "complete" | "failed";
+  registration_status?: "connecting" | "complete" | "failed";
   created_at: string;
 };
 
@@ -250,8 +252,10 @@ function ManagementToolbar({
   );
 }
 
-function IssuesPanel() {
+function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) {
   const { user } = useAuth();
+  const isClip = table === "news_clips";
+  const label = isClip ? "뉴스 클립" : "이슈";
   const [issues, setIssues] = useState<IssueRecord[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -266,7 +270,8 @@ function IssuesPanel() {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null);
   const [imagePreviewError, setImagePreviewError] = useState(false);
-  const [isPublished, setIsPublished] = useState(true);
+  const [isPublished, setIsPublished] = useState(!isClip);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -299,19 +304,56 @@ function IssuesPanel() {
   }, [thumbnailFile, thumbnailUrl]);
 
   const loadIssues = async () => {
-    if (!supabase) return;
-
-    const { data, error: loadError } = await supabase
-      .from("issues")
-      .select("id,title,summary,thumbnail_url,thumbnail_credit,is_published,registration_status,created_at")
-      .order("created_at", { ascending: false });
-
-    if (loadError) {
-      setError(loadError.message);
+    if (!supabase) {
+      setError(`${label} 저장소가 설정되지 않았습니다.`);
       return;
     }
 
-    setIssues((data ?? []) as IssueRecord[]);
+    const source = supabase.from(table);
+    const selection = isClip
+      ? source.select("id,title,summary,thumbnail_url,thumbnail_credit,is_published,created_at")
+      : source.select("id,title,summary,thumbnail_url,thumbnail_credit,is_published,registration_status,created_at");
+    const { data, error: loadError } = await selection
+      .order("created_at", { ascending: false });
+
+    if (loadError) {
+      setError(isClip ? "뉴스 클립을 불러오지 못했습니다. 저장소 설정을 확인해 주세요." : loadError.message);
+      return;
+    }
+
+    setIssues(data ?? []);
+    setHasLoaded(true);
+  };
+
+  const removeArticleImages = async (urls: Array<string | null>) => {
+    if (!supabase) return;
+    const candidates = urls.flatMap(url => {
+      const path = url && getStoredIssueImagePath(url);
+      return url && path ? [{ url, path }] : [];
+    });
+    if (candidates.length === 0) return;
+
+    // Published images can be reused across articles and across both lists.
+    const referenced = new Set<string>();
+    const pageSize = 500;
+    for (const sourceTable of ["issues", "news_clips"]) {
+      for (let offset = 0; ; offset += pageSize) {
+        const { data, error } = await supabase.from(sourceTable)
+          .select("thumbnail_url,summary").order("id").range(offset, offset + pageSize - 1);
+        if (error) {
+          if (!isClip && sourceTable === "news_clips" && (error.code === "PGRST205" || error.code === "42P01")) break;
+          throw error;
+        }
+        for (const article of data) {
+          for (const url of [article.thumbnail_url, ...issueBodyImages(article.summary)]) {
+            const path = url && getStoredIssueImagePath(url);
+            if (path) referenced.add(path);
+          }
+        }
+        if (data.length < pageSize) break;
+      }
+    }
+    await removeStoredIssueImages(candidates.filter(({ path }) => !referenced.has(path)).map(({ url }) => url));
   };
 
   useEffect(() => {
@@ -330,7 +372,7 @@ function IssuesPanel() {
     setThumbnailCredit("");
     setThumbnailFile(null);
     if (imageInputRef.current) imageInputRef.current.value = "";
-    setIsPublished(true);
+    setIsPublished(!isClip);
     setIsFormOpen(false);
   };
 
@@ -398,24 +440,21 @@ function IssuesPanel() {
     const values = {
       title: title.trim(),
       summary: summary.trim(),
-      article_url: null,
-      source_name: null,
-      article_title: null,
-      article_summary: null,
       thumbnail_url: uploadedImageUrl || thumbnailUrl.trim() || null,
       thumbnail_credit: thumbnailCredit.trim() || null,
       is_published: isPublished,
-      registration_status: "complete" as const,
+      ...(!isClip ? { article_url: null, source_name: null, article_title: null, article_summary: null, registration_status: "complete" } : {}),
     };
 
     let saveErrorMessage: string | null = null;
     try {
+      const insertValues = { ...values, ...(!isClip ? { registration_type: "manual", created_by: user.id } : {}) };
       const { error: saveError } = editingId
-        ? await supabase.from("issues").update(values).eq("id", editingId)
-        : await supabase.from("issues").insert({ ...values, registration_type: "manual", created_by: user.id });
+        ? await supabase.from(table).update(values).eq("id", editingId).select("id").single()
+        : await supabase.from(table).insert(insertValues).select("id").single();
       saveErrorMessage = saveError?.message ?? null;
     } catch (saveError) {
-      saveErrorMessage = saveError instanceof Error ? saveError.message : "이슈를 저장하지 못했습니다.";
+      saveErrorMessage = saveError instanceof Error ? saveError.message : `${label} 저장에 실패했습니다.`;
     }
 
     if (saveErrorMessage) {
@@ -439,7 +478,7 @@ function IssuesPanel() {
     const unused = [...bodyUploadsRef.current, ...(previousIssue ? [previousIssue.thumbnail_url, ...issueBodyImages(previousIssue.summary)] : [])]
       .filter((url): url is string => Boolean(url) && !retained.has(url));
     bodyUploadsRef.current = [];
-    try { await removeStoredIssueImages(Array.from(new Set(unused))); } catch (cleanupError) { console.error("[Issue image] Failed to remove unused images", cleanupError); }
+    try { await removeArticleImages(Array.from(new Set(unused))); } catch (cleanupError) { console.error("[Issue image] Failed to remove unused images", cleanupError); }
 
     setIsSaving(false);
     draftStateRef.current.saving = false;
@@ -449,19 +488,19 @@ function IssuesPanel() {
     setSummary("");
     setThumbnailUrl("");
     setThumbnailFile(null);
-    setIsPublished(true);
+    setIsPublished(!isClip);
     setThumbnailCredit("");
     setIsFormOpen(false);
-    setMessage(editingId ? "이슈 수정 완료" : "이슈 등록 완료");
+    setMessage(editingId ? `${label} 수정 완료` : `${label} 등록 완료`);
     await loadIssues();
   };
 
   const handleDelete = async (issue: IssueRecord) => {
-    if (!supabase || !window.confirm(`'${issue.title}' 이슈를 삭제할까요?`)) return;
+    if (!supabase || !window.confirm(`'${issue.title}' 글을 삭제할까요?`)) return;
 
     setError(null);
     setMessage(null);
-    const { error: deleteError } = await supabase.from("issues").delete().eq("id", issue.id);
+    const { error: deleteError } = await supabase.from(table).delete().eq("id", issue.id).select("id").single();
 
     if (deleteError) {
       setError(deleteError.message);
@@ -469,7 +508,7 @@ function IssuesPanel() {
     }
 
     const retainedImages = new Set(issues.filter(item => item.id !== issue.id).flatMap(item => [item.thumbnail_url, ...issueBodyImages(item.summary)]));
-    try { await removeStoredIssueImages([issue.thumbnail_url, ...issueBodyImages(issue.summary)].filter(url => !retainedImages.has(url))); } catch (cleanupError) { console.error("[Issue image] Failed to remove deleted issue image", cleanupError); }
+    try { await removeArticleImages([issue.thumbnail_url, ...issueBodyImages(issue.summary)].filter(url => !retainedImages.has(url))); } catch (cleanupError) { console.error("[Issue image] Failed to remove deleted issue image", cleanupError); }
 
     if (editingId === issue.id) resetForm();
     setSelectedIssueIds(current => {
@@ -477,7 +516,7 @@ function IssuesPanel() {
       next.delete(issue.id);
       return next;
     });
-    setMessage("이슈 삭제 완료");
+    setMessage(`${label} 삭제 완료`);
     await loadIssues();
   };
 
@@ -490,9 +529,9 @@ function IssuesPanel() {
     setMessage(null);
 
     const { error: updateError } = await supabase
-      .from("issues")
+      .from(table)
       .update({ is_published: nextPublished })
-      .eq("id", issue.id);
+      .eq("id", issue.id).select("id").single();
 
     setPublicationChangingIssueId(null);
 
@@ -536,30 +575,32 @@ function IssuesPanel() {
 
     setError(null);
     setMessage(null);
-    const { error: deleteError } = await supabase.from("issues").delete().in("id", ids);
+    const { data: deleted, error: deleteError } = await supabase.from(table).delete().in("id", ids).select("id");
     if (deleteError) {
       setError(deleteError.message);
       return;
     }
 
-    const retainedImages = new Set(issues.filter(issue => !ids.includes(issue.id)).flatMap(issue => [issue.thumbnail_url, ...issueBodyImages(issue.summary)]));
-    const deletedImageUrls = issues.filter(issue => ids.includes(issue.id)).flatMap(issue => [issue.thumbnail_url, ...issueBodyImages(issue.summary)]).filter(url => !retainedImages.has(url));
-    try { await removeStoredIssueImages(deletedImageUrls); } catch (cleanupError) { console.error("[Issue image] Failed to remove deleted issue images", cleanupError); }
+    const deletedIds = new Set((deleted ?? []).map(item => item.id));
+    const retainedImages = new Set(issues.filter(issue => !deletedIds.has(issue.id)).flatMap(issue => [issue.thumbnail_url, ...issueBodyImages(issue.summary)]));
+    const deletedImageUrls = issues.filter(issue => deletedIds.has(issue.id)).flatMap(issue => [issue.thumbnail_url, ...issueBodyImages(issue.summary)]).filter(url => !retainedImages.has(url));
+    try { await removeArticleImages(deletedImageUrls); } catch (cleanupError) { console.error("[Issue image] Failed to remove deleted issue images", cleanupError); }
 
     setSelectedIssueIds(current => {
       const next = new Set(current);
-      ids.forEach(id => next.delete(id));
+      deletedIds.forEach(id => next.delete(id));
       return next;
     });
-    setMessage(`${ids.length}개 이슈 삭제 완료`);
+    if (deletedIds.size === 0) setError("선택한 글을 삭제하지 못했습니다.");
+    else setMessage(`${deletedIds.size}개 ${label} 삭제 완료`);
     await loadIssues();
   };
 
   return (
     <section className="space-y-6">
       <header>
-        <h2 className="text-2xl font-medium text-white">이슈 관리</h2>
-        <p className="mt-2 text-sm font-normal text-slate-400">등록된 이슈를 관리하세요.</p>
+        <h2 className="text-2xl font-medium text-white">{label} 관리</h2>
+        {!isClip && <p className="mt-2 text-sm font-normal text-slate-400">등록된 이슈를 관리하세요.</p>}
       </header>
 
       {message && <p className="text-sm text-emerald-300">{message}</p>}
@@ -582,7 +623,7 @@ function IssuesPanel() {
           <div className="flex gap-2">
             <input
               className="h-10 min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none focus:border-blue-400"
-              placeholder="이슈 제목"
+              placeholder={`${label} 제목`}
               value={title}
               onChange={event => setTitle(event.target.value)}
             />
@@ -719,7 +760,7 @@ function IssuesPanel() {
               type="button"
               className="h-9 whitespace-nowrap rounded-md border border-red-400/50 px-3 text-xs text-red-200 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-40"
               disabled={selectedIssueIds.size === 0}
-              onClick={() => deleteIssues(Array.from(selectedIssueIds), `선택한 ${selectedIssueIds.size}개 이슈를 삭제할까요?`)}
+              onClick={() => deleteIssues(Array.from(selectedIssueIds), `선택한 글 ${selectedIssueIds.size}개를 삭제할까요?`)}
             >
               선택 삭제{selectedIssueIds.size > 0 ? ` (${selectedIssueIds.size})` : ""}
             </button>
@@ -728,10 +769,11 @@ function IssuesPanel() {
           </div>
           <button
             type="button"
-            className="inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-blue-400/60 bg-blue-500/15 px-3 text-sm font-normal text-blue-100 transition hover:bg-blue-500/25"
+            className="inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-blue-400/60 bg-blue-500/15 px-3 text-sm font-normal text-blue-100 transition hover:bg-blue-500/25 disabled:cursor-not-allowed disabled:opacity-40"
             onClick={handleCreate}
+            disabled={isClip && !hasLoaded}
           >
-            <span aria-hidden="true">+</span> 새 이슈 등록
+            <span aria-hidden="true">+</span> 새 {label} 등록
           </button>
         </div>
         {issues.length > 0 ? (
@@ -758,7 +800,9 @@ function IssuesPanel() {
                   aria-label={`${issue.title} 선택`}
                 />
                 <div className="min-w-0">
-                  <p className="truncate text-sm text-slate-100">{issue.title}</p>
+                  {isClip && issue.is_published ? (
+                    <Link href={`/news/clips/${issue.id}`} className="block truncate text-sm text-blue-200 hover:underline">{issue.title}</Link>
+                  ) : <p className="truncate text-sm text-slate-100">{issue.title}</p>}
                   <p className="mt-1 text-xs text-slate-500">{issue.is_published ? "공개" : "비공개"}</p>
                 </div>
                 <span className="flex items-center gap-2 whitespace-nowrap text-xs text-slate-400">
@@ -797,7 +841,7 @@ function IssuesPanel() {
             </div>
           </div>
         ) : (
-          <p className="text-sm text-slate-500">조건에 맞는 이슈가 없습니다.</p>
+          !error && <p className="text-sm text-slate-500">{isClip && !hasLoaded ? "뉴스 클립을 불러오는 중입니다." : `등록된 ${label} 글이 없습니다.`}</p>
         )}
       </div>}
     </section>
