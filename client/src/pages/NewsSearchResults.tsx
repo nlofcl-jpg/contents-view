@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { ChevronDown, Loader2, RotateCcw, Search } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
+import NewsTrendHeader from "@/components/NewsTrendHeader";
 
 interface NewsItem {
   title: string;
@@ -86,11 +87,8 @@ export default function NewsSearchResults() {
   };
 
   return (
-    <div className="pageContainer">
-      <div className="pageHeader">
-        <h1 className="pageTitle">뉴스 트렌드</h1>
-        <p className="pageDescription">오늘 주목받는 이슈를 빠르게 확인하고 콘텐츠 아이디어로 연결해보세요.</p>
-      </div>
+    <div className="pageContainer newsPageContainer">
+      <NewsTrendHeader />
 
       <section className="newsSearchSection" aria-labelledby="news-search-result-title">
         <h2 id="news-search-result-title" className="newsSearchTitle">뉴스 검색</h2>

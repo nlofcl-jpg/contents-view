@@ -254,7 +254,7 @@ export default function GoogleTrends() {
         </p>
       </div>
 
-      <div className="mb-5 grid grid-cols-2 border-b border-slate-700 lg:hidden" role="tablist" aria-label="검색 트렌드 종류">
+      <div className="searchTrendTabMenu mb-5 grid grid-cols-2 lg:hidden" role="tablist" aria-label="검색 트렌드 종류">
         <button
           id="google-trends-tab"
           type="button"
@@ -264,7 +264,7 @@ export default function GoogleTrends() {
           tabIndex={mobileTab === "google" ? 0 : -1}
           onClick={() => selectMobileTab("google")}
           onKeyDown={handleMobileTabKeyDown}
-          className={`min-h-11 border-b-2 px-2 text-xs font-semibold transition-colors ${mobileTab === "google" ? "border-blue-400 text-blue-300" : "border-transparent text-slate-400"}`}
+          className={`tabButton${mobileTab === "google" ? " active" : ""}`}
         >
           구글 트렌드
         </button>
@@ -277,7 +277,7 @@ export default function GoogleTrends() {
           tabIndex={mobileTab === "keywords" ? 0 : -1}
           onClick={() => selectMobileTab("keywords")}
           onKeyDown={handleMobileTabKeyDown}
-          className={`min-h-11 border-b-2 px-2 text-xs font-semibold transition-colors ${mobileTab === "keywords" ? "border-blue-400 text-blue-300" : "border-transparent text-slate-400"}`}
+          className={`tabButton${mobileTab === "keywords" ? " active" : ""}`}
         >
           검색어 트렌드
         </button>

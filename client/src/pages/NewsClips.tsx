@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import IssueDate from "@/components/IssueDate";
+import NewsTrendHeader from "@/components/NewsTrendHeader";
 import { issueBriefingLabel } from "@/lib/newsNavigation";
 import { supabase } from "@/lib/supabase";
 
@@ -24,10 +25,8 @@ export default function NewsClips() {
   });
 
   return (
-    <div className="pageContainer newsPageContainer newsClipsPage">
-      <header className="pageHeader">
-        <h1 className="pageTitle">뉴스 트렌드</h1>
-      </header>
+    <div className="pageContainer newsPageContainer">
+      <NewsTrendHeader />
       {isPending ? (
         <p className="issuesStatus" role="status">뉴스 클립을 불러오는 중입니다.</p>
       ) : isError ? (

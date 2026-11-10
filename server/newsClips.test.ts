@@ -5,6 +5,8 @@ import { Router } from "wouter";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import NewsClips from "../client/src/pages/NewsClips";
 import NewsClipDetail from "../client/src/pages/NewsClipDetail";
+import NewsTrendHeader from "../client/src/components/NewsTrendHeader";
+import SectionSubnav from "../client/src/components/SectionSubnav";
 import { getActiveNewsPath } from "../client/src/lib/newsNavigation";
 
 vi.mock("../client/src/lib/supabase", () => ({ supabase: null }));
@@ -37,7 +39,19 @@ describe("news clips pages", () => {
     expect(html).toContain("[이슈 브리핑]");
     expect(html).toContain("2026.11.10");
     expect(html).toContain("운영자");
+    expect(html).toContain('class="pageDescription"');
     expect(html).not.toContain("제목 예시");
+  });
+
+  it.each(["/news", "/news/issues", "/news/clips", "/news/search"])("places the active tab below the description on %s", path => {
+    const html = renderPage(NewsTrendHeader, path, [], null);
+    expect(html).toMatch(/class="pageDescription"[^>]*>[^<]+<\/p><nav/);
+    expect(html).toMatch(new RegExp(`<a(?=[^>]*href="${path}")(?=[^>]*aria-current="page")(?=[^>]*class="studioSubnavLink active")[^>]*>`));
+    expect(renderPage(SectionSubnav, path, [], null)).toBe("");
+  });
+
+  it.each(["/trends/youtube", "/trends/naver", "/trends/google"])("does not render the shared navigation on %s", path => {
+    expect(renderPage(SectionSubnav, path, [], null)).toBe("");
   });
 
   it("renders the detail body and retains the active parent tab", () => {
