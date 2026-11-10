@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import IssueDate from "@/components/IssueDate";
+import { issueBriefingLabel } from "@/lib/newsNavigation";
 import { supabase } from "@/lib/supabase";
 
 const PAGE_SIZE = 20;
@@ -38,12 +39,10 @@ export default function NewsClips() {
           {data.slice(0, PAGE_SIZE).map(clip => (
             <li key={clip.id}>
               <Link href={`/news/clips/${clip.id}`} className="newsClipRow">
-                <span className="newsClipLabel">[뉴스 클립]</span>
+                <span className="newsClipLabel">[{issueBriefingLabel}]</span>
                 <span className="newsClipTitle" title={clip.title}>{clip.title}</span>
-                <div className="newsClipMeta">
-                  <IssueDate value={clip.created_at} />
-                  <span>운영자</span>
-                </div>
+                <span className="newsClipDate"><IssueDate value={clip.created_at} /></span>
+                <span className="newsClipAuthor">운영자</span>
               </Link>
             </li>
           ))}

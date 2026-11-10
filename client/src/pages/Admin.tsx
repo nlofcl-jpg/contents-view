@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { issueBriefingLabel, issueFocusLabel } from "@/lib/newsNavigation";
 import { ChevronDown, RefreshCw, X } from "lucide-react";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
 import HeroKeywordsPanel from "@/components/HeroKeywordsPanel";
@@ -18,8 +19,8 @@ const adminTabs: Array<{ id: AdminTab; label: string }> = [
   { id: "notices", label: "공지" },
   { id: "users", label: "사용자" },
   { id: "apiKeys", label: "API 키" },
-  { id: "issues", label: "이슈" },
-  { id: "newsClips", label: "뉴스 클립 관리" },
+  { id: "issues", label: issueFocusLabel },
+  { id: "newsClips", label: issueBriefingLabel },
   { id: "heroKeywords", label: "인기 검색어" },
   { id: "partnership", label: "제휴 문의" },
 ];
@@ -255,7 +256,7 @@ function ManagementToolbar({
 function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) {
   const { user } = useAuth();
   const isClip = table === "news_clips";
-  const label = isClip ? "뉴스 클립" : "이슈";
+  const label = isClip ? issueBriefingLabel : issueFocusLabel;
   const [issues, setIssues] = useState<IssueRecord[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -317,7 +318,7 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
       .order("created_at", { ascending: false });
 
     if (loadError) {
-      setError(isClip ? "뉴스 클립을 불러오지 못했습니다. 저장소 설정을 확인해 주세요." : loadError.message);
+      setError(isClip ? `${label}을 불러오지 못했습니다. 저장소 설정을 확인해 주세요.` : loadError.message);
       return;
     }
 
@@ -600,7 +601,7 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
     <section className="space-y-6">
       <header>
         <h2 className="text-2xl font-medium text-white">{label} 관리</h2>
-        {!isClip && <p className="mt-2 text-sm font-normal text-slate-400">등록된 이슈를 관리하세요.</p>}
+        {!isClip && <p className="mt-2 text-sm font-normal text-slate-400">등록된 {label} 글을 관리하세요.</p>}
       </header>
 
       {message && <p className="text-sm text-emerald-300">{message}</p>}
@@ -841,7 +842,7 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
             </div>
           </div>
         ) : (
-          !error && <p className="text-sm text-slate-500">{isClip && !hasLoaded ? "뉴스 클립을 불러오는 중입니다." : `등록된 ${label} 글이 없습니다.`}</p>
+          !error && <p className="text-sm text-slate-500">{isClip && !hasLoaded ? `${label}을 불러오는 중입니다.` : `등록된 ${label} 글이 없습니다.`}</p>
         )}
       </div>}
     </section>

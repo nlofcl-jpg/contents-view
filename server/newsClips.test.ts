@@ -34,7 +34,7 @@ describe("news clips pages", () => {
   it("links a published clip from its list row to the detail page", () => {
     const html = renderPage(NewsClips, "/news/clips", ["news-clips", 0], [clip]);
     expect(html).toContain(`href="/news/clips/${id}"`);
-    expect(html).toContain("[뉴스 클립]");
+    expect(html).toContain("[이슈 브리핑]");
     expect(html).toContain("2026.11.10");
     expect(html).toContain("운영자");
     expect(html).not.toContain("제목 예시");

@@ -3151,9 +3151,8 @@ a {
 
 .newsClipRow {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: max-content minmax(0, 1fr) 116px 76px;
   align-items: center;
-  column-gap: clamp(10px, 3vw, 32px);
   min-height: 52px;
   padding: 12px 4px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.22);
@@ -3165,6 +3164,7 @@ a {
 .newsClipRow:hover .newsClipTitle,
 .newsClipRow:focus-visible .newsClipTitle {
   color: #93c5fd;
+  --news-clip-cell-inset: clamp(8px, 2vw, 24px);
 }
 
 .newsClipRow:focus-visible {
@@ -3183,16 +3183,22 @@ a {
   color: #f2f5fb;
 }
 
-.newsClipMeta {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: clamp(10px, 3vw, 28px);
+.newsClipDate,
+.newsClipAuthor {
+  padding-inline-end: var(--news-clip-cell-inset);
   color: #94a3b8;
   font-size: 12px;
 }
 
-.newsClipMeta .issueRegistrationDate,
+.newsClipTitle,
+.newsClipDate,
+.newsClipAuthor {
+  min-width: 0;
+  padding-inline: var(--news-clip-cell-inset);
+  border-inline-start: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.newsClipDate .issueRegistrationDate,
 .issueDetailByline .issueRegistrationDate {
   margin-top: 0;
   color: inherit;
@@ -3205,6 +3211,7 @@ a {
   grid-template-columns: 240px minmax(0, 1fr);
   align-items: center;
   gap: 28px;
+  text-align: center;
   padding: 20px 0;
   border: 0;
   border-bottom: 1px solid rgba(148, 163, 184, 0.22);
@@ -3213,6 +3220,13 @@ a {
   cursor: pointer;
   text-align: left;
   text-decoration: none;
+@media (max-width: 600px) {
+  .newsClipRow {
+    --news-clip-cell-inset: 8px;
+    grid-template-columns: max-content minmax(0, 1fr) 82px 52px;
+  }
+}
+
 }
 
 .issueListItem:focus-visible {

@@ -5,9 +5,9 @@ describe("support guide", () => {
   it("lists the news trend tabs in navigation order", () => {
     expect(getSupportReply("뉴스 트렌드 사용법").actions).toEqual([
       { label: "최신 뉴스", href: "/news" },
-      { label: "뉴스 픽", href: "/news/issues" },
-      { label: "뉴스 클립", href: "/news/clips" },
-      { label: "검색", href: "/news/search" },
+      { label: "이슈 포커스", href: "/news/issues" },
+      { label: "이슈 브리핑", href: "/news/clips" },
+      { label: "뉴스 검색", href: "/news/search" },
     ]);
   });
   it("answers every quick question", () => {

@@ -1,8 +1,11 @@
+export const issueFocusLabel = "이슈 포커스";
+export const issueBriefingLabel = "이슈 브리핑";
+
 export const newsLinks = [
   { label: "최신 뉴스", href: "/news" },
-  { label: "뉴스 픽", href: "/news/issues" },
-  { label: "뉴스 클립", href: "/news/clips" },
-  { label: "검색", href: "/news/search" },
+  { label: issueFocusLabel, href: "/news/issues" },
+  { label: issueBriefingLabel, href: "/news/clips" },
+  { label: "뉴스 검색", href: "/news/search" },
 ];
 
 export function getActiveNewsPath(location: string) {

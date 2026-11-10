@@ -5,7 +5,7 @@ import Image from "@tiptap/extension-image";
 import { TextStyle, FontSize } from "@tiptap/extension-text-style";
 import { TableKit, TableCell, TableHeader } from "@tiptap/extension-table";
 import { Bold, ChevronDown, ImagePlus, Italic, List, ListOrdered, Redo2, Undo2 } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ISSUE_DOCUMENT_PREFIX, issueFontSize, safeIssueUrl } from "@shared/issueDocument";
 import { issueEditorDocument } from "@shared/issueBody";
 import { uploadIssueImage } from "@/lib/issueImages";
@@ -111,7 +111,7 @@ export default function IssueBodyEditor({ value, disabled, onChange, onUpload, o
           <option value="0">본문</option><option value="3">소제목</option><option value="2">큰 소제목</option>
         </select>
         <Popover open={sizeMenuOpen && !disabled && !uploading} onOpenChange={setSizeMenuOpen}>
-          <div className="issueFontSize" data-font-size-control>
+          <PopoverAnchor asChild><div className="issueFontSize" data-font-size-control>
             <input type="number" aria-label="본문 글자 크기 (px)" min="10" max="72" step="1" value={fontSize}
               onClick={() => setSizeMenuOpen(true)}
               onChange={event => setFontSize(event.target.value)}
@@ -121,8 +121,8 @@ export default function IssueBodyEditor({ value, disabled, onChange, onUpload, o
               onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); applySize(); } if (event.key === "Escape") setSizeMenuOpen(false); }} />
             <span>px</span>
             <PopoverTrigger asChild><button type="button" className="issueFontSizeTrigger" aria-label="글자 크기 목록" title="글자 크기 선택"><ChevronDown size={13} /></button></PopoverTrigger>
-          </div>
-          <PopoverContent align="start" className="issueFontSizeMenu" data-font-size-control onOpenAutoFocus={event => event.preventDefault()} onCloseAutoFocus={event => event.preventDefault()}>
+          </div></PopoverAnchor>
+          <PopoverContent side="bottom" align="start" className="issueFontSizeMenu" data-font-size-control onOpenAutoFocus={event => event.preventDefault()} onCloseAutoFocus={event => event.preventDefault()}>
             <div role="listbox" aria-label="글자 크기 선택">
               {[10, 12, 14, 16, 17, 18, 20, 22, 24, 28, 32, 36, 40, 48, 56, 64, 72].map(size => (
                 <button type="button" role="option" key={size} aria-selected={Number(fontSize) === size}
