@@ -6,10 +6,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import NewsClips from "../client/src/pages/NewsClips";
 import NewsClipDetail from "../client/src/pages/NewsClipDetail";
 import NewsTrendHeader from "../client/src/components/NewsTrendHeader";
-import SectionSubnav from "../client/src/components/SectionSubnav";
 import { getActiveNewsPath } from "../client/src/lib/newsNavigation";
 
 vi.mock("../client/src/lib/supabase", () => ({ supabase: null }));
+vi.mock("../client/src/lib/trpc", () => ({
+  trpc: { news: { getLatestNews: { useQuery: () => ({
+    data: Array.from({ length: 8 }, (_, index) => ({
+      title: `기사 ${index + 1}번`,
+      link: `https://example.com/news/${index + 1}`,
+      pubDate: `2026-11-0${index + 1}T00:00:00Z`,
+    })),
+  }) } } },
+}));
 
 const id = "00000000-0000-0000-0000-000000000001";
 const clip = {
@@ -43,15 +51,27 @@ describe("news clips pages", () => {
     expect(html).not.toContain("제목 예시");
   });
 
-  it.each(["/news", "/news/issues", "/news/clips", "/news/search"])("places the active tab below the description on %s", path => {
-    const html = renderPage(NewsTrendHeader, path, [], null);
-    expect(html).toMatch(/class="pageDescription"[^>]*>[^<]+<\/p><nav/);
-    expect(html).toMatch(new RegExp(`<a(?=[^>]*href="${path}")(?=[^>]*aria-current="page")(?=[^>]*class="studioSubnavLink active")[^>]*>`));
-    expect(renderPage(SectionSubnav, path, [], null)).toBe("");
+  it("keeps the briefing list at ten and shows seven recent news links", () => {
+    const clips = Array.from({ length: 11 }, (_, index) => ({ ...clip, id: `clip-${index}` }));
+    const html = renderPage(NewsClips, "/news/clips", ["news-clips", 0], clips);
+    expect(html.match(/class="newsClipRow"/g)).toHaveLength(10);
+    expect(html).toContain('aria-label="다음 페이지"');
+    expect(html.match(/href="https:\/\/example\.com\/news\//g)).toHaveLength(7);
+    expect(html.indexOf("기사 8번")).toBeLessThan(html.indexOf("기사 2번"));
+    expect(html).not.toContain("기사 1번");
+    expect(html).toContain("최신 이슈 포커스");
   });
 
-  it.each(["/trends/youtube", "/trends/naver", "/trends/google"])("does not render the shared navigation on %s", path => {
-    expect(renderPage(SectionSubnav, path, [], null)).toBe("");
+  it.each([
+    ["/news", "최신 뉴스"],
+    ["/news/issues", "이슈 포커스"],
+    ["/news/clips", "이슈 브리핑"],
+    ["/news/search", "뉴스 검색"],
+  ])("renders the section title and active filter tab on %s", (path, title) => {
+    const html = renderPage(NewsTrendHeader, path, [], null);
+    expect(html).toContain(`<h1 class="pageTitle">${title}</h1>`);
+    expect(html).toContain('<nav class="tabMenu newsTrendTabMenu"');
+    expect(html).toMatch(new RegExp(`<a(?=[^>]*href="${path}")(?=[^>]*aria-current="page")(?=[^>]*class="tabButton active")[^>]*>`));
   });
 
   it("renders the detail body and retains the active parent tab", () => {
@@ -60,6 +80,8 @@ describe("news clips pages", () => {
     expect(html).toContain("<h1>뉴스 클립 테스트</h1>");
     expect(html).toContain("클립 본문");
     expect(html).toContain('href="/news/clips"');
+    expect(html).toMatch(/class="issueBackButton"[^>]*>.*?<\/svg>이슈 브리핑<\/a>/);
+    expect(html).not.toContain("뉴스 트렌드 하위 메뉴");
     expect(getActiveNewsPath(path)).toBe("/news/clips");
   });
 

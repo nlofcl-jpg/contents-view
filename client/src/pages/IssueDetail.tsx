@@ -3,6 +3,7 @@ import { ChevronLeft, Copy, LoaderCircle, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation, useRoute } from "wouter";
 import { supabase } from "@/lib/supabase";
+import { issueFocusLabel } from "@/lib/newsNavigation";
 import { loadKakaoSdk, shareIssueOnKakao } from "@/lib/kakaoShare";
 import IssueBody from "@/components/IssueBody";
 import IssueThumbnail from "@/components/IssueThumbnail";
@@ -105,7 +106,7 @@ export default function IssueDetail() {
     <div className="pageContainer issueDetailPage">
       <button type="button" className="issueBackButton" onClick={() => setLocation("/news/issues")}>
         <ChevronLeft size={15} aria-hidden="true" />
-        뉴스 픽
+        {issueFocusLabel}
       </button>
 
       {isLoading ? (

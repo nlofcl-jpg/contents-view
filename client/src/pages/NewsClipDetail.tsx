@@ -5,6 +5,7 @@ import IssueBody from "@/components/IssueBody";
 import IssueDate from "@/components/IssueDate";
 import IssueThumbnail from "@/components/IssueThumbnail";
 import { supabase } from "@/lib/supabase";
+import { issueBriefingLabel } from "@/lib/newsNavigation";
 
 export default function NewsClipDetail() {
   const [, params] = useRoute("/news/clips/:id");
@@ -24,7 +25,7 @@ export default function NewsClipDetail() {
 
   return (
     <div className="pageContainer issueDetailPage">
-      <Link href="/news/clips" className="issueBackButton"><ChevronLeft size={15} aria-hidden="true" />뉴스 클립</Link>
+      <Link href="/news/clips" className="issueBackButton"><ChevronLeft size={15} aria-hidden="true" />{issueBriefingLabel}</Link>
       {isPending ? (
         <p className="issuesStatus" role="status">뉴스 클립을 불러오는 중입니다.</p>
       ) : isError ? (

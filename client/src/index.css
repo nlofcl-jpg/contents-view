@@ -899,6 +899,7 @@ a {
 .flowDownloadBannerContent {
   display: flex;
   max-width: 1280px;
+  min-width: 0;
   align-items: center;
   gap: 7px;
   padding: 0 1rem;
@@ -914,7 +915,7 @@ a {
   display: flex;
   align-items: center;
   overflow: hidden;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 400;
   line-height: 1.3;
   white-space: nowrap;
@@ -922,6 +923,14 @@ a {
 
 .flowDownloadBannerMarquee span + span {
   display: none;
+}
+
+@media (min-width: 769px), (prefers-reduced-motion: reduce) {
+  .flowDownloadBannerMarquee span:first-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 .headerContentWrapper {
@@ -1068,7 +1077,7 @@ a {
 
   .flowDownloadBannerMarquee {
     flex: 1;
-    font-size: 10px;
+    font-size: 13px;
     font-weight: 300;
   }
 
@@ -1086,6 +1095,12 @@ a {
 @media (prefers-reduced-motion: reduce) {
   .flowDownloadBannerMarquee span {
     animation: none;
+    flex: 0 1 auto;
+    padding-right: 0;
+  }
+
+  .flowDownloadBannerMarquee span + span {
+    display: none;
   }
 }
 
@@ -3141,6 +3156,87 @@ a {
   gap: 24px;
 }
 
+.newsBriefingSidebar {
+  display: none;
+}
+
+@media (min-width: 960px) {
+  .newsBriefingLayout {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(240px, 2fr);
+    align-items: start;
+    gap: 24px;
+  }
+
+  .newsBriefingSidebar {
+    display: grid;
+    min-width: 0;
+    gap: 16px;
+  }
+}
+
+.newsBriefingSidePanel {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.48);
+}
+
+.newsBriefingSidePanel h2 {
+  margin: 0 0 8px;
+  color: #f2f5fb;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.newsBriefingSidePanel ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.newsBriefingSidePanel li + li {
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.newsBriefingSidePanel li a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  padding-block: 6px;
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+.newsBriefingSidePanel a:hover,
+.newsBriefingSidePanel a:focus-visible {
+  color: #93c5fd;
+}
+
+.newsBriefingSidePanel li a > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.newsBriefingSideThumbnail {
+  display: block;
+  flex: 0 0 52px;
+  width: 52px;
+  height: 34px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.newsBriefingSidePanel p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
 .newsClipsList {
   width: 100%;
   min-width: 0;
@@ -3331,6 +3427,27 @@ a {
 .issuePagination button:disabled {
   cursor: default;
   opacity: 0.35;
+}
+
+.issueFocusPagination {
+  gap: 6px;
+}
+
+.issueFocusPagination button {
+  flex: 0 1 30px;
+  min-width: 0;
+}
+
+.issueFocusPagination button[aria-current="page"] {
+  border-color: #60a5fa;
+  background: rgba(59, 130, 246, 0.2);
+  color: #f2f5fb;
+}
+
+@media (max-width: 480px) {
+  .issueFocusPagination {
+    gap: 3px;
+  }
 }
 
 .issueDetailPage {
@@ -9664,6 +9781,7 @@ input[type="date"].youtubeSelect {
 
 @media (max-width: 768px) {
   .communitySourceFilters.tabMenu,
+  .newsTrendTabMenu.tabMenu,
   .youtubeTabMenu.tabMenu {
     display: flex;
     flex-wrap: nowrap;
@@ -9672,6 +9790,7 @@ input[type="date"].youtubeSelect {
   }
 
   .communitySourceFilter.tabButton,
+  .newsTrendTabMenu .tabButton,
   .youtubeTabMenu .tabButton {
     flex: 0 0 auto;
     width: auto;
@@ -9747,7 +9866,7 @@ input[type="date"].youtubeSelect {
 }
 
 /* Studio Page Container */
-.mainContent:has(.studioSubnav, > .youtubePageContainer) {
+.mainContent:has(.studioSubnav, .newsTrendTabMenu, > .youtubePageContainer, > .issueDetailPage) {
   padding-top: 0;
 }
 
@@ -9831,24 +9950,27 @@ input[type="date"].youtubeSelect {
   outline-offset: 4px;
 }
 
-.sectionSubnav {
-  max-width: 1280px;
-  margin-inline: auto;
-}
-
-.newsSectionSubnav {
-  gap: clamp(10px, 4vw, 28px);
+.newsTrendTabMenu.tabMenu {
+  margin-bottom: 0;
 }
 
 @media (max-width: 768px) {
-  .pageHeader > .sectionSubnav {
-    --subnav-line-inset: 0px;
-    min-height: 40px;
-    gap: clamp(8px, 3vw, 24px);
+  .newsTrendHeader .pageDescription {
+    display: none;
+  }
+
+  .newsTrendHeader {
+    gap: 22px;
   }
 }
 
-.mainContent:has(> .sectionSubnav) > .pageContainer,
+@media (min-width: 769px) {
+  .newsTrendTabMenu.tabMenu {
+    display: none;
+  }
+}
+
+.mainContent > .issueDetailPage,
 .mainContent > .youtubePageContainer {
   padding-top: 24px;
 }

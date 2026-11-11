@@ -2,7 +2,6 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import SectionSubnav from "@/components/SectionSubnav";
 import SupportChat from "@/components/SupportChat";
 
 import NotFound from "@/pages/NotFound";
@@ -37,8 +36,6 @@ import { useAuth } from "@/_core/hooks/useAuth";
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
-    <>
-    <SectionSubnav />
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/trends/youtube"} component={YouTubeTrends} />
@@ -65,7 +62,6 @@ function Router() {
       {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>
-    </>
   );
 }
 

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download, X } from "lucide-react";
-import { Link } from "wouter";
+import { Megaphone, X } from "lucide-react";
 import { BANNER_HIDDEN_UNTIL_KEY, nextKoreanMidnight, readBannerHiddenUntil } from "@/lib/bannerVisibility";
 
 function getSavedExpiry(): number {
@@ -55,15 +54,15 @@ export default function FlowDownloadBanner() {
 
   return (
     <div className="flowDownloadBanner">
-      <Link href="/ai-studio" className="flowDownloadBannerLink" aria-label="Google Flow 오토메이션 크롬 확장 프로그램 다운로드 페이지로 이동">
+      <div className="flowDownloadBannerLink">
         <div className="flowDownloadBannerContent">
-          <Download aria-hidden="true" />
+          <Megaphone aria-hidden="true" />
           <div className="flowDownloadBannerMarquee">
-            <span>구글 FLOW 오토메이션 크롬 확장 프로그램 다운로드 받기</span>
-            <span aria-hidden="true">구글 FLOW 오토메이션 크롬 확장 프로그램 다운로드 받기</span>
+            <span>컨텐츠뷰에 가입 하고 다양한 컨텐츠 트렌드를 한 곳에서 확인하세요.</span>
+            <span aria-hidden="true">컨텐츠뷰에 가입 하고 다양한 컨텐츠 트렌드를 한 곳에서 확인하세요.</span>
           </div>
         </div>
-      </Link>
+      </div>
       <button type="button" className="flowDownloadBannerClose" onClick={handleClose} title="오늘 하루 배너 닫기" aria-label="오늘 하루 배너 닫기">
         <X size={14} aria-hidden="true" />
       </button>

@@ -256,6 +256,11 @@ export default function News() {
   const remainingIssues = issues.slice(featuredCount);
   const issuePageCount = Math.max(1, Math.ceil(remainingIssues.length / 10));
   const visibleIssueList = remainingIssues.slice((issuesPage - 1) * 10, issuesPage * 10);
+  const firstPageNumber = Math.floor((issuesPage - 1) / 10) * 10 + 1;
+  const issuePageNumbers = Array.from(
+    { length: Math.min(10, issuePageCount - firstPageNumber + 1) },
+    (_, index) => firstPageNumber + index,
+  );
 
   // Get the most recent update time from all news data
   const getLatestUpdateTime = useMemo(() => {
@@ -416,7 +421,7 @@ export default function News() {
               )}
 
               {remainingIssues.length > 10 && (
-                <nav className="issuePagination" aria-label="이슈 페이지 이동">
+                <nav className="issuePagination issueFocusPagination" aria-label="이슈 포커스 페이지 이동">
                   <button
                     type="button"
                     aria-label="이전 이슈 페이지"
@@ -425,7 +430,17 @@ export default function News() {
                   >
                     <ChevronLeft size={16} />
                   </button>
-                  <span>{issuesPage} / {issuePageCount}</span>
+                  {issuePageNumbers.map(page => (
+                    <button
+                      key={page}
+                      type="button"
+                      aria-label={`${page}페이지`}
+                      aria-current={issuesPage === page ? "page" : undefined}
+                      onClick={() => setIssuesPage(page)}
+                    >
+                      {page}
+                    </button>
+                  ))}
                   <button
                     type="button"
                     aria-label="다음 이슈 페이지"

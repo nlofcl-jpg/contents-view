@@ -3,11 +3,12 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import IssueDate from "@/components/IssueDate";
+import NewsBriefingSidebar from "@/components/NewsBriefingSidebar";
 import NewsTrendHeader from "@/components/NewsTrendHeader";
 import { issueBriefingLabel } from "@/lib/newsNavigation";
 import { supabase } from "@/lib/supabase";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 export default function NewsClips() {
   const [page, setPage] = useState(0);
@@ -27,33 +28,38 @@ export default function NewsClips() {
   return (
     <div className="pageContainer newsPageContainer">
       <NewsTrendHeader />
-      {isPending ? (
-        <p className="issuesStatus" role="status">뉴스 클립을 불러오는 중입니다.</p>
-      ) : isError ? (
-        <p className="issuesStatus" role="alert">뉴스 클립을 불러오지 못했습니다.</p>
-      ) : !data?.length ? (
-        <p className="issuesStatus">공개된 뉴스 클립이 없습니다.</p>
-      ) : (
-        <ul className="newsClipsList" aria-label="뉴스 클립 목록">
-          {data.slice(0, PAGE_SIZE).map(clip => (
-            <li key={clip.id}>
-              <Link href={`/news/clips/${clip.id}`} className="newsClipRow">
-                <span className="newsClipLabel">[{issueBriefingLabel}]</span>
-                <span className="newsClipTitle" title={clip.title}>{clip.title}</span>
-                <span className="newsClipDate"><IssueDate value={clip.created_at} /></span>
-                <span className="newsClipAuthor">운영자</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+      <div className="newsBriefingLayout">
+        <div className="min-w-0">
+          {isPending ? (
+            <p className="issuesStatus" role="status">뉴스 클립을 불러오는 중입니다.</p>
+          ) : isError ? (
+            <p className="issuesStatus" role="alert">뉴스 클립을 불러오지 못했습니다.</p>
+          ) : !data?.length ? (
+            <p className="issuesStatus">공개된 뉴스 클립이 없습니다.</p>
+          ) : (
+            <ul className="newsClipsList" aria-label="뉴스 클립 목록">
+              {data.slice(0, PAGE_SIZE).map(clip => (
+                <li key={clip.id}>
+                  <Link href={`/news/clips/${clip.id}`} className="newsClipRow">
+                    <span className="newsClipLabel">[{issueBriefingLabel}]</span>
+                    <span className="newsClipTitle" title={clip.title}>{clip.title}</span>
+                    <span className="newsClipDate"><IssueDate value={clip.created_at} /></span>
+                    <span className="newsClipAuthor">운영자</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          {(page > 0 || (data?.length ?? 0) > PAGE_SIZE) && (
+            <nav className="issuePagination" aria-label="뉴스 클립 페이지 이동">
+              <button type="button" aria-label="이전 페이지" disabled={page === 0} onClick={() => setPage(current => current - 1)}><ChevronLeft size={16} /></button>
+              <span>{page + 1}</span>
+              <button type="button" aria-label="다음 페이지" disabled={(data?.length ?? 0) <= PAGE_SIZE} onClick={() => setPage(current => current + 1)}><ChevronRight size={16} /></button>
+            </nav>
       )}
-      {(page > 0 || (data?.length ?? 0) > PAGE_SIZE) && (
-        <nav className="issuePagination" aria-label="뉴스 클립 페이지 이동">
-          <button type="button" aria-label="이전 페이지" disabled={page === 0} onClick={() => setPage(current => current - 1)}><ChevronLeft size={16} /></button>
-          <span>{page + 1}</span>
-          <button type="button" aria-label="다음 페이지" disabled={(data?.length ?? 0) <= PAGE_SIZE} onClick={() => setPage(current => current + 1)}><ChevronRight size={16} /></button>
-        </nav>
-      )}
+        </div>
+        <NewsBriefingSidebar />
+      </div>
     </div>
   );
 }
