@@ -8,7 +8,7 @@ import { useIsMobile } from "@/hooks/useMobile";
 import IssueDate from "@/components/IssueDate";
 import NewsTrendHeader from "@/components/NewsTrendHeader";
 import NewsBriefingSidebar from "@/components/NewsBriefingSidebar";
-import { issueFocusCategories, matchesIssueFocusCategory, type IssueFocusCategory } from "@/lib/issueFocusCategories";
+import { issueFocusCategories, matchesIssueFocusCategory, type IssueFocusCategory, type IssueFocusCategoryId } from "@/lib/issueFocusCategories";
 
 interface NewsItem {
   title: string;
@@ -27,6 +27,7 @@ interface PublishedIssue {
   thumbnail_url: string | null;
   article_title: string | null;
   article_summary: string | null;
+  category: IssueFocusCategoryId | null;
   created_at: string;
 }
 
@@ -186,7 +187,7 @@ export default function News() {
 
     supabase
       .from("issues")
-      .select("id,title,summary,thumbnail_url,article_title,article_summary,created_at")
+      .select("id,title,summary,thumbnail_url,article_title,article_summary,category,created_at")
       .eq("is_published", true)
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
@@ -258,7 +259,7 @@ export default function News() {
   const featuredIssues = issues.slice(0, featuredCount);
   const remainingIssues = issueCategory === "all"
     ? issues.slice(featuredCount)
-    : issues.filter(issue => matchesIssueFocusCategory(issue.id, issueCategory));
+    : issues.filter(issue => matchesIssueFocusCategory(issue.category, issueCategory));
   const issuePageCount = Math.max(1, Math.ceil(remainingIssues.length / 10));
   const visibleIssueList = remainingIssues.slice((issuesPage - 1) * 10, issuesPage * 10);
   const firstPageNumber = Math.floor((issuesPage - 1) / 10) * 10 + 1;

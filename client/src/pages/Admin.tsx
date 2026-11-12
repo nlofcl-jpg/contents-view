@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { issueFocusCategories, type IssueFocusCategoryId } from "@/lib/issueFocusCategories";
 import { issueBriefingLabel, issueFocusLabel } from "@/lib/newsNavigation";
 import { ChevronDown, RefreshCw, X } from "lucide-react";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
@@ -161,6 +162,7 @@ type IssueRecord = {
   thumbnail_credit: string | null;
   is_published: boolean;
   registration_status?: "connecting" | "complete" | "failed";
+  category?: IssueFocusCategoryId | null;
   created_at: string;
 };
 
@@ -265,6 +267,7 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
+  const [category, setCategory] = useState<IssueFocusCategoryId | "">("");
   const bodyUploadsRef = useRef<string[]>([]);
   const draftStateRef = useRef({ mounted: true, saving: false });
   const [bodyUploading, setBodyUploading] = useState(false);
@@ -316,7 +319,7 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
     const source = supabase.from(table);
     const selection = isClip
       ? source.select("id,title,summary,thumbnail_url,thumbnail_credit,is_published,created_at")
-      : source.select("id,title,summary,thumbnail_url,thumbnail_credit,is_published,registration_status,created_at");
+      : source.select("id,title,summary,thumbnail_url,thumbnail_credit,is_published,registration_status,category,created_at");
     const { data, error: loadError } = await selection
       .order("created_at", { ascending: false });
 
@@ -372,6 +375,7 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
     setEditingId(null);
     setTitle("");
     setSummary("");
+    setCategory("");
     setThumbnailUrl("");
     setThumbnailCredit("");
     setThumbnailFile(null);
@@ -384,6 +388,7 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
     setEditingId(issue.id);
     setTitle(issue.title);
     setSummary(issue.summary);
+    setCategory(issue.category ?? "");
     setThumbnailUrl(issue.thumbnail_url ?? "");
     setThumbnailCredit(issue.thumbnail_credit ?? "");
     setThumbnailFile(null);
@@ -447,7 +452,7 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
       thumbnail_url: uploadedImageUrl || thumbnailUrl.trim() || null,
       thumbnail_credit: thumbnailCredit.trim() || null,
       is_published: isPublished,
-      ...(!isClip ? { article_url: null, source_name: null, article_title: null, article_summary: null, registration_status: "complete" } : {}),
+      ...(!isClip ? { article_url: null, source_name: null, article_title: null, article_summary: null, registration_status: "complete", category: category || null } : {}),
     };
 
     let saveErrorMessage: string | null = null;
@@ -490,6 +495,7 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
     setEditingId(null);
     setTitle("");
     setSummary("");
+    setCategory("");
     setThumbnailUrl("");
     setThumbnailFile(null);
     setIsPublished(!isClip);
@@ -622,15 +628,30 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
             닫기
           </button>
         </div>
-        <label className="block">
-          <span className="mb-2 block text-sm font-medium text-slate-300">제목</span>
-          <div className="flex gap-2">
+        <div>
+          <label htmlFor="issue-title" className="mb-2 block text-sm font-medium text-slate-300">제목</label>
+          <div className={isClip ? "flex gap-2" : "flex flex-wrap justify-end gap-2 sm:flex-nowrap"}>
             <input
-              className="h-10 min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none focus:border-blue-400"
+              id="issue-title"
+              className={`h-10 min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none focus:border-blue-400 ${isClip ? "" : "basis-full sm:basis-0"}`}
               placeholder={`${label} 제목`}
               value={title}
               onChange={event => setTitle(event.target.value)}
             />
+            {!isClip && (
+              <AdminSelect
+                aria-label="이슈 포커스 카테고리"
+                className="h-10 w-[144px] rounded-md border border-slate-700 bg-slate-950/80 pl-2 text-sm text-slate-200 outline-none focus:border-blue-400"
+                value={category}
+                onChange={event => setCategory(event.target.value as IssueFocusCategoryId | "")}
+                disabled={isSaving}
+              >
+                <option value="">카테고리 미분류</option>
+                {issueFocusCategories.map(({ id, label }) => id === "all" ? null : (
+                  <option key={id} value={id}>{label}</option>
+                ))}
+              </AdminSelect>
+            )}
             <AdminSelect
               aria-label="공개 상태"
               className="h-10 w-[88px] rounded-md border border-slate-700 bg-slate-950/80 pl-2 text-sm text-slate-200 outline-none focus:border-blue-400"
@@ -641,7 +662,7 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
               <option value="published">공개</option>
             </AdminSelect>
           </div>
-        </label>
+        </div>
         <div>
           <label htmlFor="issue-body" className="mb-2 block text-sm font-medium text-slate-300">본문</label>
           <Suspense fallback={<p className="text-sm text-slate-400" role="status">편집기 불러오는 중…</p>}>
