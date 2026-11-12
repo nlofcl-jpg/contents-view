@@ -7,16 +7,18 @@ import { issueBriefingLabel, issueFocusLabel } from "@/lib/newsNavigation";
 import { ChevronDown, RefreshCw, X } from "lucide-react";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
 import HeroKeywordsPanel from "@/components/HeroKeywordsPanel";
+import SiteBannerPanel from "@/components/SiteBannerPanel";
 import { getStoredIssueImagePath, removeStoredIssueImages, uploadIssueImage, validateIssueImage, validateIssueImageUrl } from "@/lib/issueImages";
 import { stripIssueBodyFormatting } from "@shared/issueBody";
 import { issueBodyImages } from "@shared/issueDocument";
 
 const IssueBodyEditor = lazy(() => import("@/components/IssueBodyEditor"));
 
-type AdminTab = "notices" | "issues" | "newsClips" | "users" | "apiKeys" | "heroKeywords" | "partnership";
+type AdminTab = "notices" | "banner" | "issues" | "newsClips" | "users" | "apiKeys" | "heroKeywords" | "partnership";
 
 const adminTabs: Array<{ id: AdminTab; label: string }> = [
   { id: "notices", label: "공지" },
+  { id: "banner", label: "배너" },
   { id: "users", label: "사용자" },
   { id: "apiKeys", label: "API 키" },
   { id: "issues", label: issueFocusLabel },
@@ -110,6 +112,7 @@ export default function Admin() {
       </div>
 
       {activeTab === "notices" && <NoticePanel />}
+      {activeTab === "banner" && <SiteBannerPanel />}
       {activeTab === "issues" && <IssuesPanel key="issues" />}
       {activeTab === "newsClips" && <IssuesPanel key="news-clips" table="news_clips" />}
       {activeTab === "users" && <UsersPanel adminEmail={user?.email ?? ""} />}

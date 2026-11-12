@@ -1,25 +1,35 @@
 import { useQuery } from "@tanstack/react-query";
+import { ChevronRight } from "lucide-react";
 import { Link } from "wouter";
-import { issueFocusLabel } from "@/lib/newsNavigation";
+import { issueBriefingLabel, issueFocusLabel } from "@/lib/newsNavigation";
 import { supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
 
 const SIDEBAR_LIMIT = 7;
 
-export default function NewsBriefingSidebar() {
+export default function NewsBriefingSidebar({ showBriefings = false }: { showBriefings?: boolean }) {
+  const collectionPath = showBriefings ? "/news/clips" : "/news/issues";
+  const collectionLabel = showBriefings ? issueBriefingLabel : issueFocusLabel;
   const news = trpc.news.getLatestNews.useQuery({ limit: 30, category: "all" }, {
     retry: 1,
     refetchOnWindowFocus: false,
   });
   const issues = useQuery({
-    queryKey: ["news-briefing-latest-issues"],
+    queryKey: ["news-sidebar-entries", collectionPath],
     queryFn: async () => {
       if (!supabase) throw new Error("Missing issue storage");
+      if (showBriefings) {
+        const { data, error } = await supabase.from("news_clips").select("id,title")
+          .eq("is_published", true).order("created_at", { ascending: false }).order("id", { ascending: false })
+          .limit(SIDEBAR_LIMIT);
+        if (error) throw error;
+        return data;
+      }
       const { data, error } = await supabase.from("issues").select("id,title,article_title,thumbnail_url")
         .eq("is_published", true).order("created_at", { ascending: false }).order("id", { ascending: false })
         .limit(SIDEBAR_LIMIT);
       if (error) throw error;
-      return data;
+      return data.map(issue => ({ ...issue, title: issue.article_title || issue.title }));
     },
     retry: false,
   });
@@ -29,9 +39,14 @@ export default function NewsBriefingSidebar() {
     .slice(0, SIDEBAR_LIMIT);
 
   return (
-    <aside className="newsBriefingSidebar" aria-label="최신 뉴스와 이슈 포커스">
+    <aside className="newsBriefingSidebar" aria-label={`최신 뉴스와 ${collectionLabel}`}>
       <section className="newsBriefingSidePanel" aria-labelledby="briefing-latest-news">
-        <h2 id="briefing-latest-news"><Link href="/news">최신 뉴스</Link></h2>
+        <header className="newsBriefingSideHeader">
+          <h2 id="briefing-latest-news">최신 뉴스</h2>
+          <Link href="/news" className="newsBriefingSideMore" aria-label="최신 뉴스 더보기">
+            더보기 <ChevronRight size={14} aria-hidden="true" />
+          </Link>
+        </header>
         {latestNews.length > 0 ? (
           <ul>
             {latestNews.map(item => (
@@ -43,22 +58,29 @@ export default function NewsBriefingSidebar() {
         ) : <p role="status">{news.isPending ? "뉴스를 불러오는 중입니다." : "표시할 최신 뉴스가 없습니다."}</p>}
       </section>
       <section className="newsBriefingSidePanel" aria-labelledby="briefing-latest-issues">
-        <h2 id="briefing-latest-issues"><Link href="/news/issues">최신 {issueFocusLabel}</Link></h2>
+        <header className="newsBriefingSideHeader">
+          <h2 id="briefing-latest-issues">최신 {collectionLabel}</h2>
+          <Link href={collectionPath} className="newsBriefingSideMore" aria-label={`${collectionLabel} 더보기`}>
+            더보기 <ChevronRight size={14} aria-hidden="true" />
+          </Link>
+        </header>
         {issues.data?.length ? (
           <ul>
             {issues.data.map(issue => {
-              const title = issue.article_title || issue.title;
+              const title = issue.title;
               return (
-                <li key={issue.id}><Link href={`/news/issues/${issue.id}`} title={title}>
-                  {issue.thumbnail_url
-                    ? <img className="newsBriefingSideThumbnail" src={issue.thumbnail_url} loading="lazy" alt="" />
-                    : <span className="newsBriefingSideThumbnail issueCardImageFallback" aria-hidden="true" />}
+                <li key={issue.id}><Link href={`${collectionPath}/${issue.id}`} title={title}>
+                  {!showBriefings && (
+                    "thumbnail_url" in issue && typeof issue.thumbnail_url === "string" && issue.thumbnail_url
+                      ? <img className="newsBriefingSideThumbnail" src={issue.thumbnail_url} loading="lazy" alt="" />
+                      : <span className="newsBriefingSideThumbnail issueCardImageFallback" aria-hidden="true" />
+                  )}
                   <span>{title}</span>
                 </Link></li>
               );
             })}
           </ul>
-        ) : <p role="status">{issues.isPending ? "이슈를 불러오는 중입니다." : issues.isError ? "이슈를 불러오지 못했습니다." : "공개된 이슈가 없습니다."}</p>}
+        ) : <p role="status">{issues.isPending ? `${collectionLabel} 목록을 불러오는 중입니다.` : issues.isError ? `${collectionLabel} 목록을 불러오지 못했습니다.` : `공개된 ${collectionLabel} 글이 없습니다.`}</p>}
       </section>
     </aside>
   );

@@ -7,6 +7,8 @@ import { stripIssueBodyFormatting } from "@shared/issueBody";
 import { useIsMobile } from "@/hooks/useMobile";
 import IssueDate from "@/components/IssueDate";
 import NewsTrendHeader from "@/components/NewsTrendHeader";
+import NewsBriefingSidebar from "@/components/NewsBriefingSidebar";
+import { issueFocusCategories, matchesIssueFocusCategory, type IssueFocusCategory } from "@/lib/issueFocusCategories";
 
 interface NewsItem {
   title: string;
@@ -83,6 +85,7 @@ export default function News() {
   const [newsSessionCache, setNewsSessionCache] = useState<NewsSessionCache | null>(readNewsSessionCache);
   const [issues, setIssues] = useState<PublishedIssue[]>([]);
   const [issuesPage, setIssuesPage] = useState(1);
+  const [issueCategory, setIssueCategory] = useState<IssueFocusCategory>("all");
   const [isLoadingIssues, setIsLoadingIssues] = useState(false);
   const [issuesError, setIssuesError] = useState<string | null>(null);
   const shouldFetchLatestNews = !newsSessionCache || selectedCategory !== "all";
@@ -253,7 +256,9 @@ export default function News() {
     && (!nationNewsData || !businessNewsData || !technologyNewsData || !entertainmentNewsData));
   const featuredCount = isMobile ? 2 : 3;
   const featuredIssues = issues.slice(0, featuredCount);
-  const remainingIssues = issues.slice(featuredCount);
+  const remainingIssues = issueCategory === "all"
+    ? issues.slice(featuredCount)
+    : issues.filter(issue => matchesIssueFocusCategory(issue.id, issueCategory));
   const issuePageCount = Math.max(1, Math.ceil(remainingIssues.length / 10));
   const visibleIssueList = remainingIssues.slice((issuesPage - 1) * 10, issuesPage * 10);
   const firstPageNumber = Math.floor((issuesPage - 1) / 10) * 10 + 1;
@@ -369,14 +374,7 @@ export default function News() {
         </>
       ) : activeContentTab === "issues" ? (
         <section className="issuesSection" role="tabpanel" aria-label="이슈 목록">
-          {isLoadingIssues ? (
-            <p className="issuesStatus">이슈를 불러오는 중입니다.</p>
-          ) : issuesError ? (
-            <p className="issuesStatus">이슈를 불러오지 못했습니다.</p>
-          ) : issues.length === 0 ? (
-            <p className="issuesStatus">공개된 이슈가 아직 없습니다.</p>
-          ) : (
-            <>
+          {!isLoadingIssues && !issuesError && featuredIssues.length > 0 && (
               <div className="issuesFeaturedGrid" aria-label="최신 이슈">
                 {featuredIssues.map((issue) => (
                   <Link
@@ -396,61 +394,95 @@ export default function News() {
                   </Link>
                 ))}
               </div>
+          )}
 
-              {remainingIssues.length > 0 && (
-                <div className="issueList" aria-label="이슈 목록">
-                  {visibleIssueList.map((issue) => (
-                    <Link
-                      key={issue.id}
-                      href={`/news/issues/${issue.id}`}
-                      className="issueListItem"
-                    >
-                      {issue.thumbnail_url ? (
-                        <img className="issueListImage" src={issue.thumbnail_url} alt="" />
-                      ) : (
-                        <div className="issueListImage issueCardImageFallback" aria-hidden="true" />
-                      )}
-                      <div className="issueListBody">
-                        <h2 className="issueListTitle">{getIssueDisplayTitle(issue)}</h2>
-                        {getIssueDisplaySummary(issue) && <p>{getIssueDisplaySummary(issue)}</p>}
-                        <IssueDate value={issue.created_at} />
-                      </div>
-                    </Link>
-                  ))}
+          {isLoadingIssues ? (
+            <p className="issuesStatus">이슈를 불러오는 중입니다.</p>
+          ) : issuesError ? (
+            <p className="issuesStatus">이슈를 불러오지 못했습니다.</p>
+          ) : issues.length === 0 ? (
+            <p className="issuesStatus">공개된 이슈가 아직 없습니다.</p>
+          ) : (
+            <>
+              <div className="tabMenu issueFocusCategoryMenu" role="group" aria-label="이슈 포커스 카테고리">
+                {issueFocusCategories.map(({ id, label }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`tabButton${issueCategory === id ? " active" : ""}`}
+                    aria-pressed={issueCategory === id}
+                    onClick={() => {
+                      setIssueCategory(id);
+                      setIssuesPage(1);
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="issueFocusListLayout">
+                <div className="issueFocusListMain">
+                  {issueCategory !== "all" && remainingIssues.length === 0 && (
+                    <p className="issuesStatus">이 카테고리에 등록된 이슈가 없습니다.</p>
+                  )}
+                  {remainingIssues.length > 0 && (
+                    <div className="issueList" aria-label="이슈 목록">
+                      {visibleIssueList.map((issue) => (
+                        <Link
+                          key={issue.id}
+                          href={`/news/issues/${issue.id}`}
+                          className="issueListItem"
+                        >
+                          {issue.thumbnail_url ? (
+                            <img className="issueListImage" src={issue.thumbnail_url} alt="" />
+                          ) : (
+                            <div className="issueListImage issueCardImageFallback" aria-hidden="true" />
+                          )}
+                          <div className="issueListBody">
+                            <h2 className="issueListTitle">{getIssueDisplayTitle(issue)}</h2>
+                            {getIssueDisplaySummary(issue) && <p>{getIssueDisplaySummary(issue)}</p>}
+                            <IssueDate value={issue.created_at} />
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+
+                  {remainingIssues.length > 10 && (
+                    <nav className="issuePagination issueFocusPagination" aria-label="이슈 포커스 페이지 이동">
+                      <button
+                        type="button"
+                        aria-label="이전 이슈 페이지"
+                        disabled={issuesPage === 1}
+                        onClick={() => setIssuesPage(page => Math.max(1, page - 1))}
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+                      {issuePageNumbers.map(page => (
+                        <button
+                          key={page}
+                          type="button"
+                          aria-label={`${page}페이지`}
+                          aria-current={issuesPage === page ? "page" : undefined}
+                          onClick={() => setIssuesPage(page)}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        aria-label="다음 이슈 페이지"
+                        disabled={issuesPage === issuePageCount}
+                        onClick={() => setIssuesPage(page => Math.min(issuePageCount, page + 1))}
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    </nav>
+                  )}
                 </div>
-              )}
-
-              {remainingIssues.length > 10 && (
-                <nav className="issuePagination issueFocusPagination" aria-label="이슈 포커스 페이지 이동">
-                  <button
-                    type="button"
-                    aria-label="이전 이슈 페이지"
-                    disabled={issuesPage === 1}
-                    onClick={() => setIssuesPage(page => Math.max(1, page - 1))}
-                  >
-                    <ChevronLeft size={16} />
-                  </button>
-                  {issuePageNumbers.map(page => (
-                    <button
-                      key={page}
-                      type="button"
-                      aria-label={`${page}페이지`}
-                      aria-current={issuesPage === page ? "page" : undefined}
-                      onClick={() => setIssuesPage(page)}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    aria-label="다음 이슈 페이지"
-                    disabled={issuesPage === issuePageCount}
-                    onClick={() => setIssuesPage(page => Math.min(issuePageCount, page + 1))}
-                  >
-                    <ChevronRight size={16} />
-                  </button>
-                </nav>
-              )}
+                <NewsBriefingSidebar showBriefings />
+              </div>
             </>
           )}
         </section>

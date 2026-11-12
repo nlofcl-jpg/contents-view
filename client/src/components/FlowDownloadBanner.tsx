@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { Megaphone, X } from "lucide-react";
+import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { BANNER_HIDDEN_UNTIL_KEY, nextKoreanMidnight, readBannerHiddenUntil } from "@/lib/bannerVisibility";
+import { siteBannerQuery } from "@/lib/siteBanner";
+import { supabase } from "@/lib/supabase";
+import { DEFAULT_SITE_BANNER, getBannerLink } from "@shared/siteBanner";
 
 function getSavedExpiry(): number {
   try {
@@ -12,6 +17,7 @@ function getSavedExpiry(): number {
 
 export default function FlowDownloadBanner() {
   const [hiddenUntil, setHiddenUntil] = useState(getSavedExpiry);
+  const { data, error } = useQuery({ ...siteBannerQuery, enabled: Boolean(supabase) });
 
   useEffect(() => {
     const refresh = () => {
@@ -50,19 +56,30 @@ export default function FlowDownloadBanner() {
     }
   };
 
-  if (hiddenUntil > 0) return null;
+  const missingTable = error && "code" in error && (error.code === "PGRST205" || error.code === "42P01");
+  const banner = data ?? (!supabase || missingTable ? DEFAULT_SITE_BANNER : null);
+  if (!banner?.is_visible || hiddenUntil > 0) return null;
+
+  const href = getBannerLink(banner.link_url);
+  const content = (
+    <div className="flowDownloadBannerContent">
+      <Megaphone aria-hidden="true" />
+      <div className="flowDownloadBannerMarquee">
+        <span>{banner.message}</span>
+        <span aria-hidden="true">{banner.message}</span>
+      </div>
+    </div>
+  );
 
   return (
     <div className="flowDownloadBanner">
-      <div className="flowDownloadBannerLink">
-        <div className="flowDownloadBannerContent">
-          <Megaphone aria-hidden="true" />
-          <div className="flowDownloadBannerMarquee">
-            <span>컨텐츠뷰에 가입 하고 다양한 컨텐츠 트렌드를 한 곳에서 확인하세요.</span>
-            <span aria-hidden="true">컨텐츠뷰에 가입 하고 다양한 컨텐츠 트렌드를 한 곳에서 확인하세요.</span>
-          </div>
-        </div>
-      </div>
+      {href?.startsWith("/") ? (
+        <Link href={href} className="flowDownloadBannerLink">{content}</Link>
+      ) : href ? (
+        <a href={href} className="flowDownloadBannerLink">{content}</a>
+      ) : (
+        <div className="flowDownloadBannerLink">{content}</div>
+      )}
       <button type="button" className="flowDownloadBannerClose" onClick={handleClose} title="오늘 하루 배너 닫기" aria-label="오늘 하루 배너 닫기">
         <X size={14} aria-hidden="true" />
       </button>

@@ -50,6 +50,8 @@ function Router() {
       <Route path={"/news/issues/:id"} component={IssueDetail} />
       <Route path={"/news"} component={News} />
       <Route path={"/ai-studio/flow-automation"} component={FlowAutomation} />
+      <Route path={"/ai-studio/video/shorts"} component={AIStudio} />
+      <Route path={"/ai-studio/video/reels"} component={AIStudio} />
       <Route path={"/ai-studio/video"} component={AIStudio} />
       <Route path={"/ai-studio/programs"} component={AIStudio} />
       <Route path={"/ai-studio/open-source/:slug"} component={OpenSourceDetail} />

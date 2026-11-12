@@ -56,7 +56,7 @@ export default function NewsClips() {
               <span>{page + 1}</span>
               <button type="button" aria-label="다음 페이지" disabled={(data?.length ?? 0) <= PAGE_SIZE} onClick={() => setPage(current => current + 1)}><ChevronRight size={16} /></button>
             </nav>
-      )}
+          )}
         </div>
         <NewsBriefingSidebar />
       </div>

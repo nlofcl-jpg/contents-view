@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import NewsClips from "../client/src/pages/NewsClips";
 import NewsClipDetail from "../client/src/pages/NewsClipDetail";
 import NewsTrendHeader from "../client/src/components/NewsTrendHeader";
+import NewsBriefingSidebar from "../client/src/components/NewsBriefingSidebar";
 import { getActiveNewsPath } from "../client/src/lib/newsNavigation";
 
 vi.mock("../client/src/lib/supabase", () => ({ supabase: null }));
@@ -56,10 +57,24 @@ describe("news clips pages", () => {
     const html = renderPage(NewsClips, "/news/clips", ["news-clips", 0], clips);
     expect(html.match(/class="newsClipRow"/g)).toHaveLength(10);
     expect(html).toContain('aria-label="다음 페이지"');
+    expect(html.indexOf('aria-label="다음 페이지"')).toBeLessThan(html.indexOf("<aside"));
     expect(html.match(/href="https:\/\/example\.com\/news\//g)).toHaveLength(7);
     expect(html.indexOf("기사 8번")).toBeLessThan(html.indexOf("기사 2번"));
     expect(html).not.toContain("기사 1번");
     expect(html).toContain("최신 이슈 포커스");
+  });
+
+  it("shows linked briefing titles without thumbnails in the issue focus sidebar", () => {
+    const Sidebar = () => React.createElement(NewsBriefingSidebar, { showBriefings: true });
+    const html = renderPage(Sidebar, "/news/issues", ["news-sidebar-entries", "/news/clips"], [
+      { ...clip, thumbnail_url: "https://example.com/thumbnail.jpg" },
+    ]);
+    expect(html).toContain('id="briefing-latest-issues">최신 이슈 브리핑');
+    expect(html).toMatch(/<a(?=[^>]*href="\/news\/clips")(?=[^>]*aria-label="이슈 브리핑 더보기")[^>]*>/);
+    expect(html).toMatch(/<a(?=[^>]*href="\/news")(?=[^>]*aria-label="최신 뉴스 더보기")[^>]*>/);
+    expect(html).toContain(`href="/news/clips/${id}"`);
+    expect(html).toContain(`<span>${clip.title}</span>`);
+    expect(html).not.toContain("thumbnail.jpg");
   });
 
   it.each([

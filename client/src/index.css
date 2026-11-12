@@ -3059,6 +3059,7 @@ a {
 
 .issuesSection {
   min-height: 300px;
+  --issue-focus-grid-gap: 20px;
 }
 
 .issuesStatus {
@@ -3077,7 +3078,7 @@ a {
   display: grid;
   max-width: 1200px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
+  gap: var(--issue-focus-grid-gap);
   margin: 0 auto 30px;
 }
 
@@ -3158,6 +3159,21 @@ a {
 
 .newsBriefingSidebar {
   display: none;
+  min-width: 0;
+  gap: 16px;
+}
+
+@media (width < 960px) {
+  .issueFocusListLayout > .newsBriefingSidebar,
+  .newsBriefingLayout > .newsBriefingSidebar {
+    display: grid;
+    margin-top: 24px;
+  }
+}
+
+.issueFocusCategoryMenu.tabMenu {
+  max-width: 1200px;
+  margin-inline: auto;
 }
 
 @media (min-width: 960px) {
@@ -3170,8 +3186,20 @@ a {
 
   .newsBriefingSidebar {
     display: grid;
+  }
+
+  .issueFocusListLayout {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+    max-width: 1200px;
+    gap: var(--issue-focus-grid-gap);
+    margin-inline: auto;
+  }
+
+  .issueFocusListMain {
+    grid-column: span 2;
     min-width: 0;
-    gap: 16px;
   }
 }
 
@@ -3183,11 +3211,29 @@ a {
   background: rgba(15, 23, 42, 0.48);
 }
 
-.newsBriefingSidePanel h2 {
-  margin: 0 0 8px;
+.newsBriefingSideHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.newsBriefingSideHeader h2 {
+  margin: 0;
   color: #f2f5fb;
   font-size: 15px;
   font-weight: 600;
+}
+
+.newsBriefingSideMore {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  color: #94a3b8;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .newsBriefingSidePanel ul {
@@ -9781,6 +9827,7 @@ input[type="date"].youtubeSelect {
 
 @media (max-width: 768px) {
   .communitySourceFilters.tabMenu,
+  .issueFocusCategoryMenu.tabMenu,
   .newsTrendTabMenu.tabMenu,
   .youtubeTabMenu.tabMenu {
     display: flex;
@@ -9790,6 +9837,7 @@ input[type="date"].youtubeSelect {
   }
 
   .communitySourceFilter.tabButton,
+  .issueFocusCategoryMenu .tabButton,
   .newsTrendTabMenu .tabButton,
   .youtubeTabMenu .tabButton {
     flex: 0 0 auto;
@@ -10349,8 +10397,12 @@ input[type="date"].youtubeSelect {
   padding-top: 10px;
 }
 
-.aiStudioVideoGroup h2 {
-  margin: 0 0 16px;
+.aiStudioVideoDetailHeader .issueBackButton {
+  margin-bottom: 12px;
+}
+
+.aiStudioVideoGroupTitle {
+  margin: 0 0 14px;
   color: #edf4ff;
   font-size: 18px;
   font-weight: 600;
@@ -10413,7 +10465,7 @@ input[type="date"].youtubeSelect {
   padding: 20px 16px 18px;
 }
 
-.aiStudioVideoStyle h3 {
+.aiStudioVideoStyleText :is(h2, h3) {
   margin: 0 0 8px;
   color: #fff;
   font-size: 18px;
@@ -10479,12 +10531,7 @@ input[type="date"].youtubeSelect {
     gap: 32px;
   }
 
-  .aiStudioVideoGroup h2 {
-    margin-bottom: 12px;
-    font-size: 16px;
-  }
-
-  .aiStudioVideoStyle h3 {
+  .aiStudioVideoStyleText :is(h2, h3) {
     margin-bottom: 6px;
     font-size: 15px;
   }
