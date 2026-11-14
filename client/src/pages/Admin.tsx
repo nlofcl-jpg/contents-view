@@ -5,7 +5,7 @@ import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { issueFocusCategories, type IssueFocusCategoryId } from "@/lib/issueFocusCategories";
 import { issueBriefingLabel, issueFocusLabel } from "@/lib/newsNavigation";
-import { ChevronDown, RefreshCw, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, RefreshCw, X } from "lucide-react";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
 import HeroKeywordsPanel from "@/components/HeroKeywordsPanel";
 import SiteBannerPanel from "@/components/SiteBannerPanel";
@@ -258,11 +258,14 @@ function ManagementToolbar({
   );
 }
 
+const ISSUE_FOCUS_ADMIN_PAGE_SIZE = 10;
+
 function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) {
   const { user } = useAuth();
   const isClip = table === "news_clips";
   const label = isClip ? issueBriefingLabel : issueFocusLabel;
   const [issues, setIssues] = useState<IssueRecord[]>([]);
+  const [issuesPage, setIssuesPage] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -321,7 +324,8 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
       ? source.select("id,title,summary,thumbnail_url,thumbnail_credit,is_published,created_at")
       : source.select("id,title,summary,thumbnail_url,thumbnail_credit,is_published,registration_status,category,created_at");
     const { data, error: loadError } = await selection
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false });
 
     if (loadError) {
       setError(isClip ? `${label}을 불러오지 못했습니다. 저장소 설정을 확인해 주세요.` : loadError.message);
@@ -329,6 +333,7 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
     }
 
     setIssues(data ?? []);
+    setIssuesPage(current => Math.min(current, Math.max(1, Math.ceil((data?.length ?? 0) / ISSUE_FOCUS_ADMIN_PAGE_SIZE))));
     setHasLoaded(true);
   };
 
@@ -566,15 +571,29 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
     }
   };
 
-  const isAllFilteredSelected = issues.length > 0 && issues.every(issue => selectedIssueIds.has(issue.id));
+  const issuePageCount = Math.ceil(issues.length / ISSUE_FOCUS_ADMIN_PAGE_SIZE);
+  const pageOffset = (issuesPage - 1) * ISSUE_FOCUS_ADMIN_PAGE_SIZE;
+  const visibleIssues = isClip ? issues : issues.slice(pageOffset, pageOffset + ISSUE_FOCUS_ADMIN_PAGE_SIZE);
+  const firstPageNumber = Math.floor((issuesPage - 1) / 5) * 5 + 1;
+  const pageNumbers = Array.from(
+    { length: Math.max(0, Math.min(5, issuePageCount - firstPageNumber + 1)) },
+    (_, index) => firstPageNumber + index,
+  );
+  const isAllVisibleSelected = visibleIssues.length > 0 && visibleIssues.every(issue => selectedIssueIds.has(issue.id));
+
+  const changeIssuesPage = (page: number) => {
+    if (page === issuesPage || page < 1 || page > issuePageCount) return;
+    setSelectedIssueIds(new Set());
+    setIssuesPage(page);
+  };
 
   const toggleAllIssues = () => {
     setSelectedIssueIds(current => {
       const next = new Set(current);
-      if (isAllFilteredSelected) {
-        issues.forEach(issue => next.delete(issue.id));
+      if (isAllVisibleSelected) {
+        visibleIssues.forEach(issue => next.delete(issue.id));
       } else {
-        issues.forEach(issue => next.add(issue.id));
+        visibleIssues.forEach(issue => next.add(issue.id));
       }
       return next;
     });
@@ -779,7 +798,7 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
           {issues.length > 0 && (
             <>
             <button type="button" className="h-9 whitespace-nowrap rounded-md border border-slate-700 px-3 text-xs text-slate-300 hover:border-slate-500 hover:text-white" onClick={toggleAllIssues}>
-              {isAllFilteredSelected ? "전체 선택 해제" : "전체 선택"}
+              {isAllVisibleSelected ? "전체 선택 해제" : "전체 선택"}
             </button>
             <button
               type="button"
@@ -811,7 +830,7 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
               <span>생성일</span>
               <span className="text-right">관리</span>
             </div>
-            {issues.map(issue => (
+            {visibleIssues.map(issue => (
               <article key={issue.id} className="grid grid-cols-[28px_minmax(260px,1fr)_112px_120px_210px] items-center gap-4 border-b border-slate-800/80 px-4 py-3 last:border-b-0">
                 <input
                   type="checkbox"
@@ -867,6 +886,21 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
           </div>
         ) : (
           !error && <p className="text-sm text-slate-500">{isClip && !hasLoaded ? `${label}을 불러오는 중입니다.` : `등록된 ${label} 글이 없습니다.`}</p>
+        )}
+        {!isClip && issuePageCount > 1 && (
+          <nav className="issuePagination issueFocusPagination" aria-label="관리자 이슈 포커스 페이지 이동">
+            <button type="button" aria-label="이전 페이지" disabled={issuesPage === 1} onClick={() => changeIssuesPage(issuesPage - 1)}>
+              <ChevronLeft size={16} aria-hidden="true" />
+            </button>
+            {pageNumbers.map(page => (
+              <button key={page} type="button" aria-label={`${page}페이지`} aria-current={issuesPage === page ? "page" : undefined} onClick={() => changeIssuesPage(page)}>
+                {page}
+              </button>
+            ))}
+            <button type="button" aria-label="다음 페이지" disabled={issuesPage === issuePageCount} onClick={() => changeIssuesPage(issuesPage + 1)}>
+              <ChevronRight size={16} aria-hidden="true" />
+            </button>
+          </nav>
         )}
       </div>}
     </section>

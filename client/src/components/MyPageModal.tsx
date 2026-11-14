@@ -172,7 +172,9 @@ export default function MyPageModal({ isOpen, onClose }: MyPageModalProps) {
 
             <div className="mypageSettingsRow mypageSettingsBox" aria-label="회원 등급">
               <span className="mypageModalLabel">등급</span>
-              <strong className="mypageMembershipValue">일반 회원</strong>
+              <strong className="mypageMembershipValue">
+                {user ? (user.role === "admin" ? "관리자" : "일반 회원") : "-"}
+              </strong>
             </div>
             <div className="mypageModalField mypageApiField">
               <YouTubeApiKeySettingsPanel isActive={isOpen} compact />

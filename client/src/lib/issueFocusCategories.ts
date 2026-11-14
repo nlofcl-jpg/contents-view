@@ -1,10 +1,10 @@
 export const issueFocusCategories = [
   { id: "all", label: "전체" },
+  { id: "technology", label: "AI·테크" },
+  { id: "platform", label: "플랫폼·SNS" },
+  { id: "marketing", label: "마케팅·광고" },
   { id: "commerce", label: "커머스·비즈니스" },
-  { id: "technology", label: "AI·기술" },
-  { id: "digital", label: "디지털·콘텐츠" },
-  { id: "society", label: "사회·정책" },
-  { id: "culture", label: "문화·화제" },
+  { id: "creator", label: "크리에이터·콘텐츠" },
 ] as const;
 
 export type IssueFocusCategory = typeof issueFocusCategories[number]["id"];
