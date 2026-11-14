@@ -3145,11 +3145,21 @@ a {
 }
 
 @media (max-width: 767px) {
+  .issueFeaturedCard {
+    overflow: visible;
+    border: 0;
+    background: none;
+  }
+
+  .issueFeaturedImage {
+    border-radius: 8px;
+  }
+
   .issueFeaturedOverlay {
     position: static;
     display: block;
     min-height: 0;
-    padding: 10px;
+    padding: 8px 0 0;
     background: none;
   }
 
