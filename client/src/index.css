@@ -3144,6 +3144,24 @@ a {
   }
 }
 
+@media (max-width: 767px) {
+  .issueFeaturedOverlay {
+    position: static;
+    display: block;
+    min-height: 0;
+    padding: 10px;
+    background: none;
+  }
+
+  .issueFeaturedOverlay .issueRegistrationDate {
+    display: none;
+  }
+
+  .issueFeaturedTitle {
+    font-size: 13px;
+  }
+}
+
 .issueList {
   display: flex;
   flex-direction: column;
@@ -4210,14 +4228,6 @@ a {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     margin-bottom: 22px;
-  }
-
-  .issueFeaturedOverlay {
-    padding: 24px 10px 10px;
-  }
-
-  .issueFeaturedTitle {
-    font-size: 13px;
   }
 
   .issueListItem {

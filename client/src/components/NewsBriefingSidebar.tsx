@@ -60,7 +60,16 @@ export default function NewsBriefingSidebar({ showBriefings = false }: { showBri
       <section className="newsBriefingSidePanel" aria-labelledby="briefing-latest-issues">
         <header className="newsBriefingSideHeader">
           <h2 id="briefing-latest-issues">최신 {collectionLabel}</h2>
-          <Link href={collectionPath} className="newsBriefingSideMore" aria-label={`${collectionLabel} 더보기`}>
+          <Link
+            href={collectionPath}
+            className="newsBriefingSideMore"
+            aria-label={`${collectionLabel} 더보기`}
+            onClick={event => {
+              if (!window.matchMedia("(width < 960px)").matches) return;
+              const scroller = event.currentTarget.closest<HTMLElement>(".mainContent");
+              (scroller ?? window).scrollTo({ top: 0, behavior: "instant" });
+            }}
+          >
             더보기 <ChevronRight size={14} aria-hidden="true" />
           </Link>
         </header>
