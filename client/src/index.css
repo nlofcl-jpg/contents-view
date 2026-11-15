@@ -267,7 +267,7 @@ a {
 .siteFooterInner {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 32px;
+  gap: 12px 32px;
   align-items: start;
 }
 
@@ -300,13 +300,41 @@ a {
   color: #8492ad;
 }
 
-.siteFooterLegalLinks {
+.siteFooterSocialIcons {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: center;
   display: flex;
   align-items: center;
-  align-self: end;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  color: #a7b4cc;
+  list-style: none;
+}
+
+.siteFooterSocialIcons svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.siteFooterSocialIcons li {
+  transition: color 0.15s ease;
+}
+
+.siteFooterSocialIcons li:hover {
+  color: #fff;
+}
+
+.siteFooterLegalLinks {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  align-items: center;
+  align-self: center;
   justify-content: flex-end;
   gap: 20px;
-  padding-bottom: 2px;
   white-space: nowrap;
 }
 
@@ -477,19 +505,27 @@ a {
 
 @media (max-width: 768px) {
   .siteFooter {
+    display: flex;
+    flex-direction: column;
     margin-top: 20px;
     padding-top: 8px;
   }
 
   .siteFooterInner {
-    display: block;
+    display: contents;
   }
 
   .siteFooterBrand {
     display: none;
   }
 
+  .siteFooterSocialIcons {
+    order: 2;
+    margin-top: 16px;
+  }
+
   .siteFooterBottom {
+    order: 1;
     flex-direction: column;
     align-items: center;
     gap: 12px;
@@ -1048,8 +1084,14 @@ a {
   }
 }
 
+.headerBrandText strong,
+.heroSearch {
+  --view-logo-blue: 21 140 255;
+  --view-logo-violet: 124 58 237;
+}
+
 .headerBrandText strong {
-  background: linear-gradient(135deg, rgba(21, 140, 255, 0.9), rgba(124, 58, 237, 0.9));
+  background: linear-gradient(135deg, rgb(var(--view-logo-blue) / 0.9), rgb(var(--view-logo-violet) / 0.9));
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
@@ -1565,10 +1607,6 @@ a {
     linear-gradient(90deg, rgba(7, 10, 17, 0.94) 0%, rgba(7, 10, 17, 0.82) 45%, rgba(7, 10, 17, 0.42) 100%);
 }
 
-.heroMenuOpen {
-  z-index: 7;
-}
-
 .heroBackdrop::before {
   content: "";
   position: absolute;
@@ -1635,20 +1673,21 @@ a {
 
 .heroSearch {
   width: min(100%, 620px);
-  height: 52px;
   margin-top: 30px;
-  display: flex;
-  align-items: center;
-  gap: 0;
-  border-radius: 999px;
-  border: 2px solid rgba(41, 151, 255, 0.92);
-  background: #ffffff;
+  padding: 8px 10px 10px;
+  display: grid;
+  gap: 4px;
+  border-radius: 20px;
+  border: 2px solid rgba(69, 146, 243, 0.62);
+  background: #111a2b;
   box-shadow:
-    0 0 0 3px rgba(31, 134, 246, 0.19),
-    0 0 23px rgba(25, 138, 255, 0.56),
-    0 18px 48px rgba(21, 140, 255, 0.24);
-  position: relative;
-  overflow: visible;
+    -8px 0 28px rgb(var(--view-logo-blue) / 0.24),
+    8px 0 32px rgb(var(--view-logo-violet) / 0.2),
+    0 18px 48px rgba(5, 11, 22, 0.42);
+}
+
+.heroSearch:focus-within {
+  border-color: #148aff;
 }
 
 .heroPopularKeywordSection {
@@ -1749,133 +1788,144 @@ a {
   color: #ffffff;
 }
 
-.heroSearchFilter {
-  flex: 0 0 auto;
-  height: 100%;
-  min-width: 128px;
+.heroSearchActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.heroSearchPlatformControls {
+  display: flex;
+  align-items: center;
+}
+
+.heroSearchClearPlatform {
+  display: inline-grid;
+  width: 28px;
+  height: 36px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #a4b2c8;
+  cursor: pointer;
+}
+
+.heroSearchClearPlatform:hover {
+  color: #fff;
+}
+
+.heroSearchFilterButton,
+.heroSearchButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  position: relative;
+  height: 36px;
+  border-radius: 999px;
+  cursor: pointer;
 }
 
 .heroSearchFilterButton {
-  width: 100%;
-  height: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
+  gap: 6px;
+  padding: 0 11px 0 8px;
   border: 0;
-  border-radius: 999px 0 0 999px;
   background: transparent;
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
 }
 
-.heroSearchFilterIcon {
-  width: 17px;
-  height: 17px;
-  color: #4b5563;
-  pointer-events: none;
+.heroSearchFilterButton > svg {
+  color: #c2d5ef;
+}
+
+.heroSearchFilterButton.isUnselected {
+  width: 36px;
+  padding: 0;
+}
+
+.heroSearchFilterButton:hover > svg,
+.heroSearchFilterButton[data-state="open"] > svg {
+  color: #fff;
 }
 
 .heroSearchFilterButton.isNaver,
-.heroSearchMenuItem.isNaver {
-  color: #10b981;
-}
-
+.heroSearchMenuItem.isNaver { color: #6ee7b7; }
 .heroSearchFilterButton.isNews,
-.heroSearchMenuItem.isNews {
-  color: #0ea5e9;
-}
-
+.heroSearchMenuItem.isNews { color: #7dd3fc; }
 .heroSearchFilterButton.isYoutube,
-.heroSearchMenuItem.isYoutube {
-  color: #ef4444;
-}
-
+.heroSearchMenuItem.isYoutube { color: #fca5a5; }
 .heroSearchFilterButton.isGoogle,
-.heroSearchMenuItem.isGoogle {
-  color: #2563eb;
-}
+.heroSearchMenuItem.isGoogle { color: #93c5fd; }
 
 .heroSearchMenu {
-  position: absolute;
-  top: calc(100% + 10px);
-  left: 10px;
-  z-index: 60;
-  width: 132px;
-  padding: 6px;
-  border: 1px solid rgba(21, 140, 255, 0.26);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow:
-    0 18px 42px rgba(7, 10, 17, 0.24),
-    0 0 28px rgba(21, 140, 255, 0.22);
+  z-index: 1200;
+  min-width: 152px;
+  padding: 4px;
+  border-color: #344866;
+  border-radius: 8px;
+  background: #111a2b;
 }
 
 .heroSearchMenuItem {
-  width: 100%;
-  min-height: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
+  min-height: 36px;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
 }
 
-.heroSearchMenuItem:hover,
-.heroSearchMenuItem[aria-selected="true"] {
-  background: rgba(21, 140, 255, 0.1);
-}
-
-.heroSearchDivider {
-  width: 1px;
-  height: 22px;
-  background: #e5e7eb;
+.heroSearchMenuItem[data-highlighted],
+.heroSearchMenuItem[data-state="checked"] {
+  background: #213653;
 }
 
 .heroSearchInput {
+  width: 100%;
   min-width: 0;
-  flex: 1;
-  height: 100%;
+  height: 40px;
   border: 0;
   outline: 0;
   background: transparent;
-  padding: 0 16px;
-  color: #111827;
-  font-size: 15px;
-  font-weight: 600;
+  padding: 0 4px;
+  color: #f1f5ff;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .heroSearchInput::placeholder {
-  color: #8b8b8b;
+  color: #a4b2c8;
   opacity: 1;
 }
 
-.heroSearchButton {
-  flex: 0 0 auto;
-  width: 56px;
-  height: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  background: transparent;
-  color: #52565c;
-  cursor: pointer;
+@media (max-width: 480px) {
+  .heroSearchInput::placeholder {
+    font-size: 12px;
+  }
 }
 
-.heroSearchIcon {
-  width: 22px;
-  height: 22px;
+.heroSearchButton {
+  flex: none;
+  width: 36px;
+  border: 0;
+  background: #1d63d8;
+  color: #fff;
+}
+
+.heroSearchButton:not(:disabled):hover {
+  background: #174eaa;
+}
+
+.heroSearchButton:disabled {
+  background: #23334c;
+  color: #95a7c1;
+  cursor: default;
+}
+
+.heroSearchFilterButton:focus-visible,
+.heroSearchClearPlatform:focus-visible,
+.heroSearchButton:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }
 
 .heroDescription {
@@ -2129,9 +2179,7 @@ a {
 
   .heroSearch {
     width: min(100%, 520px);
-    height: 48px;
     margin-top: 26px;
-    border-radius: 999px;
   }
 
   .heroPopularKeywordSection {
@@ -2146,49 +2194,6 @@ a {
     min-height: 30px;
     padding: 5px 11px;
     font-size: 11px;
-  }
-
-  .heroSearchFilter {
-    min-width: 106px;
-  }
-
-  .heroSearchFilterButton {
-    font-size: 13px;
-    gap: 7px;
-  }
-
-  .heroSearchFilterIcon {
-    width: 16px;
-    height: 16px;
-  }
-
-  .heroSearchMenu {
-    left: 8px;
-    width: 112px;
-    border-radius: 12px;
-  }
-
-  .heroSearchMenuItem {
-    min-height: 32px;
-    font-size: 12px;
-  }
-
-  .heroSearchDivider {
-    height: 22px;
-  }
-
-  .heroSearchInput {
-    padding: 0 10px;
-    font-size: 13px;
-  }
-
-  .heroSearchButton {
-    width: 48px;
-  }
-
-  .heroSearchIcon {
-    width: 21px;
-    height: 21px;
   }
 
   .heroActions {
@@ -3212,6 +3217,25 @@ a {
     gap: 24px;
   }
 
+  .latestNewsLayout {
+    grid-template-areas:
+      "filters ."
+      "articles sidebar";
+    row-gap: 0;
+  }
+
+  .latestNewsLayout > .newsCategoryFilters {
+    grid-area: filters;
+  }
+
+  .latestNewsLayout > .latestNewsArticles {
+    grid-area: articles;
+  }
+
+  .latestNewsLayout > .newsBriefingSidebar {
+    grid-area: sidebar;
+  }
+
   .newsBriefingSidebar {
     display: grid;
   }
@@ -3529,6 +3553,28 @@ a {
   gap: 0;
 }
 
+@media (min-width: 960px) {
+  .issueDetailPage:has(.newsBriefingLayout) {
+    max-width: 1280px;
+  }
+
+  .issueDetail:has(> .issueDetailArticle.newsBriefingLayout) {
+    --issue-detail-sidebar-width: clamp(240px, 25%, 280px);
+    --issue-detail-column-gap: 24px;
+  }
+
+  .issueDetail:has(> .issueDetailArticle.newsBriefingLayout) > .issueDetailHeader {
+    width: calc(100% - var(--issue-detail-sidebar-width) - var(--issue-detail-column-gap));
+    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  }
+
+  .issueDetailArticle.newsBriefingLayout {
+    grid-template-columns: minmax(0, 1fr) var(--issue-detail-sidebar-width);
+    column-gap: var(--issue-detail-column-gap);
+    border-top: 0;
+  }
+}
+
 @media (max-width: 768px) {
   .pageContainer.issueDetailPage {
     padding-top: 32px;
@@ -3536,6 +3582,12 @@ a {
 
   .issueDetailPage .issueBackButton {
     margin-bottom: 20px;
+  }
+
+  .issueDetailPage .issueDetailArticle > .newsBriefingSidebar {
+    margin-top: 28px;
+    padding-top: 28px;
+    border-top: 1px solid rgba(148, 163, 184, 0.18);
   }
 }
 
@@ -3670,6 +3722,15 @@ a {
 
 .issueDetailBody {
   display: flow-root;
+}
+
+.issueDetailCopyright {
+  max-width: 960px;
+  margin: 28px auto 0;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: left;
 }
 
 .issueDetailImage {
@@ -4009,32 +4070,8 @@ a {
   text-align: left;
 }
 
-.newsLatestHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-.newsLatestHeader h2 {
-  flex: none;
-  margin: 0;
-}
-
-.newsLatestHeader .newsCardsUpdateTime {
-  order: 1;
-  margin: 0;
-  text-align: right;
-  white-space: nowrap;
-}
-
 @media (max-width: 767px) {
-  .newsLatestHeader h2 {
-    font-size: 20px;
-  }
-
-  .newsLatestHeader .newsCardsUpdateTime {
+  .newsCardsUpdateTime {
     font-size: 11px;
   }
 

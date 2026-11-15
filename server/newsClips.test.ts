@@ -69,12 +69,24 @@ describe("news clips pages", () => {
     const html = renderPage(Sidebar, "/news/issues", ["news-sidebar-entries", "/news/clips"], [
       { ...clip, thumbnail_url: "https://example.com/thumbnail.jpg" },
     ]);
-    expect(html).toContain('id="briefing-latest-issues">최신 이슈 브리핑');
+    expect(html).toContain('id="sidebar-latest-briefings">최신 이슈 브리핑');
     expect(html).toMatch(/<a(?=[^>]*href="\/news\/clips")(?=[^>]*aria-label="이슈 브리핑 더보기")[^>]*>/);
     expect(html).toMatch(/<a(?=[^>]*href="\/news")(?=[^>]*aria-label="최신 뉴스 더보기")[^>]*>/);
     expect(html).toContain(`href="/news/clips/${id}"`);
     expect(html).toContain(`<span>${clip.title}</span>`);
     expect(html).not.toContain("thumbnail.jpg");
+  });
+
+  it("shows focus and briefing links instead of a repeated news panel in the latest news sidebar", () => {
+    const Sidebar = () => React.createElement(NewsBriefingSidebar, { collectionsOnly: true });
+    const html = renderPage(Sidebar, "/news", ["news-sidebar-entries", "/news/issues"], [
+      { ...clip, title: "포커스 글", thumbnail_url: "https://example.com/focus.jpg" },
+    ]);
+    expect(html).toContain('aria-label="이슈 포커스 더보기"');
+    expect(html).toContain('aria-label="이슈 브리핑 더보기"');
+    expect(html).toContain(`href="/news/issues/${id}"`);
+    expect(html).toContain("https://example.com/focus.jpg");
+    expect(html).not.toContain("최신 뉴스 더보기");
   });
 
   it.each([
@@ -85,6 +97,7 @@ describe("news clips pages", () => {
   ])("renders the section title and active filter tab on %s", (path, title) => {
     const html = renderPage(NewsTrendHeader, path, [], null);
     expect(html).toContain(`<h1 class="pageTitle">${title}</h1>`);
+    expect(html.includes('aria-label="최신 뉴스 표시 안내"')).toBe(path === "/news");
     expect(html).toContain('<nav class="tabMenu newsTrendTabMenu"');
     expect(html).toMatch(new RegExp(`<a(?=[^>]*href="${path}")(?=[^>]*aria-current="page")(?=[^>]*class="tabButton active")[^>]*>`));
   });

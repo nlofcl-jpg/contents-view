@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowRight, MessageCircle, MessageCircleMore, Newspaper, RefreshCw, ThumbsUp, TrendingUp } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
@@ -6,7 +6,6 @@ import { GoogleTrendRankChange, type RankChange } from "@/components/GoogleTrend
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useGuestRisingVideoAccess } from "@/hooks/useGuestRisingVideoAccess";
 import { trpc } from "@/lib/trpc";
-import { supabase } from "@/lib/supabase";
 import { GoogleLogo, YouTubeLogo } from "@/components/ServiceLogos";
 
 type TrendRow = {
@@ -363,34 +362,6 @@ export default function ServiceCards() {
     { category: "all", limit: 30 },
     { retry: 1, refetchOnWindowFocus: false }
   );
-  const [issues, setIssues] = useState<Array<{
-    id: string;
-    title: string;
-    article_title: string | null;
-    thumbnail_url: string | null;
-    created_at: string;
-  }>>([]);
-  const [issuesLoading, setIssuesLoading] = useState(Boolean(supabase));
-  const [issuesError, setIssuesError] = useState(false);
-
-  useEffect(() => {
-    if (!supabase) return;
-    let cancelled = false;
-    supabase.from("issues")
-      .select("id,title,article_title,thumbnail_url,created_at")
-      .eq("is_published", true)
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(3)
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        setIssues(error ? [] : data ?? []);
-        setIssuesError(Boolean(error));
-        setIssuesLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []);
-
   const youtubeRows = useMemo<TrendRow[]>(() => {
     const videos = (youtubeRisingQuery.data as any)?.videos || [];
     return videos.slice(0, 5).map((video: any) => ({
@@ -442,7 +413,7 @@ export default function ServiceCards() {
     const news = Array.isArray(newsQuery.data) ? newsQuery.data : [];
     return [...news]
       .sort((a, b) => (Date.parse(b.pubDate) || 0) - (Date.parse(a.pubDate) || 0))
-      .slice(0, 2)
+      .slice(0, 5)
       .map(item => ({
         label: stripHtml(item.title),
         meta: [item.source, item.pubDate ? new Date(item.pubDate).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }) : null].filter(Boolean).join(" · "),
@@ -451,12 +422,6 @@ export default function ServiceCards() {
         externalHref: item.link,
       }));
   }, [newsQuery.data]);
-  const issueRows = useMemo<TrendRow[]>(() => issues.map((issue) => ({
-    label: stripHtml(issue.article_title || issue.title),
-    meta: new Date(issue.created_at).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" }),
-    image: issue.thumbnail_url,
-    detailHref: `/news/issues/${issue.id}`,
-  })), [issues]);
 
   const cards: TrendCard[] = [
     {
@@ -502,9 +467,9 @@ export default function ServiceCards() {
       badge: "뉴스 트렌드",
       href: "/news",
       icon: <Newspaper className="h-7 w-7 text-sky-400" />,
-      rows: [...issueRows, ...newsRows],
-      loading: issuesLoading || newsQuery.isLoading,
-      emptyText: issuesError || newsQuery.isError ? "뉴스 트렌드를 불러오지 못했습니다." : "표시할 뉴스와 이슈가 없습니다.",
+      rows: newsRows,
+      loading: newsQuery.isLoading,
+      emptyText: newsQuery.isError ? "최신 뉴스를 불러오지 못했습니다." : "표시할 최신 뉴스가 없습니다.",
     },
   ];
 

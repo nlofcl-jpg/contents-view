@@ -7,6 +7,7 @@ import { issueFocusLabel } from "@/lib/newsNavigation";
 import { loadKakaoSdk, shareIssueOnKakao } from "@/lib/kakaoShare";
 import IssueBody from "@/components/IssueBody";
 import IssueThumbnail from "@/components/IssueThumbnail";
+import NewsBriefingSidebar from "@/components/NewsBriefingSidebar";
 
 type IssueDetailRecord = {
   id: string;
@@ -150,13 +151,19 @@ export default function IssueDetail() {
               </div>
             </div>
           </header>
-          <div className="issueDetailArticle">
-            <IssueThumbnail src={issue.thumbnail_url} credit={issue.thumbnail_credit} />
-            {(issue.summary || issue.article_summary) && (
-              <div className="issueDetailBody">
-                <IssueBody value={issue.summary || issue.article_summary || ""} />
-              </div>
-            )}
+          <div className="issueDetailArticle newsBriefingLayout">
+            <div className="min-w-0">
+              <IssueThumbnail src={issue.thumbnail_url} credit={issue.thumbnail_credit} />
+              {(issue.summary || issue.article_summary) && (
+                <div className="issueDetailBody">
+                  <IssueBody value={issue.summary || issue.article_summary || ""} />
+                </div>
+              )}
+              <footer className="issueDetailCopyright">
+                © CONTENTS VIEW. 무단 전재 및 재배포 금지
+              </footer>
+            </div>
+            <NewsBriefingSidebar showBriefings />
           </div>
         </article>
       )}

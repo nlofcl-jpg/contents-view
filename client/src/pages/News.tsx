@@ -305,74 +305,74 @@ export default function News() {
       <NewsTrendHeader />
 
       {activeContentTab === "news" ? (
-        <>
-      <div>
-        <div className="newsLatestHeader">
+        <section aria-label="최신 뉴스 목록">
           {getLatestUpdateTime && (
             <p className="newsCardsUpdateTime">{formatUpdateTime(getLatestUpdateTime)}</p>
           )}
-          <h2 className="text-2xl font-bold text-white mb-6">최신 뉴스</h2>
-        </div>
 
-        {/* Category Tabs */}
-        <div className="newsCategoryFilters mb-8 flex flex-wrap gap-2 border-b border-gray-700 pb-4">
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                selectedCategory === cat.id
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
-        {isLoadingNews ? (
-          <div className="text-center text-gray-400">뉴스를 불러오는 중...</div>
-        ) : visibleNews.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {visibleNews.map((news: NewsItem) => (
-              <div
-                key={news.link}
-                className="bg-gray-900 rounded-lg overflow-hidden hover:bg-gray-800 transition-colors"
-              >
-                {news.thumbnail && (
-                  <div className="w-full h-32 bg-gray-800 overflow-hidden">
-                    <img
-                      src={news.thumbnail}
-                      alt={news.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-                <div className="p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs text-gray-500">{news.source}</span>
-                    <span className="text-xs text-gray-500">{formatDate(news.publishedAt || news.pubDate)}</span>
-                  </div>
-                  <h3 className="text-base font-semibold text-white mb-2 line-clamp-2">
-                    {news.title}
-                  </h3>
-                  <a
-                    href={news.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-400 hover:text-blue-300 text-sm font-medium"
-                  >
-                    원문 보기 →
-                  </a>
+          <div className="newsBriefingLayout latestNewsLayout">
+            {/* Category Tabs */}
+            <div className="newsCategoryFilters mb-8 flex flex-wrap gap-2 border-b border-gray-700 pb-4">
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    selectedCategory === cat.id
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+            <div className="latestNewsArticles min-w-0">
+              {isLoadingNews ? (
+                <div className="text-center text-gray-400">뉴스를 불러오는 중...</div>
+              ) : visibleNews.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {visibleNews.map((news: NewsItem) => (
+                    <div
+                      key={news.link}
+                      className="bg-gray-900 rounded-lg overflow-hidden hover:bg-gray-800 transition-colors"
+                    >
+                      {news.thumbnail && (
+                        <div className="w-full h-32 bg-gray-800 overflow-hidden">
+                          <img
+                            src={news.thumbnail}
+                            alt={news.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xs text-gray-500">{news.source}</span>
+                          <span className="text-xs text-gray-500">{formatDate(news.publishedAt || news.pubDate)}</span>
+                        </div>
+                        <h3 className="text-base font-semibold text-white mb-2 line-clamp-2">
+                          {news.title}
+                        </h3>
+                        <a
+                          href={news.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 text-sm font-medium"
+                        >
+                          원문 보기 →
+                        </a>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            ))}
+              ) : (
+                <div className="text-center text-gray-400">뉴스를 불러올 수 없습니다.</div>
+              )}
+            </div>
+            <NewsBriefingSidebar collectionsOnly />
           </div>
-        ) : (
-          <div className="text-center text-gray-400">뉴스를 불러올 수 없습니다.</div>
-        )}
-      </div>
-        </>
+        </section>
       ) : activeContentTab === "issues" ? (
         <section className="issuesSection" role="tabpanel" aria-label="이슈 목록">
           {!isLoadingIssues && !issuesError && featuredIssues.length > 0 && (

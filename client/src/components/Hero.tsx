@@ -1,10 +1,11 @@
-import { ChevronDown, ChevronRight, Search } from "lucide-react";
+import { ArrowUp, ChevronRight, Plus, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { readHeroKeywords } from "@/lib/heroKeywords";
 import { useAuth } from "@/_core/hooks/useAuth";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const searchPlatforms = [
   { value: "naver", label: "NAVER", className: "isNaver" },
@@ -16,10 +17,10 @@ const searchPlatforms = [
 export default function Hero() {
   const heroRef = useRef<HTMLElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
+  const platformTriggerRef = useRef<HTMLButtonElement>(null);
   const [, setLocation] = useLocation();
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const [selectedPlatform, setSelectedPlatform] = useState(searchPlatforms[0]);
-  const [isPlatformMenuOpen, setIsPlatformMenuOpen] = useState(false);
+  const [selectedPlatform, setSelectedPlatform] = useState<(typeof searchPlatforms)[number] | null>(null);
   const [keyword, setKeyword] = useState("");
   const [popularKeywords, setPopularKeywords] = useState<string[]>([]);
   const [guestKeyword, setGuestKeyword] = useState<string | null>(null);
@@ -30,7 +31,7 @@ export default function Hero() {
     if (!hero || !backdrop) return;
     const scroller = hero.closest<HTMLElement>(".mainContent");
 
-    // Anchor all visual layers to the hero's unscrolled position.
+    // Anchor the backdrop to the hero's unscrolled position.
     const updateBounds = () => {
       const bounds = hero.getBoundingClientRect();
       const top = bounds.top + (scroller?.scrollTop ?? window.scrollY);
@@ -65,15 +66,16 @@ export default function Hero() {
 
   const getSearchPath = (searchKeyword: string) => {
     const trimmedKeyword = searchKeyword.trim();
-    if (selectedPlatform.value === "naver") {
+    const platform = selectedPlatform?.value ?? "naver";
+    if (platform === "naver") {
       return `/trends/naver?keyword=${encodeURIComponent(trimmedKeyword)}`;
     }
 
-    if (selectedPlatform.value === "news") {
+    if (platform === "news") {
       return `/news/search?keyword=${encodeURIComponent(trimmedKeyword)}`;
     }
 
-    if (selectedPlatform.value === "youtube") {
+    if (platform === "youtube") {
       return `/trends/youtube?tab=analysis&keyword=${encodeURIComponent(trimmedKeyword)}`;
     }
 
@@ -105,7 +107,7 @@ export default function Hero() {
   return (
     <>
     <div ref={backdropRef} className="heroBackdrop" aria-hidden="true" />
-    <section ref={heroRef} className={`hero${isPlatformMenuOpen ? " heroMenuOpen" : ""}`}>
+    <section ref={heroRef} className="hero">
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
         <div className="heroCopy">
           <p className="heroKicker">TRACK. ANALYZE. DISCOVER.</p>
@@ -116,64 +118,75 @@ export default function Hero() {
             <span>실시간으로</span> 확인하세요
           </h2>
 
-          <div className="heroSearch" role="search" aria-label="트렌드 키워드 검색">
-            <div
-              className="heroSearchFilter"
-              onBlur={(event) => {
-                if (!event.currentTarget.contains(event.relatedTarget)) {
-                  setIsPlatformMenuOpen(false);
-                }
-              }}
-            >
-              <button
-                type="button"
-                className={`heroSearchFilterButton ${selectedPlatform.className}`}
-                aria-haspopup="listbox"
-                aria-expanded={isPlatformMenuOpen}
-                onClick={() => setIsPlatformMenuOpen((current) => !current)}
-              >
-                <span>{selectedPlatform.label}</span>
-                <ChevronDown className="heroSearchFilterIcon" aria-hidden="true" />
-              </button>
-              {isPlatformMenuOpen ? (
-                <div className="heroSearchMenu" role="listbox" aria-label="검색 플랫폼 선택">
-                  {searchPlatforms.map((platform) => (
-                    <button
-                      key={platform.value}
-                      type="button"
-                      className={`heroSearchMenuItem ${platform.className}`}
-                      role="option"
-                      aria-selected={selectedPlatform.value === platform.value}
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => {
-                        setSelectedPlatform(platform);
-                        setIsPlatformMenuOpen(false);
-                      }}
-                    >
-                      {platform.label}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-            <div className="heroSearchDivider" aria-hidden="true" />
+          <form
+            className="heroSearch"
+            role="search"
+            aria-label="트렌드 분석"
+            onSubmit={event => {
+              event.preventDefault();
+              handleHeroSearch();
+            }}
+          >
             <input
               type="text"
               className="heroSearchInput"
               value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  handleHeroSearch();
-                }
-              }}
-              placeholder="분석할 키워드를 입력하세요"
+              onChange={event => setKeyword(event.target.value)}
+              placeholder="분석할 플랫폼을 선택 후 키워드를 입력하세요"
               aria-label="분석할 키워드"
             />
-            <button type="button" className="heroSearchButton" aria-label="검색" onClick={() => handleHeroSearch()}>
-              <Search className="heroSearchIcon" aria-hidden="true" />
-            </button>
-          </div>
+            <div className="heroSearchActions">
+              <div className="heroSearchPlatformControls">
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger
+                    ref={platformTriggerRef}
+                    className={`heroSearchFilterButton ${selectedPlatform?.className ?? "isUnselected"}`}
+                    aria-label={selectedPlatform ? `분석 플랫폼 선택: ${selectedPlatform.label}` : "분석 플랫폼 선택"}
+                    title="분석 플랫폼 선택"
+                  >
+                    <Plus size={18} aria-hidden="true" />
+                    {selectedPlatform && <span>{selectedPlatform.label}</span>}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" sideOffset={8} collisionPadding={12} className="heroSearchMenu" aria-label="분석 플랫폼">
+                    <DropdownMenuRadioGroup
+                      value={selectedPlatform?.value ?? ""}
+                      onValueChange={value => {
+                        const platform = searchPlatforms.find(item => item.value === value);
+                        if (platform) setSelectedPlatform(platform);
+                      }}
+                    >
+                      {searchPlatforms.map(platform => (
+                        <DropdownMenuRadioItem
+                          key={platform.value}
+                          value={platform.value}
+                          className={`heroSearchMenuItem ${platform.className}`}
+                        >
+                          {platform.label}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {selectedPlatform && (
+                  <button
+                    type="button"
+                    className="heroSearchClearPlatform"
+                    aria-label={`${selectedPlatform.label} 선택 취소`}
+                    title="플랫폼 선택 취소"
+                    onClick={() => {
+                      setSelectedPlatform(null);
+                      platformTriggerRef.current?.focus();
+                    }}
+                  >
+                    <X size={14} aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+              <button type="submit" className="heroSearchButton" aria-label="분석" title="분석" disabled={!keyword.trim()}>
+                <ArrowUp size={19} aria-hidden="true" />
+              </button>
+            </div>
+          </form>
           {popularKeywords.length > 0 && (
             <div className="heroPopularKeywordSection" aria-labelledby="heroPopularKeywordTitle">
               <p id="heroPopularKeywordTitle" className="heroPopularKeywordTitle">인기 검색어</p>

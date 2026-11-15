@@ -1,19 +1,66 @@
 import { useQuery } from "@tanstack/react-query";
 import { ChevronRight } from "lucide-react";
 import { Link } from "wouter";
+import LatestNewsInfo from "@/components/LatestNewsInfo";
 import { issueBriefingLabel, issueFocusLabel } from "@/lib/newsNavigation";
 import { supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
 
 const SIDEBAR_LIMIT = 7;
 
-export default function NewsBriefingSidebar({ showBriefings = false }: { showBriefings?: boolean }) {
-  const collectionPath = showBriefings ? "/news/clips" : "/news/issues";
-  const collectionLabel = showBriefings ? issueBriefingLabel : issueFocusLabel;
+export default function NewsBriefingSidebar({
+  showBriefings = false,
+  collectionsOnly = false,
+}: { showBriefings?: boolean; collectionsOnly?: boolean }) {
+  return (
+    <aside className="newsBriefingSidebar" aria-label={
+      collectionsOnly ? `${issueFocusLabel}와 ${issueBriefingLabel}`
+        : `최신 뉴스와 ${showBriefings ? issueBriefingLabel : issueFocusLabel}`
+    }>
+      {collectionsOnly ? <IssueCollectionPanel showBriefings={false} /> : <LatestNewsPanel />}
+      <IssueCollectionPanel showBriefings={collectionsOnly || showBriefings} />
+    </aside>
+  );
+}
+
+function LatestNewsPanel() {
   const news = trpc.news.getLatestNews.useQuery({ limit: 30, category: "all" }, {
     retry: 1,
     refetchOnWindowFocus: false,
   });
+  const latestNews = [...(news.data ?? [])]
+    .sort((a, b) => (Date.parse(b.pubDate) || 0) - (Date.parse(a.pubDate) || 0))
+    .filter((item, index, all) => /^https?:\/\//i.test(item.link) && all.findIndex(other => other.link === item.link) === index)
+    .slice(0, SIDEBAR_LIMIT);
+
+  return (
+      <section className="newsBriefingSidePanel" aria-labelledby="briefing-latest-news">
+        <header className="newsBriefingSideHeader">
+          <div className="flex min-w-0 items-center gap-1">
+            <h2 id="briefing-latest-news">최신 뉴스</h2>
+            <LatestNewsInfo />
+          </div>
+          <Link href="/news" className="newsBriefingSideMore" aria-label="최신 뉴스 더보기">
+            더보기 <ChevronRight size={14} aria-hidden="true" />
+          </Link>
+        </header>
+        {latestNews.length > 0 ? (
+          <ul>
+            {latestNews.map(item => (
+              <li key={item.link}><a href={item.link} target="_blank" rel="noopener noreferrer" title={item.title}>
+                <span>{item.title}</span>
+              </a></li>
+            ))}
+          </ul>
+        ) : <p role="status">{news.isPending ? "뉴스를 불러오는 중입니다." : "표시할 최신 뉴스가 없습니다."}</p>}
+      </section>
+  );
+}
+
+function IssueCollectionPanel({ showBriefings }: { showBriefings: boolean }) {
+  const collectionPath = showBriefings ? "/news/clips" : "/news/issues";
+  const collectionLabel = showBriefings ? issueBriefingLabel : issueFocusLabel;
+  const headingId = showBriefings ? "sidebar-latest-briefings" : "sidebar-latest-focus";
   const issues = useQuery({
     queryKey: ["news-sidebar-entries", collectionPath],
     queryFn: async () => {
@@ -33,33 +80,11 @@ export default function NewsBriefingSidebar({ showBriefings = false }: { showBri
     },
     retry: false,
   });
-  const latestNews = [...(news.data ?? [])]
-    .sort((a, b) => (Date.parse(b.pubDate) || 0) - (Date.parse(a.pubDate) || 0))
-    .filter((item, index, all) => /^https?:\/\//i.test(item.link) && all.findIndex(other => other.link === item.link) === index)
-    .slice(0, SIDEBAR_LIMIT);
 
   return (
-    <aside className="newsBriefingSidebar" aria-label={`최신 뉴스와 ${collectionLabel}`}>
-      <section className="newsBriefingSidePanel" aria-labelledby="briefing-latest-news">
+      <section className="newsBriefingSidePanel" aria-labelledby={headingId}>
         <header className="newsBriefingSideHeader">
-          <h2 id="briefing-latest-news">최신 뉴스</h2>
-          <Link href="/news" className="newsBriefingSideMore" aria-label="최신 뉴스 더보기">
-            더보기 <ChevronRight size={14} aria-hidden="true" />
-          </Link>
-        </header>
-        {latestNews.length > 0 ? (
-          <ul>
-            {latestNews.map(item => (
-              <li key={item.link}><a href={item.link} target="_blank" rel="noopener noreferrer" title={item.title}>
-                <span>{item.title}</span>
-              </a></li>
-            ))}
-          </ul>
-        ) : <p role="status">{news.isPending ? "뉴스를 불러오는 중입니다." : "표시할 최신 뉴스가 없습니다."}</p>}
-      </section>
-      <section className="newsBriefingSidePanel" aria-labelledby="briefing-latest-issues">
-        <header className="newsBriefingSideHeader">
-          <h2 id="briefing-latest-issues">최신 {collectionLabel}</h2>
+          <h2 id={headingId}>최신 {collectionLabel}</h2>
           <Link
             href={collectionPath}
             className="newsBriefingSideMore"
@@ -91,6 +116,5 @@ export default function NewsBriefingSidebar({ showBriefings = false }: { showBri
           </ul>
         ) : <p role="status">{issues.isPending ? `${collectionLabel} 목록을 불러오는 중입니다.` : issues.isError ? `${collectionLabel} 목록을 불러오지 못했습니다.` : `공개된 ${collectionLabel} 글이 없습니다.`}</p>}
       </section>
-    </aside>
   );
 }

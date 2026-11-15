@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import LatestNewsInfo from "@/components/LatestNewsInfo";
 import { getActiveNewsPath, newsLinks } from "@/lib/newsNavigation";
 
 export default function NewsTrendHeader() {
@@ -8,7 +9,14 @@ export default function NewsTrendHeader() {
 
   return (
     <header className="pageHeader newsTrendHeader">
-      <h1 className="pageTitle">{title}</h1>
+      {selectedPath === "/news" ? (
+        <div className="flex items-center gap-1">
+          <h1 className="pageTitle">{title}</h1>
+          <LatestNewsInfo />
+        </div>
+      ) : (
+        <h1 className="pageTitle">{title}</h1>
+      )}
       <p className="pageDescription">오늘 주목받는 이슈를 빠르게 확인하고 콘텐츠 아이디어로 연결해보세요.</p>
       <nav className="tabMenu newsTrendTabMenu" aria-label="뉴스 트렌드 하위 메뉴">
         {newsLinks.map(({ href, label }) => (
