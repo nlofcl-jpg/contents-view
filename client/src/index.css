@@ -3151,11 +3151,20 @@ a {
   margin-top: auto;
 }
 
-@media (max-width: 767px) {
+@media (width < 960px) {
   .issueFeaturedCard {
     grid-template-columns: minmax(0, 1fr);
     gap: 12px;
     margin-bottom: 22px;
+  }
+
+  .issueFeaturedMedia {
+    justify-self: center;
+    width: 100%;
+  }
+
+  .issueFeaturedImage {
+    object-position: center;
   }
 
   .issueFeaturedCopy {
