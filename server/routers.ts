@@ -24,6 +24,7 @@ import { fetchYouTubeBookmarkVideo, parseYouTubeVideoUrl } from "./youtubeBookma
 import { fetchTikTokBookmarkVideo, parseTikTokVideoUrl } from "./tiktokBookmarkUrl";
 import { fetchInstagramBookmarkMetadata, parseInstagramUrl } from "./instagramBookmarkUrl";
 import { parseNewsSource } from "./newsSource";
+import { getLatestRssNews } from "./latestNews";
 import { partnershipInquiryInput, partnershipConsentRecord } from "../shared/partnershipConsent";
 
 const require = createRequire(import.meta.url);
@@ -4778,160 +4779,9 @@ export const appRouter = router({
     /**
      * Get latest news from RSS
      */
-      getLatestNews: publicProcedure
-      .input(z.object({ limit: z.number().default(20), category: z.string().default('all') }).optional())
-      .query(async ({ input }) => {
-        try {
-          const limit = input?.limit || 20;
-          const category = input?.category || 'all';
-          
-          console.log(`\n[News] ===== RSS Fetch Start =====`);
-          console.log(`[News] Frontend category: ${category}`);
-          
-          // Category key to Google News RSS URL mapping (using search-based RSS URLs)
-          const categoryUrls: Record<string, string> = {
-            'all': 'https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko',
-            'nation': 'https://news.google.com/rss/search?q=%EC%A0%95%EC%B9%98%20OR%20%EC%82%AC%ED%9A%8C&hl=ko&gl=KR&ceid=KR:ko',
-            'business': 'https://news.google.com/rss/search?q=%EA%B2%BD%EC%A0%9C&hl=ko&gl=KR&ceid=KR:ko',
-            'technology': 'https://news.google.com/rss/search?q=IT%20OR%20%EA%B8%B0%EC%88%A0&hl=ko&gl=KR&ceid=KR:ko',
-            'science': 'https://news.google.com/rss/search?q=%EA%B3%BC%ED%95%99&hl=ko&gl=KR&ceid=KR:ko',
-            'entertainment': 'https://news.google.com/rss/search?q=%EC%97%B0%EC%98%88&hl=ko&gl=KR&ceid=KR:ko',
-            'sports': 'https://news.google.com/rss/search?q=%EC%8A%A4%ED%8F%AC%EC%B8%A0&hl=ko&gl=KR&ceid=KR:ko',
-            'health': 'https://news.google.com/rss/search?q=%EA%B1%B4%EA%B0%95&hl=ko&gl=KR&ceid=KR:ko',
-            'world': 'https://news.google.com/rss/search?q=%EA%B5%AD%EC%A0%9C&hl=ko&gl=KR&ceid=KR:ko',
-          };
-          
-          const rssUrl = categoryUrls[category] || categoryUrls['all'];
-          
-          console.log(`[News] Mapped topic URL: ${rssUrl}`);
-          
-          const response = await fetch(rssUrl, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-          });
-          
-          console.log(`[News] Fetch status: ${response.status} ${response.statusText}`);
-          console.log(`[News] Content-Type: ${response.headers.get('content-type')}`);
-          
-          if (!response.ok) {
-            console.log(`[News] ===== RSS Fetch FAILED (HTTP ${response.status}) =====`);
-            throw new Error(`RSS fetch failed: ${response.status}`);
-          }
-          
-          let xml: string;
-          try {
-            xml = await response.text();
-            console.log(`[News] Response body length: ${xml.length} chars`);
-            console.log(`[News] First 300 chars: ${xml.substring(0, 300)}`);
-          } catch (textError) {
-            console.error(`[News] Error reading response text:`, textError);
-            console.log(`[News] ===== RSS Fetch FAILED (Text read error) =====`);
-            return [];
-          }
-          
-          if (!xml || xml.length === 0) {
-            console.log(`[News] ===== RSS Fetch FAILED (Empty response) =====`);
-            return [];
-          }
-          
-          // Helper: Decode HTML entities
-          const decodeHtmlEntities = (text: string): string => {
-            const entities: Record<string, string> = {
-              '&amp;': '&',
-              '&lt;': '<',
-              '&gt;': '>',
-              '&quot;': '"',
-              '&#39;': "'",
-              '&apos;': "'",
-            };
-            let decoded = text;
-            for (const [entity, char] of Object.entries(entities)) {
-              decoded = decoded.replace(new RegExp(entity, 'g'), char);
-            }
-            return decoded;
-          };
-
-          // Helper: Extract publisher from title (format: "Title - Publisher")
-          const extractPublisher = (title: string): { title: string; publisher: string } => {
-            const match = title.match(/^(.+?)\s*-\s*([^-]+)$/);
-            if (match) {
-              return {
-                title: match[1].trim(),
-                publisher: match[2].trim(),
-              };
-            }
-            return { title, publisher: 'Google News' };
-          };
-
-          // Helper: Clean description - remove HTML tags and entities
-          const cleanDescription = (text: string): string => {
-            // Remove HTML tags
-            let cleaned = text.replace(/<[^>]*>/g, '');
-            // Decode HTML entities
-            cleaned = decodeHtmlEntities(cleaned);
-            // Remove extra whitespace
-            cleaned = cleaned.replace(/\s+/g, ' ').trim();
-            // Limit length
-            if (cleaned.length > 150) {
-              cleaned = cleaned.substring(0, 150) + '...';
-            }
-            return cleaned;
-          };
-          
-          // Simple XML parsing for RSS items
-          console.log(`[News] Starting XML item parsing...`);
-          const itemRegex = /<item>([\s\S]*?)<\/item>/g;
-          const items = [];
-          let match;
-          let itemCount = 0;
-          
-          try {
-            while ((match = itemRegex.exec(xml)) !== null && items.length < limit) {
-              itemCount++;
-            const itemXml = match[1];
-            
-            const titleMatch = itemXml.match(/<title>([\s\S]*?)<\/title>/);
-            const linkMatch = itemXml.match(/<link>([\s\S]*?)<\/link>/);
-            const pubDateMatch = itemXml.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
-            const descriptionMatch = itemXml.match(/<description>([\s\S]*?)<\/description>/);
-            
-            if (titleMatch && linkMatch) {
-              const rawTitle = titleMatch[1].replace(/<[^>]*>/g, '').trim();
-              const { title, publisher } = extractPublisher(rawTitle);
-              const link = linkMatch[1].trim();
-              const pubDate = pubDateMatch ? pubDateMatch[1].trim() : new Date().toISOString();
-              const rawDescription = descriptionMatch ? descriptionMatch[1] : '';
-              const description = cleanDescription(rawDescription);
-              
-              items.push({
-                title,
-                link,
-                pubDate,
-                description,
-                source: publisher,
-                thumbnail: null,
-              });
-            }
-          }
-          } catch (parseError) {
-            console.error(`[News] XML parsing error:`, parseError);
-            console.log(`[News] ===== RSS Fetch FAILED (Parsing error) =====`);
-            return [];
-          }
-          
-          console.log(`[News] Total items found in XML: ${itemCount}`);
-          console.log(`[News] Items parsed successfully: ${items.length}`);
-          console.log(`[News] ===== RSS Fetch SUCCESS =====`);
-          
-          return items;
-        } catch (error) {
-          console.error('[News] RSS fetch error:', error);
-          console.log(`[News] ===== RSS Fetch FAILED (Exception) =====`);
-          console.error('[News] Error details:', error instanceof Error ? error.message : String(error));
-          return [];
-        }
-      }),
+    getLatestNews: publicProcedure
+      .input(z.object({ limit: z.number().default(20), category: z.string().default("all") }).optional())
+      .query(({ input }) => getLatestRssNews(input?.category ?? "all", input?.limit ?? 20)),
 
     /**
      * Search news from Naver News API

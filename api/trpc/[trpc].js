@@ -3047,6 +3047,86 @@ function parseNewsSource(buffer, contentType = "") {
   return null;
 }
 
+// server/latestNews.ts
+import { load as load3 } from "cheerio";
+var RSS_URL = "https://news.google.com/rss";
+var RSS_LOCALE = "hl=ko&gl=KR&ceid=KR:ko";
+var FRESH_MS = 2 * 6e4;
+var STALE_MS = 30 * 6e4;
+var TOPICS = {
+  all: "",
+  nation: "\uC815\uCE58 OR \uC0AC\uD68C",
+  business: "\uACBD\uC81C",
+  technology: "IT OR \uAE30\uC220",
+  science: "\uACFC\uD559",
+  entertainment: "\uC5F0\uC608",
+  sports: "\uC2A4\uD3EC\uCE20",
+  health: "\uAC74\uAC15",
+  world: "\uAD6D\uC81C"
+};
+function parseNews(xml) {
+  const $ = load3(xml, { xmlMode: true });
+  const seen = /* @__PURE__ */ new Set();
+  return $("rss > channel > item").toArray().flatMap((element) => {
+    const item = $(element);
+    const rawTitle = item.children("title").first().text().trim();
+    const link = item.children("link").first().text().trim();
+    if (!rawTitle || !/^https?:\/\//i.test(link) || seen.has(link)) return [];
+    seen.add(link);
+    const source = item.children("source").first().text().trim();
+    const suffix = source ? ` - ${source}` : "";
+    const title = suffix && rawTitle.endsWith(suffix) ? rawTitle.slice(0, -suffix.length) : rawTitle;
+    const description = load3(item.children("description").first().text(), {}, false).text().replace(/\s+/g, " ").trim();
+    return [{
+      title: title || rawTitle,
+      link,
+      pubDate: item.children("pubDate").first().text().trim(),
+      description: description.length > 150 ? `${description.slice(0, 150)}...` : description,
+      source: source || "Google News",
+      thumbnail: null
+    }];
+  }).sort((a, b) => (Date.parse(b.pubDate) || 0) - (Date.parse(a.pubDate) || 0));
+}
+function createLatestNewsLoader(fetchFeed = (...args) => fetch(...args), now = Date.now) {
+  const snapshots = /* @__PURE__ */ new Map();
+  const inFlight = /* @__PURE__ */ new Map();
+  function read(category) {
+    const last = snapshots.get(category);
+    if (last && now() - last.at < FRESH_MS) return Promise.resolve(last.items);
+    const pending = inFlight.get(category);
+    if (pending) return pending;
+    const request = (async () => {
+      const topic = TOPICS[category];
+      const url = topic ? `${RSS_URL}/search?q=${encodeURIComponent(topic)}&${RSS_LOCALE}` : `${RSS_URL}?${RSS_LOCALE}`;
+      try {
+        const response = await fetchFeed(url, {
+          headers: { "User-Agent": "Mozilla/5.0" },
+          signal: AbortSignal.timeout(4e3)
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const items = parseNews(await response.text());
+        if (!items.length) throw new Error("empty RSS");
+        snapshots.set(category, { items, at: now() });
+        return items;
+      } catch (error) {
+        console.warn("[News] RSS unavailable:", category, error instanceof Error ? error.message : error);
+        if (last && now() - last.at < STALE_MS) return last.items;
+        if (category !== "all") return [];
+        const fallback = (await Promise.all([read("nation"), read("business"), read("technology")])).flat();
+        const items = Array.from(new Map(fallback.map((item) => [item.link, item])).values()).sort((a, b) => (Date.parse(b.pubDate) || 0) - (Date.parse(a.pubDate) || 0));
+        return items;
+      }
+    })().finally(() => inFlight.delete(category));
+    inFlight.set(category, request);
+    return request;
+  }
+  return async (category, limit) => {
+    const key = Object.hasOwn(TOPICS, category) ? category : "all";
+    return (await read(key)).slice(0, Math.max(1, Math.min(100, limit)));
+  };
+}
+var getLatestRssNews = createLatestNewsLoader();
+
 // shared/partnershipConsent.ts
 import { z as z3 } from "zod";
 var PARTNERSHIP_CONSENT_VERSION = "2026-10-31-v1";
@@ -6841,131 +6921,7 @@ var appRouter = router({
     /**
      * Get latest news from RSS
      */
-    getLatestNews: publicProcedure.input(z4.object({ limit: z4.number().default(20), category: z4.string().default("all") }).optional()).query(async ({ input }) => {
-      try {
-        const limit = input?.limit || 20;
-        const category = input?.category || "all";
-        console.log(`
-[News] ===== RSS Fetch Start =====`);
-        console.log(`[News] Frontend category: ${category}`);
-        const categoryUrls = {
-          "all": "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko",
-          "nation": "https://news.google.com/rss/search?q=%EC%A0%95%EC%B9%98%20OR%20%EC%82%AC%ED%9A%8C&hl=ko&gl=KR&ceid=KR:ko",
-          "business": "https://news.google.com/rss/search?q=%EA%B2%BD%EC%A0%9C&hl=ko&gl=KR&ceid=KR:ko",
-          "technology": "https://news.google.com/rss/search?q=IT%20OR%20%EA%B8%B0%EC%88%A0&hl=ko&gl=KR&ceid=KR:ko",
-          "science": "https://news.google.com/rss/search?q=%EA%B3%BC%ED%95%99&hl=ko&gl=KR&ceid=KR:ko",
-          "entertainment": "https://news.google.com/rss/search?q=%EC%97%B0%EC%98%88&hl=ko&gl=KR&ceid=KR:ko",
-          "sports": "https://news.google.com/rss/search?q=%EC%8A%A4%ED%8F%AC%EC%B8%A0&hl=ko&gl=KR&ceid=KR:ko",
-          "health": "https://news.google.com/rss/search?q=%EA%B1%B4%EA%B0%95&hl=ko&gl=KR&ceid=KR:ko",
-          "world": "https://news.google.com/rss/search?q=%EA%B5%AD%EC%A0%9C&hl=ko&gl=KR&ceid=KR:ko"
-        };
-        const rssUrl = categoryUrls[category] || categoryUrls["all"];
-        console.log(`[News] Mapped topic URL: ${rssUrl}`);
-        const response = await fetch(rssUrl, {
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-          }
-        });
-        console.log(`[News] Fetch status: ${response.status} ${response.statusText}`);
-        console.log(`[News] Content-Type: ${response.headers.get("content-type")}`);
-        if (!response.ok) {
-          console.log(`[News] ===== RSS Fetch FAILED (HTTP ${response.status}) =====`);
-          throw new Error(`RSS fetch failed: ${response.status}`);
-        }
-        let xml;
-        try {
-          xml = await response.text();
-          console.log(`[News] Response body length: ${xml.length} chars`);
-          console.log(`[News] First 300 chars: ${xml.substring(0, 300)}`);
-        } catch (textError) {
-          console.error(`[News] Error reading response text:`, textError);
-          console.log(`[News] ===== RSS Fetch FAILED (Text read error) =====`);
-          return [];
-        }
-        if (!xml || xml.length === 0) {
-          console.log(`[News] ===== RSS Fetch FAILED (Empty response) =====`);
-          return [];
-        }
-        const decodeHtmlEntities = (text2) => {
-          const entities = {
-            "&amp;": "&",
-            "&lt;": "<",
-            "&gt;": ">",
-            "&quot;": '"',
-            "&#39;": "'",
-            "&apos;": "'"
-          };
-          let decoded = text2;
-          for (const [entity, char] of Object.entries(entities)) {
-            decoded = decoded.replace(new RegExp(entity, "g"), char);
-          }
-          return decoded;
-        };
-        const extractPublisher = (title) => {
-          const match2 = title.match(/^(.+?)\s*-\s*([^-]+)$/);
-          if (match2) {
-            return {
-              title: match2[1].trim(),
-              publisher: match2[2].trim()
-            };
-          }
-          return { title, publisher: "Google News" };
-        };
-        const cleanDescription = (text2) => {
-          let cleaned = text2.replace(/<[^>]*>/g, "");
-          cleaned = decodeHtmlEntities(cleaned);
-          cleaned = cleaned.replace(/\s+/g, " ").trim();
-          if (cleaned.length > 150) {
-            cleaned = cleaned.substring(0, 150) + "...";
-          }
-          return cleaned;
-        };
-        console.log(`[News] Starting XML item parsing...`);
-        const itemRegex = /<item>([\s\S]*?)<\/item>/g;
-        const items = [];
-        let match;
-        let itemCount = 0;
-        try {
-          while ((match = itemRegex.exec(xml)) !== null && items.length < limit) {
-            itemCount++;
-            const itemXml = match[1];
-            const titleMatch = itemXml.match(/<title>([\s\S]*?)<\/title>/);
-            const linkMatch = itemXml.match(/<link>([\s\S]*?)<\/link>/);
-            const pubDateMatch = itemXml.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
-            const descriptionMatch = itemXml.match(/<description>([\s\S]*?)<\/description>/);
-            if (titleMatch && linkMatch) {
-              const rawTitle = titleMatch[1].replace(/<[^>]*>/g, "").trim();
-              const { title, publisher } = extractPublisher(rawTitle);
-              const link = linkMatch[1].trim();
-              const pubDate = pubDateMatch ? pubDateMatch[1].trim() : (/* @__PURE__ */ new Date()).toISOString();
-              const rawDescription = descriptionMatch ? descriptionMatch[1] : "";
-              const description = cleanDescription(rawDescription);
-              items.push({
-                title,
-                link,
-                pubDate,
-                description,
-                source: publisher,
-                thumbnail: null
-              });
-            }
-          }
-        } catch (parseError) {
-          console.error(`[News] XML parsing error:`, parseError);
-          console.log(`[News] ===== RSS Fetch FAILED (Parsing error) =====`);
-          return [];
-        }
-        console.log(`[News] Total items found in XML: ${itemCount}`);
-        console.log(`[News] Items parsed successfully: ${items.length}`);
-        console.log(`[News] ===== RSS Fetch SUCCESS =====`);
-        return items;
-      } catch (error) {
-        console.error("[News] RSS fetch error:", error);
-        console.log(`[News] ===== RSS Fetch FAILED (Exception) =====`);
-        console.error("[News] Error details:", error instanceof Error ? error.message : String(error));
-        return [];
-      }
-    }),
+    getLatestNews: publicProcedure.input(z4.object({ limit: z4.number().default(20), category: z4.string().default("all") }).optional()).query(({ input }) => getLatestRssNews(input?.category ?? "all", input?.limit ?? 20)),
     /**
      * Search news from Naver News API
      */

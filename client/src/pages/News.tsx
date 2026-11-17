@@ -3,8 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
-import { stripIssueBodyFormatting } from "@shared/issueBody";
-import { useIsMobile } from "@/hooks/useMobile";
+import { getIssueOpeningParagraph, stripIssueBodyFormatting } from "@shared/issueBody";
 import IssueDate from "@/components/IssueDate";
 import NewsTrendHeader from "@/components/NewsTrendHeader";
 import NewsBriefingSidebar from "@/components/NewsBriefingSidebar";
@@ -78,7 +77,6 @@ function readNewsSessionCache(): NewsSessionCache | null {
 }
 
 export default function News() {
-  const isMobile = useIsMobile();
   const [location, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -190,6 +188,7 @@ export default function News() {
       .select("id,title,summary,thumbnail_url,article_title,article_summary,category,created_at")
       .eq("is_published", true)
       .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
       .then(({ data, error }) => {
         if (cancelled) return;
         if (error) {
@@ -255,10 +254,12 @@ export default function News() {
 
   const isLoadingNews = isLoadingLatest || (selectedCategory === "all" && shouldFetchFeaturedNews
     && (!nationNewsData || !businessNewsData || !technologyNewsData || !entertainmentNewsData));
-  const featuredCount = isMobile ? 2 : 3;
-  const featuredIssues = issues.slice(0, featuredCount);
+  const featuredIssue = issues[0];
+  const featuredExcerpt = featuredIssue
+    ? getIssueOpeningParagraph(featuredIssue.summary) || getIssueOpeningParagraph(featuredIssue.article_summary ?? "")
+    : "";
   const remainingIssues = issueCategory === "all"
-    ? issues.slice(featuredCount)
+    ? issues.slice(1)
     : issues.filter(issue => matchesIssueFocusCategory(issue.category, issueCategory));
   const issuePageCount = Math.max(1, Math.ceil(remainingIssues.length / 10));
   const visibleIssueList = remainingIssues.slice((issuesPage - 1) * 10, issuesPage * 10);
@@ -375,26 +376,17 @@ export default function News() {
         </section>
       ) : activeContentTab === "issues" ? (
         <section className="issuesSection" role="tabpanel" aria-label="이슈 목록">
-          {!isLoadingIssues && !issuesError && featuredIssues.length > 0 && (
-              <div className="issuesFeaturedGrid" aria-label="최신 이슈">
-                {featuredIssues.map((issue) => (
-                  <Link
-                    key={issue.id}
-                    href={`/news/issues/${issue.id}`}
-                    className="issueFeaturedCard"
-                  >
-                    {issue.thumbnail_url ? (
-                      <img className="issueFeaturedImage" src={issue.thumbnail_url} alt="" />
-                    ) : (
-                      <div className="issueFeaturedImage issueCardImageFallback" aria-hidden="true" />
-                    )}
-                    <div className="issueFeaturedOverlay">
-                      <h2 className="issueFeaturedTitle">{getIssueDisplayTitle(issue)}</h2>
-                      <IssueDate value={issue.created_at} />
-                    </div>
-                  </Link>
-                ))}
+          {!isLoadingIssues && !issuesError && featuredIssue && (
+            <Link href={`/news/issues/${featuredIssue.id}`} className="issueFeaturedCard">
+              <div className="issueFeaturedMedia issueCardImageFallback">
+                {featuredIssue.thumbnail_url && <img className="issueFeaturedImage" src={featuredIssue.thumbnail_url} alt="" />}
               </div>
+              <div className="issueFeaturedCopy">
+                <h2 className="issueFeaturedTitle">{getIssueDisplayTitle(featuredIssue)}</h2>
+                {featuredExcerpt && <p className="issueFeaturedExcerpt">{featuredExcerpt}</p>}
+                <IssueDate value={featuredIssue.created_at} />
+              </div>
+            </Link>
           )}
 
           {isLoadingIssues ? (

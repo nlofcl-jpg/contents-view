@@ -2,9 +2,22 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import IssueBody from "../client/src/components/IssueBody";
-import { formatIssueBodyLines, parseIssueBodyBlocks, parseIssueBodyLine, stripIssueBodyFormatting } from "../shared/issueBody";
+import { formatIssueBodyLines, getIssueOpeningParagraph, parseIssueBodyBlocks, parseIssueBodyLine, stripIssueBodyFormatting } from "../shared/issueBody";
+import { ISSUE_DOCUMENT_PREFIX } from "../shared/issueDocument";
 
 describe("issue body formatting", () => {
+  it("uses only the first paragraph from legacy and rich issue content", () => {
+    expect(getIssueOpeningParagraph("## 소제목\n\n**첫 문단**입니다.\n이어서 작성.\n\n다음 문단."))
+      .toBe("첫 문단입니다. 이어서 작성.");
+    const rich = ISSUE_DOCUMENT_PREFIX + JSON.stringify({ type: "doc", content: [
+      { type: "image", attrs: { src: "https://example.com/cover.jpg" } },
+      { type: "paragraph" },
+      { type: "paragraph", content: [{ type: "text", text: "첫 문단입니다." }] },
+      { type: "paragraph", content: [{ type: "text", text: "다음 문단입니다." }] },
+    ] });
+    expect(getIssueOpeningParagraph(rich)).toBe("첫 문단입니다.");
+  });
+
   it("keeps existing plain text as body text", () => {
     expect(parseIssueBodyLine("기존 이슈 본문")).toEqual({ size: "body", text: "기존 이슈 본문" });
   });

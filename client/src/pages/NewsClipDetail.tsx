@@ -4,6 +4,7 @@ import { Link, useRoute } from "wouter";
 import IssueBody from "@/components/IssueBody";
 import IssueDate from "@/components/IssueDate";
 import IssueThumbnail from "@/components/IssueThumbnail";
+import NewsBriefingSidebar from "@/components/NewsBriefingSidebar";
 import { supabase } from "@/lib/supabase";
 import { issueBriefingLabel } from "@/lib/newsNavigation";
 
@@ -43,9 +44,12 @@ export default function NewsClipDetail() {
               </div>
             </div>
           </header>
-          <div className="issueDetailArticle">
-            <IssueThumbnail src={clip.thumbnail_url} credit={clip.thumbnail_credit} />
-            <div className="issueDetailBody"><IssueBody value={clip.summary} /></div>
+          <div className="issueDetailArticle newsBriefingLayout">
+            <div className="min-w-0">
+              <IssueThumbnail src={clip.thumbnail_url} credit={clip.thumbnail_credit} />
+              <div className="issueDetailBody"><IssueBody value={clip.summary} /></div>
+            </div>
+            <NewsBriefingSidebar />
           </div>
         </article>
       )}

@@ -86,6 +86,20 @@ export function stripIssueBodyFormatting(value: string) {
     .trim();
 }
 
+export function getIssueOpeningParagraph(value: string) {
+  const doc = readIssueDocument(value);
+  if (doc) {
+    return doc.content
+      ?.filter(node => node.type === "paragraph")
+      .map(node => issueDocumentText(node).replace(/\s+/g, " ").trim())
+      .find(Boolean) ?? "";
+  }
+
+  return Lexer.lex(value, { gfm: true })
+    .flatMap(token => token.type === "paragraph" ? [stripIssueBodyFormatting(token.raw)] : [])
+    .find(Boolean) ?? "";
+}
+
 function inlineText(value: string): IssueNode[] {
   return value.split(/(\*\*[^*]+\*\*)/g).filter(Boolean).map(text =>
     text.startsWith("**") && text.endsWith("**")

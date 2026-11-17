@@ -117,9 +117,9 @@ export default function IssueDetail() {
       ) : (
         <article className="issueDetail">
           <header className="issueDetailHeader">
-            <div className="headerBrandText issueDetailBrand">CONTENTS <strong>VIEW</strong></div>
             <h1>{issue.article_title || issue.title}</h1>
             <div className="issueDetailMeta">
+              <div className="headerBrandText issueDetailBrand">CONTENTS <strong>VIEW</strong></div>
               <div className="issueDetailByline">
                 <time dateTime={issue.created_at}>
                   {new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric" }).format(new Date(issue.created_at))}
