@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "@/_core/hooks/useAuth";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 import VoiceSearchButton from "@/components/VoiceSearchButton";
@@ -6,13 +7,25 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenu
 import { NAVER_GUEST_DAILY_LIMIT_MESSAGE, NAVER_MEMBER_DAILY_LIMIT_MESSAGE } from "@shared/naverAnalysisQuota";
 import { trpc } from "@/lib/trpc";
 import { UnifiedChart } from "@/components/UnifiedChart";
-import { ArrowUp, ChevronDown, CircleAlert, ExternalLink, Heart, ListFilter, Loader2, MessageCircle, Plus } from "lucide-react";
+import { ArrowUp, ChevronDown, CircleAlert, ExternalLink, Heart, ListFilter, Loader2, MessageCircle, Plus, X } from "lucide-react";
 import { useLocation } from "wouter";
 
 type InsightPoint = {
   period: string;
   ratio: number;
 };
+
+type TrendComparison = {
+  sourceKeywords: string[];
+  keywords: string[];
+  keywordBySeries: Record<string, string>;
+  trend: Record<string, InsightPoint[]>;
+  shopping: Record<string, InsightPoint[]>;
+};
+
+const MAX_COMPARISON_KEYWORDS = 3;
+const TREND_FILTER_GRID_CLASS = "grid grid-cols-2 items-end gap-2 md:grid-cols-[repeat(5,minmax(0,1fr))_6.5rem]";
+const TREND_FILTER_BUTTON_CLASS = "h-10 min-w-0 rounded-lg bg-blue-600 px-2 text-sm font-semibold whitespace-nowrap text-white transition-colors hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-400";
 
 type KeywordMetric = {
   keyword: string;
@@ -169,7 +182,8 @@ export default function UnifiedInsights() {
   const [queryError, setQueryError] = useState("");
   const [querySuccess, setQuerySuccess] = useState(false);
   const [chartData, setChartData] = useState<any>(null);
-  const [trendComparisonData, setTrendComparisonData] = useState<any>(null);
+  const [trendComparisonData, setTrendComparisonData] = useState<TrendComparison | null>(null);
+  const [comparisonKeywordInput, setComparisonKeywordInput] = useState("");
   const [isTrendFilterLoading, setIsTrendFilterLoading] = useState(false);
   const [trendFilterError, setTrendFilterError] = useState("");
   const [openTrendFilterMenu, setOpenTrendFilterMenu] = useState<TrendFilterMenu>(null);
@@ -215,6 +229,8 @@ export default function UnifiedInsights() {
   const primaryTrendSummary = getSeriesSummary(primaryKeyword ? chartData?.trend?.[primaryKeyword] : undefined);
   const displayedTrendData = trendComparisonData || chartData;
   const hasAnalysisResults = !isLoading && querySuccess && Boolean(chartData);
+  const comparisonKeywords: string[] = trendComparisonData?.sourceKeywords ?? chartData?.keywords ?? [];
+  const hasComparisonResults = !isLoading && Boolean(displayedTrendData?.keywords?.length);
   const comparisonChartTitle = "검색·쇼핑 트렌드 비교";
   const comparisonChartData = {
     keywords: displayedTrendData?.keywords || [],
@@ -550,6 +566,7 @@ export default function UnifiedInsights() {
   };
 
   const runQuery = (requestedKeywords?: string[]) => {
+    if (isTrendFilterLoading) return;
     const nextKeywords = requestedKeywords ?? (keywords.length > 0 ? keywords : [keywordInput.trim()].filter(Boolean));
 
     if (nextKeywords.length === 0) {
@@ -638,19 +655,13 @@ export default function UnifiedInsights() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading]);
 
-  const handleApplyTrendFilters = async () => {
-    const nextKeywords = keywords.length > 0 ? keywords : [keywordInput.trim()].filter(Boolean);
-    const baseKeyword = nextKeywords[0];
-
-    if (!baseKeyword) {
-      setTrendFilterError("검색어를 먼저 입력해주세요.");
-      return;
-    }
+  const loadTrendComparison = async (nextKeywords: string[]) => {
+    if (authLoading || isLoading || isTrendFilterLoading || nextKeywords.length === 0) return false;
 
     const combinations = getChartFilterCombinations();
     if (combinations.length > 12) {
       setTrendFilterError("필터 조합은 한 번에 최대 12개까지 조회할 수 있습니다.");
-      return;
+      return false;
     }
 
     const { startDateStr, endDateStr, timeUnit } = getTrendDateRange();
@@ -662,7 +673,7 @@ export default function UnifiedInsights() {
     try {
       const responses = await queryTrendFilterInsight({
         requests: combinations.map(combination => ({
-          keywords: [baseKeyword],
+          keywords: nextKeywords,
           startDate: startDateStr,
           endDate: endDateStr,
           timeUnit: timeUnit as any,
@@ -676,41 +687,79 @@ export default function UnifiedInsights() {
       const trend: Record<string, InsightPoint[]> = {};
       const shopping: Record<string, InsightPoint[]> = {};
       const chartKeywords: string[] = [];
+      const keywordBySeries: Record<string, string> = {};
 
       results.forEach(({ combination, response }) => {
         if (!response?.success) return;
-        const label = getChartSeriesLabel(baseKeyword, combination, combinations.length);
-        const searchSeries = response.trend?.[baseKeyword] || Object.values(response.trend || {})[0];
-        const shoppingSeries = response.shopping?.[baseKeyword] || Object.values(response.shopping || {})[0];
-        const hasSearchSeries = Array.isArray(searchSeries) && searchSeries.length > 0;
-        const hasShoppingSeries = Array.isArray(shoppingSeries) && shoppingSeries.length > 0;
-        if (!hasSearchSeries && !hasShoppingSeries) return;
+        nextKeywords.forEach(keyword => {
+          const label = getChartSeriesLabel(keyword, combination, combinations.length);
+          const searchSeries = response.trend?.[keyword];
+          const shoppingSeries = response.shopping?.[keyword];
+          const hasSearchSeries = Array.isArray(searchSeries) && searchSeries.length > 0;
+          const hasShoppingSeries = Array.isArray(shoppingSeries) && shoppingSeries.length > 0;
+          if (!hasSearchSeries && !hasShoppingSeries) return;
 
-        chartKeywords.push(label);
-        if (hasSearchSeries) trend[label] = searchSeries;
-        if (hasShoppingSeries) shopping[label] = shoppingSeries;
+          chartKeywords.push(label);
+          keywordBySeries[label] = keyword;
+          if (hasSearchSeries) trend[label] = searchSeries;
+          if (hasShoppingSeries) shopping[label] = shoppingSeries;
+        });
       });
 
       if (chartKeywords.length === 0) {
         setTrendFilterError("선택한 필터의 트렌드 데이터를 불러오지 못했습니다.");
-        return;
+        return false;
       }
 
       setTrendComparisonData({
+        sourceKeywords: nextKeywords,
         keywords: chartKeywords,
+        keywordBySeries,
         trend,
         shopping,
-        meta: chartData?.meta || {},
       });
       setStartDateForChart(startDateStr);
       setEndDateForChart(endDateStr);
       setTimeUnitForChart(timeUnit);
       setFilterLabelForChart(getFilterLabel());
+      return true;
     } catch (error) {
       setTrendFilterError(analysisErrorMessage(error, "필터 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요."));
+      return false;
     } finally {
       setIsTrendFilterLoading(false);
     }
+  };
+
+  const addComparisonKeyword = async () => {
+    const keyword = comparisonKeywordInput.trim().replace(/\s+/g, " ");
+    if (!keyword) return;
+    if (comparisonKeywords.some(value => value.toLowerCase() === keyword.toLowerCase())) {
+      setTrendFilterError("이미 추가한 키워드입니다.");
+      return;
+    }
+    if (comparisonKeywords.length >= MAX_COMPARISON_KEYWORDS) {
+      setTrendFilterError(`비교 키워드는 최대 ${MAX_COMPARISON_KEYWORDS}개까지 추가할 수 있습니다.`);
+      return;
+    }
+    if (await loadTrendComparison([...comparisonKeywords, keyword])) {
+      setComparisonKeywordInput(current => current.trim().replace(/\s+/g, " ") === keyword ? "" : current);
+    }
+  };
+
+  const removeComparisonKeyword = (keyword: string) => {
+    setTrendComparisonData(current => {
+      if (!current) return current;
+      const keep = (label: string) => current.keywordBySeries[label] !== keyword;
+      return {
+        sourceKeywords: current.sourceKeywords.filter(value => value !== keyword),
+        keywords: current.keywords.filter(keep),
+        keywordBySeries: Object.fromEntries(Object.entries(current.keywordBySeries).filter(([label]) => keep(label))),
+        trend: Object.fromEntries(Object.entries(current.trend).filter(([label]) => keep(label))),
+        shopping: Object.fromEntries(Object.entries(current.shopping).filter(([label]) => keep(label))),
+      };
+    });
+    setTrendFilterError("");
   };
 
   const renderSingleCheckFilter = (
@@ -754,56 +803,104 @@ export default function UnifiedInsights() {
   );
 
   const renderTrendFilters = () => (
-    <div className="mt-4 rounded-lg border border-slate-700/70 bg-slate-950/35 p-3">
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-[repeat(5,minmax(0,1fr))_auto]">
-        {renderSingleCheckFilter("period", "기간", PERIOD_OPTIONS.map(option => ({
-          value: option.value,
-          label: option.label,
-          checked: selectedPeriod === option.value,
-          onChange: () => {
-            setSelectedPeriod(option.value);
-            setSelectedTimeUnit(option.unit);
-          },
-        })), PERIOD_OPTIONS.find(option => option.value === selectedPeriod)?.label || "1개월")}
-        {renderSingleCheckFilter("unit", "단위", TIME_UNIT_OPTIONS.map(option => ({
-          value: option.value,
-          label: option.label,
-          checked: selectedTimeUnit === option.value,
-          onChange: () => setSelectedTimeUnit(option.value),
-        })), TIME_UNIT_OPTIONS.find(option => option.value === selectedTimeUnit)?.label || "일간")}
-        {renderSingleCheckFilter("device", "기기", DEVICE_OPTIONS.map(option => ({
-          value: option,
-          label: option,
-          checked: selectedDevices.includes(option),
-          onChange: () => toggleMultiFilter(selectedDevices, option, "전체", setSelectedDevices),
-        })), getFilterSummary(selectedDevices, "전체", "전체"))}
-        {renderSingleCheckFilter("gender", "성별", GENDER_OPTIONS.map(option => ({
-          value: option,
-          label: option,
-          checked: selectedGenders.includes(option),
-          onChange: () => toggleMultiFilter(selectedGenders, option, "전체", setSelectedGenders),
-        })), getFilterSummary(selectedGenders, "전체", "전체"))}
-        {renderSingleCheckFilter("age", "연령", AGE_OPTIONS.map(option => ({
-          value: option.value,
-          label: option.label,
-          checked: selectedAges.includes(option.value),
-          onChange: () => toggleMultiFilter(selectedAges, option.value, "", setSelectedAges),
-        })), getFilterSummary(
-          selectedAges,
-          "",
-          "전체",
-          Object.fromEntries(AGE_OPTIONS.map(option => [option.value, option.label]))
-        ))}
-        <button
-          type="button"
-          onClick={handleApplyTrendFilters}
-          disabled={isTrendFilterLoading || !hasAnalysisResults}
-          className="col-span-2 h-10 self-end rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-400 md:col-span-1"
+    <div className="mt-4">
+      <div className={`${TREND_FILTER_GRID_CLASS} mb-2 px-[13px]`}>
+        <h4 className="col-span-full pb-1 text-sm font-semibold text-slate-200 md:col-span-4">필터 적용</h4>
+        <form
+          className="col-span-2 grid grid-cols-subgrid items-end gap-2 md:col-start-5"
+          onSubmit={event => {
+            event.preventDefault();
+            void addComparisonKeyword();
+          }}
         >
-          필터 적용
-        </button>
+          <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-slate-400">
+            <span className="sr-only">비교 키워드</span>
+            <input
+              value={comparisonKeywordInput}
+              onChange={event => setComparisonKeywordInput(event.target.value)}
+              placeholder="키워드 입력"
+              maxLength={100}
+              className="h-10 w-full min-w-0 rounded-lg border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none focus:border-blue-500"
+            />
+          </label>
+          <button
+            type="submit"
+            className={TREND_FILTER_BUTTON_CLASS}
+            disabled={authLoading || isLoading || isTrendFilterLoading || !comparisonKeywordInput.trim()}
+          >
+            추가
+          </button>
+        </form>
       </div>
-      {trendFilterError && <p className="mt-3 text-xs text-red-300">{trendFilterError}</p>}
+      <div className="rounded-lg border border-slate-700/70 bg-slate-950/35 p-3">
+        <div className={TREND_FILTER_GRID_CLASS}>
+          {renderSingleCheckFilter("period", "기간", PERIOD_OPTIONS.map(option => ({
+            value: option.value,
+            label: option.label,
+            checked: selectedPeriod === option.value,
+            onChange: () => {
+              setSelectedPeriod(option.value);
+              setSelectedTimeUnit(option.unit);
+            },
+          })), PERIOD_OPTIONS.find(option => option.value === selectedPeriod)?.label || "1개월")}
+          {renderSingleCheckFilter("unit", "단위", TIME_UNIT_OPTIONS.map(option => ({
+            value: option.value,
+            label: option.label,
+            checked: selectedTimeUnit === option.value,
+            onChange: () => setSelectedTimeUnit(option.value),
+          })), TIME_UNIT_OPTIONS.find(option => option.value === selectedTimeUnit)?.label || "일간")}
+          {renderSingleCheckFilter("device", "기기", DEVICE_OPTIONS.map(option => ({
+            value: option,
+            label: option,
+            checked: selectedDevices.includes(option),
+            onChange: () => toggleMultiFilter(selectedDevices, option, "전체", setSelectedDevices),
+          })), getFilterSummary(selectedDevices, "전체", "전체"))}
+          {renderSingleCheckFilter("gender", "성별", GENDER_OPTIONS.map(option => ({
+            value: option,
+            label: option,
+            checked: selectedGenders.includes(option),
+            onChange: () => toggleMultiFilter(selectedGenders, option, "전체", setSelectedGenders),
+          })), getFilterSummary(selectedGenders, "전체", "전체"))}
+          {renderSingleCheckFilter("age", "연령", AGE_OPTIONS.map(option => ({
+            value: option.value,
+            label: option.label,
+            checked: selectedAges.includes(option.value),
+            onChange: () => toggleMultiFilter(selectedAges, option.value, "", setSelectedAges),
+          })), getFilterSummary(
+            selectedAges,
+            "",
+            "전체",
+            Object.fromEntries(AGE_OPTIONS.map(option => [option.value, option.label]))
+          ))}
+          <button
+            type="button"
+            onClick={() => void loadTrendComparison(comparisonKeywords)}
+            disabled={authLoading || isLoading || isTrendFilterLoading || comparisonKeywords.length === 0}
+            className={TREND_FILTER_BUTTON_CLASS}
+          >
+            필터 적용
+          </button>
+        </div>
+        {trendComparisonData && comparisonKeywords.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2" aria-label="비교 키워드 목록">
+            {comparisonKeywords.map(keyword => (
+              <button
+                key={keyword}
+                type="button"
+                title={`${keyword} 제거`}
+                aria-label={`${keyword} 제거`}
+                disabled={isTrendFilterLoading}
+                onClick={() => removeComparisonKeyword(keyword)}
+                className="inline-flex max-w-full items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:border-blue-500 focus-visible:outline focus-visible:outline-blue-400 disabled:opacity-50"
+              >
+                <span className="truncate">{keyword}</span>
+                <X size={13} className="shrink-0" aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+        )}
+        {trendFilterError && <p className="mt-3 text-xs text-red-300">{trendFilterError}</p>}
+      </div>
     </div>
   );
 
@@ -893,7 +990,7 @@ export default function UnifiedInsights() {
                 className="heroSearchButton"
                 aria-label="분석"
                 title="분석"
-                disabled={!keywordInput.trim() || authLoading || isLoading || isBlogLoading || isBlogPostRankLoading}
+            disabled={!keywordInput.trim() || authLoading || isLoading || isTrendFilterLoading || isBlogLoading || isBlogPostRankLoading}
               >
                 <ArrowUp size={19} aria-hidden="true" />
               </button>
@@ -925,11 +1022,12 @@ export default function UnifiedInsights() {
         </div>
       )}
 
-      {isLoading && (
+      {isLoading && createPortal(
         <div className="naverAnalysisProgress" role="status">
           <div className="naverAnalysisProgressTrack" aria-hidden="true" />
           <p>분석중...</p>
-        </div>
+        </div>,
+        document.body
       )}
 
       {isBlogLoading && (
@@ -1418,8 +1516,8 @@ export default function UnifiedInsights() {
               <h3 className="mb-1 text-base font-medium text-white md:mb-2 md:text-lg md:font-semibold">
                 {comparisonChartTitle}
               </h3>
-              {hasAnalysisResults && <div className="text-xs font-normal text-slate-400 md:text-sm">
-                <p className="mb-1">{keywords.join(", ")}</p>
+              {hasComparisonResults && <div className="text-xs font-normal text-slate-400 md:text-sm">
+                {!trendComparisonData && <p className="mb-1">{comparisonKeywords.join(", ")}</p>}
                 <p>{startDateForChart} – {endDateForChart}</p>
                 <p className="mt-1 text-xs text-slate-500">
                   {filterLabelForChart}
@@ -1437,7 +1535,7 @@ export default function UnifiedInsights() {
                   </div>
                 </div>
               )}
-              {hasAnalysisResults && <UnifiedChart
+              {hasComparisonResults && <UnifiedChart
                 data={comparisonChartData}
                 visibleLayers={comparisonChartLayers}
                 timeUnit={timeUnitForChart}

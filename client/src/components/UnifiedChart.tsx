@@ -359,7 +359,7 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
       padding: {
         top: isMobile ? 0 : 0,
         right: isMobile ? 4 : 0,
-        bottom: isMobile ? 0 : 0,
+        bottom: isMobile ? 0 : 6,
         left: isMobile ? 0 : 0,
       },
     },
@@ -427,8 +427,7 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
           },
           maxRotation: 0,
           autoSkip: false,
-          // 모바일에서 라벨과 축선 사이 간격 확대
-          padding: isMobile ? 4 : 0,
+          padding: isMobile ? 4 : 7,
           // tickFormatter: 선택된 인덱스만 라벨 표시
           callback: function (value: any, index: number) {
             if (labelIndexes.has(index)) {
@@ -481,7 +480,7 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
   );
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
       {hasNoShoppingData && (
         <div className="mb-4 inline-flex w-fit max-w-full shrink-0 px-5 py-3 border border-red-500/40 bg-red-950/45 rounded text-sm text-red-200 shopping-no-data-alert">
           <p className="whitespace-nowrap max-md:whitespace-normal">
@@ -490,13 +489,13 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
         </div>
       )}
       {legendItems.length > 0 && (
-        <div className="mb-3 flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 md:mb-4">
+        <div className="mb-3 flex max-h-28 shrink-0 flex-wrap content-start items-center gap-x-4 gap-y-2 overflow-y-auto md:mb-4 md:max-h-36" role="group" aria-label="차트 범례">
           {legendItems.map((item) => (
             <button
               key={item.label}
               type="button"
               onClick={() => toggleSeries(item.label)}
-              className={`flex min-w-0 items-center gap-2 text-left text-[10px] font-normal transition-opacity md:text-xs ${
+              className={`flex min-w-0 max-w-full items-center gap-2 text-left text-[10px] font-normal transition-opacity md:text-xs ${
                 item.hidden ? "opacity-45" : "opacity-100"
               }`}
               aria-pressed={!item.hidden}
@@ -515,7 +514,7 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
           ))}
         </div>
       )}
-      <div className="relative min-h-0 flex-1">
+      <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
         <Line data={chartData} options={options} />
       </div>
     </div>

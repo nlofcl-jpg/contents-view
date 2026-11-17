@@ -1,4 +1,5 @@
 import * as React from "react";
+import { load } from "cheerio";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -24,8 +25,14 @@ describe("UnifiedChart shopping data notice", () => {
       endDate: "2026-10-04",
     }));
 
-    expect(html).toContain('class="flex h-full min-h-0 w-full flex-col"');
-    expect(html).toContain('class="relative min-h-0 flex-1"');
+    const $ = load(html);
+    const legend = $('[role="group"][aria-label="차트 범례"]');
+    expect(legend).toHaveLength(1);
+    expect(legend.hasClass("max-h-28")).toBe(true);
+    expect(legend.hasClass("overflow-y-auto")).toBe(true);
+    expect(legend.parent().hasClass("flex-col")).toBe(true);
+    expect(legend.next().hasClass("flex-1")).toBe(true);
+    expect(legend.next().hasClass("overflow-hidden")).toBe(true);
     expect(html).not.toContain("md:h-[480px]");
   });
 
