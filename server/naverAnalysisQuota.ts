@@ -40,6 +40,8 @@ function hasSuccessfulAnalysis(data: unknown): boolean {
 }
 
 export const naverAnalysisProcedure = publicProcedure.use(async ({ ctx, next }) => {
+  if (ctx.user?.role === "admin") return next();
+
   if (!quotaStore) {
     throw new TRPCError({ code: "SERVICE_UNAVAILABLE", message: "분석 이용 횟수를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요." });
   }

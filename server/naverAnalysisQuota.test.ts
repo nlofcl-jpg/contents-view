@@ -17,7 +17,7 @@ const testRouter = router({
 
 function context(member = false, address = "192.0.2.1"): TrpcContext {
   return {
-    user: member ? { id: 7, loginMethod: "supabase", openId: "member-7" } : null,
+    user: member ? { id: 7, loginMethod: "supabase", openId: "member-7", role: "user" } : null,
     req: { headers: {}, socket: { remoteAddress: address } },
     res: {},
   } as TrpcContext;
@@ -62,6 +62,21 @@ describe("Naver daily analysis quota", () => {
     }
     await expect(testRouter.createCaller(context(true)).analyze({ keyword: "초과" })).rejects.toMatchObject({ code: "TOO_MANY_REQUESTS", message: NAVER_MEMBER_DAILY_LIMIT_MESSAGE });
     expect(executeAnalysis).toHaveBeenCalledTimes(10);
+  });
+
+  it("allows authenticated administrators past the member limit without charging quota", async () => {
+    const ctx = context(true);
+    const member = testRouter.createCaller(ctx);
+    for (let index = 0; index < 10; index++) {
+      await member.analyze({ keyword: "테스트" });
+    }
+    await expect(member.analyze({ keyword: "초과" })).rejects.toMatchObject({ code: "TOO_MANY_REQUESTS" });
+
+    store.rpc.mockClear();
+    const admin = testRouter.createCaller({ ...ctx, user: { ...ctx.user!, role: "admin" } });
+    await expect(admin.analyze({ keyword: "관리자 조회" })).resolves.toEqual({ success: true });
+    expect(executeAnalysis).toHaveBeenCalledTimes(11);
+    expect(store.rpc).not.toHaveBeenCalled();
   });
 
   it("restores quota after failed responses and thrown errors", async () => {

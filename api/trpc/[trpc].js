@@ -1072,6 +1072,7 @@ function hasSuccessfulAnalysis(data) {
   return typeof data === "object" && data !== null && "success" in data && data.success === true;
 }
 var naverAnalysisProcedure = publicProcedure.use(async ({ ctx, next }) => {
+  if (ctx.user?.role === "admin") return next();
   if (!quotaStore) {
     throw new TRPCError3({ code: "SERVICE_UNAVAILABLE", message: "\uBD84\uC11D \uC774\uC6A9 \uD69F\uC218\uB97C \uD655\uC778\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
   }
