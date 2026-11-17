@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
+import VoiceSearchButton from "@/components/VoiceSearchButton";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { NAVER_GUEST_DAILY_LIMIT_MESSAGE, NAVER_MEMBER_DAILY_LIMIT_MESSAGE } from "@shared/naverAnalysisQuota";
 import { trpc } from "@/lib/trpc";
 import { UnifiedChart } from "@/components/UnifiedChart";
-import { ChevronDown, CircleAlert, ExternalLink, Heart, ListFilter, Loader2, MessageCircle } from "lucide-react";
+import { ArrowUp, ChevronDown, CircleAlert, ExternalLink, Heart, ListFilter, Loader2, MessageCircle, Plus } from "lucide-react";
 import { useLocation } from "wouter";
 
 type InsightPoint = {
@@ -23,24 +25,6 @@ type KeywordMetric = {
   competition: string | null;
   averageAdDepth: number | null;
   similarity: number | null;
-};
-
-type ShoppingCompetition = {
-  productCount: number | null;
-  averagePrice: number | null;
-  monthlySearches: number | null;
-  competitionRatio: number | null;
-  strength: string | null;
-  error?: string | null;
-};
-
-type ShoppingRelatedKeyword = {
-  keyword: string;
-  monthlySearches: number | null;
-  productCount: number | null;
-  averagePrice: number | null;
-  competitionRatio: number | null;
-  strength: string | null;
 };
 
 type BlogAnalysisPost = {
@@ -131,7 +115,6 @@ const AGE_OPTIONS = [
 ] as const;
 
 type TrendFilterMenu = "period" | "unit" | "device" | "gender" | "age" | null;
-type InsightTab = "content" | "seller";
 type SearchMode = "analysis" | "rank" | "postRank";
 
 const SEARCH_MODE_OPTIONS: Array<{ value: SearchMode; label: string }> = [
@@ -140,37 +123,9 @@ const SEARCH_MODE_OPTIONS: Array<{ value: SearchMode; label: string }> = [
   { value: "postRank", label: "블로그 순위" },
 ];
 
-type TabSearchState = {
-  keywords: string[];
-  keywordInput: string;
-  queryError: string;
-  querySuccess: boolean;
-  chartData: any;
-  trendComparisonData: any;
-  trendFilterError: string;
-  startDateForChart: string;
-  endDateForChart: string;
-  timeUnitForChart: string;
-  filterLabelForChart: string;
-};
-
-const createEmptyTabSearchState = (): TabSearchState => ({
-  keywords: [],
-  keywordInput: "",
-  queryError: "",
-  querySuccess: false,
-  chartData: null,
-  trendComparisonData: null,
-  trendFilterError: "",
-  startDateForChart: "",
-  endDateForChart: "",
-  timeUnitForChart: "date",
-  filterLabelForChart: "1개월 · 일간 · 전체",
-});
-
 export default function UnifiedInsights() {
   // State management
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   const { loading: authLoading } = useAuth();
   const [guestAnalysisPromptOpen, setGuestAnalysisPromptOpen] = useState(false);
   const initialKeywordQueried = useRef(false);
@@ -193,19 +148,9 @@ export default function UnifiedInsights() {
   };
   const [keywords, setKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState("");
-  const [isKeywordInputFocused, setIsKeywordInputFocused] = useState(false);
   const [searchMode, setSearchMode] = useState<SearchMode>("analysis");
   const [isSearchModeOpen, setIsSearchModeOpen] = useState(false);
   const [infoPopup, setInfoPopup] = useState<{ title: string; body: string } | null>(null);
-  const [activeInsightTab, setActiveInsightTab] = useState<InsightTab>(() =>
-    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "seller"
-      ? "seller"
-      : "content",
-  );
-  const [tabSearchStates, setTabSearchStates] = useState<Record<InsightTab, TabSearchState>>({
-    content: createEmptyTabSearchState(),
-    seller: createEmptyTabSearchState(),
-  });
   const [isKeywordGradeInfoOpen, setIsKeywordGradeInfoOpen] = useState(false);
   const [relatedSortMode, setRelatedSortMode] = useState<"related" | "recommended">("related");
   const [isRelatedSortOpen, setIsRelatedSortOpen] = useState(false);
@@ -238,74 +183,6 @@ export default function UnifiedInsights() {
   const [timeUnitForChart, setTimeUnitForChart] = useState("date");
   const [filterLabelForChart, setFilterLabelForChart] = useState("1개월 · 일간 · 전체");
 
-  const getCurrentTabSearchState = (): TabSearchState => ({
-    keywords,
-    keywordInput,
-    queryError,
-    querySuccess,
-    chartData,
-    trendComparisonData,
-    trendFilterError,
-    startDateForChart,
-    endDateForChart,
-    timeUnitForChart,
-    filterLabelForChart,
-  });
-
-  const applyTabSearchState = (state: TabSearchState) => {
-    setKeywords(state.keywords);
-    setKeywordInput(state.keywordInput);
-    setQueryError(state.queryError);
-    setQuerySuccess(state.querySuccess);
-    setChartData(state.chartData);
-    setTrendComparisonData(state.trendComparisonData);
-    setTrendFilterError(state.trendFilterError);
-    setStartDateForChart(state.startDateForChart);
-    setEndDateForChart(state.endDateForChart);
-    setTimeUnitForChart(state.timeUnitForChart);
-    setFilterLabelForChart(state.filterLabelForChart);
-  };
-
-  const handleInsightTabChange = (nextTab: InsightTab, syncUrl = true) => {
-    if (nextTab === activeInsightTab) return;
-
-    const currentState = getCurrentTabSearchState();
-    const nextState = tabSearchStates[nextTab] || createEmptyTabSearchState();
-
-    setTabSearchStates(prev => ({
-      ...prev,
-      [activeInsightTab]: currentState,
-    }));
-    applyTabSearchState(nextState);
-    setIsLoading(false);
-    setIsTrendFilterLoading(false);
-    setOpenTrendFilterMenu(null);
-    setIsSearchModeOpen(false);
-    setIsKeywordGradeInfoOpen(false);
-    setIsRelatedSortOpen(false);
-    setActiveInsightTab(nextTab);
-
-    if (syncUrl) {
-      const params = new URLSearchParams(window.location.search);
-      if (nextTab === "content") {
-        params.delete("tab");
-      } else {
-        params.set("tab", nextTab);
-      }
-      const queryString = params.toString();
-      setLocation(`${window.location.pathname}${queryString ? `?${queryString}` : ""}`);
-    }
-  };
-
-  useEffect(() => {
-    const requestedTab: InsightTab = new URLSearchParams(window.location.search).get("tab") === "seller"
-      ? "seller"
-      : "content";
-    if (requestedTab !== activeInsightTab) {
-      handleInsightTabChange(requestedTab, false);
-    }
-  }, [location]);
-
   const getInitialKeywordFromUrl = () => {
     if (typeof window === "undefined") return "";
     return new URLSearchParams(window.location.search).get("keyword")?.trim() || "";
@@ -323,12 +200,6 @@ export default function UnifiedInsights() {
     return { latest, delta, peak };
   };
 
-  const getSeriesAverage = (series?: InsightPoint[]) => {
-    if (!series || series.length === 0) return null;
-    const total = series.reduce((sum, item) => sum + item.ratio, 0);
-    return total / series.length;
-  };
-
   const formatRatio = (value: number | null) => {
     if (value === null || Number.isNaN(value)) return "-";
     return `${Math.round(value * 10) / 10}`;
@@ -340,20 +211,17 @@ export default function UnifiedInsights() {
     return `${value > 0 ? "+" : ""}${Math.round(value * 10) / 10}p`;
   };
 
-  const getShoppingIndexGrade = (indexValue: number | null | undefined) => {
-    if (indexValue === null || indexValue === undefined || Number.isNaN(indexValue)) return "-";
-    if (indexValue < 5) return "낮음";
-    if (indexValue < 15) return "보통";
-    if (indexValue < 30) return "높음";
-    return "매우 높음";
-  };
-
   const primaryKeyword = chartData?.keywords?.[0] || keywords[0] || "";
   const primaryTrendSummary = getSeriesSummary(primaryKeyword ? chartData?.trend?.[primaryKeyword] : undefined);
-  const primaryShoppingSeries: InsightPoint[] | undefined = primaryKeyword ? chartData?.shopping?.[primaryKeyword] : undefined;
-  const primaryShoppingSummary = getSeriesSummary(primaryShoppingSeries);
-  const primaryShoppingMonthlyClickIndex = getSeriesAverage(primaryShoppingSeries);
   const displayedTrendData = trendComparisonData || chartData;
+  const hasAnalysisResults = !isLoading && querySuccess && Boolean(chartData);
+  const comparisonChartTitle = "검색·쇼핑 트렌드 비교";
+  const comparisonChartData = {
+    keywords: displayedTrendData?.keywords || [],
+    trend: displayedTrendData?.trend || {},
+    shopping: displayedTrendData?.shopping || {},
+  };
+  const comparisonChartLayers = { trend: true, shopping: true };
   const keywordTool = chartData?.meta?.keywordTool;
   const primaryMetric: KeywordMetric | null = keywordTool?.primary || null;
   const recommendedKeywords: KeywordMetric[] = keywordTool?.recommended || [];
@@ -364,15 +232,9 @@ export default function UnifiedInsights() {
     }
     return (b.similarity || 0) - (a.similarity || 0) || (b.monthlyTotalSearches || 0) - (a.monthlyTotalSearches || 0);
   });
-  const visibleRelatedKeywords = sortedRelatedKeywords.slice(0, 10);
-  const hasLockedRelatedKeywords = relatedKeywords.length > visibleRelatedKeywords.length;
+  const visibleRelatedKeywords = sortedRelatedKeywords.slice(0, 1);
   const contentVolume = chartData?.meta?.contentVolume;
   const blogTotalDocuments = contentVolume?.sources?.find((item: any) => item.key === "blog")?.totalDocuments ?? null;
-  const shoppingStatus = primaryKeyword ? chartData?.meta?.shoppingStatus?.[primaryKeyword] : null;
-  const shoppingCompetition: ShoppingCompetition | null = chartData?.meta?.shoppingCompetition || null;
-  const shoppingRelatedKeywords: ShoppingRelatedKeyword[] = chartData?.meta?.shoppingRelatedKeywords || [];
-  const visibleShoppingRelatedKeywords = shoppingRelatedKeywords.slice(0, 10);
-  const hasLockedShoppingRelatedKeywords = shoppingRelatedKeywords.length > visibleShoppingRelatedKeywords.length;
   const searchRatio = primaryMetric?.monthlyTotalSearches
     ? blogTotalDocuments / primaryMetric.monthlyTotalSearches
     : null;
@@ -423,8 +285,6 @@ export default function UnifiedInsights() {
     if (ratio < 20) return "높음";
     return "포화";
   };
-
-  const getShoppingCompetitionStrength = () => shoppingCompetition?.strength || "-";
 
   const getFilterLabel = () => {
     const periodLabel = PERIOD_OPTIONS.find(option => option.value === selectedPeriod)?.label || "1개월";
@@ -527,41 +387,7 @@ export default function UnifiedInsights() {
       if (data.success) {
         // Store chart data
         setChartData(data);
-        setTrendComparisonData((previous: any) => {
-          if (activeInsightTab !== "seller") {
-            return data;
-          }
-
-          const previousChartData = previous || trendComparisonData || chartData;
-          const previousShopping = previousChartData?.shopping || {};
-          const nextShopping = data.shopping || {};
-          const mergedShopping = {
-            ...previousShopping,
-            ...nextShopping,
-          };
-          const mergedKeywords = Array.from(
-            new Set([
-              ...(previousChartData?.keywords || []),
-              ...(data.keywords || []),
-              ...Object.keys(mergedShopping),
-            ])
-          ).filter((keyword) => Array.isArray(mergedShopping[keyword]) && mergedShopping[keyword].length > 0);
-
-          return {
-            ...data,
-            keywords: mergedKeywords,
-            trend: {},
-            shopping: mergedShopping,
-            meta: {
-              ...(previousChartData?.meta || {}),
-              ...(data.meta || {}),
-              shoppingStatus: {
-                ...(previousChartData?.meta?.shoppingStatus || {}),
-                ...(data.meta?.shoppingStatus || {}),
-              },
-            },
-          };
-        });
+        setTrendComparisonData(null);
         setQuerySuccess(true);
         setQueryError("");
         setTrendFilterError("");
@@ -854,26 +680,19 @@ export default function UnifiedInsights() {
       results.forEach(({ combination, response }) => {
         if (!response?.success) return;
         const label = getChartSeriesLabel(baseKeyword, combination, combinations.length);
-        const series =
-          activeInsightTab === "content"
-            ? response.trend?.[baseKeyword] || Object.values(response.trend || {})[0] || []
-            : response.shopping?.[baseKeyword] || Object.values(response.shopping || {})[0] || [];
-        if (!Array.isArray(series) || series.length === 0) return;
+        const searchSeries = response.trend?.[baseKeyword] || Object.values(response.trend || {})[0];
+        const shoppingSeries = response.shopping?.[baseKeyword] || Object.values(response.shopping || {})[0];
+        const hasSearchSeries = Array.isArray(searchSeries) && searchSeries.length > 0;
+        const hasShoppingSeries = Array.isArray(shoppingSeries) && shoppingSeries.length > 0;
+        if (!hasSearchSeries && !hasShoppingSeries) return;
 
         chartKeywords.push(label);
-        if (activeInsightTab === "content") {
-          trend[label] = series;
-        } else {
-          shopping[label] = series;
-        }
+        if (hasSearchSeries) trend[label] = searchSeries;
+        if (hasShoppingSeries) shopping[label] = shoppingSeries;
       });
 
       if (chartKeywords.length === 0) {
-        setTrendFilterError(
-          activeInsightTab === "content"
-            ? "선택한 필터의 검색 트렌드 데이터를 불러오지 못했습니다."
-            : "선택한 필터의 쇼핑 트렌드 데이터를 불러오지 못했습니다."
-        );
+        setTrendFilterError("선택한 필터의 트렌드 데이터를 불러오지 못했습니다.");
         return;
       }
 
@@ -978,7 +797,7 @@ export default function UnifiedInsights() {
         <button
           type="button"
           onClick={handleApplyTrendFilters}
-          disabled={isTrendFilterLoading || keywords.length === 0}
+          disabled={isTrendFilterLoading || !hasAnalysisResults}
           className="col-span-2 h-10 self-end rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-400 md:col-span-1"
         >
           필터 적용
@@ -1012,120 +831,81 @@ export default function UnifiedInsights() {
         </div>
       )}
 
-      {searchMode === "analysis" && (
-        <div className="mb-4 flex w-full justify-center">
-          <div className="inline-flex rounded-full border border-slate-700/80 bg-slate-950/55 p-1">
-            {[
-              { value: "content" as const, label: "컨텐츠" },
-              { value: "seller" as const, label: "쇼핑" },
-            ].map((tab) => (
-              <button
-                key={tab.value}
-                type="button"
-                onClick={() => handleInsightTabChange(tab.value)}
-                className={`h-9 min-w-24 rounded-full px-5 text-sm transition-colors ${
-                  activeInsightTab === tab.value
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-950/40"
-                    : "text-slate-400 hover:text-slate-100"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Search Card */}
-      <div className="mx-auto mb-6 w-full max-w-3xl min-w-0 overflow-visible rounded-[18px] border border-white/25 bg-white p-1 shadow-[0_12px_28px_rgba(21,140,255,0.16)] md:mb-8 md:rounded-[20px]">
-        <div className="relative flex items-center gap-0">
-          {activeInsightTab !== "seller" && (
-            <>
-              <div className="relative shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setIsSearchModeOpen((open) => !open)}
-                  className="flex h-9 w-16 items-center justify-center gap-0.5 rounded-[14px] whitespace-nowrap text-[9px] font-medium text-blue-600 transition-colors hover:bg-slate-100 lg:h-10 lg:w-32 lg:gap-2 lg:text-sm"
-                  aria-haspopup="listbox"
-                  aria-expanded={isSearchModeOpen}
-                >
-                  <span>{SEARCH_MODE_OPTIONS.find((option) => option.value === searchMode)?.label}</span>
-                  <ChevronDown
-                    className={`h-3.5 w-3.5 text-slate-500 transition-transform lg:h-4 lg:w-4 ${isSearchModeOpen ? "rotate-180" : ""}`}
-                    aria-hidden="true"
-                  />
-                </button>
-                {isSearchModeOpen && (
-                  <div className="absolute left-0 top-[2.6rem] z-40 w-28 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl shadow-blue-950/20 lg:top-[2.9rem] lg:w-40 lg:rounded-2xl" role="listbox">
-                    {SEARCH_MODE_OPTIONS.map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => {
-                          setSearchMode(option.value);
-                          setIsSearchModeOpen(false);
-                        }}
-                        className={`block w-full px-3 py-2 text-left text-xs transition-colors md:px-4 md:py-2.5 md:text-sm ${
-                          searchMode === option.value
-                            ? "bg-blue-50 text-blue-600"
-                            : "text-slate-700 hover:bg-slate-50"
-                        }`}
-                        role="option"
-                        aria-selected={searchMode === option.value}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="h-4 w-px shrink-0 bg-slate-200 md:h-5" aria-hidden="true" />
-            </>
-          )}
+      <div className="mb-6 flex w-full flex-col items-center md:mb-8">
+        <form
+          className="heroSearch"
+          role="search"
+          aria-label="네이버 트렌드 분석"
+          onSubmit={event => {
+            event.preventDefault();
+            if (!authLoading && !isLoading && !isBlogLoading && !isBlogPostRankLoading) handleSearch();
+          }}
+        >
           <input
             id="keyword"
             type="text"
             value={keywordInput}
-            onChange={(e) => setKeywordInput(e.target.value)}
-            onFocus={() => setIsKeywordInputFocused(true)}
-            onBlur={() => setIsKeywordInputFocused(false)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleSearch();
-            }}
+            onChange={event => setKeywordInput(event.target.value)}
             placeholder={
-              isKeywordInputFocused
-                ? ""
-                : searchMode === "rank"
-                  ? "블로그 주소를 입력하세요."
-                  : searchMode === "postRank"
-                    ? "블로그 게시글 URL을 입력하세요."
+              searchMode === "rank"
+                ? "블로그 주소를 입력하세요."
+                : searchMode === "postRank"
+                  ? "블로그 게시글 URL을 입력하세요."
                   : "분석할 검색어를 입력하세요."
             }
+            aria-label={searchMode === "analysis" ? "분석할 검색어" : "분석할 블로그 주소"}
             autoComplete="off"
-            className="h-9 min-w-0 flex-1 rounded-[14px] border-0 bg-transparent px-2.5 text-[13px] font-normal text-slate-950 placeholder-slate-400 outline-none md:h-10 md:px-3 md:text-sm md:font-medium"
+            className="heroSearchInput"
           />
-          <button
-            onClick={handleSearch}
-            disabled={authLoading || isLoading || isBlogLoading || isBlogPostRankLoading}
-            className="h-9 shrink-0 rounded-[14px] bg-blue-600 px-3 text-[13px] font-semibold text-white transition-colors hover:bg-blue-500 disabled:bg-slate-300 disabled:text-slate-500 md:h-10 md:w-24 md:text-sm"
-          >
-            분석
-          </button>
-        </div>
+          <div className="heroSearchActions">
+            <DropdownMenu modal={false} open={isSearchModeOpen} onOpenChange={setIsSearchModeOpen}>
+              <DropdownMenuTrigger
+                type="button"
+                className="heroSearchFilterButton isNaver"
+                aria-label={`분석 방식 선택: ${SEARCH_MODE_OPTIONS.find(option => option.value === searchMode)?.label}`}
+                title="분석 방식 선택"
+              >
+                <Plus size={18} aria-hidden="true" />
+                <span>{SEARCH_MODE_OPTIONS.find(option => option.value === searchMode)?.label}</span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" sideOffset={8} collisionPadding={12} className="heroSearchMenu" aria-label="분석 방식">
+                <DropdownMenuRadioGroup
+                  value={searchMode}
+                  onValueChange={value => {
+                    const mode = SEARCH_MODE_OPTIONS.find(option => option.value === value);
+                    if (mode) setSearchMode(mode.value);
+                  }}
+                >
+                  {SEARCH_MODE_OPTIONS.map(option => (
+                    <DropdownMenuRadioItem key={option.value} value={option.value} className="heroSearchMenuItem isNaver">
+                      {option.label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <div className="flex items-center gap-1">
+              {searchMode === "analysis" && !isLoading && (
+                <VoiceSearchButton onTranscript={text => setKeywordInput(value => [value.trimEnd(), text].filter(Boolean).join(" "))} />
+              )}
+              <button
+                type="submit"
+                className="heroSearchButton"
+                aria-label="분석"
+                title="분석"
+                disabled={!keywordInput.trim() || authLoading || isLoading || isBlogLoading || isBlogPostRankLoading}
+              >
+                <ArrowUp size={19} aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        </form>
         {queryError && !isLoading && !isBlogLoading && !querySuccess && !chartData && !blogAnalysisData && (
-          <p className="mt-3 text-sm text-red-300">{queryError}</p>
+          <p className="mt-3 text-sm text-red-300" role="alert">{queryError}</p>
         )}
       </div>
 
       {/* Empty State */}
-      {searchMode === "analysis" && keywords.length === 0 && !isLoading && !querySuccess && (
-        <div className="mt-8 p-8 text-center bg-slate-900 bg-opacity-30 border border-slate-700 rounded-lg min-h-[260px] sm:min-h-[320px] lg:min-h-[380px] flex items-center justify-center">
-          <p className="text-slate-400">
-            검색어를 입력하고 검색 버튼을 눌러주세요.
-          </p>
-        </div>
-      )}
-
       {searchMode === "rank" && !isBlogLoading && !blogAnalysisData && !queryError && (
         <div className="mt-8 flex min-h-[260px] items-center justify-center rounded-lg border border-slate-700 bg-slate-900/30 p-8 text-center sm:min-h-[320px] lg:min-h-[380px]">
           <p className="text-slate-400">
@@ -1417,7 +1197,7 @@ export default function UnifiedInsights() {
       )}
 
       {/* Chart Display */}
-      {searchMode === "analysis" && !isLoading && querySuccess && chartData && (
+      {searchMode === "analysis" && (
         <div className="mt-8 space-y-6">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-5">
@@ -1443,21 +1223,20 @@ export default function UnifiedInsights() {
               <div className="grid grid-cols-3 gap-2 md:gap-3">
                 <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-slate-800/70 p-2 text-center md:p-3">
                   <p className="text-xs text-slate-500">PC</p>
-                  <p className="mt-2 max-w-full truncate text-sm font-medium text-slate-300 md:text-xl md:font-bold">{formatNumber(primaryMetric?.monthlyPcSearches)}</p>
+                  <p className="mt-2 max-w-full truncate text-sm font-medium text-slate-300 md:text-xl md:font-bold">{hasAnalysisResults && formatNumber(primaryMetric?.monthlyPcSearches)}</p>
                 </div>
                 <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-slate-800/70 p-2 text-center md:p-3">
                   <p className="text-xs text-slate-500">모바일</p>
-                  <p className="mt-2 max-w-full truncate text-sm font-medium text-slate-300 md:text-xl md:font-bold">{formatNumber(primaryMetric?.monthlyMobileSearches)}</p>
+                  <p className="mt-2 max-w-full truncate text-sm font-medium text-slate-300 md:text-xl md:font-bold">{hasAnalysisResults && formatNumber(primaryMetric?.monthlyMobileSearches)}</p>
                 </div>
                 <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-blue-950/50 p-2 text-center md:p-3">
                   <p className="text-xs text-blue-300">전체</p>
-                  <p className="mt-2 max-w-full truncate text-sm font-medium text-white md:text-xl md:font-bold">{formatNumber(primaryMetric?.monthlyTotalSearches)}</p>
+                  <p className="mt-2 max-w-full truncate text-sm font-medium text-white md:text-xl md:font-bold">{hasAnalysisResults && formatNumber(primaryMetric?.monthlyTotalSearches)}</p>
                 </div>
               </div>
-              {keywordTool?.error && <p className="mt-3 text-xs text-slate-500">{keywordTool.error}</p>}
+              {hasAnalysisResults && keywordTool?.error && <p className="mt-3 text-xs text-slate-500">{keywordTool.error}</p>}
             </div>
 
-            {activeInsightTab === "content" ? (
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
@@ -1482,116 +1261,52 @@ export default function UnifiedInsights() {
                 <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-slate-800/70 p-2 text-center md:p-3">
                   <p className="text-xs text-slate-500">블로그 발행수</p>
                   <p className="mt-2 max-w-full truncate text-sm font-medium text-slate-300 md:text-xl md:font-bold">
-                    {formatNumber(blogTotalDocuments)}
+                    {hasAnalysisResults && formatNumber(blogTotalDocuments)}
                   </p>
                 </div>
                 <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-slate-800/70 p-2 text-center md:p-3">
                   <p className="text-xs text-slate-500">경쟁강도</p>
-                  <p className="mt-2 max-w-full truncate text-sm font-medium text-slate-300 md:text-xl md:font-bold">{getBlogCompetitionStrength(searchRatio)}</p>
+                  <p className="mt-2 max-w-full truncate text-sm font-medium text-slate-300 md:text-xl md:font-bold">{hasAnalysisResults && getBlogCompetitionStrength(searchRatio)}</p>
                 </div>
                 <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-blue-950/50 p-2 text-center md:p-3">
                   <p className="text-xs text-blue-300">검색 비율</p>
-                  <p className="mt-2 max-w-full truncate text-sm font-medium text-white md:text-xl md:font-bold">{formatDecimal(searchRatio)}</p>
+                  <p className="mt-2 max-w-full truncate text-sm font-medium text-white md:text-xl md:font-bold">{hasAnalysisResults && formatDecimal(searchRatio)}</p>
                 </div>
               </div>
             </div>
-            ) : (
-            <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-5">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Shopping Competition</p>
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <h3 className="text-lg font-semibold text-white">쇼핑 경쟁도</h3>
-                    <button
-                      type="button"
-                      aria-label="쇼핑 경쟁도 안내"
-                      onClick={() => setInfoPopup({
-                        title: "쇼핑 경쟁도",
-                        body: "해당 키워드의 쇼핑 데이터와 검색광고 지표를 함께 참고해 쇼핑 관점의 경쟁 정도를 표시합니다.",
-                      })}
-                      className="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-500 transition-colors hover:text-blue-300"
-                    >
-                      <CircleAlert className="h-3.5 w-3.5" aria-hidden="true" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-2 md:gap-3">
-                <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-slate-800/70 p-2 text-center md:p-3">
-                  <p className="text-xs text-slate-500">상품 수</p>
-                  <p className="mt-2 max-w-full truncate text-sm font-medium text-slate-300 md:text-xl md:font-bold">
-                    {formatNumber(shoppingCompetition?.productCount)}
-                  </p>
-                </div>
-                <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-slate-800/70 p-2 text-center md:p-3">
-                  <p className="text-xs text-slate-500">경쟁강도</p>
-                  <p className="mt-2 max-w-full truncate text-sm font-medium text-slate-300 md:text-xl md:font-bold">{getShoppingCompetitionStrength()}</p>
-                </div>
-                <div className="flex h-20 min-w-0 flex-col items-center justify-between rounded-lg bg-blue-950/50 p-2 text-center md:p-3">
-                  <p className="text-xs text-blue-300">월 검색량</p>
-                  <p className="mt-2 max-w-full truncate text-sm font-medium text-white md:text-xl md:font-bold">
-                    {formatNumber(shoppingCompetition?.monthlySearches)}
-                  </p>
-                </div>
-              </div>
-              {shoppingCompetition?.error && <p className="mt-3 text-xs text-slate-500">{shoppingCompetition.error}</p>}
-            </div>
-            )}
           </div>
 
-          <div className={`grid grid-cols-1 gap-4 ${activeInsightTab === "content" ? "md:grid-cols-3" : "md:grid-cols-4"}`}>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-4 text-center">
-              <p className="text-xs font-semibold text-slate-200">{activeInsightTab === "content" ? "검색 관심도" : "쇼핑 관심도"}</p>
-              <p className="mt-2 text-2xl font-bold text-white">
-                {activeInsightTab === "content" ? (
-                  formatRatio(primaryTrendSummary.latest)
-                ) : (
-                  <span className="inline-flex items-baseline justify-center gap-2">
-                    <span>{getShoppingIndexGrade(primaryShoppingSummary.latest)}</span>
-                    <span className="text-sm font-medium text-slate-300">{formatRatio(primaryShoppingSummary.latest)}</span>
-                  </span>
-                )}
+              <p className="text-xs font-semibold text-slate-200">검색 관심도</p>
+              <p className="mt-2 min-h-[1lh] text-2xl font-bold text-white">
+                {hasAnalysisResults && formatRatio(primaryTrendSummary.latest)}
               </p>
-              <p className="mt-1 text-xs text-slate-300">
-                직전 구간 대비 {activeInsightTab === "content" ? formatDelta(primaryTrendSummary.delta) : formatDelta(primaryShoppingSummary.delta)}
+              <p className="mt-1 min-h-[1lh] text-xs text-slate-300">
+                {hasAnalysisResults && `직전 구간 대비 ${formatDelta(primaryTrendSummary.delta)}`}
               </p>
             </div>
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-4 text-center">
-              <p className="text-xs font-semibold text-slate-200">
-                {activeInsightTab === "content" ? "월간 클릭량" : "월간 쇼핑 클릭량"}
+              <p className="text-xs font-semibold text-slate-200">월간 클릭량</p>
+              <p className="mt-2 min-h-[1lh] text-2xl font-bold text-white">
+                {hasAnalysisResults && formatDecimal(primaryMetric?.monthlyTotalClicks)}
               </p>
-              <p className="mt-2 text-2xl font-bold text-white">
-                {activeInsightTab === "content"
-                  ? formatDecimal(primaryMetric?.monthlyTotalClicks)
-                  : getShoppingIndexGrade(primaryShoppingMonthlyClickIndex)}
-              </p>
-              <p className="mt-1 text-xs text-slate-300">
-                {activeInsightTab === "content"
-                  ? `PC ${formatDecimal(primaryMetric?.monthlyPcClicks)} · 모바일 ${formatDecimal(primaryMetric?.monthlyMobileClicks)}`
-                  : formatRatio(primaryShoppingMonthlyClickIndex)}
+              <p className="mt-1 min-h-[1lh] text-xs text-slate-300">
+                {hasAnalysisResults && `PC ${formatDecimal(primaryMetric?.monthlyPcClicks)} · 모바일 ${formatDecimal(primaryMetric?.monthlyMobileClicks)}`}
               </p>
             </div>
-            {activeInsightTab === "seller" && (
-              <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-4 text-center">
-                <p className="text-xs font-semibold text-slate-200">상품 평균가</p>
-                <p className="mt-2 text-2xl font-bold text-white">{formatNumber(shoppingCompetition?.averagePrice, "원")}</p>
-                <p className="mt-1 text-xs text-slate-300">상위 상품 기준</p>
-              </div>
-            )}
             <div className="relative rounded-lg border border-blue-500/20 bg-slate-900/50 p-4 text-center">
               <div className="relative inline-flex items-center justify-center gap-1.5">
-                <p className="text-xs font-semibold text-slate-200">{activeInsightTab === "content" ? "키워드 등급" : "쇼핑 광고"}</p>
-                {activeInsightTab === "content" && (
-                  <button
-                    type="button"
-                    aria-label="키워드 등급 기준 안내"
-                    onClick={() => setIsKeywordGradeInfoOpen((isOpen) => !isOpen)}
-                    className="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-500 transition-colors hover:text-blue-300"
-                  >
-                    <CircleAlert className="h-3.5 w-3.5" aria-hidden="true" />
-                  </button>
-                )}
-                {activeInsightTab === "content" && isKeywordGradeInfoOpen && (
+                <p className="text-xs font-semibold text-slate-200">키워드 등급</p>
+                <button
+                  type="button"
+                  aria-label="키워드 등급 기준 안내"
+                  onClick={() => setIsKeywordGradeInfoOpen((isOpen) => !isOpen)}
+                  className="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-500 transition-colors hover:text-blue-300"
+                >
+                  <CircleAlert className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+                {isKeywordGradeInfoOpen && (
                   <div className="absolute left-1/2 top-6 z-20 w-64 -translate-x-1/2 rounded-lg border border-slate-200 bg-white p-3 text-left shadow-xl shadow-black/20">
                     <p className="text-xs font-medium text-slate-900">수치 기준 안내</p>
                     <p className="mt-2 text-xs leading-5 text-slate-600">
@@ -1600,65 +1315,60 @@ export default function UnifiedInsights() {
                   </div>
                 )}
               </div>
-              <p className="mt-2 text-2xl font-bold text-white">{getCompetitionLabel(primaryMetric?.competition)}</p>
-              <p className="mt-1 text-xs text-slate-300">
-                {activeInsightTab === "content"
-                  ? `광고 노출 깊이 ${formatDecimal(primaryMetric?.averageAdDepth)}`
-                  : formatDecimal(primaryMetric?.averageAdDepth)}
+              <p className="mt-2 min-h-[1lh] text-2xl font-bold text-white">{hasAnalysisResults && getCompetitionLabel(primaryMetric?.competition)}</p>
+              <p className="mt-1 min-h-[1lh] text-xs text-slate-300">
+                {hasAnalysisResults && `광고 노출 깊이 ${formatDecimal(primaryMetric?.averageAdDepth)}`}
               </p>
             </div>
           </div>
 
-          {activeInsightTab === "content" && (
-            <div className="rounded-lg border border-slate-700 bg-slate-900/35 p-4">
-              <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <h3 className="text-base font-semibold text-white">추천 키워드</h3>
-                </div>
-              </div>
-              <div className="-mx-1 overflow-x-auto pb-1">
-                <div className="flex w-max max-w-none gap-2 px-1">
-                  {recommendedKeywords.map((item) => (
-                    <button
-                      key={item.keyword}
-                      type="button"
-                      onClick={() => {
-                        setKeywordInput(item.keyword);
-                        runQuery([item.keyword]);
-                      }}
-                      className="whitespace-nowrap rounded-full border border-blue-500/25 bg-blue-500/10 px-3 py-1.5 text-sm font-medium text-blue-100 transition-colors hover:border-blue-400/50 hover:bg-blue-500/20"
-                    >
-                      {item.keyword}
-                    </button>
-                  ))}
-                </div>
+          <div className="rounded-lg border border-slate-700 bg-slate-900/35 p-4">
+            <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-white">추천 키워드</h3>
               </div>
             </div>
-          )}
+            <div className="-mx-1 overflow-x-auto pb-1">
+              <div className="flex w-max max-w-none gap-2 px-1">
+                {hasAnalysisResults && recommendedKeywords.map((item) => (
+                  <button
+                    key={item.keyword}
+                    type="button"
+                    onClick={() => {
+                      setKeywordInput(item.keyword);
+                      runQuery([item.keyword]);
+                    }}
+                    className="whitespace-nowrap rounded-full border border-blue-500/25 bg-blue-500/10 px-3 py-1.5 text-sm font-medium text-blue-100 transition-colors hover:border-blue-400/50 hover:bg-blue-500/20"
+                  >
+                    {item.keyword}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
 
           <div className="rounded-lg border border-slate-700 bg-slate-900/35 p-4">
             <div className="mb-3 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
               <div>
-                <h3 className="text-base font-semibold text-white">{activeInsightTab === "content" ? "연관 키워드" : "쇼핑 연관 키워드"}</h3>
+                <h3 className="text-base font-semibold text-white">연관 키워드</h3>
               </div>
             </div>
             <div className="overflow-x-auto rounded-lg border border-slate-700/70">
               <div className="grid min-w-[620px] grid-cols-[150px_76px_120px_120px_96px] gap-0 border-b border-slate-700/70 bg-slate-950/50 px-4 py-3 text-sm font-semibold text-slate-100 md:grid-cols-[minmax(180px,2fr)_minmax(76px,0.7fr)_minmax(96px,0.9fr)_minmax(96px,0.9fr)_minmax(86px,0.8fr)]">
                 <span className="sticky left-0 z-10 relative pr-3 after:pointer-events-none after:absolute after:bottom-0 after:right-0 after:top-0 after:w-4 after:bg-gradient-to-r after:from-transparent after:to-slate-950/20">키워드</span>
-                <span className="text-right">{activeInsightTab === "content" ? "등급" : "경쟁"}</span>
+                <span className="text-right">등급</span>
                 <span className="text-right">검색량</span>
-                <span className="text-right">{activeInsightTab === "content" ? "클릭량" : "상품 수"}</span>
-                {activeInsightTab === "content" ? (
+                <span className="text-right">클릭량</span>
                 <div className="relative flex justify-end">
-                  <button
+                  {hasAnalysisResults ? <button
                     type="button"
                     onClick={() => setIsRelatedSortOpen(!isRelatedSortOpen)}
                     className="inline-flex items-center gap-1 text-right text-slate-100 transition-colors hover:text-blue-300"
                   >
                     <span>유사도</span>
                     <ListFilter className="h-3.5 w-3.5" aria-hidden="true" />
-                  </button>
-                  {isRelatedSortOpen && (
+                  </button> : <span>유사도</span>}
+                  {hasAnalysisResults && isRelatedSortOpen && (
                     <div className="absolute right-0 top-6 z-20 w-24 overflow-hidden rounded-lg border border-slate-700 bg-slate-950 shadow-xl shadow-black/30">
                       {[
                         { value: "related" as const, label: "관련순" },
@@ -1681,11 +1391,8 @@ export default function UnifiedInsights() {
                     </div>
                   )}
                 </div>
-                ) : (
-                  <span className="text-right">평균가</span>
-                )}
               </div>
-              {activeInsightTab === "content" ? visibleRelatedKeywords.map((item) => (
+              {hasAnalysisResults && visibleRelatedKeywords.map((item) => (
                 <button
                   key={item.keyword}
                   type="button"
@@ -1701,65 +1408,23 @@ export default function UnifiedInsights() {
                   <span className="text-right text-slate-400">{formatDecimal(item.monthlyTotalClicks)}</span>
                   <span className="text-right text-slate-300">{formatPercent(item.similarity)}</span>
                 </button>
-              )) : visibleShoppingRelatedKeywords.map((item) => (
-                <button
-                  key={item.keyword}
-                  type="button"
-                  onClick={() => {
-                    setKeywordInput(item.keyword);
-                    runQuery([item.keyword]);
-                  }}
-                  className="group grid min-h-11 min-w-[620px] grid-cols-[150px_76px_120px_120px_96px] gap-0 border-b border-slate-800/80 px-4 py-2 text-left text-sm text-slate-200 transition-colors last:border-b-0 hover:bg-slate-800/70 md:w-full md:grid-cols-[minmax(180px,2fr)_minmax(76px,0.7fr)_minmax(96px,0.9fr)_minmax(96px,0.9fr)_minmax(86px,0.8fr)]"
-                >
-                  <span className="sticky left-0 z-10 relative min-w-0 truncate pr-3 after:pointer-events-none after:absolute after:bottom-0 after:right-0 after:top-0 after:w-4 after:bg-gradient-to-r after:from-transparent after:to-slate-900/20">{item.keyword}</span>
-                  <span className="text-right text-blue-300">{item.strength || "-"}</span>
-                  <span className="text-right text-slate-300">{formatNumber(item.monthlySearches)}</span>
-                  <span className="text-right text-slate-400">{formatNumber(item.productCount)}</span>
-                  <span className="text-right text-slate-300">{formatNumber(item.averagePrice, "원")}</span>
-                </button>
               ))}
-              {activeInsightTab === "seller" && shoppingRelatedKeywords.length === 0 && (
-                <div className="px-4 py-5 text-center text-sm text-slate-500">
-                  쇼핑 연관 키워드를 확인할 수 없습니다.
-                </div>
-              )}
             </div>
-            {((activeInsightTab === "content" && hasLockedRelatedKeywords) ||
-              (activeInsightTab === "seller" && hasLockedShoppingRelatedKeywords)) && (
-              <div className="mt-4 flex flex-col items-center gap-3">
-                <div className="flex flex-col items-center py-1">
-                  {[0, 1, 2].map((index) => (
-                    <ChevronDown
-                      key={index}
-                      className="relatedMoreArrow h-4 w-4 text-blue-400"
-                      style={{ animationDelay: `${index * 220}ms` }}
-                      aria-hidden="true"
-                    />
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  className="min-h-11 rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold leading-none text-white transition-colors hover:bg-blue-500"
-                >
-                  {activeInsightTab === "content" ? "더 많은 연관 키워드 확인" : "더 많은 쇼핑 연관 키워드 확인"}
-                </button>
-              </div>
-            )}
           </div>
 
           <div className="bg-slate-900 bg-opacity-50 border border-cyan-700 border-opacity-30 rounded-lg px-4 pt-4 pb-5 md:px-6 md:pt-6 md:pb-6 h-auto min-h-0">
             {/* Chart Header */}
             <div className="mb-4 md:mb-6">
               <h3 className="mb-1 text-base font-medium text-white md:mb-2 md:text-lg md:font-semibold">
-                {activeInsightTab === "content" ? "검색 트렌드 비교" : "쇼핑 트렌드 비교"}
+                {comparisonChartTitle}
               </h3>
-              <div className="text-xs font-normal text-slate-400 md:text-sm">
+              {hasAnalysisResults && <div className="text-xs font-normal text-slate-400 md:text-sm">
                 <p className="mb-1">{keywords.join(", ")}</p>
                 <p>{startDateForChart} – {endDateForChart}</p>
                 <p className="mt-1 text-xs text-slate-500">
                   {filterLabelForChart}
                 </p>
-              </div>
+              </div>}
               {renderTrendFilters()}
             </div>
 
@@ -1768,80 +1433,22 @@ export default function UnifiedInsights() {
               {isTrendFilterLoading && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-slate-950/70 backdrop-blur-sm">
                   <div className="rounded-lg border border-blue-500/20 bg-slate-900 px-5 py-3 text-sm font-medium text-slate-200 shadow-xl shadow-black/30">
-                    {activeInsightTab === "content" ? "검색 트렌드" : "쇼핑 트렌드"} 데이터를 불러오는 중입니다...
+                    {comparisonChartTitle} 데이터를 불러오는 중입니다...
                   </div>
                 </div>
               )}
-              <UnifiedChart
-                data={{
-                  keywords: displayedTrendData?.keywords || [],
-                  trend: activeInsightTab === "content" ? displayedTrendData?.trend || {} : {},
-                  shopping: activeInsightTab === "content" ? {} : displayedTrendData?.shopping || {},
-                  shoppingStatus: chartData?.meta?.shoppingStatus,
-                }}
-                visibleLayers={{
-                  trend: activeInsightTab === "content",
-                  shopping: activeInsightTab === "seller",
-                }}
+              {hasAnalysisResults && <UnifiedChart
+                data={comparisonChartData}
+                visibleLayers={comparisonChartLayers}
                 timeUnit={timeUnitForChart}
                 startDate={startDateForChart}
                 endDate={endDateForChart}
-              />
+              />}
             </div>
           </div>
         </div>
       )}
 
-      {/* Error State with Chart Fallback */}
-      {!isLoading && !querySuccess && queryError && chartData && (
-        <div className="mt-8">
-          <div className="p-4 bg-red-500 bg-opacity-20 border border-red-500 border-opacity-30 rounded-lg mb-6 text-red-300 text-sm">
-            {queryError}
-          </div>
-          {/* Show previous chart if available */}
-          <div className="bg-slate-900 bg-opacity-50 border border-cyan-700 border-opacity-30 rounded-lg px-4 pt-4 pb-5 md:p-6">
-            <div className="mb-4 md:mb-6">
-              <h3 className="mb-1 text-base font-medium text-white md:mb-2 md:text-lg md:font-semibold">
-                {activeInsightTab === "content" ? "검색 트렌드 비교" : "쇼핑 트렌드 비교"}
-              </h3>
-              <div className="text-xs font-normal text-slate-400 md:text-sm">
-                <p className="mb-1">{keywords.join(", ")}</p>
-                <p>{startDateForChart} – {endDateForChart}</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  {filterLabelForChart}
-                </p>
-              </div>
-              {renderTrendFilters()}
-            </div>
-            <div className="relative h-[300px] md:h-[480px]">
-              {isTrendFilterLoading && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-slate-950/70 backdrop-blur-sm">
-                  <div className="rounded-lg border border-blue-500/20 bg-slate-900 px-5 py-3 text-sm font-medium text-slate-200 shadow-xl shadow-black/30">
-                    {activeInsightTab === "content" ? "검색 트렌드" : "쇼핑 트렌드"} 데이터를 불러오는 중입니다...
-                  </div>
-                </div>
-              )}
-              <UnifiedChart
-                data={{
-                  keywords: displayedTrendData?.keywords || [],
-                  trend: activeInsightTab === "content" ? displayedTrendData?.trend || {} : {},
-                  shopping: activeInsightTab === "content" ? {} : displayedTrendData?.shopping || {},
-                  shoppingStatus: chartData?.meta?.shoppingStatus,
-                }}
-                visibleLayers={{
-                  trend: activeInsightTab === "content",
-                  shopping: activeInsightTab === "seller",
-                }}
-                timeUnit={timeUnitForChart}
-                startDate={startDateForChart}
-                endDate={endDateForChart}
-              />
-            </div>
-            {/* Mobile-specific bottom padding */}
-            <div className="md:hidden h-8"></div>
-          </div>
-        </div>
-      )}
       <GuestAccessPrompt
         open={guestAnalysisPromptOpen}
         description={NAVER_GUEST_DAILY_LIMIT_MESSAGE}

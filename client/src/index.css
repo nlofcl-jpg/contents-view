@@ -3153,26 +3153,25 @@ a {
 
 @media (max-width: 767px) {
   .issueFeaturedCard {
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
     margin-bottom: 22px;
   }
 
-  .issueFeaturedMedia {
-    aspect-ratio: 4 / 3;
-  }
-
   .issueFeaturedCopy {
-    gap: 5px;
+    gap: 8px;
   }
 
   .issueFeaturedTitle {
-    font-size: 15px;
+    font-size: 16px;
+    -webkit-line-clamp: 3;
   }
 
   .issueFeaturedExcerpt {
-    font-size: 12px;
-    line-height: 1.5;
-    -webkit-line-clamp: 2;
+    color: #c2cde0;
+    font-size: 13px;
+    line-height: 1.55;
+    -webkit-line-clamp: 3;
   }
 
   .issueFeaturedCopy > .issueRegistrationDate {

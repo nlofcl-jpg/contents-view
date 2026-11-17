@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { readHeroKeywords } from "@/lib/heroKeywords";
 import { useAuth } from "@/_core/hooks/useAuth";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
+import VoiceSearchButton from "@/components/VoiceSearchButton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const searchPlatforms = [
@@ -182,9 +183,12 @@ export default function Hero() {
                   </button>
                 )}
               </div>
-              <button type="submit" className="heroSearchButton" aria-label="분석" title="분석" disabled={!keyword.trim()}>
-                <ArrowUp size={19} aria-hidden="true" />
-              </button>
+              <div className="flex items-center gap-1">
+                <VoiceSearchButton onTranscript={text => setKeyword(value => [value.trimEnd(), text].filter(Boolean).join(" "))} />
+                <button type="submit" className="heroSearchButton" aria-label="분석" title="분석" disabled={!keyword.trim()}>
+                  <ArrowUp size={19} aria-hidden="true" />
+                </button>
+              </div>
             </div>
           </form>
           {popularKeywords.length > 0 && (
