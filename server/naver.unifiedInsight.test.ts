@@ -498,11 +498,13 @@ describe("naver.unifiedInsight - Phase 2", () => {
         json: async () => ({
           results: [
             {
-              keyword: "원피스",
+              title: "원피스",
+              keyword: ["원피스"],
               data: [{ period: "2026-05-13", ratio: 38.5 }],
             },
             {
-              keyword: "블라우스",
+              title: "블라우스",
+              keyword: ["블라우스"],
               data: [{ period: "2026-05-13", ratio: 22.3 }],
             },
           ],
@@ -530,6 +532,36 @@ describe("naver.unifiedInsight - Phase 2", () => {
     expect(result.trend["블라우스"][0]).toEqual({ period: "2026-05-13", ratio: 30.5 });
     expect(result.shopping["원피스"][0]).toEqual({ period: "2026-05-13", ratio: 38.5 });
     expect(result.shopping["블라우스"][0]).toEqual({ period: "2026-05-13", ratio: 22.3 });
+  });
+
+  it("retrieves missing shopping series separately when comparing keywords", async () => {
+    const period = "2026-05-13";
+    vi.stubGlobal("fetch", vi.fn(async (url: string, options?: RequestInit) => {
+      const reply = (results: unknown[]) => ({ ok: true, json: async () => ({ results }) });
+      const point = (ratio: number) => [{ period, ratio }];
+      if (url.endsWith("/datalab/search")) {
+        return reply([{ title: "러닝 화", data: point(60) }, { title: "노트북", data: point(80) }]);
+      }
+      if (url.endsWith("/shopping/category/keywords")) {
+        const body = JSON.parse(String(options?.body));
+        const keywords = body.keyword.map((item: { name: string }) => item.name);
+        if (keywords.includes("노트북")) return reply([{ title: "노트북", keyword: ["노트북"], data: point(90) }]);
+        if (keywords.includes("러닝화") && body.category === "50000001") {
+          return reply([{ title: "러닝화", keyword: ["러닝화"], data: point(70) }]);
+        }
+      }
+      return reply([]);
+    }));
+
+    try {
+      const caller = appRouter.createCaller({ user: null, req: {} as any, res: {} as any });
+      const request = { keywords: ["러닝 화", "노트북"], startDate: period, endDate: "2026-06-12", timeUnit: "date" as const };
+      const [result] = await caller.naver.unifiedInsightBatch({ requests: [request] });
+      expect(result.success).toBe(true);
+      expect(result.shopping).toEqual({ "러닝 화": [{ period, ratio: 70 }], 노트북: [{ period, ratio: 90 }] });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("should handle response with no keywords", async () => {

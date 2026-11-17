@@ -1239,7 +1239,11 @@ function getMatchedShoppingKeyword(shoppingData, fallbackKeyword) {
   const matched = (shoppingData.results || []).find(
     (item) => Array.isArray(item.data) && item.data.length > 0
   );
-  return matched?.keyword || matched?.title || fallbackKeyword;
+  return getShoppingResultNames(matched)[0] || fallbackKeyword;
+}
+function getShoppingResultNames(result) {
+  const keywords = Array.isArray(result?.keyword) ? result.keyword : [result?.keyword];
+  return [result?.title, ...keywords].filter((value) => typeof value === "string").map(normalizeKeywordInput);
 }
 var supabaseAdmin = ENV.supabaseUrl && ENV.supabaseServiceRoleKey ? createClient3(ENV.supabaseUrl, ENV.supabaseServiceRoleKey, {
   auth: {
@@ -1664,8 +1668,25 @@ async function fetchUnifiedInsight(input) {
       }
       return { category, data: shoppingData2 };
     };
-    const hasShoppingData = (shoppingData2) => {
-      return getShoppingDataPointCount(shoppingData2) > 0;
+    const categoriesToTry = requestedCategory === "auto" ? AUTO_SHOPPING_CATEGORIES : [requestedCategory];
+    const resolveShoppingTrend = async (keywordsToTry, primaryKeyword) => {
+      let lastResult;
+      for (const category of categoriesToTry) {
+        try {
+          const result2 = await fetchShoppingTrend(category, keywordsToTry);
+          const pointCount = getShoppingDataPointCount(result2.data);
+          const matchedKeyword = getMatchedShoppingKeyword(result2.data, primaryKeyword);
+          lastResult = { ...result2, matchedKeyword, pointCount };
+          if (pointCount > 0) return lastResult;
+        } catch (error) {
+          console.error("[Naver API] Shopping Trend API - Category failed", {
+            category,
+            error: error instanceof Error ? error.message : "Unknown error"
+          });
+        }
+      }
+      if (!lastResult) throw new Error("Shopping Trend API failed for all categories");
+      return lastResult;
     };
     const [trendSettled, shoppingSettled] = await Promise.allSettled([
       (async () => {
@@ -1735,30 +1756,7 @@ async function fetchUnifiedInsight(input) {
           timeUnit: input.timeUnit,
           keywordVariants: shoppingKeywordsToTry
         });
-        const categoriesToTry = requestedCategory === "auto" ? AUTO_SHOPPING_CATEGORIES : [requestedCategory];
-        let bestResult = null;
-        let lastResult = null;
-        for (const category of categoriesToTry) {
-          try {
-            const result2 = await fetchShoppingTrend(category, shoppingKeywordsToTry);
-            const pointCount = getShoppingDataPointCount(result2.data);
-            const matchedKeyword = getMatchedShoppingKeyword(result2.data, primaryShoppingKeyword);
-            lastResult = { ...result2, matchedKeyword, pointCount };
-            if (hasShoppingData(result2.data)) {
-              bestResult = { ...result2, matchedKeyword, pointCount };
-              break;
-            }
-          } catch (error) {
-            console.error("[Naver API] Shopping Trend API - Category failed", {
-              category,
-              error: error instanceof Error ? error.message : "Unknown error"
-            });
-          }
-        }
-        const resolvedResult = bestResult || lastResult;
-        if (!resolvedResult) {
-          throw new Error("Shopping Trend API failed for all categories");
-        }
+        const resolvedResult = await resolveShoppingTrend(shoppingKeywordsToTry, primaryShoppingKeyword);
         const shoppingEndTime = Date.now();
         const shoppingResponseTime = shoppingEndTime - shoppingStartTime;
         console.log("[Naver API] Shopping Trend API - Success", {
@@ -2036,25 +2034,24 @@ async function fetchUnifiedInsight(input) {
     const matchedShoppingCategory = shoppingSuccess ? shoppingSettled.value.category : null;
     const matchedShoppingKeyword = shoppingSuccess ? shoppingSettled.value.matchedKeyword : null;
     const shoppingResult = {};
-    if (shoppingData.results && Array.isArray(shoppingData.results)) {
-      if (normalizedKeywords.length === 1) {
-        const matchedItem = shoppingData.results.find((item) => item.keyword === matchedShoppingKeyword && Array.isArray(item.data) && item.data.length > 0) || shoppingData.results.find((item) => Array.isArray(item.data) && item.data.length > 0);
-        if (matchedItem) {
-          shoppingResult[normalizedKeywords[0]] = matchedItem.data.map((d) => ({
-            period: d.period,
-            ratio: d.ratio
-          }));
-        }
-      } else {
-        shoppingData.results.forEach((item) => {
-          if (item.keyword && item.data) {
-            shoppingResult[item.keyword] = item.data.map((d) => ({
-              period: d.period,
-              ratio: d.ratio
-            }));
-          }
-        });
-      }
+    const shoppingPoints = (item) => Array.isArray(item?.data) && item.data.length > 0;
+    const shoppingRows = Array.isArray(shoppingData.results) ? shoppingData.results.filter(shoppingPoints) : [];
+    const setShoppingSeries = (keyword, item) => {
+      if (item) shoppingResult[keyword] = item.data.map(({ period, ratio }) => ({ period, ratio }));
+    };
+    if (normalizedKeywords.length === 1) {
+      setShoppingSeries(primaryShoppingKeyword, shoppingRows[0]);
+    } else if (normalizedKeywords.length > 1) {
+      const missingKeywords = normalizedKeywords.filter((keyword) => {
+        const item = shoppingRows.find((row) => getShoppingResultNames(row).includes(keyword));
+        setShoppingSeries(keyword, item);
+        return !item;
+      });
+      await Promise.allSettled(missingKeywords.map(async (keyword) => {
+        const result2 = await resolveShoppingTrend(generateShoppingKeywordVariants(keyword), keyword);
+        const row = Array.isArray(result2.data.results) ? result2.data.results.find(shoppingPoints) : void 0;
+        setShoppingSeries(keyword, row);
+      }));
     }
     console.log("[Naver API] Unified Insight success", {
       keywords: normalizedKeywords.length,

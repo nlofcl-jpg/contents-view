@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useIsMobile } from '@/hooks/useMobile';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -108,25 +109,6 @@ const getAllDates = (data: UnifiedChartData): string[] => {
 };
 
 /**
- * 기간별 모바일 라벨 개수 결정
- */
-const getMobileLabelCount = (startDate: string, endDate: string): number => {
-  const start = parseLocalDate(startDate);
-  const end = parseLocalDate(endDate);
-  const durationDays = getDaysBetween(start, end);
-
-  if (durationDays <= 30) {
-    return 6; // 1개월: 6개
-  } else if (durationDays <= 90) {
-    return 7; // 3개월: 7개
-  } else if (durationDays <= 180) {
-    return 7; // 6개월: 7개
-  } else {
-    return 7; // 1년: 7개
-  }
-};
-
-/**
  * 라벨 표시 인덱스 계산 (데이터 배열 길이 기준)
  * 첫 번째와 마지막은 반드시 포함, 중간은 균등 분배
  */
@@ -181,32 +163,6 @@ const formatMobileDateLabel = (
   }
 };
 
-/**
- * 날짜를 라벨로 포맷팅
- * 첫/마지막: YYYY.M.D
- * 중간: M.D (단, 연도 변경 지점은 YYYY.M.D)
- */
-const formatDateLabel = (
-  dateStr: string,
-  isFirstOrLast: boolean,
-  previousYear?: number
-): string => {
-  const [year, month, day] = dateStr.split('-').map(Number);
-
-  // 첫 번째와 마지막은 연도 포함
-  if (isFirstOrLast) {
-    return `${year}.${month}.${day}`;
-  }
-
-  // 연도가 바뀌는 지점은 연도 포함
-  if (previousYear !== undefined && previousYear !== year) {
-    return `${year}.${month}.${day}`;
-  }
-
-  // 그 외는 월.일만
-  return `${month}.${day}`;
-};
-
 export const UnifiedChart: React.FC<UnifiedChartProps> = ({
   data,
   visibleLayers,
@@ -215,48 +171,27 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
   endDate,
 }) => {
   const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
+  const plotRef = useRef<HTMLDivElement>(null);
+  const [plotWidth, setPlotWidth] = useState(0);
+  const isMobile = useIsMobile();
+
+  useEffect(() => {
+    const plot = plotRef.current;
+    if (!plot || !isMobile) return;
+    const measure = () => setPlotWidth(plot.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(plot);
+    return () => observer.disconnect();
+  }, [isMobile]);
 
   // 모든 날짜 수집 (원본 데이터 전체)
   const allDates = useMemo(() => getAllDates(data), [data]);
 
-  // 모바일 여부 확인
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-
-  // 기간별 모바일 라벨 개수 결정
-  const mobileLabelCount = useMemo(() => {
-    if (!isMobile) return 7;
-    return getMobileLabelCount(startDate, endDate);
-  }, [isMobile, startDate, endDate]);
-
-  // 라벨 표시 인덱스 계산
+  const labelCount = isMobile ? Math.max(2, Math.min(5, Math.floor((plotWidth - 32) / 54))) : 7;
   const labelIndexes = useMemo(() => {
-    const count = isMobile ? mobileLabelCount : 7;
-    return createLabelIndexes(allDates.length, count);
-  }, [allDates.length, isMobile, mobileLabelCount]);
-
-  // 라벨 배열 생성 (표시할 라벨만)
-  const displayLabels = useMemo(() => {
-    const labels: string[] = [];
-    let previousYear: number | undefined;
-
-    allDates.forEach((dateStr, index) => {
-      if (labelIndexes.has(index)) {
-        let label: string;
-        if (isMobile) {
-          label = formatMobileDateLabel(dateStr, startDate, endDate);
-        } else {
-          const isFirstOrLast = index === 0 || index === allDates.length - 1;
-          label = formatDateLabel(dateStr, isFirstOrLast, previousYear);
-        }
-        labels.push(label);
-
-        const [year] = dateStr.split('-').map(Number);
-        previousYear = year;
-      }
-    });
-
-    return labels;
-  }, [allDates, labelIndexes, isMobile, startDate, endDate]);
+    return createLabelIndexes(allDates.length, labelCount);
+  }, [allDates.length, labelCount]);
 
   // 차트 데이터 생성 (원본 데이터 전체 유지)
   const chartData = useMemo(() => {
@@ -514,7 +449,7 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
           ))}
         </div>
       )}
-      <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
+      <div ref={plotRef} className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
         <Line data={chartData} options={options} />
       </div>
     </div>
