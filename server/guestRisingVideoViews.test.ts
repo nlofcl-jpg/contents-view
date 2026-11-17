@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   consumeGuestRisingVideoView,
+  consumeMemberRisingVideoView,
   GUEST_RISING_VIDEO_VIEW_KEY,
 } from "../client/src/lib/guestRisingVideoViews";
 
@@ -13,18 +14,21 @@ function createStorage() {
 }
 
 describe("consumeGuestRisingVideoView", () => {
-  it("allows two views across callers and blocks the third", () => {
+  it("shares one view between the home page and the rising tab", () => {
     const storage = createStorage();
-    expect(consumeGuestRisingVideoView(storage)).toBe(true);
-    expect(consumeGuestRisingVideoView(storage)).toBe(true);
-    expect(consumeGuestRisingVideoView(storage)).toBe(false);
-    expect(storage.getItem(GUEST_RISING_VIDEO_VIEW_KEY)).toBe("2");
+    const openFromHome = () => consumeGuestRisingVideoView(storage);
+    const openFromRisingTab = () => consumeGuestRisingVideoView(storage);
+    expect(openFromHome()).toBe(true);
+    expect(openFromRisingTab()).toBe(false);
+    expect(storage.getItem(GUEST_RISING_VIDEO_VIEW_KEY)).toBe("1");
   });
 
-  it("allows one main-page view and blocks every later click, including the same video", () => {
+  it("blocks every later click, including another click on the same video", () => {
     const storage = createStorage();
-    expect(consumeGuestRisingVideoView(storage, 1)).toBe(true);
-    expect(consumeGuestRisingVideoView(storage, 1)).toBe(false);
+    const openVideo = () => consumeGuestRisingVideoView(storage);
+    expect(openVideo()).toBe(true);
+    expect(openVideo()).toBe(false);
+    expect(openVideo()).toBe(false);
     expect(storage.getItem(GUEST_RISING_VIDEO_VIEW_KEY)).toBe("1");
   });
 
@@ -33,6 +37,26 @@ describe("consumeGuestRisingVideoView", () => {
       getItem: () => null,
       setItem: () => { throw new Error("Storage unavailable"); },
     };
+    expect(consumeGuestRisingVideoView(storage)).toBe(false);
+  });
+});
+
+describe("consumeMemberRisingVideoView", () => {
+  it("shares the member's single view across surfaces and blocks the same video again", () => {
+    const storage = createStorage();
+    const openFromHome = () => consumeMemberRisingVideoView("member-a", storage);
+    const openFromRisingTab = () => consumeMemberRisingVideoView("member-a", storage);
+    expect(openFromHome()).toBe(true);
+    expect(openFromHome()).toBe(false);
+    expect(openFromRisingTab()).toBe(false);
+  });
+
+  it("keeps guest views and member accounts independent", () => {
+    const storage = createStorage();
+    expect(consumeGuestRisingVideoView(storage)).toBe(true);
+    expect(consumeMemberRisingVideoView("member-a", storage)).toBe(true);
+    expect(consumeMemberRisingVideoView("member-a", storage)).toBe(false);
+    expect(consumeMemberRisingVideoView("member-b", storage)).toBe(true);
     expect(consumeGuestRisingVideoView(storage)).toBe(false);
   });
 });

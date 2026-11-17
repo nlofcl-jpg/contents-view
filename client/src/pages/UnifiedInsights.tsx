@@ -7,7 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenu
 import { NAVER_GUEST_DAILY_LIMIT_MESSAGE, NAVER_MEMBER_DAILY_LIMIT_MESSAGE } from "@shared/naverAnalysisQuota";
 import { trpc } from "@/lib/trpc";
 import { UnifiedChart } from "@/components/UnifiedChart";
-import { ArrowUp, ChevronDown, CircleAlert, ExternalLink, Heart, ListFilter, Loader2, MessageCircle, Plus, X } from "lucide-react";
+import { ArrowUp, ChevronDown, CircleAlert, ExternalLink, Heart, ListFilter, Loader2, MessageCircle, Plus, RotateCcw, X } from "lucide-react";
 import { useLocation } from "wouter";
 
 type InsightPoint = {
@@ -161,6 +161,7 @@ export default function UnifiedInsights() {
   };
   const [keywords, setKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState("");
+  const [voiceInputKey, setVoiceInputKey] = useState(0);
   const [searchMode, setSearchMode] = useState<SearchMode>("analysis");
   const [isSearchModeOpen, setIsSearchModeOpen] = useState(false);
   const [infoPopup, setInfoPopup] = useState<{ title: string; body: string } | null>(null);
@@ -196,6 +197,54 @@ export default function UnifiedInsights() {
   const [endDateForChart, setEndDateForChart] = useState("");
   const [timeUnitForChart, setTimeUnitForChart] = useState("date");
   const [filterLabelForChart, setFilterLabelForChart] = useState("1개월 · 일간 · 전체");
+  const isResetDisabled = isLoading || isTrendFilterLoading || isBlogLoading || isBlogPostRankLoading || Boolean(blogPostAnalysisLoading || blogPostEngagementLoading);
+  const resetLabel = `${SEARCH_MODE_OPTIONS.find(option => option.value === searchMode)?.label ?? "분석"} 초기화`;
+
+  const resetAnalysis = () => {
+    if (isResetDisabled) return;
+    setKeywordInput("");
+    setQueryError("");
+    setGuestAnalysisPromptOpen(false);
+    setInfoPopup(null);
+
+    if (searchMode === "analysis") {
+      setVoiceInputKey(key => key + 1);
+      setKeywords([]);
+      setQuerySuccess(false);
+      setChartData(null);
+      setTrendComparisonData(null);
+      setComparisonKeywordInput("");
+      setTrendFilterError("");
+      setOpenTrendFilterMenu(null);
+      setIsKeywordGradeInfoOpen(false);
+      setIsRelatedSortOpen(false);
+      setRelatedSortMode("related");
+      setSelectedPeriod("30");
+      setSelectedTimeUnit("date");
+      setSelectedDevices(["전체"]);
+      setSelectedGenders(["전체"]);
+      setSelectedAges([""]);
+      setStartDateForChart("");
+      setEndDateForChart("");
+      setTimeUnitForChart("date");
+      setFilterLabelForChart("1개월 · 일간 · 전체");
+
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("keyword")) {
+        url.searchParams.delete("keyword");
+        setLocation(`${url.pathname}${url.search}${url.hash}`, { replace: true });
+      }
+      return;
+    }
+
+    if (searchMode === "rank") setBlogAnalysisData(null);
+    else setBlogPostRankData(null);
+    setBlogPostAnalysisData({});
+    setBlogPostAnalysisErrors({});
+    setBlogPostAnalysisOpen({});
+    setBlogPostKeywordInputs({});
+    setBlogPostEngagementData({});
+  };
 
   const getInitialKeywordFromUrl = () => {
     if (typeof window === "undefined") return "";
@@ -928,7 +977,7 @@ export default function UnifiedInsights() {
         </div>
       )}
 
-      <div className="mb-6 flex w-full flex-col items-center md:mb-8">
+      <div className="flex w-full flex-col items-center">
         <form
           className="heroSearch"
           role="search"
@@ -983,14 +1032,14 @@ export default function UnifiedInsights() {
             </DropdownMenu>
             <div className="flex items-center gap-1">
               {searchMode === "analysis" && !isLoading && (
-                <VoiceSearchButton onTranscript={text => setKeywordInput(value => [value.trimEnd(), text].filter(Boolean).join(" "))} />
+                <VoiceSearchButton key={voiceInputKey} onTranscript={text => setKeywordInput(value => [value.trimEnd(), text].filter(Boolean).join(" "))} />
               )}
               <button
                 type="submit"
                 className="heroSearchButton"
                 aria-label="분석"
                 title="분석"
-            disabled={!keywordInput.trim() || authLoading || isLoading || isTrendFilterLoading || isBlogLoading || isBlogPostRankLoading}
+                disabled={!keywordInput.trim() || authLoading || isLoading || isTrendFilterLoading || isBlogLoading || isBlogPostRankLoading}
               >
                 <ArrowUp size={19} aria-hidden="true" />
               </button>
@@ -1002,9 +1051,22 @@ export default function UnifiedInsights() {
         )}
       </div>
 
+      <div className="mt-5 flex justify-end md:mt-7">
+        <button
+          type="button"
+          onClick={resetAnalysis}
+          disabled={isResetDisabled}
+          aria-label={resetLabel}
+          title={resetLabel}
+          className="inline-grid size-9 place-items-center text-slate-400 transition-colors hover:text-white focus-visible:outline focus-visible:outline-blue-400 disabled:opacity-40"
+        >
+          <RotateCcw size={16} aria-hidden="true" />
+        </button>
+      </div>
+
       {/* Empty State */}
       {searchMode === "rank" && !isBlogLoading && !blogAnalysisData && !queryError && (
-        <div className="mt-8 flex min-h-[260px] items-center justify-center rounded-lg border border-slate-700 bg-slate-900/30 p-8 text-center sm:min-h-[320px] lg:min-h-[380px]">
+        <div className="mt-3 flex min-h-[260px] items-center justify-center rounded-lg border border-slate-700 bg-slate-900/30 p-8 text-center sm:min-h-[320px] lg:min-h-[380px]">
           <p className="text-slate-400">
             블로그 메인 주소를 입력하고 검색 버튼을 눌러주세요.
           </p>
@@ -1012,7 +1074,7 @@ export default function UnifiedInsights() {
       )}
 
       {searchMode === "postRank" && !isBlogPostRankLoading && !blogPostRankData && !queryError && (
-        <div className="mt-8 flex min-h-[260px] items-center justify-center rounded-lg border border-slate-700 bg-slate-900/30 p-8 text-center sm:min-h-[320px] lg:min-h-[380px]">
+        <div className="mt-3 flex min-h-[260px] items-center justify-center rounded-lg border border-slate-700 bg-slate-900/30 p-8 text-center sm:min-h-[320px] lg:min-h-[380px]">
           <div className="max-w-md">
             <h2 className="text-lg font-medium text-slate-100">블로그 게시글 순위</h2>
             <p className="mt-2 text-sm text-slate-400">
@@ -1031,25 +1093,25 @@ export default function UnifiedInsights() {
       )}
 
       {isBlogLoading && (
-        <div className="mt-8 rounded-lg border border-slate-700 bg-slate-900/30 p-8 text-center">
+        <div className="mt-3 rounded-lg border border-slate-700 bg-slate-900/30 p-8 text-center">
           <p className="text-slate-400">블로그 정보를 불러오는 중입니다...</p>
         </div>
       )}
 
       {isBlogPostRankLoading && (
-        <div className="mt-8 rounded-lg border border-slate-700 bg-slate-900/30 p-8 text-center">
+        <div className="mt-3 rounded-lg border border-slate-700 bg-slate-900/30 p-8 text-center">
           <p className="text-slate-400">게시글 정보를 불러오는 중입니다...</p>
         </div>
       )}
 
       {searchMode === "rank" && queryError && !isBlogLoading && !blogAnalysisData && (
-        <div className="mt-8 rounded-lg border border-red-500/30 bg-red-950/30 p-5 text-sm text-red-200">
+        <div className="mt-3 rounded-lg border border-red-500/30 bg-red-950/30 p-5 text-sm text-red-200">
           {queryError}
         </div>
       )}
 
       {((searchMode === "rank" && !isBlogLoading && blogAnalysisData?.blog) || (searchMode === "postRank" && !isBlogPostRankLoading && blogPostRankData?.post)) && (
-        <div className="mt-8 space-y-6">
+        <div className="mt-3 space-y-6">
           {searchMode === "rank" && blogAnalysisData?.blog && (
           <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-5">
             <div className="flex flex-col gap-4 md:flex-row md:items-start">
@@ -1296,7 +1358,7 @@ export default function UnifiedInsights() {
 
       {/* Chart Display */}
       {searchMode === "analysis" && (
-        <div className="mt-8 space-y-6">
+        <div className="mt-3 space-y-6">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-5">
               <div className="mb-4 flex items-center justify-between gap-3">

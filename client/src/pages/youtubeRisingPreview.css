@@ -1,0 +1,25 @@
+.videosGrid.risingGuestTeaser {
+  height: 46px;
+  margin-top: 24px;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
+}
+
+.previousRisingToggle.risingGuestMore {
+  margin-top: 12px;
+}
+
+@media (max-width: 768px) {
+  .videosGrid.risingGuestTeaser {
+    height: 36px;
+    margin-top: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .videosGrid.risingGuestTeaser {
+    margin-top: 12px;
+  }
+}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ interface YouTubeApiKeyModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave?: () => void;
+  description?: string;
 }
 
 interface YouTubeApiKeySettingsPanelProps {
@@ -22,26 +24,31 @@ export function YouTubeApiKeyModal({
   isOpen,
   onClose,
   onSave,
+  description,
 }: YouTubeApiKeyModalProps) {
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[1000] pt-20 pb-8 overflow-y-auto">
-      <div className="bg-slate-900 rounded-lg p-8 max-w-md w-full mx-4 border border-slate-700 max-h-[calc(100vh-160px)] overflow-y-auto relative z-[1001]">
+      <div role="dialog" aria-modal="true" aria-label="YouTube API 키 설정" className="bg-slate-900 rounded-lg p-8 max-w-md w-full mx-4 border border-slate-700 max-h-[calc(100vh-160px)] overflow-y-auto relative z-[1001]">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-white">
             YouTube API 키 설정
           </h2>
           <button
+            type="button"
+            aria-label="닫기"
             onClick={onClose}
             className="text-slate-400 hover:text-white transition-colors"
           >
             <X size={20} />
           </button>
         </div>
+        {description && <p className="mb-4 text-sm text-slate-300">{description}</p>}
         <YouTubeApiKeySettingsPanel isActive={isOpen} onClose={onClose} onSave={onSave} />
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

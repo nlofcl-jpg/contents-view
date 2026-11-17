@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type FormEvent } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, type FormEvent } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
@@ -9,6 +9,8 @@ import { useBookmark } from "@/contexts/BookmarkContext";
 import { useLocation } from "wouter";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 import { useIsMobile } from "@/hooks/useMobile";
+import { useRisingVideoAccess } from "@/hooks/useRisingVideoAccess";
+import "./youtubeRisingPreview.css";
 
 type TabType = "analysis" | "trending" | "category" | "shorts" | "rising";
 type AnalysisSortType = "relevance" | "publishedAt" | "viewCount";
@@ -220,13 +222,17 @@ function formatDate(dateString: string): string {
 export default function YouTubeTrends() {
   const isMobile = useIsMobile();
   const [location, setLocation] = useLocation();
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { toggleYouTubeBookmark, isYouTubeVideoBookmarked, isBookmarkPending } = useBookmark();
   const [activeTab, setActiveTab] = useState<TabType>(getInitialYouTubeTab);
   const tabMenuRef = useRef<HTMLDivElement>(null);
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { apiKeyData, canOpenRisingVideo, openGuestPrompt: openRisingGuestPrompt, accessPrompt: risingAccessPrompt } = useRisingVideoAccess(user?.id, authLoading);
+  const [risingGridColumns, setRisingGridColumns] = useState(1);
+  const risingPreviewGridRef = useRef<HTMLDivElement>(null);
   const openRisingVideo = (video: any) => {
+    if (!canOpenRisingVideo()) return;
     setSelectedVideo(video);
     setIsModalOpen(true);
   };
@@ -353,12 +359,6 @@ export default function YouTubeTrends() {
   const sortBy = currentFilters.sort;
   const category = activeTab === "trending" ? "all" : (currentFilters as any).category || "all";
   const risingPeriod = (currentFilters as any).period || "realtime";
-
-  // Query to get API key status
-  const { data: apiKeyData } = trpc.user.apiKey.getWithStatus.useQuery(
-    { provider: "youtube" },
-    { enabled: isAuthenticated }
-  );
 
   const analysisInputValue = analysisInput.trim();
   const isAnalysisUrl = isYouTubeUrl(analysisInputValue);
@@ -490,12 +490,26 @@ export default function YouTubeTrends() {
       maxResults: 30,
     },
     {
-      enabled: isAuthenticated && activeTab === "rising",
+      enabled: activeTab === "rising",
       staleTime: 5 * 60 * 1000,
       retry: false,
       refetchOnWindowFocus: false,
     }
   );
+
+  useLayoutEffect(() => {
+    const grid = risingPreviewGridRef.current;
+    if (!grid) return;
+
+    const measure = () => {
+      const columns = getComputedStyle(grid).gridTemplateColumns.trim();
+      setRisingGridColumns(columns && columns !== "none" ? columns.split(/\s+/).length : 1);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(grid);
+    return () => observer.disconnect();
+  }, [activeTab, authLoading, isAuthenticated, risingData, risingError]);
 
   // Use cache if available and valid, otherwise use API response
   const displayVideosData = isCacheValid && !shouldForceRefresh
@@ -1285,6 +1299,9 @@ export default function YouTubeTrends() {
     const previousRisingVideos = risingData?.success && "previousVideos" in risingData
       ? risingData.previousVideos || []
       : [];
+    const guestVisibleCount = risingGridColumns * 2;
+    const visibleRisingVideos = isAuthenticated ? risingVideos : risingVideos.slice(0, guestVisibleCount);
+    const teaserVideos = isAuthenticated ? [] : risingVideos.slice(guestVisibleCount, guestVisibleCount + risingGridColumns);
     const renderRisingVideoCard = (video: any, isPrevious = false) => {
       const isBookmarked = isYouTubeVideoBookmarked(video.id);
       return (
@@ -1388,11 +1405,28 @@ export default function YouTubeTrends() {
           </button>
         </div>
 
-        <div className="videosGrid">
-          {risingVideos.map((video: any) => renderRisingVideoCard(video))}
+        <div className="videosGrid" ref={isAuthenticated ? undefined : risingPreviewGridRef}>
+          {visibleRisingVideos.map((video: any) => renderRisingVideoCard(video))}
         </div>
 
-        {previousRisingVideos.length > 0 && visiblePreviousRisingCount === 0 ? (
+        {teaserVideos.length > 0 && (
+          <div className="videosGrid risingGuestTeaser" aria-hidden="true">
+            {teaserVideos.map(video => (
+              <div key={video.id} className="videoThumbnail">
+                <img src={video.thumbnail} alt="" loading="lazy" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!isAuthenticated && (
+          <button type="button" className="previousRisingToggle risingGuestMore" onClick={openRisingGuestPrompt}>
+            더보기
+            <ChevronDown size={16} aria-hidden="true" />
+          </button>
+        )}
+
+        {isAuthenticated && previousRisingVideos.length > 0 && visiblePreviousRisingCount === 0 ? (
           <button
             type="button"
             className="previousRisingToggle"
@@ -1403,7 +1437,7 @@ export default function YouTubeTrends() {
           </button>
         ) : null}
 
-        {visiblePreviousRisingCount > 0 && previousRisingVideos.length > 0 ? (
+        {isAuthenticated && visiblePreviousRisingCount > 0 && previousRisingVideos.length > 0 ? (
           <section className="previousRisingSection">
             <div className="previousRisingHeader">
               <h2>이전 급상승 영상</h2>
@@ -1759,12 +1793,10 @@ export default function YouTubeTrends() {
           <Clock className="emptyStateIcon" size={48} />
           <p className="emptyStateText">인증 상태를 확인하는 중입니다...</p>
         </div>
-      ) : !isAuthenticated ? (
-        renderGuestLoginNotice(activeTab === "rising"
-          ? "급상승 영상은 로그인 후 이용할 수 있습니다."
-          : "YouTube 트렌드와 개인 API 키 기능은 로그인 후 이용할 수 있습니다.")
       ) : activeTab === "rising" ? (
         renderRisingTab()
+      ) : !isAuthenticated ? (
+        renderGuestLoginNotice("YouTube 트렌드와 개인 API 키 기능은 로그인 후 이용할 수 있습니다.")
       ) : isAuthenticated && !apiKeyData?.exists ? (
         <YouTubeApiStatusCard activeTab={activeTab} apiKeyMessage={TAB_MESSAGES.trending} />
       ) : activeTab === "trending" || activeTab === "category" ? (
@@ -1772,6 +1804,8 @@ export default function YouTubeTrends() {
       ) : activeTab === "shorts" ? (
         renderShortsTab()
       ) : null}
+
+      {risingAccessPrompt}
 
       <GuestAccessPrompt
         open={isAnalysisGuestPromptOpen}

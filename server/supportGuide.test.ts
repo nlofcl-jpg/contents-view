@@ -48,14 +48,26 @@ describe("support guide", () => {
     expect(getSupportReply("네이버 트렌드 사용법").questions).toEqual(trendTabQuestions.naver);
     expect(getSupportReply("검색 트렌드 사용법").questions).toEqual(trendTabQuestions.search);
   });
-  it("resolves every tab and nested mode to a specific guide", () => {
+  it("resolves every suggested mode to a specific guide", () => {
     const questions = Object.values(trendTabQuestions).flat();
-    questions.push(...getSupportReply("네이버 컨텐츠 사용법").questions!);
     for (const question of questions) {
       const reply = getSupportReply(question);
       expect(reply.text).toContain("활용");
       expect(reply.actions?.length).toBeGreaterThan(0);
     }
+  });
+  it("describes the current Naver analysis and independent comparison flow", () => {
+    const overview = getSupportReply("네이버 트렌드 사용법");
+    expect(overview.text).toContain("초기화 아이콘");
+    expect(overview.text).toContain("일반 회원 하루 10회");
+    expect(overview.questions).not.toContain("네이버 컨텐츠 사용법");
+    const keywordGuide = getSupportReply("네이버 키워드 분석 사용법");
+    expect(keywordGuide.text).toContain("마이크 버튼");
+    expect(keywordGuide.questions).toContain("검색·쇼핑 트렌드 비교 방법");
+    const comparison = getSupportReply("검색·쇼핑 트렌드 비교 방법");
+    expect(comparison.text).toContain("상단 분석 없이도");
+    expect(comparison.text).toContain("최대 3개");
+    expect(comparison.actions).toEqual([{ label: "네이버 트렌드 열기", href: "/trends/naver" }]);
   });
   it("keeps search trend help focused on usage rather than collection internals", () => {
     for (const question of ["검색 트렌드 사용법", ...trendTabQuestions.search]) {
