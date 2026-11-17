@@ -925,10 +925,10 @@ export default function UnifiedInsights() {
         </div>
       )}
 
-      {/* Loading State */}
       {isLoading && (
-        <div className="mt-8 p-8 text-center bg-slate-900 bg-opacity-30 border border-slate-700 rounded-lg">
-          <p className="text-slate-400">데이터를 불러오는 중입니다...</p>
+        <div className="naverAnalysisProgress" role="status">
+          <div className="naverAnalysisProgressTrack" aria-hidden="true" />
+          <p>분석중...</p>
         </div>
       )}
 

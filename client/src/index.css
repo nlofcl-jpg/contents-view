@@ -1921,6 +1921,51 @@ a {
   cursor: default;
 }
 
+.naverAnalysisProgress {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 9px;
+  pointer-events: none;
+  color: #f1f5ff;
+  font-size: 13px;
+  font-weight: 600;
+  text-shadow: 0 1px 5px #060b14;
+}
+
+.naverAnalysisProgressTrack {
+  width: 108px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #334765;
+}
+
+.naverAnalysisProgressTrack::after {
+  display: block;
+  width: 40%;
+  height: 100%;
+  border-radius: inherit;
+  background: #63a8ff;
+  content: "";
+  animation: naverAnalysisProgressSweep 1.2s ease-in-out infinite;
+}
+
+@keyframes naverAnalysisProgressSweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .naverAnalysisProgressTrack::after {
+    animation: none;
+    transform: translateX(75%);
+  }
+}
+
 .heroSearchFilterButton:focus-visible,
 .heroSearchClearPlatform:focus-visible,
 .heroSearchButton:focus-visible {
