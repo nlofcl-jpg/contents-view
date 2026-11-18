@@ -4,7 +4,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { YouTubeApiStatusCard } from "@/components/YouTubeApiStatusCard";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
-import { AlertCircle, CircleAlert, Clock, Play, ChevronDown, RotateCw, Bookmark, Search, Copy, ExternalLink } from "lucide-react";
+import { AlertCircle, CircleAlert, Clock, Play, ChevronDown, RotateCw, Bookmark, Search, Copy, ExternalLink, Plus, ArrowUp, X } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useBookmark } from "@/contexts/BookmarkContext";
 import { useLocation } from "wouter";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
@@ -219,6 +220,15 @@ function formatDate(dateString: string): string {
   return `${month}월 ${day}일`;
 }
 
+function YouTubeLoadingState({ message }: { message: string }) {
+  return (
+    <div className="youtubeLoadingState" role="status" aria-live="polite">
+      <span className="youtubeLoadingTrack" aria-hidden="true" />
+      <p>{message}</p>
+    </div>
+  );
+}
+
 export default function YouTubeTrends() {
   const isMobile = useIsMobile();
   const [location, setLocation] = useLocation();
@@ -259,6 +269,8 @@ export default function YouTubeTrends() {
     </div>
   );
   const [analysisInput, setAnalysisInput] = useState("");
+  const [analysisInputType, setAnalysisInputType] = useState<"keyword" | "url" | null>(null);
+  const analysisTypeTriggerRef = useRef<HTMLButtonElement>(null);
   const [isAnalysisGuestPromptOpen, setIsAnalysisGuestPromptOpen] = useState(false);
   const [submittedAnalysisKeyword, setSubmittedAnalysisKeyword] = useState("");
   const [submittedAnalysisVideoId, setSubmittedAnalysisVideoId] = useState("");
@@ -363,8 +375,8 @@ export default function YouTubeTrends() {
   const analysisInputValue = analysisInput.trim();
   const isAnalysisUrl = isYouTubeUrl(analysisInputValue);
   const analysisVideoId = extractYouTubeVideoId(analysisInputValue);
-  const canSearchAnalysisKeyword = analysisInputValue.length > 0 && !isAnalysisUrl;
-  const canAnalyzeVideoUrl = Boolean(analysisVideoId);
+  const canSearchAnalysisKeyword = analysisInputType !== "url" && analysisInputValue.length > 0 && !isAnalysisUrl;
+  const canAnalyzeVideoUrl = analysisInputType !== "keyword" && Boolean(analysisVideoId);
 
   const {
     data: analysisSearchData,
@@ -766,33 +778,56 @@ export default function YouTubeTrends() {
       : [];
 
     return (
-      <section className="youtubeAnalysisPanel" aria-labelledby="youtube-analysis-title">
-        <div className="youtubeAnalysisHeader">
-          <h2 id="youtube-analysis-title" className="youtubeAnalysisTitle">영상 분석</h2>
-          <p className="youtubeAnalysisDescription">
-            키워드는 관련 인기 영상 리스트로, 유튜브 URL은 개별 영상 분석으로 연결됩니다.
-          </p>
-        </div>
-
-        <form className="youtubeAnalysisSearchForm" onSubmit={handleAnalysisSubmit}>
-          <div className="youtubeAnalysisInputWrap">
-            <Search size={18} strokeWidth={1.9} aria-hidden="true" />
+      <section className="youtubeAnalysisPanel" aria-label="영상 분석">
+        <form className="heroSearch youtubeAnalysisComposer" role="search" aria-label="유튜브 영상 분석" onSubmit={handleAnalysisSubmit}>
             <input
               type="text"
               value={analysisInput}
               onChange={(event) => setAnalysisInput(event.target.value)}
-              placeholder={isMobile ? "키워드·URL을 입력하세요" : "키워드 또는 YouTube URL을 입력하세요"}
-              aria-label="키워드 또는 YouTube URL"
-              className="youtubeAnalysisInput"
+              placeholder={analysisInputType === "url" ? "YouTube URL을 입력해 개별 영상을 분석하세요" : analysisInputType === "keyword" ? "키워드를 입력해 관련 인기 영상을 확인하세요" : "키워드로 인기 영상을, URL로 개별 영상을 분석하세요"}
+              aria-label={analysisInputType === "url" ? "YouTube 영상 URL" : analysisInputType === "keyword" ? "분석할 키워드" : "키워드 또는 YouTube URL"}
+              className="heroSearchInput"
             />
-            <button
-              type="submit"
-              className="youtubeAnalysisActionButton"
-              disabled={authLoading || !(canSearchAnalysisKeyword || canAnalyzeVideoUrl)}
-            >
-              분석
-            </button>
-          </div>
+            <div className="heroSearchActions">
+              <div className="heroSearchPlatformControls">
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger
+                    ref={analysisTypeTriggerRef}
+                    className={`heroSearchFilterButton ${analysisInputType ? "isYoutube" : "isUnselected"}`}
+                    aria-label={analysisInputType ? `입력 방식 선택: ${analysisInputType === "keyword" ? "키워드" : "URL"}` : "입력 방식 선택"}
+                    title="입력 방식 선택"
+                  >
+                    <Plus size={18} aria-hidden="true" />
+                    {analysisInputType && <span>{analysisInputType === "keyword" ? "키워드" : "URL"}</span>}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" sideOffset={8} collisionPadding={12} className="heroSearchMenu" aria-label="입력 방식">
+                    <DropdownMenuRadioGroup value={analysisInputType ?? ""} onValueChange={value => {
+                      if (value === "keyword" || value === "url") setAnalysisInputType(value);
+                    }}>
+                      <DropdownMenuRadioItem value="keyword" className="heroSearchMenuItem isYoutube">키워드</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="url" className="heroSearchMenuItem isYoutube">URL</DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {analysisInputType && <button
+                  type="button"
+                  className="heroSearchClearPlatform"
+                  aria-label="입력 방식 선택 취소"
+                  title="입력 방식 선택 취소"
+                  onClick={() => {
+                    setAnalysisInputType(null);
+                    analysisTypeTriggerRef.current?.focus();
+                  }}
+                ><X size={14} aria-hidden="true" /></button>}
+              </div>
+              <button
+                type="submit"
+                className="heroSearchButton"
+                aria-label="분석"
+                title="분석"
+                disabled={authLoading || !(canSearchAnalysisKeyword || canAnalyzeVideoUrl)}
+              ><ArrowUp size={19} aria-hidden="true" /></button>
+            </div>
         </form>
 
         {!isAuthenticated ? null : !apiKeyData?.exists || apiKeyData?.testStatus !== "success" ? (
@@ -805,10 +840,7 @@ export default function YouTubeTrends() {
             </p>
           </div>
         ) : analysisMode === "url" && isAnalysisUrlLoading ? (
-          <div className="emptyStateContainer youtubeAnalysisState">
-            <Clock className="emptyStateIcon" size={42} />
-            <p className="emptyStateText">영상 정보를 분석하는 중입니다...</p>
-          </div>
+          <YouTubeLoadingState message="영상 정보를 분석하는 중입니다..." />
         ) : analysisMode === "url" && (analysisUrlError || analysisUrlErrorMessage || !analysisUrlVideo) ? (
           <div className="emptyStateContainer youtubeAnalysisState">
             <AlertCircle className="emptyStateIcon" size={42} />
@@ -916,10 +948,7 @@ export default function YouTubeTrends() {
             ) : null}
           </div>
         ) : isAnalysisSearchLoading ? (
-          <div className="emptyStateContainer youtubeAnalysisState">
-            <Clock className="emptyStateIcon" size={42} />
-            <p className="emptyStateText">키워드 관련 인기 영상을 불러오는 중입니다...</p>
-          </div>
+          <YouTubeLoadingState message="키워드 관련 인기 영상을 불러오는 중입니다..." />
         ) : analysisSearchError ? (
           <div className="emptyStateContainer youtubeAnalysisState">
             <AlertCircle className="emptyStateIcon" size={42} />
@@ -1152,10 +1181,7 @@ export default function YouTubeTrends() {
 
     if (isLoading && !isCacheValid) {
       return (
-        <div className="emptyStateContainer">
-          <Clock className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">YouTube 트렌드 데이터를 불러오는 중입니다...</p>
-        </div>
+        <YouTubeLoadingState message="YouTube 트렌드 데이터를 불러오는 중입니다..." />
       );
     }
 
@@ -1274,10 +1300,7 @@ export default function YouTubeTrends() {
   const renderRisingTab = () => {
     if (isRisingLoading) {
       return (
-        <div className="emptyStateContainer">
-          <Clock className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">수집된 급상승 영상을 불러오는 중입니다...</p>
-        </div>
+        <YouTubeLoadingState message="급상승 영상을 불러오는 중입니다..." />
       );
     }
 
@@ -1482,10 +1505,7 @@ export default function YouTubeTrends() {
 
     if (isShortsLoading && !isShortsCacheValid) {
       return (
-        <div className="emptyStateContainer">
-          <Clock className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">인기 쇼츠 데이터를 불러오는 중입니다...</p>
-        </div>
+        <YouTubeLoadingState message="인기 쇼츠 데이터를 불러오는 중입니다..." />
       );
     }
 
@@ -1653,7 +1673,7 @@ export default function YouTubeTrends() {
   };
 
   return (
-    <div className="youtubePageContainer">
+    <div className={`youtubePageContainer ${!isAuthenticated && activeTab !== "analysis" ? "youtubeGuestUnframed" : ""}`}>
       {/* Page Header */}
       <div className="pageHeader">
         <h1 className="pageTitle">YouTube 트렌드</h1>
@@ -1789,10 +1809,7 @@ export default function YouTubeTrends() {
       {activeTab === "analysis" ? (
         renderAnalysisTab()
       ) : authLoading ? (
-        <div className="emptyStateContainer">
-          <Clock className="emptyStateIcon" size={48} />
-          <p className="emptyStateText">인증 상태를 확인하는 중입니다...</p>
-        </div>
+        <YouTubeLoadingState message="인증 상태를 확인하는 중입니다..." />
       ) : activeTab === "rising" ? (
         renderRisingTab()
       ) : !isAuthenticated ? (
