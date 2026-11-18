@@ -55,6 +55,12 @@ describe("my info API settings", () => {
     expect(html).not.toContain('aria-label="유튜브 API 키 입력"');
   });
 
+  it("places a text withdrawal action below API settings", () => {
+    const html = render();
+    expect(html).toContain('class="mypageWithdrawalButton"');
+    expect(html.indexOf("회원 탈퇴")).toBeGreaterThan(html.indexOf("YouTube API Key"));
+  });
+
   it("shows edit rather than registration for an existing key", () => {
     state.exists = true;
     const html = render();

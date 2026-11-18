@@ -33,7 +33,7 @@ export default function Footer() {
 
         <nav className="siteFooterLegalLinks" aria-label="하단 안내">
             <Link href="/privacy">개인정보처리방침</Link>
-            <span>이용약관</span>
+            <Link href="/terms">이용약관</Link>
             <a href="mailto:edenofcls@gmail.com">이메일</a>
             <button type="button" className="siteFooterInquiryButton" onClick={() => setInquiryOpen(true)}>제휴 문의</button>
         </nav>

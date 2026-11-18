@@ -22,6 +22,7 @@ import FlowAutomation from "@/pages/FlowAutomation";
 import Login from "@/pages/Login";
 import Admin from "@/pages/Admin";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsOfService from "@/pages/TermsOfService";
 import MyPageModal from "@/components/MyPageModal";
 import { MobileMenuDrawer } from "@/components/MobileMenuDrawer";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
@@ -60,6 +61,7 @@ function Router() {
       <Route path={"/login"} component={Login} />
       <Route path={"/admin"} component={Admin} />
       <Route path={"/privacy"} component={PrivacyPolicy} />
+      <Route path={"/terms"} component={TermsOfService} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
@@ -70,6 +72,7 @@ function Router() {
 function App() {
   const [location, setLocation] = useLocation();
   const isPrivacyPage = location === "/privacy" || location === "/privacy/";
+  const isTermsPage = location === "/terms" || location === "/terms/";
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [isMyPageModalOpen, setIsMyPageModalOpen] = useState(false);
 
@@ -135,9 +138,9 @@ function App() {
         >
           <TooltipProvider>
             <Toaster />
-            {isPrivacyPage ? (
+            {isPrivacyPage || isTermsPage ? (
               <main className="privacyStandalone">
-                <PrivacyPolicy />
+                {isTermsPage ? <TermsOfService /> : <PrivacyPolicy />}
               </main>
             ) : (
             <div className="app">

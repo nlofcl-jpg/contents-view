@@ -26,6 +26,7 @@ import { fetchInstagramBookmarkMetadata, parseInstagramUrl } from "./instagramBo
 import { parseNewsSource } from "./newsSource";
 import { getLatestRssNews } from "./latestNews";
 import { partnershipInquiryInput, partnershipConsentRecord } from "../shared/partnershipConsent";
+import { createAccountWithdrawalProcedure } from "./accountWithdrawal";
 
 const require = createRequire(import.meta.url);
 
@@ -1321,6 +1322,7 @@ export const appRouter = router({
   }),
 
   user: router({
+    withdraw: createAccountWithdrawalProcedure(supabaseAdmin),
     /**
      * Update user name
      */

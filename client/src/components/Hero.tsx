@@ -9,10 +9,10 @@ import VoiceSearchButton from "@/components/VoiceSearchButton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const searchPlatforms = [
-  { value: "naver", label: "NAVER", className: "isNaver" },
-  { value: "news", label: "뉴스", className: "isNews" },
   { value: "youtube", label: "YOUTUBE", className: "isYoutube" },
+  { value: "naver", label: "NAVER", className: "isNaver" },
   { value: "google", label: "GOOGLE", className: "isGoogle" },
+  { value: "news", label: "뉴스", className: "isNews" },
 ];
 
 export default function Hero() {

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Check, Pencil, X } from "lucide-react";
 import { YouTubeApiKeySettingsPanel } from "./YouTubeApiKeyModal";
+import AccountWithdrawalDialog from "./AccountWithdrawalDialog";
 
 interface MyPageModalProps {
   isOpen: boolean;
@@ -16,6 +17,11 @@ export default function MyPageModal({ isOpen, onClose }: MyPageModalProps) {
   const [nameInput, setNameInput] = useState(user?.name || "");
   const [originalName, setOriginalName] = useState(user?.name || "");
   const [isSaving, setIsSaving] = useState(false);
+  const [isWithdrawalOpen, setIsWithdrawalOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) setIsWithdrawalOpen(false);
+  }, [isOpen]);
 
   const utils = trpc.useUtils();
   const updateNameMutation = trpc.user.updateName.useMutation();
@@ -179,9 +185,13 @@ export default function MyPageModal({ isOpen, onClose }: MyPageModalProps) {
             <div className="mypageModalField mypageApiField">
               <YouTubeApiKeySettingsPanel isActive={isOpen} compact />
             </div>
+            <div className="mypageWithdrawalRow">
+              <button type="button" className="mypageWithdrawalButton" onClick={() => setIsWithdrawalOpen(true)}>회원 탈퇴</button>
+            </div>
           </div>
         </div>
       </div>
+      {isWithdrawalOpen && <AccountWithdrawalDialog onClose={() => setIsWithdrawalOpen(false)} />}
     </>
   );
 }
