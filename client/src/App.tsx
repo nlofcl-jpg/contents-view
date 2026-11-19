@@ -10,6 +10,7 @@ import YouTubeTrends from "@/pages/YouTubeTrends";
 import NaverTrends from "@/pages/NaverTrends";
 import GoogleTrends from "@/pages/GoogleTrends";
 import Community from "@/pages/Community";
+import CommerceTrends from "@/pages/CommerceTrends";
 import SavedContents from "@/pages/SavedContents";
 import News from "@/pages/News";
 import NewsClips from "@/pages/NewsClips";
@@ -43,6 +44,7 @@ function Router() {
       <Route path={"/trends/naver"} component={NaverTrends} />
       <Route path={"/trends/google"} component={GoogleTrends} />
       <Route path={"/community"} component={Community} />
+      <Route path={"/commerce"} component={CommerceTrends} />
       <Route path={"/saved-contents"} component={SavedContents} />
       <Route path={"/news/search"} component={NewsSearchResults} />
       <Route path={"/news/clips"} component={NewsClips} />
@@ -82,6 +84,7 @@ function App() {
   const guestBrowseAction = useRef<(() => void) | null>(null);
 
   const requestGuestMenuAccess = (path?: string, onBrowse?: () => void) => {
+    if (path === "/commerce") return false;
     if (path === "/news/issues" || path?.startsWith("/news/issues/")) return false;
     if (path?.startsWith("/saved-contents")) return false;
     if (authLoading || isAuthenticated || guestMenuPromptSeen.current) return false;

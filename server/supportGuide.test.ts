@@ -74,10 +74,11 @@ describe("support guide", () => {
     expect(overview.questions).not.toContain("네이버 컨텐츠 사용법");
     const keywordGuide = getSupportReply("네이버 키워드 분석 사용법");
     expect(keywordGuide.text).toContain("마이크 버튼");
-    expect(keywordGuide.questions).toContain("검색·쇼핑 트렌드 비교 방법");
-    const comparison = getSupportReply("검색·쇼핑 트렌드 비교 방법");
+    expect(keywordGuide.questions).toContain("네이버 검색 트렌드 비교 방법");
+    const comparison = getSupportReply("네이버 검색 트렌드 비교 방법");
     expect(comparison.text).toContain("상단 분석 없이도");
     expect(comparison.text).toContain("최대 3개");
+    expect(comparison.text).toContain("쇼핑 클릭 추이는 커머스 트렌드에서 따로");
     expect(comparison.actions).toEqual([{ label: "네이버 트렌드 열기", href: "/trends/naver" }]);
   });
   it("keeps search trend help focused on usage rather than collection internals", () => {

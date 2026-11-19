@@ -53,6 +53,7 @@ export function MobileMenuDrawer({
   const activeNewsPath = getActiveNewsPath(location);
   const isSavedContentsPage = location === "/saved-contents";
   const isCommunityPage = location === "/community";
+  const isCommercePage = location === "/commerce";
   const isAIStudioPage = location?.startsWith("/ai-studio");
   const isVideoProductionPage = location === "/ai-studio/video" ||
     (location === "/ai-studio" && new URLSearchParams(window.location.search).get("tab") === "upcoming");
@@ -252,8 +253,13 @@ export function MobileMenuDrawer({
               >
                 <span>커뮤니티 트렌드</span>
               </button>
-              <button className="mobileNavItem" type="button" disabled title="준비 중">
-                <span>커머스</span>
+              <button
+                className={`mobileNavItem ${isCommercePage ? "active" : ""}`}
+                aria-current={isCommercePage ? "page" : undefined}
+                onClick={() => handleNavigation("/commerce")}
+                type="button"
+              >
+                <span>커머스 트렌드</span>
               </button>
 
               <button

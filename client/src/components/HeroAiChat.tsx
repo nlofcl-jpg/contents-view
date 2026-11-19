@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Globe, LoaderCircle, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -17,9 +17,10 @@ type HeroAiChatProps = {
   setInput: (value: string) => void;
   renderInput: (sendDisabled: boolean) => ReactNode;
   onAnalyze?: () => void;
+  entryOrigin: DOMRectReadOnly | null;
 };
 
-export default function HeroAiChat({ input, setInput, renderInput, onAnalyze }: HeroAiChatProps) {
+export default function HeroAiChat({ input, setInput, renderInput, onAnalyze, entryOrigin }: HeroAiChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [consent, setConsent] = useState(false);
   const [consentOpen, setConsentOpen] = useState(false);
@@ -31,6 +32,21 @@ export default function HeroAiChat({ input, setInput, renderInput, onAnalyze }: 
   const chat = trpc.aiTest.chat.useMutation();
   const busy = chat.isPending;
   const sendDisabled = !input.trim() || (!onAnalyze && (busy || status.isLoading));
+
+  useLayoutEffect(() => {
+    const form = formRef.current;
+    if (!form || !entryOrigin || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const destination = form.getBoundingClientRect();
+    if (!entryOrigin.width || !destination.width) return;
+
+    // Align the new composer to the homepage input before animating to its final layout.
+    const centerDelta = entryOrigin.left + entryOrigin.width / 2 - (destination.left + destination.width / 2);
+    form.style.setProperty("--ai-entry-x", `${centerDelta}px`);
+    form.style.setProperty("--ai-entry-y", `${entryOrigin.bottom - destination.bottom}px`);
+    form.style.setProperty("--ai-entry-scale", String(entryOrigin.width / destination.width));
+    form.classList.add("isEntering");
+    return () => form.classList.remove("isEntering");
+  }, [entryOrigin]);
 
   useEffect(() => {
     const log = logRef.current;

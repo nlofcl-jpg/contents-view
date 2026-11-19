@@ -32,10 +32,12 @@ export default function Hero() {
   const backdropRef = useRef<HTMLDivElement>(null);
   const platformTriggerRef = useRef<HTMLButtonElement>(null);
   const aiInputRef = useRef<HTMLTextAreaElement>(null);
+  const searchFormRef = useRef<HTMLFormElement>(null);
   const [, setLocation] = useLocation();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [selectedPlatform, setSelectedPlatform] = useState<(typeof searchPlatforms)[number] | null>(null);
   const [isAiPageOpen, setIsAiPageOpen] = useState(false);
+  const [aiEntryOrigin, setAiEntryOrigin] = useState<DOMRectReadOnly | null>(null);
   const [keyword, setKeyword] = useState("");
   const [popularKeywords, setPopularKeywords] = useState<string[]>([]);
   const [guestKeyword, setGuestKeyword] = useState<string | null>(null);
@@ -142,7 +144,10 @@ export default function Hero() {
     const platform = searchPlatforms.find(item => item.value === value);
     if (!platform) return;
     setSelectedPlatform(platform);
-    if (platform.value === "ai") setIsAiPageOpen(true);
+    if (platform.value === "ai" && !isAiPageOpen) {
+      setAiEntryOrigin(searchFormRef.current?.getBoundingClientRect() ?? null);
+      setIsAiPageOpen(true);
+    }
   };
 
   const clearPlatform = () => {
@@ -237,7 +242,7 @@ export default function Hero() {
   );
 
   if (isAiPageOpen) {
-    return <HeroAiChat input={keyword} setInput={setKeyword} renderInput={renderInput} onAnalyze={isAiMode ? undefined : handleHeroSearch} />;
+    return <HeroAiChat input={keyword} setInput={setKeyword} renderInput={renderInput} onAnalyze={isAiMode ? undefined : handleHeroSearch} entryOrigin={aiEntryOrigin} />;
   }
 
   return (
@@ -252,7 +257,7 @@ export default function Hero() {
             <br />
             한곳에서 확인하고 <span>새로운 기회로</span>
           </h2>
-          <form className="heroSearch" role="search" aria-label="트렌드 분석" onSubmit={event => {
+          <form ref={searchFormRef} className="heroSearch" role="search" aria-label="트렌드 분석" onSubmit={event => {
             event.preventDefault();
             handleHeroSearch();
           }}>

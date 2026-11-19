@@ -413,9 +413,9 @@ export default function Header({
         <a href="/community" onClick={(event) => handleNavLinkClick(event, "/community")} className={`headerNavItem headerNavLink ${location === "/community" ? "active" : ""}`}>
           커뮤니티 트렌드
         </a>
-        <button type="button" className="headerNavItem headerNavLink" disabled title="준비 중">
-          커머스
-        </button>
+        <a href="/commerce" className={`headerNavItem headerNavLink ${location === "/commerce" ? "active" : ""}`} aria-current={location === "/commerce" ? "page" : undefined}>
+          커머스 트렌드
+        </a>
 
         <div
           className="headerNavItem"
