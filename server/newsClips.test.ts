@@ -45,7 +45,7 @@ describe("news clips pages", () => {
   it("links a published clip from its list row to the detail page", () => {
     const html = renderPage(NewsClips, "/news/clips", ["news-clips", 0], [clip]);
     expect(html).toContain(`href="/news/clips/${id}"`);
-    expect(html).toContain("[이슈 브리핑]");
+    expect(html).toContain("[이슈 클리핑]");
     expect(html).toContain("2026.11.10");
     expect(html).toContain("운영자");
     expect(html).toContain('class="pageDescription"');
@@ -69,8 +69,8 @@ describe("news clips pages", () => {
     const html = renderPage(Sidebar, "/news/issues", ["news-sidebar-entries", "/news/clips"], [
       { ...clip, thumbnail_url: "https://example.com/thumbnail.jpg" },
     ]);
-    expect(html).toContain('id="sidebar-latest-briefings">최신 이슈 브리핑');
-    expect(html).toMatch(/<a(?=[^>]*href="\/news\/clips")(?=[^>]*aria-label="이슈 브리핑 더보기")[^>]*>/);
+    expect(html).toContain('id="sidebar-latest-briefings">최신 이슈 클리핑');
+    expect(html).toMatch(/<a(?=[^>]*href="\/news\/clips")(?=[^>]*aria-label="이슈 클리핑 더보기")[^>]*>/);
     expect(html).toMatch(/<a(?=[^>]*href="\/news")(?=[^>]*aria-label="최신 뉴스 더보기")[^>]*>/);
     expect(html).toContain(`href="/news/clips/${id}"`);
     expect(html).toContain(`<span>${clip.title}</span>`);
@@ -83,7 +83,7 @@ describe("news clips pages", () => {
       { ...clip, title: "포커스 글", thumbnail_url: "https://example.com/focus.jpg" },
     ]);
     expect(html).toContain('aria-label="이슈 포커스 더보기"');
-    expect(html).toContain('aria-label="이슈 브리핑 더보기"');
+    expect(html).toContain('aria-label="이슈 클리핑 더보기"');
     expect(html).toContain(`href="/news/issues/${id}"`);
     expect(html).toContain("https://example.com/focus.jpg");
     expect(html).not.toContain("최신 뉴스 더보기");
@@ -92,7 +92,7 @@ describe("news clips pages", () => {
   it.each([
     ["/news", "최신 뉴스"],
     ["/news/issues", "이슈 포커스"],
-    ["/news/clips", "이슈 브리핑"],
+    ["/news/clips", "이슈 클리핑"],
     ["/news/search", "뉴스 검색"],
   ])("renders the section title and active filter tab on %s", (path, title) => {
     const html = renderPage(NewsTrendHeader, path, [], null);
@@ -108,13 +108,13 @@ describe("news clips pages", () => {
     expect(html).toContain("<h1>뉴스 클립 테스트</h1>");
     expect(html).toContain("클립 본문");
     expect(html).toContain('href="/news/clips"');
-    expect(html).toMatch(/class="issueBackButton"[^>]*>.*?<\/svg>이슈 브리핑<\/a>/);
+    expect(html).toMatch(/class="issueBackButton"[^>]*>.*?<\/svg>이슈 클리핑<\/a>/);
     expect(html).not.toContain("뉴스 트렌드 하위 메뉴");
     expect(getActiveNewsPath(path)).toBe("/news/clips");
   });
 
   it("shows a not-found state for unpublished or missing clips", () => {
     const html = renderPage(NewsClipDetail, `/news/clips/${id}`, ["news-clip", id], null);
-    expect(html).toContain("공개된 뉴스 클립을 찾을 수 없습니다.");
+    expect(html).toContain("공개된 이슈 클리핑을 찾을 수 없습니다.");
   });
 });

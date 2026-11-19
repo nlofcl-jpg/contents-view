@@ -6,7 +6,7 @@ import IssueDate from "@/components/IssueDate";
 import IssueThumbnail from "@/components/IssueThumbnail";
 import NewsBriefingSidebar from "@/components/NewsBriefingSidebar";
 import { supabase } from "@/lib/supabase";
-import { issueBriefingLabel } from "@/lib/newsNavigation";
+import { issueClippingLabel } from "@/lib/newsNavigation";
 
 export default function NewsClipDetail() {
   const [, params] = useRoute("/news/clips/:id");
@@ -26,13 +26,13 @@ export default function NewsClipDetail() {
 
   return (
     <div className="pageContainer issueDetailPage">
-      <Link href="/news/clips" className="issueBackButton"><ChevronLeft size={15} aria-hidden="true" />{issueBriefingLabel}</Link>
+      <Link href="/news/clips" className="issueBackButton"><ChevronLeft size={15} aria-hidden="true" />{issueClippingLabel}</Link>
       {isPending ? (
-        <p className="issuesStatus" role="status">뉴스 클립을 불러오는 중입니다.</p>
+        <p className="issuesStatus" role="status">{issueClippingLabel}을 불러오는 중입니다.</p>
       ) : isError ? (
-        <p className="issuesStatus" role="alert">뉴스 클립을 불러오지 못했습니다.</p>
+        <p className="issuesStatus" role="alert">{issueClippingLabel}을 불러오지 못했습니다.</p>
       ) : !clip ? (
-        <p className="issuesStatus">공개된 뉴스 클립을 찾을 수 없습니다.</p>
+        <p className="issuesStatus">공개된 {issueClippingLabel}을 찾을 수 없습니다.</p>
       ) : (
         <article className="issueDetail">
           <header className="issueDetailHeader">

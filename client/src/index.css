@@ -1085,7 +1085,8 @@ a {
 }
 
 .headerBrandText strong,
-.heroSearch {
+.heroSearch,
+.newsSearchForm {
   --view-logo-blue: 21 140 255;
   --view-logo-violet: 124 58 237;
 }
@@ -1678,6 +1679,10 @@ a {
   display: grid;
   gap: 4px;
   border-radius: 20px;
+}
+
+.heroSearch,
+.newsSearchInput {
   border: 2px solid rgba(69, 146, 243, 0.62);
   background: #111a2b;
   box-shadow:
@@ -1686,7 +1691,8 @@ a {
     0 18px 48px rgba(5, 11, 22, 0.42);
 }
 
-.heroSearch:focus-within {
+.heroSearch:focus-within,
+.newsSearchForm:focus-within .newsSearchInput {
   border-color: #148aff;
 }
 
@@ -1757,8 +1763,7 @@ a {
   position: absolute;
   left: 0;
   width: 22px;
-  color: #69f5b0;
-  text-shadow: 0 0 6px rgb(57 255 154 / 0.55), 0 0 14px rgb(57 255 154 / 0.25);
+  color: var(--cyan);
   font-size: 12px;
   font-weight: 700;
   text-align: center;
@@ -2177,12 +2182,17 @@ a {
   outline: 0;
   background: transparent;
   padding: 0 4px;
-  color: #f1f5ff;
   font-size: 16px;
+}
+
+.heroSearchInput,
+.newsSearchInput {
+  color: #f1f5ff;
   font-weight: 500;
 }
 
-.heroSearchInput::placeholder {
+.heroSearchInput::placeholder,
+.newsSearchInput::placeholder {
   color: #a4b2c8;
   opacity: 1;
 }
@@ -4116,6 +4126,145 @@ a {
   text-align: left;
 }
 
+.issueRelatedSection {
+  --issue-related-gap: 12px;
+  --issue-related-peek: 24px;
+  max-width: 960px;
+  margin: 32px auto 0;
+  padding-top: 20px;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.issueRelatedHeader {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.issueRelatedHeader h2 {
+  margin: 0;
+  color: #f1f5f9;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.issueRelatedControls {
+  display: flex;
+  gap: 4px;
+}
+
+.issueRelatedControls button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #aab8ce;
+  cursor: pointer;
+}
+
+.issueRelatedControls button:hover:not(:disabled) {
+  color: #f1f5f9;
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.issueRelatedControls button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.issueRelatedViewport {
+  overflow: hidden;
+}
+
+.issueRelatedViewport.hasOverflow {
+  --issue-related-start-fill: #000;
+  --issue-related-end-fill: #000;
+  padding-inline: calc(var(--issue-related-peek) + var(--issue-related-gap));
+  mask-image: linear-gradient(
+    to right,
+    var(--issue-related-start-fill),
+    #000 var(--issue-related-peek),
+    #000 calc(100% - var(--issue-related-peek)),
+    var(--issue-related-end-fill)
+  );
+}
+
+.issueRelatedViewport[data-previous="true"] {
+  --issue-related-start-fill: transparent;
+}
+
+.issueRelatedViewport[data-next="true"] {
+  --issue-related-end-fill: transparent;
+}
+
+.issueRelatedTrack {
+  display: flex;
+  gap: var(--issue-related-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  touch-action: pan-y pinch-zoom;
+}
+
+.issueRelatedSlide {
+  flex: 0 0 calc((100% - 2 * var(--issue-related-gap)) / 3);
+  min-width: 0;
+}
+
+.issueRelatedCard {
+  display: block;
+  border-radius: 8px;
+}
+
+.issueRelatedCard:hover .issueRelatedTitle {
+  color: #93c5fd;
+}
+
+.issueRelatedCard:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: -2px;
+}
+
+.issueRelatedThumbnail {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.issueRelatedTitle {
+  display: -webkit-box;
+  height: calc(2 * 1.45em);
+  overflow: hidden;
+  margin: 8px 0 0;
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+@media (max-width: 600px) {
+  .issueRelatedSection {
+    --issue-related-gap: 7px;
+    --issue-related-peek: 12px;
+  }
+
+  .issueRelatedTitle {
+    margin-top: 6px;
+    font-size: 11px;
+  }
+}
+
 .issueDetailImage {
   display: block;
   width: 100%;
@@ -4478,29 +4627,11 @@ a {
 .newsSearchInput {
   width: 100%;
   height: 46px;
-  border: 1px solid rgba(226, 232, 240, 0.9);
   border-radius: 999px;
-  background: #ffffff;
-  color: #111827;
   padding: 0 52px 0 20px;
   font-size: 15px;
-  font-weight: 400;
   outline: none;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
-  transition:
-    border-color 0.18s ease,
-    box-shadow 0.18s ease;
-}
-
-.newsSearchInput::placeholder {
-  color: #8a94a6;
-}
-
-.newsSearchInput:focus {
-  border-color: rgba(56, 189, 248, 0.8);
-  box-shadow:
-    0 0 0 3px rgba(56, 189, 248, 0.16),
-    0 12px 30px rgba(15, 23, 42, 0.18);
+  transition: border-color 0.18s ease;
 }
 
 .newsSearchIconButton {
@@ -4516,7 +4647,7 @@ a {
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: #4b5563;
+  color: #a4b2c8;
   cursor: pointer;
   transition:
     color 0.18s ease,
@@ -4524,8 +4655,8 @@ a {
 }
 
 .newsSearchIconButton:hover {
-  color: #0f172a;
-  background: rgba(15, 23, 42, 0.06);
+  color: #fff;
+  background: rgb(var(--view-logo-blue) / 0.16);
 }
 
 .newsSearchBackLink {
@@ -10498,12 +10629,6 @@ input[type="date"].youtubeSelect {
 
   .newsTrendHeader {
     gap: 22px;
-  }
-}
-
-@media (min-width: 769px) {
-  .newsTrendTabMenu.tabMenu {
-    display: none;
   }
 }
 

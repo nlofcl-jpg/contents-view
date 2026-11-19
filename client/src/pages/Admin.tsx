@@ -4,7 +4,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ComponentPro
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { issueFocusCategories, isIssueFocusCategoryId, type IssueFocusCategoryId } from "@/lib/issueFocusCategories";
-import { issueBriefingLabel, issueFocusLabel } from "@/lib/newsNavigation";
+import { issueClippingLabel, issueFocusLabel } from "@/lib/newsNavigation";
 import { ChevronDown, ChevronLeft, ChevronRight, RefreshCw, X } from "lucide-react";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
 import HeroKeywordsPanel from "@/components/HeroKeywordsPanel";
@@ -23,7 +23,7 @@ const adminTabs: Array<{ id: AdminTab; label: string }> = [
   { id: "users", label: "사용자" },
   { id: "apiKeys", label: "API 키" },
   { id: "issues", label: issueFocusLabel },
-  { id: "newsClips", label: issueBriefingLabel },
+  { id: "newsClips", label: issueClippingLabel },
   { id: "heroKeywords", label: "인기 검색어" },
   { id: "partnership", label: "제휴 문의" },
 ];
@@ -263,7 +263,7 @@ const ISSUE_FOCUS_ADMIN_PAGE_SIZE = 10;
 function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) {
   const { user } = useAuth();
   const isClip = table === "news_clips";
-  const label = isClip ? issueBriefingLabel : issueFocusLabel;
+  const label = isClip ? issueClippingLabel : issueFocusLabel;
   const [issues, setIssues] = useState<IssueRecord[]>([]);
   const [issuesPage, setIssuesPage] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);

@@ -1,5 +1,5 @@
 import { Check, Copy, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 
@@ -156,7 +156,7 @@ export function YouTubeVideoDetailModal({
 
   if (!isOpen || !video) return null;
 
-  const freshVideo = analysisData?.success ? analysisData.video : null;
+  const freshVideo = !useStoredSnapshot && analysisData?.success ? analysisData.video : null;
   const modalVideo: Video = freshVideo
     ? {
         ...video,
@@ -249,7 +249,7 @@ export function YouTubeVideoDetailModal({
           <div className="youtubeVideoModalMeta">
             <span>{formatDate(modalVideo.publishedAt)}</span>
             <span>{formatDuration(modalVideo.duration)}</span>
-            {isAnalysisFetching ? <span>최신 분석 중...</span> : null}
+            {!useStoredSnapshot && isAnalysisFetching ? <span>최신 분석 중...</span> : null}
           </div>
 
           <div className="youtubeVideoInsightGrid">

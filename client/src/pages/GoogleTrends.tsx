@@ -64,7 +64,7 @@ function SearchKeywordTrends() {
 
   return (
     <section aria-labelledby="search-keyword-trends-heading">
-      <h2 id="search-keyword-trends-heading" className="mb-5 hidden text-xl font-bold text-foreground lg:block">검색어 트렌드</h2>
+      <h2 id="search-keyword-trends-heading" className="mb-5 hidden text-xl font-bold text-foreground lg:block">컨텐츠뷰</h2>
       {isLoading || hasError ? (
         <div className="flex h-[562px] items-center justify-center rounded-md border border-slate-800 bg-slate-900/25 p-8 text-center text-sm text-slate-400">
           {isLoading ? "불러오는 중..." : "인기 검색어를 불러오지 못했습니다."}
@@ -266,7 +266,7 @@ export default function GoogleTrends() {
           onKeyDown={handleMobileTabKeyDown}
           className={`tabButton${mobileTab === "google" ? " active" : ""}`}
         >
-          구글 트렌드
+          구글
         </button>
         <button
           id="search-keyword-trends-tab"
@@ -279,7 +279,7 @@ export default function GoogleTrends() {
           onKeyDown={handleMobileTabKeyDown}
           className={`tabButton${mobileTab === "keywords" ? " active" : ""}`}
         >
-          검색어 트렌드
+          컨텐츠뷰
         </button>
       </div>
 
@@ -295,7 +295,7 @@ export default function GoogleTrends() {
           className="w-full min-w-0 flex-none snap-start lg:w-auto"
         >
           <h2 id="google-trends-heading" className="mb-5 hidden text-xl font-bold text-foreground lg:block">
-            구글 트렌드
+            구글
           </h2>
 
         {error ? (

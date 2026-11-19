@@ -10,7 +10,6 @@ import { useBookmark } from "@/contexts/BookmarkContext";
 import { useLocation } from "wouter";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 import { useIsMobile } from "@/hooks/useMobile";
-import { useRisingVideoAccess } from "@/hooks/useRisingVideoAccess";
 import "./youtubeRisingPreview.css";
 
 type TabType = "analysis" | "trending" | "category" | "shorts" | "rising";
@@ -237,14 +236,19 @@ export default function YouTubeTrends() {
   const [activeTab, setActiveTab] = useState<TabType>(getInitialYouTubeTab);
   const tabMenuRef = useRef<HTMLDivElement>(null);
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
+  const [selectedRisingVideo, setSelectedRisingVideo] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { apiKeyData, canOpenRisingVideo, openGuestPrompt: openRisingGuestPrompt, accessPrompt: risingAccessPrompt } = useRisingVideoAccess(user?.id, authLoading);
+  const [isRisingGuestPromptOpen, setIsRisingGuestPromptOpen] = useState(false);
+  const { data: apiKeyData } = trpc.user.apiKey.getWithStatus.useQuery(
+    { provider: "youtube" },
+    { enabled: Boolean(user?.id) && !authLoading }
+  );
   const [risingGridColumns, setRisingGridColumns] = useState(1);
   const risingPreviewGridRef = useRef<HTMLDivElement>(null);
-  const openRisingVideo = (video: any) => {
-    if (!canOpenRisingVideo()) return;
-    setSelectedVideo(video);
-    setIsModalOpen(true);
+  const goToRisingAuth = (mode: "login" | "signup") => {
+    setIsRisingGuestPromptOpen(false);
+    const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+    setLocation(`/login?${mode === "signup" ? "mode=signup&" : ""}redirect=${redirect}`);
   };
   const guestLoginButton = (className = "") => (
     <button
@@ -1333,11 +1337,11 @@ export default function YouTubeTrends() {
             className="videoCard"
             role="button"
             tabIndex={0}
-            onClick={() => openRisingVideo(video)}
+            onClick={() => setSelectedRisingVideo(video)}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
-                openRisingVideo(video);
+                setSelectedRisingVideo(video);
               }
             }}
           >
@@ -1443,7 +1447,7 @@ export default function YouTubeTrends() {
         )}
 
         {!isAuthenticated && (
-          <button type="button" className="previousRisingToggle risingGuestMore" onClick={openRisingGuestPrompt}>
+          <button type="button" className="previousRisingToggle risingGuestMore" onClick={() => setIsRisingGuestPromptOpen(true)}>
             더보기
             <ChevronDown size={16} aria-hidden="true" />
           </button>
@@ -1822,7 +1826,13 @@ export default function YouTubeTrends() {
         renderShortsTab()
       ) : null}
 
-      {risingAccessPrompt}
+      <GuestAccessPrompt
+        open={isRisingGuestPromptOpen && !isAuthenticated}
+        description="로그인하거나 가입하면 급상승 영상 전체 목록을 볼 수 있어요."
+        onBrowse={() => setIsRisingGuestPromptOpen(false)}
+        onLogin={() => goToRisingAuth("login")}
+        onSignup={() => goToRisingAuth("signup")}
+      />
 
       <GuestAccessPrompt
         open={isAnalysisGuestPromptOpen}
@@ -1839,13 +1849,14 @@ export default function YouTubeTrends() {
 
       {/* Video Detail Modal */}
       <YouTubeVideoDetailModal
-        video={selectedVideo}
-        isOpen={isModalOpen}
+        video={selectedRisingVideo ?? selectedVideo}
+        isOpen={Boolean(selectedRisingVideo) || isModalOpen}
         onClose={() => {
           setIsModalOpen(false);
           setSelectedVideo(null);
+          setSelectedRisingVideo(null);
         }}
-        useStoredSnapshot={activeTab === "rising"}
+        useStoredSnapshot={Boolean(selectedRisingVideo)}
       />
     </div>
   );

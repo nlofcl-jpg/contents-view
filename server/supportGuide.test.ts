@@ -17,7 +17,7 @@ describe("support guide", () => {
     expect(getSupportReply("뉴스 트렌드 사용법").actions).toEqual([
       { label: "최신 뉴스", href: "/news" },
       { label: "이슈 포커스", href: "/news/issues" },
-      { label: "이슈 브리핑", href: "/news/clips" },
+      { label: "이슈 클리핑", href: "/news/clips" },
       { label: "뉴스 검색", href: "/news/search" },
     ]);
   });

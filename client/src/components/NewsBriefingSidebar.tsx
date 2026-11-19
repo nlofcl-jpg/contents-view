@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import LatestNewsInfo from "@/components/LatestNewsInfo";
-import { issueBriefingLabel, issueFocusLabel } from "@/lib/newsNavigation";
+import { issueClippingLabel, issueFocusLabel } from "@/lib/newsNavigation";
 import { supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
 
@@ -30,8 +30,8 @@ export default function NewsBriefingSidebar({
 }: { showBriefings?: boolean; collectionsOnly?: boolean }) {
   return (
     <aside className="newsBriefingSidebar" aria-label={
-      collectionsOnly ? `${issueFocusLabel}와 ${issueBriefingLabel}`
-        : `최신 뉴스와 ${showBriefings ? issueBriefingLabel : issueFocusLabel}`
+      collectionsOnly ? `${issueFocusLabel}와 ${issueClippingLabel}`
+        : `최신 뉴스와 ${showBriefings ? issueClippingLabel : issueFocusLabel}`
     }>
       {collectionsOnly ? <IssueCollectionPanel showBriefings={false} /> : <LatestNewsPanel />}
       <IssueCollectionPanel showBriefings={collectionsOnly || showBriefings} />
@@ -100,7 +100,7 @@ function LatestNewsPanel() {
 
 function IssueCollectionPanel({ showBriefings }: { showBriefings: boolean }) {
   const collectionPath = showBriefings ? "/news/clips" : "/news/issues";
-  const collectionLabel = showBriefings ? issueBriefingLabel : issueFocusLabel;
+  const collectionLabel = showBriefings ? issueClippingLabel : issueFocusLabel;
   const headingId = showBriefings ? "sidebar-latest-briefings" : "sidebar-latest-focus";
   const issues = useQuery({
     queryKey: ["news-sidebar-entries", collectionPath],

@@ -4,10 +4,12 @@ import { toast } from "sonner";
 import { useLocation, useRoute } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { issueFocusLabel } from "@/lib/newsNavigation";
+import { isIssueFocusCategoryId, type IssueFocusCategoryId } from "@/lib/issueFocusCategories";
 import { loadKakaoSdk, shareIssueOnKakao } from "@/lib/kakaoShare";
 import IssueBody from "@/components/IssueBody";
 import IssueThumbnail from "@/components/IssueThumbnail";
 import NewsBriefingSidebar from "@/components/NewsBriefingSidebar";
+import RelatedFocusIssues from "@/components/RelatedFocusIssues";
 
 type IssueDetailRecord = {
   id: string;
@@ -17,6 +19,7 @@ type IssueDetailRecord = {
   thumbnail_credit: string | null;
   article_title: string | null;
   article_summary: string | null;
+  category: IssueFocusCategoryId | null;
   created_at: string;
 };
 
@@ -34,9 +37,10 @@ export default function IssueDetail() {
     }
 
     let cancelled = false;
+    setIsLoading(true);
     supabase
       .from("issues")
-      .select("id,title,summary,thumbnail_url,thumbnail_credit,article_title,article_summary,created_at")
+      .select("id,title,summary,thumbnail_url,thumbnail_credit,article_title,article_summary,category,created_at")
       .eq("id", params.id)
       .eq("is_published", true)
       .maybeSingle()
@@ -110,7 +114,7 @@ export default function IssueDetail() {
         {issueFocusLabel}
       </button>
 
-      {isLoading ? (
+      {isLoading || (issue && issue.id !== params?.id) ? (
         <p className="issuesStatus">이슈를 불러오는 중입니다.</p>
       ) : !issue ? (
         <p className="issuesStatus">이슈를 찾을 수 없습니다.</p>
@@ -162,6 +166,7 @@ export default function IssueDetail() {
               <footer className="issueDetailCopyright">
                 © CONTENTS VIEW. 무단 전재 및 재배포 금지
               </footer>
+              {isIssueFocusCategoryId(issue.category) && <RelatedFocusIssues issueId={issue.id} category={issue.category} />}
             </div>
             <NewsBriefingSidebar showBriefings />
           </div>

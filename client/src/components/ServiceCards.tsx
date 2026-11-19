@@ -3,8 +3,6 @@ import { ArrowRight, MessageCircle, MessageCircleMore, Newspaper, RefreshCw, Sea
 import { Link, useLocation } from "wouter";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
 import { GoogleTrendRankChange, type RankChange } from "@/components/GoogleTrendRankChange";
-import { useAuth } from "@/_core/hooks/useAuth";
-import { useRisingVideoAccess } from "@/hooks/useRisingVideoAccess";
 import { trpc } from "@/lib/trpc";
 import { YouTubeLogo } from "@/components/ServiceLogos";
 
@@ -328,8 +326,6 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
 
 export default function ServiceCards() {
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
-  const { user, loading: authLoading } = useAuth();
-  const { canOpenRisingVideo, accessPrompt } = useRisingVideoAccess(user?.id, authLoading);
 
   const youtubeRisingQuery = trpc.youtube.getCollectedRisingVideos.useQuery(
     {
@@ -492,9 +488,7 @@ export default function ServiceCards() {
             <TrendDashboardCard
               key={card.id}
               card={card}
-              onVideoSelect={(video) => {
-                if (canOpenRisingVideo()) setSelectedVideo(video);
-              }}
+              onVideoSelect={setSelectedVideo}
             />
           ))}
         </div>
@@ -505,7 +499,6 @@ export default function ServiceCards() {
         onClose={() => setSelectedVideo(null)}
         useStoredSnapshot
       />
-      {accessPrompt}
     </section>
   );
 }

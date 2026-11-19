@@ -32,7 +32,9 @@ export default function CommerceTrends() {
   return (
     <div className="youtubePageContainer min-h-full">
       <div className="pageHeader">
-        <h1 className="pageTitle">커머스 트렌드</h1>
+        <h1 className="pageTitle">
+          커머스 트렌드 <span className="ml-1 align-middle text-xs font-normal tracking-normal text-slate-400/70">Test</span>
+        </h1>
       </div>
       <div className="tabMenu youtubeTabMenu" role="group" aria-label="커머스 트렌드 선택">
         <button type="button" className="tabButton active" aria-pressed="true">

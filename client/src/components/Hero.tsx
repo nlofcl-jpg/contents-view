@@ -1,10 +1,9 @@
 import { ArrowUp, Plus, X } from "lucide-react";
 import HeroKeywordSlot from "@/components/HeroKeywordSlot";
 import HeroAiChat from "@/components/HeroAiChat";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { supabase } from "@/lib/supabase";
-import { readHeroKeywords } from "@/lib/heroKeywords";
+import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 import VoiceSearchButton from "@/components/VoiceSearchButton";
@@ -39,9 +38,16 @@ export default function Hero() {
   const [isAiPageOpen, setIsAiPageOpen] = useState(false);
   const [aiEntryOrigin, setAiEntryOrigin] = useState<DOMRectReadOnly | null>(null);
   const [keyword, setKeyword] = useState("");
-  const [popularKeywords, setPopularKeywords] = useState<string[]>([]);
   const [guestKeyword, setGuestKeyword] = useState<string | null>(null);
   const isAiMode = selectedPlatform?.value === "ai";
+  const { data: googleTrends } = trpc.googleTrends.realtimeTrending.useQuery(
+    { country: "KR" },
+    { retry: 1, refetchOnWindowFocus: false }
+  );
+  const popularKeywords = useMemo(
+    () => googleTrends?.success ? (googleTrends.data ?? []).slice(0, 7).map(item => item.keyword) : [],
+    [googleTrends]
+  );
 
   useLayoutEffect(() => {
     const hero = heroRef.current;
@@ -89,16 +95,6 @@ export default function Hero() {
     observer.observe(input, { box: "border-box" });
     return () => observer.disconnect();
   }, [isAiPageOpen]);
-
-  useEffect(() => {
-    if (!supabase) return;
-    let active = true;
-    supabase.from("hero_search_settings").select("keywords").eq("id", 1).maybeSingle()
-      .then(({ data }) => {
-        if (active) setPopularKeywords(readHeroKeywords(data?.keywords).slice(0, 7));
-      });
-    return () => { active = false; };
-  }, []);
 
   const getSearchPath = (searchKeyword: string) => {
     const trimmedKeyword = searchKeyword.trim();
