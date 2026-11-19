@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
-import { ArrowRight, MessageCircle, MessageCircleMore, Newspaper, RefreshCw, ThumbsUp, TrendingUp } from "lucide-react";
+import { ArrowRight, MessageCircle, MessageCircleMore, Newspaper, RefreshCw, Search, ThumbsUp, TrendingUp } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
 import { GoogleTrendRankChange, type RankChange } from "@/components/GoogleTrendRankChange";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useRisingVideoAccess } from "@/hooks/useRisingVideoAccess";
 import { trpc } from "@/lib/trpc";
-import { GoogleLogo, YouTubeLogo } from "@/components/ServiceLogos";
+import { YouTubeLogo } from "@/components/ServiceLogos";
 
 type TrendRow = {
   label: string;
@@ -115,7 +115,7 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
         <div className={`flex min-w-0 items-center ${isCommunityCard || isNewsCard ? "gap-2" : "gap-3"}`}>
           <div
             className={`flex shrink-0 items-center justify-center ${isCommunityCard || isNewsCard ? "h-8 w-8" : "h-10 w-10"} ${
-              card.brandIcon || isCommunityCard || isNewsCard ? "" : "rounded-lg bg-blue-500/15 text-blue-300"
+              card.brandIcon || isSearchCard || isCommunityCard || isNewsCard ? "" : "rounded-lg bg-blue-500/15 text-blue-300"
             }`}
           >
             {card.icon}
@@ -445,8 +445,7 @@ export default function ServiceCards() {
       title: "검색 트렌드",
       badge: "검색량",
       href: "/trends/google",
-      icon: <GoogleLogo />,
-      brandIcon: true,
+      icon: <Search aria-hidden="true" className="h-7 w-7 text-sky-400" />,
       rows: searchRows,
       loading: googleTrendsQuery.isLoading,
       emptyText: "실시간 검색 트렌드를 불러오지 못했습니다.",

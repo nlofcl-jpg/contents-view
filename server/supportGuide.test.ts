@@ -2,6 +2,17 @@ import { describe, expect, it } from "vitest";
 import { getSupportReply, supportMenuQuestions, supportQuestions, trendTabQuestions } from "../client/src/lib/supportGuide";
 
 describe("support guide", () => {
+  it("places withdrawal last and explains the exact confirmation without deleting in chat", () => {
+    expect(supportQuestions.at(-1)).toBe("회원탈퇴");
+    for (const question of ["회원탈퇴", "회원 탈퇴", "계정 삭제", "API 키와 계정을 삭제하고 탈퇴"]) {
+      const reply = getSupportReply(question);
+      expect(reply.text).toContain("내 정보");
+      expect(reply.text).toContain("창 하단 왼쪽");
+      expect(reply.text).toContain("띄어쓰기 없이 ‘회원탈퇴’");
+      expect(reply.text).toContain("복구할 수 없습니다");
+      expect(reply.text).toContain("이 채팅창에서는 탈퇴를 대신 처리하지 않습니다");
+    }
+  });
   it("lists the news trend tabs in navigation order", () => {
     expect(getSupportReply("뉴스 트렌드 사용법").actions).toEqual([
       { label: "최신 뉴스", href: "/news" },

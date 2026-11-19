@@ -1,4 +1,6 @@
-import { ArrowUp, ChevronRight, Plus, X } from "lucide-react";
+import { ArrowUp, Plus, X } from "lucide-react";
+import HeroKeywordSlot from "@/components/HeroKeywordSlot";
+import HeroAiChat from "@/components/HeroAiChat";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
@@ -8,23 +10,36 @@ import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 import VoiceSearchButton from "@/components/VoiceSearchButton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
+const aiPlatform = { value: "ai", label: "AI 모드", className: "isAi" };
+
 const searchPlatforms = [
   { value: "youtube", label: "YOUTUBE", className: "isYoutube" },
   { value: "naver", label: "NAVER", className: "isNaver" },
   { value: "google", label: "GOOGLE", className: "isGoogle" },
   { value: "news", label: "뉴스", className: "isNews" },
+  aiPlatform,
 ];
+
+function resizeAiInput(input: HTMLTextAreaElement) {
+  const scrollTop = input.scrollTop;
+  input.style.height = "auto";
+  input.style.height = `${input.scrollHeight}px`;
+  input.scrollTop = scrollTop;
+}
 
 export default function Hero() {
   const heroRef = useRef<HTMLElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
   const platformTriggerRef = useRef<HTMLButtonElement>(null);
+  const aiInputRef = useRef<HTMLTextAreaElement>(null);
   const [, setLocation] = useLocation();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [selectedPlatform, setSelectedPlatform] = useState<(typeof searchPlatforms)[number] | null>(null);
+  const [isAiPageOpen, setIsAiPageOpen] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [popularKeywords, setPopularKeywords] = useState<string[]>([]);
   const [guestKeyword, setGuestKeyword] = useState<string | null>(null);
+  const isAiMode = selectedPlatform?.value === "ai";
 
   useLayoutEffect(() => {
     const hero = heroRef.current;
@@ -53,7 +68,25 @@ export default function Hero() {
       observer.disconnect();
       window.removeEventListener("resize", updateBounds);
     };
-  }, []);
+  }, [isAiPageOpen]);
+
+  useLayoutEffect(() => {
+    const input = aiInputRef.current;
+    if (input) resizeAiInput(input);
+  }, [isAiPageOpen, keyword]);
+
+  useLayoutEffect(() => {
+    const input = aiInputRef.current;
+    if (!input) return;
+    let width = input.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (input.clientWidth === width) return;
+      width = input.clientWidth;
+      resizeAiInput(input);
+    });
+    observer.observe(input, { box: "border-box" });
+    return () => observer.disconnect();
+  }, [isAiPageOpen]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -67,7 +100,7 @@ export default function Hero() {
 
   const getSearchPath = (searchKeyword: string) => {
     const trimmedKeyword = searchKeyword.trim();
-    const platform = selectedPlatform?.value ?? "naver";
+    const platform = isAiMode ? "naver" : selectedPlatform?.value ?? "naver";
     if (platform === "naver") {
       return `/trends/naver?keyword=${encodeURIComponent(trimmedKeyword)}`;
     }
@@ -105,37 +138,53 @@ export default function Hero() {
     setLocation(`/login?${params.toString()}`);
   };
 
-  return (
-    <>
-    <div ref={backdropRef} className="heroBackdrop" aria-hidden="true" />
-    <section ref={heroRef} className="hero">
-      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
-        <div className="heroCopy">
-          <p className="heroKicker">TRACK. ANALYZE. DISCOVER.</p>
+  const selectPlatform = (value: string) => {
+    const platform = searchPlatforms.find(item => item.value === value);
+    if (!platform) return;
+    setSelectedPlatform(platform);
+    if (platform.value === "ai") setIsAiPageOpen(true);
+  };
 
-          <h2>
-            다양한 컨텐츠 트렌드를
-            <br />
-            <span>실시간으로</span> 확인하세요
-          </h2>
+  const clearPlatform = () => {
+    if (isAiPageOpen && !isAiMode) {
+      setSelectedPlatform(aiPlatform);
+    } else {
+      setSelectedPlatform(null);
+      setIsAiPageOpen(false);
+    }
+    requestAnimationFrame(() => platformTriggerRef.current?.focus());
+  };
 
-          <form
-            className="heroSearch"
-            role="search"
-            aria-label="트렌드 분석"
-            onSubmit={event => {
-              event.preventDefault();
-              handleHeroSearch();
-            }}
-          >
-            <input
-              type="text"
-              className="heroSearchInput"
-              value={keyword}
-              onChange={event => setKeyword(event.target.value)}
-              placeholder="분석할 플랫폼을 선택 후 키워드를 입력하세요"
-              aria-label="분석할 키워드"
-            />
+  const renderInput = (sendDisabled: boolean) => (
+            <>
+            {isAiPageOpen ? (
+              <textarea
+                ref={aiInputRef}
+                className="heroSearchInput heroAiInput"
+                rows={1}
+                maxLength={2000}
+                value={keyword}
+                onChange={event => setKeyword(event.target.value)}
+                placeholder={isAiMode ? "질문을 입력하세요." : selectedPlatform?.value === "youtube" ? "유튜브 키워드 또는 URL을 입력하세요." : "검색할 키워드를 입력하세요."}
+                aria-label={isAiMode ? "Gemini에게 보낼 질문" : "분석할 키워드"}
+                onKeyDown={event => {
+                  if (event.key !== "Enter" || event.nativeEvent.isComposing || event.shiftKey) return;
+                  event.preventDefault();
+                  if (!sendDisabled && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                    event.currentTarget.form?.requestSubmit();
+                  }
+                }}
+              />
+            ) : (
+              <input
+                type="text"
+                className="heroSearchInput"
+                value={keyword}
+                onChange={event => setKeyword(event.target.value)}
+                placeholder="분석할 플랫폼을 선택 후 키워드를 입력하세요"
+                aria-label="분석할 키워드"
+              />
+            )}
             <div className="heroSearchActions">
               <div className="heroSearchPlatformControls">
                 <DropdownMenu modal={false}>
@@ -151,10 +200,7 @@ export default function Hero() {
                   <DropdownMenuContent align="start" sideOffset={8} collisionPadding={12} className="heroSearchMenu" aria-label="분석 플랫폼">
                     <DropdownMenuRadioGroup
                       value={selectedPlatform?.value ?? ""}
-                      onValueChange={value => {
-                        const platform = searchPlatforms.find(item => item.value === value);
-                        if (platform) setSelectedPlatform(platform);
-                      }}
+                      onValueChange={selectPlatform}
                     >
                       {searchPlatforms.map(platform => (
                         <DropdownMenuRadioItem
@@ -174,10 +220,7 @@ export default function Hero() {
                     className="heroSearchClearPlatform"
                     aria-label={`${selectedPlatform.label} 선택 취소`}
                     title="플랫폼 선택 취소"
-                    onClick={() => {
-                      setSelectedPlatform(null);
-                      platformTriggerRef.current?.focus();
-                    }}
+                    onClick={clearPlatform}
                   >
                     <X size={14} aria-hidden="true" />
                   </button>
@@ -185,39 +228,42 @@ export default function Hero() {
               </div>
               <div className="flex items-center gap-1">
                 <VoiceSearchButton onTranscript={text => setKeyword(value => [value.trimEnd(), text].filter(Boolean).join(" "))} />
-                <button type="submit" className="heroSearchButton" aria-label="분석" title="분석" disabled={!keyword.trim()}>
+                <button type="submit" className="heroSearchButton" aria-label={isAiMode ? "질문 보내기" : "분석"} title={isAiMode ? "질문 보내기" : "분석"} disabled={sendDisabled}>
                   <ArrowUp size={19} aria-hidden="true" />
                 </button>
               </div>
             </div>
+            </>
+  );
+
+  if (isAiPageOpen) {
+    return <HeroAiChat input={keyword} setInput={setKeyword} renderInput={renderInput} onAnalyze={isAiMode ? undefined : handleHeroSearch} />;
+  }
+
+  return (
+    <>
+    <div ref={backdropRef} className="heroBackdrop" aria-hidden="true" />
+    <section ref={heroRef} className="hero">
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
+        <div className="heroCopy">
+          <p className="heroKicker">CONTENT · COMMERCE · MARKETING</p>
+          <h2>
+            다양한 콘텐츠와 트렌드를
+            <br />
+            한곳에서 확인하고 <span>새로운 기회로</span>
+          </h2>
+          <form className="heroSearch" role="search" aria-label="트렌드 분석" onSubmit={event => {
+            event.preventDefault();
+            handleHeroSearch();
+          }}>
+            {renderInput(!keyword.trim())}
           </form>
           {popularKeywords.length > 0 && (
-            <div className="heroPopularKeywordSection" aria-labelledby="heroPopularKeywordTitle">
-              <p id="heroPopularKeywordTitle" className="heroPopularKeywordTitle">인기 검색어</p>
-              <div className="heroPopularKeywordRow">
-              <div className="heroPopularKeywords">
-                {popularKeywords.map(popularKeyword => (
-                  <button
-                    key={popularKeyword}
-                    type="button"
-                    className="heroPopularKeyword"
-                    title={`${popularKeyword} 검색`}
-                    onClick={() => handlePopularKeywordClick(popularKeyword)}
-                  >
-                    #{popularKeyword}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                className="heroPopularKeywordMore"
-                onClick={() => setLocation("/trends/google")}
-              >
-                더보기
-                <ChevronRight size={14} aria-hidden="true" />
-              </button>
-              </div>
-            </div>
+            <HeroKeywordSlot
+              keywords={popularKeywords}
+              onSelect={handlePopularKeywordClick}
+              onMore={() => setLocation("/trends/google")}
+            />
           )}
         </div>
       </div>

@@ -15,9 +15,9 @@ export default function Home() {
   // const { theme, toggleTheme } = useTheme();
 
   return (
-    <div>
+    <div className="homePage">
       <Hero />
-      <ServiceCards />
+      <div className="homeTrendContent"><ServiceCards /></div>
     </div>
   );
 }

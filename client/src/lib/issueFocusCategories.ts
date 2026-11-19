@@ -10,6 +10,10 @@ export const issueFocusCategories = [
 export type IssueFocusCategory = typeof issueFocusCategories[number]["id"];
 export type IssueFocusCategoryId = Exclude<IssueFocusCategory, "all">;
 
+export function isIssueFocusCategoryId(value: unknown): value is IssueFocusCategoryId {
+  return issueFocusCategories.some(({ id }) => id !== "all" && id === value);
+}
+
 export function matchesIssueFocusCategory(savedCategory: IssueFocusCategoryId | null, category: IssueFocusCategory) {
   return category === "all" || savedCategory === category;
 }

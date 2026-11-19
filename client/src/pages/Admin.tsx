@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { issueFocusCategories, type IssueFocusCategoryId } from "@/lib/issueFocusCategories";
+import { issueFocusCategories, isIssueFocusCategoryId, type IssueFocusCategoryId } from "@/lib/issueFocusCategories";
 import { issueBriefingLabel, issueFocusLabel } from "@/lib/newsNavigation";
 import { ChevronDown, ChevronLeft, ChevronRight, RefreshCw, X } from "lucide-react";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
@@ -413,6 +413,12 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
 
   const handleSave = async () => {
     if (!supabase || !user || bodyUploading || isSaving) return;
+    if (!isClip && !isIssueFocusCategoryId(category)) {
+      setError("카테고리를 선택해 주세요.");
+      setMessage(null);
+      document.getElementById("issue-category")?.focus();
+      return;
+    }
     if (!title.trim() || (!stripIssueBodyFormatting(summary) && issueBodyImages(summary).length === 0)) {
       setError("제목과 본문을 입력하세요.");
       setMessage(null);
@@ -659,13 +665,16 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
             />
             {!isClip && (
               <AdminSelect
+                id="issue-category"
                 aria-label="이슈 포커스 카테고리"
+                aria-required="true"
+                required
                 className="h-10 w-[144px] rounded-md border border-slate-700 bg-slate-950/80 pl-2 text-sm text-slate-200 outline-none focus:border-blue-400"
                 value={category}
                 onChange={event => setCategory(event.target.value as IssueFocusCategoryId | "")}
                 disabled={isSaving}
               >
-                <option value="">카테고리 미분류</option>
+                <option value="" disabled>카테고리 선택</option>
                 {issueFocusCategories.map(({ id, label }) => id === "all" ? null : (
                   <option key={id} value={id}>{label}</option>
                 ))}

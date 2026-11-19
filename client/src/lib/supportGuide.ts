@@ -4,7 +4,7 @@ export type SupportAction = { label: string; href: string } | { label: string; i
 export type SupportReply = { text: string; actions?: SupportAction[]; questions?: string[] };
 
 export const supportMenuQuestions = ["유튜브 트렌드 사용법", "네이버 트렌드 사용법", "검색 트렌드 사용법", "뉴스 트렌드 사용법", "커뮤니티 트렌드 사용법", "스튜디오 사용법"];
-export const supportQuestions = ["메뉴별 사용법", "보관함", "API 키 설정", "로그인·가입", "문의하기"];
+export const supportQuestions = ["메뉴별 사용법", "보관함", "API 키 설정", "로그인·가입", "문의하기", "회원탈퇴"];
 
 export const trendTabQuestions = {
   youtube: ["영상 분석 사용법", "유튜브 추천 영상 사용법", "카테고리별 인기 사용법", "인기 쇼츠 사용법", "급상승 영상 사용법"],
@@ -64,6 +64,10 @@ export function getSupportReply(question: string): SupportReply {
   const text = question.toLowerCase().replace(/\s+/g, "");
   const tabGuide = Object.entries(tabGuides).find(([label]) => label.toLowerCase().replace(/\s+/g, "") === text)?.[1];
   if (tabGuide) return tabGuide;
+  if (/탈퇴|계정삭제|회원삭제/.test(text)) return {
+    text: "회원 탈퇴 방법\n\n1. 로그인한 뒤 프로필 메뉴에서 ‘내 정보’를 여세요.\n2. 창 하단 왼쪽의 ‘회원 탈퇴’를 누르세요.\n3. 삭제 안내를 확인하고 입력칸에 띄어쓰기 없이 ‘회원탈퇴’를 입력하세요.\n4. ‘탈퇴하기’를 누르면 계정과 연결된 개인 정보·보관함·등록한 API 키가 삭제되고 로그아웃됩니다. 진행하지 않으려면 ‘취소’를 누르세요.\n\n삭제된 정보는 복구할 수 없습니다. Google 계정과 외부 플랫폼의 원본 콘텐츠는 삭제되지 않습니다. 등록된 API 키의 외부 발급 자체가 취소되는 것은 아니므로 필요하면 Google Cloud Console에서도 직접 폐기해 주세요.\n\n이 채팅창에서는 탈퇴를 대신 처리하지 않습니다. 직접 진행하기 어렵다면 edenofcls@gmail.com으로 문의해 주세요. 비밀번호나 API 키 전체 값은 보내지 마세요.",
+    actions: [{ label: "개인정보처리방침", href: "/privacy" }],
+  };
   if (/메뉴별|전체메뉴|사용법목록/.test(text)) return {
     text: "사용 방법이 궁금한 메뉴를 선택해 주세요. 각 메뉴의 이용 순서와 바로가기를 안내해 드릴게요.",
     questions: supportMenuQuestions,

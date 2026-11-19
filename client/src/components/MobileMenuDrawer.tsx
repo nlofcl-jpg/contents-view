@@ -252,6 +252,9 @@ export function MobileMenuDrawer({
               >
                 <span>커뮤니티 트렌드</span>
               </button>
+              <button className="mobileNavItem" type="button" disabled title="준비 중">
+                <span>커머스</span>
+              </button>
 
               <button
                 className={`mobileNavItem groupTitle ${isAIStudioPage ? "active" : ""}`}
