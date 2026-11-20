@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanHeroKeyword, parseRankedHeroKeywords, readHeroKeywords } from "../client/src/lib/heroKeywords";
+import { addHeroKeywordToDraft, cleanHeroKeyword, parseRankedHeroKeywords, readHeroKeywords } from "../client/src/lib/heroKeywords";
 
 describe("hero search keywords", () => {
   it("removes a leading hash and surrounding whitespace", () => {
@@ -37,5 +37,19 @@ describe("hero search keywords", () => {
 
   it("returns no keywords for an invalid stored value", () => {
     expect(readHeroKeywords(null)).toEqual([]);
+  });
+
+  it("starts a new draft without modifying a full saved list", () => {
+    const saved = Array.from({ length: 20 }, (_, index) => `검색어 ${index + 1}`);
+    const draft = addHeroKeywordToDraft([...saved], saved, " #신규 ");
+    expect(draft).toEqual({ keywords: ["신규"], startsNewRound: true });
+    expect(saved).toHaveLength(20);
+    expect(addHeroKeywordToDraft(draft.keywords, saved, "두 번째").keywords).toEqual(["신규", "두 번째"]);
+  });
+
+  it("does not discard a full unsaved draft", () => {
+    const draft = Array.from({ length: 20 }, (_, index) => `검색어 ${index + 1}`);
+    expect(() => addHeroKeywordToDraft(draft, ["저장된 검색어"], "신규")).toThrow("먼저 저장하거나 취소");
+    expect(() => addHeroKeywordToDraft(draft, draft, "검색어 1")).toThrow("이미 등록");
   });
 });

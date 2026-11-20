@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, Plus, Save, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
-import { cleanHeroKeyword, MAX_HERO_KEYWORD_LENGTH, MAX_HERO_KEYWORDS, parseRankedHeroKeywords, readHeroKeywords } from "@/lib/heroKeywords";
+import { addHeroKeywordToDraft, cleanHeroKeyword, MAX_HERO_KEYWORD_LENGTH, MAX_HERO_KEYWORDS, parseRankedHeroKeywords, readHeroKeywords } from "@/lib/heroKeywords";
 
 export default function HeroKeywordsPanel() {
   const utils = trpc.useUtils();
@@ -56,17 +56,17 @@ export default function HeroKeywordsPanel() {
   };
 
   const addKeyword = () => {
-    const keyword = cleanHeroKeyword(newKeyword);
-    if (!keyword) return setError("검색어를 입력하세요.");
-    if (keyword.length > MAX_HERO_KEYWORD_LENGTH) return setError(`검색어는 ${MAX_HERO_KEYWORD_LENGTH}자 이하로 입력하세요.`);
-    if (keywords.length >= MAX_HERO_KEYWORDS) return setError(`검색어는 최대 ${MAX_HERO_KEYWORDS}개까지 등록할 수 있습니다.`);
-    if (keywords.some(item => cleanHeroKeyword(item).toLocaleLowerCase() === keyword.toLocaleLowerCase())) {
-      return setError("이미 등록된 검색어입니다.");
+    if (isSaving) return;
+    try {
+      const draft = addHeroKeywordToDraft(keywords, savedKeywords, newKeyword);
+      setKeywords(draft.keywords);
+      setNewKeyword("");
+      setError(null);
+      setMessage(draft.startsNewRound ? "새 목록에 추가했습니다. 저장하면 이전 목록은 이력에 보관됩니다." : null);
+    } catch (draftError) {
+      setError(draftError instanceof Error ? draftError.message : "검색어를 추가하지 못했습니다.");
+      setMessage(null);
     }
-    setKeywords(current => [...current, keyword]);
-    setNewKeyword("");
-    setError(null);
-    setMessage(null);
   };
 
   const applyBulkKeywords = () => {
@@ -159,18 +159,19 @@ export default function HeroKeywordsPanel() {
             ))}
           </div>
 
-          {keywords.length < MAX_HERO_KEYWORDS && (
-            <form onSubmit={event => { event.preventDefault(); addKeyword(); }} className="flex items-center gap-2">
-              <input
-                value={newKeyword}
-                onChange={event => { setNewKeyword(event.target.value); setError(null); }}
-                maxLength={MAX_HERO_KEYWORD_LENGTH + 1}
-                placeholder="검색어 추가"
-                aria-label="새 검색어"
-                className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-400"
-              />
-              <button type="submit" title="검색어 추가" className="inline-flex h-10 items-center gap-1 rounded-md border border-blue-400/50 px-3 text-sm text-blue-200 hover:bg-blue-500/10"><Plus size={16} /> 추가</button>
-            </form>
+          <form onSubmit={event => { event.preventDefault(); addKeyword(); }} className="flex items-center gap-2">
+            <input
+              value={newKeyword}
+              onChange={event => { setNewKeyword(event.target.value); setError(null); }}
+              maxLength={MAX_HERO_KEYWORD_LENGTH + 1}
+              placeholder="검색어 추가"
+              aria-label="새 검색어"
+              className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-400"
+            />
+            <button type="submit" title="검색어 추가" disabled={isSaving} className="inline-flex h-10 items-center gap-1 rounded-md border border-blue-400/50 px-3 text-sm text-blue-200 hover:bg-blue-500/10 disabled:opacity-40"><Plus size={16} /> 추가</button>
+          </form>
+          {keywords.length === MAX_HERO_KEYWORDS && !isDirty && (
+            <p className="text-xs text-slate-400">20개가 모두 등록되어 있습니다. 새 검색어를 추가하고 저장하면 기존 목록은 이력으로 남습니다.</p>
           )}
 
           <div className="flex items-center justify-between gap-3 border-t border-slate-800 pt-4">
