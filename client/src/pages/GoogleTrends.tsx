@@ -161,10 +161,12 @@ function SearchKeywordTrends({ isAuthenticated, authLoading, onGuestAccess }: {
     refetchInterval: 30_000,
     retry: false,
   });
-  const showLocalFallback = import.meta.env.DEV && !date && current.isError && Boolean(supabase);
+  const showPublishedKeywords = !date && Boolean(supabase) && (
+    current.data?.rankings.length === 0 || (import.meta.env.DEV && current.isError)
+  );
   const fallback = useQuery({
-    queryKey: ["contents-view-local-keywords"],
-    enabled: showLocalFallback,
+    queryKey: ["contents-view-published-keywords"],
+    enabled: showPublishedKeywords,
     queryFn: async ({ signal }) => {
       if (!supabase) return [];
       const { data, error } = await supabase.from("hero_search_settings").select("keywords")
@@ -175,11 +177,11 @@ function SearchKeywordTrends({ isAuthenticated, authLoading, onGuestAccess }: {
     refetchInterval: 30_000,
     retry: false,
   });
-  const liveKeywords = (showLocalFallback ? fallback.data?.map(keyword => ({ keyword })) : current.data?.rankings) ?? [];
+  const liveKeywords = (showPublishedKeywords ? fallback.data?.map(keyword => ({ keyword })) : current.data?.rankings) ?? [];
   const canShowMoreLiveRanks = liveKeywords.length > LIVE_RANKING_PREVIEW_SIZE;
   const visibleLiveRanks = showAllLiveRanks ? liveKeywords : liveKeywords.slice(0, LIVE_RANKING_PREVIEW_SIZE);
-  const liveLoading = current.isPending || (showLocalFallback && fallback.isPending);
-  const liveError = showLocalFallback ? fallback.isError : current.isError;
+  const liveLoading = current.isPending || (showPublishedKeywords && fallback.isPending);
+  const liveError = showPublishedKeywords ? fallback.isError : current.isError;
   const history = useInfiniteQuery({
     queryKey: ["contents-view-keyword-history"],
     enabled: historyOpen && isAuthenticated,
@@ -220,7 +222,7 @@ function SearchKeywordTrends({ isAuthenticated, authLoading, onGuestAccess }: {
           <div id="search-keyword-ranking">
             {visibleLiveRanks.length
               ? <KeywordRanking entries={visibleLiveRanks} />
-              : <p className="rounded-md border border-slate-800 bg-slate-900/25 p-6 text-center text-sm text-slate-400">{showLocalFallback ? "등록된 검색어가 없습니다." : "오늘 등록된 검색어가 없습니다."}</p>}
+              : <p className="rounded-md border border-slate-800 bg-slate-900/25 p-6 text-center text-sm text-slate-400">{showPublishedKeywords ? "등록된 검색어가 없습니다." : "오늘 등록된 검색어가 없습니다."}</p>}
           </div>
           {canShowMoreLiveRanks && !showAllLiveRanks && (
             <div className="mt-4 flex justify-center">
