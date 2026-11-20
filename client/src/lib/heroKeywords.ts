@@ -5,20 +5,6 @@ export function cleanHeroKeyword(value: string): string {
   return value.trim().replace(/^#+/, "").trim();
 }
 
-export function addHeroKeywordToDraft(draft: string[], saved: string[], input: string) {
-  const keyword = cleanHeroKeyword(input);
-  if (!keyword) throw new Error("검색어를 입력하세요.");
-  if (keyword.length > MAX_HERO_KEYWORD_LENGTH) throw new Error(`검색어는 ${MAX_HERO_KEYWORD_LENGTH}자 이하로 입력하세요.`);
-  if (draft.some(item => cleanHeroKeyword(item).toLocaleLowerCase() === keyword.toLocaleLowerCase())) {
-    throw new Error("이미 등록된 검색어입니다.");
-  }
-  if (draft.length < MAX_HERO_KEYWORDS) return { keywords: [...draft, keyword], startsNewRound: false };
-  if (draft.length !== saved.length || draft.some((item, index) => item !== saved[index])) {
-    throw new Error("한 회차는 최대 20개입니다. 편집 중인 목록을 먼저 저장하거나 취소해 주세요.");
-  }
-  return { keywords: [keyword], startsNewRound: true };
-}
-
 export function parseRankedHeroKeywords(value: string): string[] {
   const entries = value.split(/[|,\n]+/).map(entry => entry.trim()).filter(Boolean);
   if (entries.length === 0) throw new Error("검색어를 입력하세요.");
