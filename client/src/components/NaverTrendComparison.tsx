@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, X } from "lucide-react";
+import { AnalysisProgress } from "@/components/AnalysisProgress";
 import { UnifiedChart } from "@/components/UnifiedChart";
 import { trpc } from "@/lib/trpc";
 
@@ -16,7 +17,7 @@ type TrendComparison = {
   shopping: Record<string, InsightPoint[]>;
 };
 
-type ComparisonResponse = Partial<Pick<TrendComparison, "trend" | "shopping">> & { success?: boolean };
+type ComparisonResponse = Partial<Pick<TrendComparison, "trend" | "shopping">> & { success?: boolean; error?: string };
 
 const MAX_COMPARISON_KEYWORDS = 3;
 const TREND_FILTER_GRID_CLASS = "grid grid-cols-2 items-end gap-2 md:grid-cols-[repeat(5,minmax(0,1fr))_6.5rem]";
@@ -47,6 +48,16 @@ const AGE_OPTIONS = [
   { value: "7,8", label: "40대" },
   { value: "9,10", label: "50대" },
   { value: "11", label: "60대+" },
+] as const;
+
+const SHOPPING_AGE_OPTIONS = [
+  { value: "", label: "전체" },
+  { value: "10", label: "10대" },
+  { value: "20", label: "20대" },
+  { value: "30", label: "30대" },
+  { value: "40", label: "40대" },
+  { value: "50", label: "50대" },
+  { value: "60", label: "60대+" },
 ] as const;
 
 type TrendFilterMenu = "period" | "unit" | "device" | "gender" | "age" | null;
@@ -83,6 +94,7 @@ export function useNaverTrendComparison({
   const displayedTrendData = trendComparisonData || chartData;
   const comparisonKeywords: string[] = trendComparisonData?.sourceKeywords ?? chartData?.keywords ?? [];
   const shoppingOnly = metric === "shopping";
+  const ageOptionsForMetric = shoppingOnly ? SHOPPING_AGE_OPTIONS : AGE_OPTIONS;
   const chartKeywords = (displayedTrendData?.keywords ?? []).filter(keyword => displayedTrendData?.[metric]?.[keyword]?.length);
   const hasComparisonResults = !isLoading && chartKeywords.length > 0;
   const comparisonChartTitle = shoppingOnly ? "쇼핑 트렌드 비교" : "검색 트렌드 비교";
@@ -101,7 +113,7 @@ export function useNaverTrendComparison({
     const genderLabel = selectedGenders.includes("전체") ? "전체" : selectedGenders.join(", ");
     const ageLabel = selectedAges.includes("")
       ? "전체 연령"
-      : selectedAges.map(value => AGE_OPTIONS.find(option => option.value === value)?.label || value).join(", ");
+      : selectedAges.map(value => ageOptionsForMetric.find(option => option.value === value)?.label || value).join(", ");
     return [
       periodLabel,
       unitLabel,
@@ -167,7 +179,7 @@ export function useNaverTrendComparison({
       ? [{ value: undefined as string | undefined, label: "전체" }]
       : selectedGenders.map(value => ({ value, label: value }));
 
-    const ageLabelMap = Object.fromEntries(AGE_OPTIONS.map(option => [option.value, option.label]));
+    const ageLabelMap = Object.fromEntries(ageOptionsForMetric.map(option => [option.value, option.label]));
     const ageOptions = selectedAges.includes("")
       ? [{ values: undefined as string[] | undefined, label: "전체 연령" }]
       : selectedAges.map(value => ({
@@ -242,6 +254,7 @@ export function useNaverTrendComparison({
 
     try {
       const responses = await queryTrendFilterInsight({
+        metric: shoppingOnly ? "shopping" : undefined,
         requests: combinations.map(combination => ({
           keywords: nextKeywords,
           startDate: startDateStr,
@@ -273,7 +286,8 @@ export function useNaverTrendComparison({
       });
 
       if (chartKeywords.length === 0) {
-        setTrendFilterError(shoppingOnly ? "선택한 조건의 쇼핑 클릭 데이터를 찾지 못했습니다." : "선택한 조건의 검색 트렌드 데이터를 찾지 못했습니다.");
+        const shoppingError = shoppingOnly && results.find(({ response }) => response?.error)?.response?.error;
+        setTrendFilterError(shoppingError || (shoppingOnly ? "선택한 조건의 쇼핑 클릭 데이터를 찾지 못했습니다." : "선택한 조건의 검색 트렌드 데이터를 찾지 못했습니다."));
         return false;
       }
 
@@ -394,7 +408,7 @@ export function useNaverTrendComparison({
             className={TREND_FILTER_BUTTON_CLASS}
             disabled={authLoading || isLoading || isTrendFilterLoading || !comparisonKeywordInput.trim()}
           >
-            추가
+            {shoppingOnly ? "분석" : "추가"}
           </button>
         </form>
       </div>
@@ -427,7 +441,7 @@ export function useNaverTrendComparison({
             checked: selectedGenders.includes(option),
             onChange: () => toggleMultiFilter(selectedGenders, option, "전체", setSelectedGenders),
           })), getFilterSummary(selectedGenders, "전체", "전체"))}
-          {renderSingleCheckFilter("age", "연령", AGE_OPTIONS.map(option => ({
+          {renderSingleCheckFilter("age", "연령", ageOptionsForMetric.map(option => ({
             value: option.value,
             label: option.label,
             checked: selectedAges.includes(option.value),
@@ -436,7 +450,7 @@ export function useNaverTrendComparison({
             selectedAges,
             "",
             "전체",
-            Object.fromEntries(AGE_OPTIONS.map(option => [option.value, option.label]))
+            Object.fromEntries(ageOptionsForMetric.map(option => [option.value, option.label]))
           ))}
           <button
             type="button"
@@ -465,13 +479,13 @@ export function useNaverTrendComparison({
             ))}
           </div>
         )}
-        {trendFilterError && <p className="mt-3 text-xs text-red-300">{trendFilterError}</p>}
+        {trendFilterError && <p role="alert" className="mt-3 text-xs text-red-300">{trendFilterError}</p>}
       </div>
     </div>
   );
 
   const renderPanel = () => (
-    <div className="bg-slate-900 bg-opacity-50 border border-cyan-700 border-opacity-30 rounded-lg px-4 pt-4 pb-5 md:px-6 md:pt-6 md:pb-6 h-auto min-h-0">
+    <div className="trend-comparison-glass min-h-0 rounded-lg border px-4 pt-4 pb-5 md:px-6 md:pt-6 md:pb-6">
       {/* Chart Header */}
       <div className="mb-4 md:mb-6">
         <h3 className="mb-1 text-base font-medium text-white md:mb-2 md:text-lg md:font-semibold">
@@ -488,14 +502,8 @@ export function useNaverTrendComparison({
       </div>
 
       {/* Chart Container */}
-      <div className="relative h-[300px] md:h-[480px]">
-        {isTrendFilterLoading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-slate-950/70 backdrop-blur-sm">
-            <div className="rounded-lg border border-blue-500/20 bg-slate-900 px-5 py-3 text-sm font-medium text-slate-200 shadow-xl shadow-black/30">
-              {comparisonChartTitle} 데이터를 불러오는 중입니다...
-            </div>
-          </div>
-        )}
+      {isTrendFilterLoading && <AnalysisProgress />}
+      <div className="relative h-[300px] md:h-[480px]" aria-busy={isTrendFilterLoading}>
         {hasComparisonResults && <UnifiedChart
           data={comparisonChartData}
           visibleLayers={comparisonChartLayers}

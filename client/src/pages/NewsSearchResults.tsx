@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { ChevronDown, Loader2, RotateCcw, Search } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { AnalysisProgress } from "@/components/AnalysisProgress";
 import NewsTrendHeader from "@/components/NewsTrendHeader";
 
 interface NewsItem {
@@ -131,10 +132,7 @@ export default function NewsSearchResults() {
             </div>
           </div>
         ) : isLoadingSearch ? (
-          <div className="newsSearchLoading" role="status" aria-live="polite">
-            <Loader2 className="newsSearchLoadingIcon" aria-hidden="true" />
-            <span>데이터를 불러오는 중</span>
-          </div>
+          <AnalysisProgress label="검색중..." />
         ) : !keyword ? (
           <div className="text-center text-gray-400">검색할 키워드를 입력해 주세요.</div>
         ) : searchError ? (

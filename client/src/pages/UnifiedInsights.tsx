@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { AnalysisProgress } from "@/components/AnalysisProgress";
 import { useAuth } from "@/_core/hooks/useAuth";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 import VoiceSearchButton from "@/components/VoiceSearchButton";
@@ -634,25 +634,7 @@ export default function UnifiedInsights() {
         </div>
       )}
 
-      {isLoading && createPortal(
-        <div className="naverAnalysisProgress" role="status">
-          <div className="naverAnalysisProgressTrack" aria-hidden="true" />
-          <p>분석중...</p>
-        </div>,
-        document.body
-      )}
-
-      {isBlogLoading && (
-        <div className="mt-3 rounded-lg border border-slate-700 bg-slate-900/30 p-8 text-center">
-          <p className="text-slate-400">블로그 정보를 불러오는 중입니다...</p>
-        </div>
-      )}
-
-      {isBlogPostRankLoading && (
-        <div className="mt-3 rounded-lg border border-slate-700 bg-slate-900/30 p-8 text-center">
-          <p className="text-slate-400">게시글 정보를 불러오는 중입니다...</p>
-        </div>
-      )}
+      {(isLoading || isBlogLoading || isBlogPostRankLoading) && <AnalysisProgress />}
 
       {searchMode === "rank" && queryError && !isBlogLoading && !blogAnalysisData && (
         <div className="mt-3 rounded-lg border border-red-500/30 bg-red-950/30 p-5 text-sm text-red-200">

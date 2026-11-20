@@ -585,6 +585,87 @@ const unifiedInsightInput = z.object({
     ages: z.array(z.string()).optional(),
   });
 
+type ShoppingSeries = Record<string, { period: string; ratio: number }[]>;
+type ShoppingComparisonResponse = { success: boolean; shopping: ShoppingSeries; error?: string };
+
+async function fetchShoppingComparison(input: z.infer<typeof unifiedInsightInput>): Promise<ShoppingComparisonResponse> {
+  const keywords = uniqueValues(input.keywords.map(normalizeKeywordInput));
+  const clientId = process.env.NAVER_CLIENT_ID;
+  const clientSecret = process.env.NAVER_CLIENT_SECRET;
+  if (!keywords.length) return { success: false, shopping: {} };
+  if (!clientId || !clientSecret) {
+    return { success: false, shopping: {}, error: "네이버 쇼핑인사이트 연결이 설정되지 않았습니다." };
+  }
+
+  const category = input.category || "auto";
+  const cacheKey = generateCacheKey("shopping", keywords, category, input.startDate, input.endDate,
+    input.timeUnit, input.device, input.gender, input.ages);
+  const cached = getFromCache<ShoppingComparisonResponse>(cacheKey);
+  if (cached) return cached;
+
+  const shopping: ShoppingSeries = Object.create(null);
+  const pending = new Map(keywords.map(keyword => [keyword, generateShoppingKeywordVariants(keyword)]));
+  const signal = AbortSignal.timeout(12_000);
+  let hasError = false;
+
+  try {
+    for (const categoryCode of category === "auto" ? AUTO_SHOPPING_CATEGORIES : [category]) {
+      if (!pending.size) break;
+      // Keep every original term in the request before filling the API's five group slots with variants.
+      const groups = Array.from(new Set([...Array.from(pending.keys()), ...Array.from(pending.values()).flat()])).slice(0, 5);
+      const response = await fetch("https://openapi.naver.com/v1/datalab/shopping/category/keywords", {
+        method: "POST",
+        signal,
+        headers: {
+          "X-Naver-Client-Id": clientId,
+          "X-Naver-Client-Secret": clientSecret,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          startDate: input.startDate,
+          endDate: input.endDate,
+          timeUnit: input.timeUnit,
+          category: categoryCode,
+          keyword: groups.map(keyword => ({ name: keyword, param: [keyword] })),
+          device: input.device === "PC" ? "pc" : input.device === "모바일" ? "mo" : undefined,
+          gender: input.gender === "남성" ? "m" : input.gender === "여성" ? "f" : undefined,
+          ages: input.ages,
+        }),
+      });
+      if (!response.ok) {
+        console.warn("[Naver Shopping Comparison] API request failed", { status: response.status, category: categoryCode });
+        hasError = true;
+        if (response.status !== 400) break;
+        continue;
+      }
+
+      const payload = await response.json();
+      if (!Array.isArray(payload.results)) {
+        hasError = true;
+        break;
+      }
+      const rows = payload.results.filter((row: { data?: unknown[] }) => Array.isArray(row?.data) && row.data.length);
+      for (const [keyword, variants] of Array.from(pending)) {
+        const row = variants.map(variant => rows.find((item: unknown) => getShoppingResultNames(item).includes(variant))).find(Boolean);
+        if (!row) continue;
+        shopping[keyword] = row.data;
+        pending.delete(keyword);
+      }
+    }
+  } catch (error) {
+    hasError = true;
+    console.warn("[Naver Shopping Comparison] Unable to fetch trends", error instanceof Error ? error.name : "Unknown error");
+  }
+
+  const result = {
+    success: Object.keys(shopping).length > 0,
+    shopping,
+    ...(hasError ? { error: "네이버 쇼핑인사이트 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." } : {}),
+  };
+  if (!hasError) setInCache(cacheKey, result);
+  return result;
+}
+
 async function fetchUnifiedInsight(input: z.infer<typeof unifiedInsightInput>) {
     const requestedCategory = input.category || "auto";
     const normalizedKeywords = uniqueValues(input.keywords.map(normalizeKeywordInput)).slice(0, 5);
@@ -1242,5 +1323,7 @@ export const unifiedInsightProcedure = naverAnalysisProcedure
   .mutation(({ input }) => fetchUnifiedInsight(input));
 
 export const unifiedInsightBatchProcedure = naverAnalysisProcedure
-  .input(z.object({ requests: z.array(unifiedInsightInput).min(1).max(12) }))
-  .mutation(({ input }) => Promise.all(input.requests.map(fetchUnifiedInsight)));
+  .input(z.object({ requests: z.array(unifiedInsightInput).min(1).max(12), metric: z.literal("shopping").optional() }))
+  .mutation(({ input }) => input.metric === "shopping"
+    ? Promise.all(input.requests.map(fetchShoppingComparison))
+    : Promise.all(input.requests.map(fetchUnifiedInsight)));

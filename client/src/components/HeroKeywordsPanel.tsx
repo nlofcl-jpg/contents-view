@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, Plus, Save, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { trpc } from "@/lib/trpc";
 import { cleanHeroKeyword, MAX_HERO_KEYWORD_LENGTH, MAX_HERO_KEYWORDS, parseRankedHeroKeywords, readHeroKeywords } from "@/lib/heroKeywords";
 
 export default function HeroKeywordsPanel() {
+  const utils = trpc.useUtils();
   const [keywords, setKeywords] = useState<string[]>([]);
   const [savedKeywords, setSavedKeywords] = useState<string[]>([]);
   const [newKeyword, setNewKeyword] = useState("");
@@ -107,6 +109,8 @@ export default function HeroKeywordsPanel() {
     setKeywords(saved);
     setSavedKeywords(saved);
     setMessage("인기 검색어를 저장했습니다.");
+    void utils.googleTrends.contentsLiveRanking.invalidate();
+    void utils.googleTrends.dailyRanking.invalidate({ source: "contents" });
   };
 
   const isDirty = JSON.stringify(keywords) !== JSON.stringify(savedKeywords);
@@ -115,7 +119,7 @@ export default function HeroKeywordsPanel() {
     <section className="max-w-2xl space-y-5">
       <div>
         <h2 className="text-xl font-semibold text-white">인기 검색어</h2>
-        <p className="mt-1 text-sm text-slate-400">검색어 트렌드에 최대 20개를 표시합니다. 메인 검색창 아래에는 앞의 7개만 표시됩니다.</p>
+        <p className="mt-1 text-sm text-slate-400">한 회차에 최대 20개를 등록할 수 있습니다. 컨텐츠뷰 탭에는 오늘 누적 순위 상위 50개가 표시됩니다.</p>
       </div>
 
       {error && <p role="alert" className="text-sm text-red-300">{error}</p>}

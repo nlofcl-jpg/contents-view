@@ -1563,6 +1563,86 @@ var unifiedInsightInput = z2.object({
   gender: z2.string().optional(),
   ages: z2.array(z2.string()).optional()
 });
+async function fetchShoppingComparison(input) {
+  const keywords = uniqueValues(input.keywords.map(normalizeKeywordInput));
+  const clientId = process.env.NAVER_CLIENT_ID;
+  const clientSecret = process.env.NAVER_CLIENT_SECRET;
+  if (!keywords.length) return { success: false, shopping: {} };
+  if (!clientId || !clientSecret) {
+    return { success: false, shopping: {}, error: "\uB124\uC774\uBC84 \uC1FC\uD551\uC778\uC0AC\uC774\uD2B8 \uC5F0\uACB0\uC774 \uC124\uC815\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4." };
+  }
+  const category = input.category || "auto";
+  const cacheKey = generateCacheKey(
+    "shopping",
+    keywords,
+    category,
+    input.startDate,
+    input.endDate,
+    input.timeUnit,
+    input.device,
+    input.gender,
+    input.ages
+  );
+  const cached = getFromCache(cacheKey);
+  if (cached) return cached;
+  const shopping = /* @__PURE__ */ Object.create(null);
+  const pending = new Map(keywords.map((keyword) => [keyword, generateShoppingKeywordVariants(keyword)]));
+  const signal = AbortSignal.timeout(12e3);
+  let hasError = false;
+  try {
+    for (const categoryCode of category === "auto" ? AUTO_SHOPPING_CATEGORIES : [category]) {
+      if (!pending.size) break;
+      const groups = Array.from(/* @__PURE__ */ new Set([...Array.from(pending.keys()), ...Array.from(pending.values()).flat()])).slice(0, 5);
+      const response = await fetch("https://openapi.naver.com/v1/datalab/shopping/category/keywords", {
+        method: "POST",
+        signal,
+        headers: {
+          "X-Naver-Client-Id": clientId,
+          "X-Naver-Client-Secret": clientSecret,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          startDate: input.startDate,
+          endDate: input.endDate,
+          timeUnit: input.timeUnit,
+          category: categoryCode,
+          keyword: groups.map((keyword) => ({ name: keyword, param: [keyword] })),
+          device: input.device === "PC" ? "pc" : input.device === "\uBAA8\uBC14\uC77C" ? "mo" : void 0,
+          gender: input.gender === "\uB0A8\uC131" ? "m" : input.gender === "\uC5EC\uC131" ? "f" : void 0,
+          ages: input.ages
+        })
+      });
+      if (!response.ok) {
+        console.warn("[Naver Shopping Comparison] API request failed", { status: response.status, category: categoryCode });
+        hasError = true;
+        if (response.status !== 400) break;
+        continue;
+      }
+      const payload = await response.json();
+      if (!Array.isArray(payload.results)) {
+        hasError = true;
+        break;
+      }
+      const rows = payload.results.filter((row) => Array.isArray(row?.data) && row.data.length);
+      for (const [keyword, variants] of Array.from(pending)) {
+        const row = variants.map((variant) => rows.find((item) => getShoppingResultNames(item).includes(variant))).find(Boolean);
+        if (!row) continue;
+        shopping[keyword] = row.data;
+        pending.delete(keyword);
+      }
+    }
+  } catch (error) {
+    hasError = true;
+    console.warn("[Naver Shopping Comparison] Unable to fetch trends", error instanceof Error ? error.name : "Unknown error");
+  }
+  const result = {
+    success: Object.keys(shopping).length > 0,
+    shopping,
+    ...hasError ? { error: "\uB124\uC774\uBC84 \uC1FC\uD551\uC778\uC0AC\uC774\uD2B8 \uB370\uC774\uD130\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." } : {}
+  };
+  if (!hasError) setInCache(cacheKey, result);
+  return result;
+}
 async function fetchUnifiedInsight(input) {
   const requestedCategory = input.category || "auto";
   const normalizedKeywords = uniqueValues(input.keywords.map(normalizeKeywordInput)).slice(0, 5);
@@ -2111,7 +2191,7 @@ async function fetchUnifiedInsight(input) {
   }
 }
 var unifiedInsightProcedure = naverAnalysisProcedure.input(unifiedInsightInput).mutation(({ input }) => fetchUnifiedInsight(input));
-var unifiedInsightBatchProcedure = naverAnalysisProcedure.input(z2.object({ requests: z2.array(unifiedInsightInput).min(1).max(12) })).mutation(({ input }) => Promise.all(input.requests.map(fetchUnifiedInsight)));
+var unifiedInsightBatchProcedure = naverAnalysisProcedure.input(z2.object({ requests: z2.array(unifiedInsightInput).min(1).max(12), metric: z2.literal("shopping").optional() })).mutation(({ input }) => input.metric === "shopping" ? Promise.all(input.requests.map(fetchShoppingComparison)) : Promise.all(input.requests.map(fetchUnifiedInsight)));
 
 // server/naver.diagnostic.ts
 async function testSearchTrendAPI(clientId, clientSecret, keywords, startDate, endDate, timeUnit) {
@@ -2855,6 +2935,43 @@ function parseGoogleTrendsPage(html, countryCode, observedAt) {
   } catch {
     return [];
   }
+}
+
+// shared/searchTrendDailyRanking.ts
+var TOP_COUNT = 20;
+var HOUR_MS = 36e5;
+var seoulDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" });
+function getSeoulDate(date = /* @__PURE__ */ new Date()) {
+  const parts = seoulDate.formatToParts(date);
+  const part = (type) => parts.find((value) => value.type === type)?.value;
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+function getSeoulDayBounds(day) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  const start = Date.parse(`${day}T00:00:00+09:00`);
+  if (!Number.isFinite(start) || getSeoulDate(new Date(start)) !== day) return null;
+  return { start: new Date(start).toISOString(), end: new Date(start + 24 * HOUR_MS).toISOString() };
+}
+function aggregateDailySearchRanks(snapshots) {
+  const scores = /* @__PURE__ */ new Map();
+  for (const snapshot of snapshots) {
+    const entries = /* @__PURE__ */ new Map();
+    for (const item of snapshot) {
+      const keyword = item.keyword.trim();
+      const key = keyword.normalize("NFKC").replace(/\s+/g, " ").toLocaleLowerCase("ko-KR");
+      if (!key || !Number.isInteger(item.rank) || item.rank < 1 || item.rank > TOP_COUNT) continue;
+      const previous = entries.get(key);
+      if (!previous || item.rank < previous.rank) entries.set(key, { keyword, rank: item.rank });
+    }
+    entries.forEach(({ keyword, rank }, key) => {
+      const score = scores.get(key) ?? { keyword, points: 0, appearances: 0, bestRank: rank };
+      score.points += TOP_COUNT + 1 - rank;
+      score.appearances += 1;
+      score.bestRank = Math.min(score.bestRank, rank);
+      scores.set(key, score);
+    });
+  }
+  return Array.from(scores.values()).sort((a, b) => b.points - a.points || b.appearances - a.appearances || a.bestRank - b.bestRank || a.keyword.localeCompare(b.keyword, "ko-KR")).slice(0, TOP_COUNT).map(({ keyword, points, appearances }, index) => ({ keyword, points, appearances, rank: index + 1 }));
 }
 
 // server/youtubeBookmarkUrl.ts
@@ -4256,6 +4373,15 @@ function translateYouTubeError(error) {
   }
   return `YouTube API \uC624\uB958: ${error}. API Key \uC124\uC815\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694.`;
 }
+async function getContentsViewDailyRanks(date) {
+  if (!supabaseAdmin4) {
+    throw new TRPCError6({ code: "PRECONDITION_FAILED", message: "\uC800\uC7A5\uB41C \uAC80\uC0C9\uC5B4\uB97C \uC870\uD68C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+  }
+  const { data, error } = await supabaseAdmin4.from("contents_view_keyword_daily_rankings").select("rank,keyword,points,appearances,rank_change").eq("ranking_date", date).order("rank").limit(50);
+  if (error) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "\uCEE8\uD150\uCE20\uBDF0 \uC21C\uC704\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4." });
+  const rankings = data ?? [];
+  return { rankings: rankings.map(({ rank_change, ...entry }) => ({ ...entry, rankChange: rank_change })) };
+}
 var appRouter = router({
   // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
@@ -5327,6 +5453,22 @@ var appRouter = router({
     })
   }),
   googleTrends: router({
+    contentsLiveRanking: publicProcedure.query(() => getContentsViewDailyRanks(getSeoulDate())),
+    dailyRanking: protectedProcedure.input(z6.object({ source: z6.enum(["google", "contents"]), date: z6.string().length(10) })).query(async ({ input }) => {
+      const bounds = getSeoulDayBounds(input.date);
+      if (!bounds || input.date > getSeoulDate()) {
+        throw new TRPCError6({ code: "BAD_REQUEST", message: "\uC870\uD68C\uD560 \uB0A0\uC9DC\uB97C \uD655\uC778\uD574 \uC8FC\uC138\uC694." });
+      }
+      if (input.source === "contents") return getContentsViewDailyRanks(input.date);
+      if (!supabaseAdmin4) {
+        throw new TRPCError6({ code: "PRECONDITION_FAILED", message: "\uC800\uC7A5\uB41C \uAC80\uC0C9\uC5B4\uB97C \uC870\uD68C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+      }
+      const { data, error } = await supabaseAdmin4.from("google_trend_rank_snapshots").select("rankings").eq("country_code", "KR").gte("captured_at", bounds.start).lt("captured_at", bounds.end).order("captured_at", { ascending: false });
+      if (error) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "\uAD6C\uAE00 \uC21C\uC704\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4." });
+      return { rankings: aggregateDailySearchRanks((data ?? []).map(
+        ({ rankings }) => Object.entries(rankings).map(([keyword, rank]) => ({ keyword, rank }))
+      )) };
+    }),
     realtimeTrending: publicProcedure.input(z6.object({
       country: z6.string().default("KR")
     })).query(async ({ input }) => {

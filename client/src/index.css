@@ -2244,7 +2244,8 @@ a {
   height: 4px;
   overflow: hidden;
   border-radius: 999px;
-  background: #334765;
+  background: #14243b;
+  box-shadow: 0 0 0 1px rgb(68 206 255 / 0.35), 0 0 12px rgb(45 154 255 / 0.4);
 }
 
 .naverAnalysisProgressTrack::after {
@@ -2252,9 +2253,10 @@ a {
   width: 40%;
   height: 100%;
   border-radius: inherit;
-  background: #63a8ff;
+  background: linear-gradient(90deg, transparent, #287dff 24%, #31e7ff 62%, #d6fff9 88%, #76ffd4);
+  box-shadow: 0 0 8px #35d5ff;
   content: "";
-  animation: naverAnalysisProgressSweep 1.2s ease-in-out infinite;
+  animation: naverAnalysisProgressSweep 1.2s linear infinite;
 }
 
 @keyframes naverAnalysisProgressSweep {
@@ -12006,6 +12008,14 @@ input[type="date"].youtubeSelect {
   .risingMetrics strong {
     font-size: 10px;
   }
+}
+
+.trend-comparison-glass {
+  border-color: rgb(109 161 211 / 0.24);
+  background: linear-gradient(145deg, rgb(37 67 97 / 0.36), rgb(13 25 43 / 0.62) 48%, rgb(12 33 48 / 0.48));
+  box-shadow: inset 0 1px 0 rgb(187 220 255 / 0.1), 0 12px 32px rgb(0 0 0 / 0.16);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
 }
 
 .trend-glass-card {

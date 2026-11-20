@@ -2,6 +2,7 @@ import { useState, useEffect, useLayoutEffect, useRef, type FormEvent } from "re
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
+import { AnalysisProgress } from "@/components/AnalysisProgress";
 import { YouTubeApiStatusCard } from "@/components/YouTubeApiStatusCard";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
 import { AlertCircle, CircleAlert, Clock, Play, ChevronDown, RotateCw, Bookmark, Search, Copy, ExternalLink, Plus, ArrowUp, X } from "lucide-react";
@@ -224,6 +225,14 @@ function YouTubeLoadingState({ message }: { message: string }) {
     <div className="youtubeLoadingState" role="status" aria-live="polite">
       <span className="youtubeLoadingTrack" aria-hidden="true" />
       <p>{message}</p>
+    </div>
+  );
+}
+
+function YouTubeVideoListLoading({ message }: { message: string }) {
+  return (
+    <div className="min-h-[180px]">
+      <AnalysisProgress label={message} />
     </div>
   );
 }
@@ -952,7 +961,7 @@ export default function YouTubeTrends() {
             ) : null}
           </div>
         ) : isAnalysisSearchLoading ? (
-          <YouTubeLoadingState message="키워드 관련 인기 영상을 불러오는 중입니다..." />
+          <YouTubeVideoListLoading message="키워드 관련 인기 영상을 불러오는 중입니다..." />
         ) : analysisSearchError ? (
           <div className="emptyStateContainer youtubeAnalysisState">
             <AlertCircle className="emptyStateIcon" size={42} />
@@ -1185,7 +1194,7 @@ export default function YouTubeTrends() {
 
     if (isLoading && !isCacheValid) {
       return (
-        <YouTubeLoadingState message="YouTube 트렌드 데이터를 불러오는 중입니다..." />
+        <YouTubeVideoListLoading message="YouTube 트렌드 데이터를 불러오는 중입니다..." />
       );
     }
 
@@ -1304,7 +1313,7 @@ export default function YouTubeTrends() {
   const renderRisingTab = () => {
     if (isRisingLoading) {
       return (
-        <YouTubeLoadingState message="급상승 영상을 불러오는 중입니다..." />
+        <YouTubeVideoListLoading message="급상승 영상을 불러오는 중입니다..." />
       );
     }
 
@@ -1509,7 +1518,7 @@ export default function YouTubeTrends() {
 
     if (isShortsLoading && !isShortsCacheValid) {
       return (
-        <YouTubeLoadingState message="인기 쇼츠 데이터를 불러오는 중입니다..." />
+        <YouTubeVideoListLoading message="인기 쇼츠 데이터를 불러오는 중입니다..." />
       );
     }
 
@@ -1825,6 +1834,12 @@ export default function YouTubeTrends() {
       ) : activeTab === "shorts" ? (
         renderShortsTab()
       ) : null}
+
+      {isRefreshing && !authLoading && (
+        (activeTab === "rising" && !isRisingLoading) ||
+        (activeTab === "shorts" && isAuthenticated && (!isShortsLoading || isShortsCacheValid)) ||
+        ((activeTab === "trending" || activeTab === "category") && isAuthenticated && (!isLoading || isCacheValid))
+      ) && <AnalysisProgress label="영상 목록을 새로고침하는 중입니다..." />}
 
       <GuestAccessPrompt
         open={isRisingGuestPromptOpen && !isAuthenticated}
