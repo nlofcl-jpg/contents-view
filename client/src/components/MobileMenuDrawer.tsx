@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { X, Home, LogOut, User, ShieldCheck, Bookmark } from "lucide-react";
 import { useState } from "react";
 import { getActiveNewsPath, newsLinks } from "@/lib/newsNavigation";
+import SocialIcons from "@/components/SocialIcons";
 
 interface MobileMenuDrawerProps {
   panelType: "account" | "menu" | null;
@@ -55,7 +56,7 @@ export function MobileMenuDrawer({
   const isCommunityPage = location === "/community";
   const isCommercePage = location === "/commerce";
   const isAIStudioPage = location?.startsWith("/ai-studio");
-  const isVideoProductionPage = location === "/ai-studio/video" ||
+  const isVideoProductionPage = location === "/ai-studio/video" || location.startsWith("/ai-studio/video/") ||
     (location === "/ai-studio" && new URLSearchParams(window.location.search).get("tab") === "upcoming");
   const isOpenSourcePage = location?.startsWith("/ai-studio/open-source");
   const isAdminPage = location === "/admin";
@@ -84,7 +85,7 @@ export function MobileMenuDrawer({
           <X size={16} />
         </button>
 
-        <div className="mobileDrawerContent">
+        <div className={`mobileDrawerContent${panelType === "menu" ? " mobileDrawerNavigation" : ""}`}>
           {/* 계정 패널 */}
           {panelType === "account" && (
             <>
@@ -142,9 +143,8 @@ export function MobileMenuDrawer({
                   <div className="mobileLoginPrompt">
                     로그인하여 모든 기능을 이용하세요
                   </div>
-                  <a href={getLoginUrl()} className="mobileMenuAction">
-                    <User size={18} />
-                    <span>로그인</span>
+                  <a href={getLoginUrl()} className="neonAuthLink">
+                    로그인 / 가입
                   </a>
                 </div>
               )}
@@ -155,12 +155,9 @@ export function MobileMenuDrawer({
           {panelType === "menu" && (
             <div className="mobileMenuSection mobileNavigationSection">
               {!(isAuthenticated && user) && (
-                <div className="mobileAuthButtonRow mobileMenuTopActions">
-                  <a href={getLoginUrl()} className="mobileAuthButton">
-                    로그인
-                  </a>
-                  <a href={`${getLoginUrl()}?mode=signup`} className="mobileAuthButton secondary">
-                    가입
+                <div className="mobileMenuTopActions">
+                  <a href={getLoginUrl()} className="neonAuthLink">
+                    로그인 / 가입
                   </a>
                 </div>
               )}
@@ -337,6 +334,7 @@ export function MobileMenuDrawer({
               )}
             </div>
           )}
+          {panelType === "menu" && <SocialIcons className="mobileMenuSocialIcons" />}
         </div>
       </div>
     </>

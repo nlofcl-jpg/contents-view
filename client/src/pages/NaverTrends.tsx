@@ -1,3 +1,4 @@
+import LiveTrendNavigation from "@/components/LiveTrendNavigation";
 import UnifiedInsights from "./UnifiedInsights";
 
 export default function NaverTrends() {
@@ -8,9 +9,10 @@ export default function NaverTrends() {
         <p className="pageDescription">
           키워드와 블로그 데이터를 한곳에서 분석하세요.
         </p>
+        <LiveTrendNavigation active="naver" />
       </div>
 
-      <section className="mt-8">
+      <section className="naverTrendAnalysis">
         <UnifiedInsights />
       </section>
     </div>

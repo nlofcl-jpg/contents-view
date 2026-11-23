@@ -6,13 +6,17 @@ export function cleanHeroKeyword(value: string): string {
 }
 
 export function parseRankedHeroKeywords(value: string): string[] {
-  const entries = value.split(/[|,\n]+/).map(entry => entry.trim()).filter(Boolean);
+  const rankPrefix = /^(\d{1,2})\\{0,2}[.)](?!\d)\s*/;
+  const separator = rankPrefix.test(value.trim())
+    ? /[|\n]+|,(?=\s*\d{1,2}\\{0,2}[.)](?!\d))/
+    : /[|,\n]+/;
+  const entries = value.split(separator).map(entry => entry.trim()).filter(Boolean);
   if (entries.length === 0) throw new Error("검색어를 입력하세요.");
   if (entries.length > MAX_HERO_KEYWORDS) throw new Error(`검색어는 최대 ${MAX_HERO_KEYWORDS}개까지 등록할 수 있습니다.`);
 
   const ranked = entries.map(entry => {
-    const match = entry.match(/^(\d{1,2})[.)]\s*(.+)$/);
-    return { rank: match ? Number(match[1]) : null, keyword: cleanHeroKeyword(match ? match[2] : entry) };
+    const match = rankPrefix.exec(entry);
+    return { rank: match ? Number(match[1]) : null, keyword: cleanHeroKeyword(match ? entry.slice(match[0].length) : entry) };
   });
   const numbered = ranked.filter(entry => entry.rank !== null).length;
   if (numbered > 0 && numbered !== ranked.length) throw new Error("순위 번호를 모두 입력하거나 모두 생략해 주세요.");

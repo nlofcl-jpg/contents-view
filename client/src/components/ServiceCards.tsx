@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
-import { ArrowRight, MessageCircle, MessageCircleMore, Newspaper, RefreshCw, Search, ThumbsUp, TrendingUp } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowRight, Check, MessageCircle, MessageCircleMore, Newspaper, RefreshCw, ThumbsUp, TrendingUp } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
-import { GoogleTrendRankChange, type RankChange } from "@/components/GoogleTrendRankChange";
+import { issueFocusLabel } from "@/lib/newsNavigation";
+import { supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
 import { YouTubeLogo } from "@/components/ServiceLogos";
 
@@ -17,7 +19,6 @@ type TrendRow = {
   video?: any;
   minimal?: boolean;
   risingScore?: boolean;
-  googleRankChange?: RankChange;
   durationText?: string | null;
   channelTitle?: string | null;
   communityName?: string;
@@ -101,10 +102,9 @@ function CommunitySourceMark({ name }: { name?: string }) {
 function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoSelect?: (video: any) => void }) {
   const [, setLocation] = useLocation();
   const isYouTubeCard = card.id === "youtube";
-  const isSearchCard = card.id === "search";
   const isCommunityCard = card.id === "community";
-  const isNewsCard = card.id === "news";
-  const isFeaturedCard = isYouTubeCard || isSearchCard || isCommunityCard || isNewsCard;
+  const isNewsCard = card.id === "news" || card.id === "focus";
+  const isFeaturedCard = isYouTubeCard || isCommunityCard || isNewsCard;
   const glassRowClass = "trend-glass-row rounded-lg backdrop-blur-sm";
 
   return (
@@ -113,7 +113,7 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
         <div className={`flex min-w-0 items-center ${isCommunityCard || isNewsCard ? "gap-2" : "gap-3"}`}>
           <div
             className={`flex shrink-0 items-center justify-center ${isCommunityCard || isNewsCard ? "h-8 w-8" : "h-10 w-10"} ${
-              card.brandIcon || isSearchCard || isCommunityCard || isNewsCard ? "" : "rounded-lg bg-blue-500/15 text-blue-300"
+              card.brandIcon || isCommunityCard || isNewsCard ? "" : "rounded-lg bg-blue-500/15 text-blue-300"
             }`}
           >
             {card.icon}
@@ -147,24 +147,7 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
             </div>
           ))
         ) : card.rows.length > 0 ? (
-          card.rows.map((row, index) => isSearchCard ? (
-            <button
-              key={`${card.id}-${index}-${row.label}`}
-              type="button"
-              className={`grid h-[72px] w-full grid-cols-[24px_minmax(0,1fr)_auto] items-center gap-2 py-1.5 pl-1.5 pr-3.5 text-left ${glassRowClass}`}
-              onClick={() => row.detailHref && setLocation(row.detailHref)}
-              aria-label={`${index + 1}위 ${row.label} 자세히`}
-            >
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-400/20 text-xs font-bold text-blue-100">{index + 1}</span>
-              <span className="min-w-0">
-                <span className="block min-w-0 truncate text-sm font-semibold leading-5 text-slate-100" title={row.label}>{row.label}</span>
-              </span>
-              <span className="inline-flex shrink-0 items-center gap-2">
-                {row.googleRankChange && <GoogleTrendRankChange change={row.googleRankChange} />}
-                {row.detailHref && <span className="text-[11px] font-semibold text-slate-500">자세히</span>}
-              </span>
-            </button>
-          ) : isCommunityCard ? (
+          card.rows.map((row, index) => isCommunityCard ? (
             <a
               key={`${card.id}-${index}-${row.label}`}
               href={row.externalHref || card.href}
@@ -263,16 +246,13 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
                 <p className="truncate text-sm font-semibold text-slate-100">{row.label}</p>
                 {!row.minimal && row.meta && <p className="mt-1 truncate text-xs text-slate-400">{row.meta}</p>}
               </div>
-              {(row.rightValue || row.googleRankChange || row.detailHref) && (
+              {(row.rightValue || row.detailHref) && (
                 <div className={`flex shrink-0 items-center gap-2 ${row.minimal ? "ml-auto" : ""}`}>
                   {row.rightValue && (
                     <span className={`inline-flex items-center gap-1 text-xs font-bold ${row.risingScore ? "text-red-400" : "text-blue-300"}`}>
                       {row.risingScore ? <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" /> : null}
                       {row.rightValue}
                     </span>
-                  )}
-                  {row.googleRankChange && (
-                    <GoogleTrendRankChange change={row.googleRankChange} />
                   )}
                   {row.detailHref && (
                     <button
@@ -338,10 +318,22 @@ export default function ServiceCards() {
     { staleTime: 5 * 60 * 1000, retry: false, refetchOnWindowFocus: false }
   );
 
-  const googleTrendsQuery = trpc.googleTrends.realtimeTrending.useQuery(
-    { country: "KR" },
-    { retry: 1, refetchOnWindowFocus: false }
-  );
+  const focusQuery = useQuery({
+    queryKey: ["home-latest-focus"],
+    queryFn: async () => {
+      if (!supabase) throw new Error("Missing issue storage");
+      const { data, error } = await supabase.from("issues")
+        .select("id,title,article_title,thumbnail_url,created_at")
+        .eq("is_published", true)
+        .order("created_at", { ascending: false }).order("id", { ascending: false })
+        .limit(5);
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 2 * 60_000,
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
 
   const communityQueryOptions = { retry: 1, staleTime: 10 * 60 * 1000, refetchOnWindowFocus: false } as const;
   const dcinsideQuery = trpc.community.getDcinside.useQuery({ sort: "source" }, communityQueryOptions);
@@ -378,14 +370,14 @@ export default function ServiceCards() {
     }));
   }, [youtubeRisingQuery.data]);
 
-  const searchRows = useMemo<TrendRow[]>(() => {
-    const trends = (googleTrendsQuery.data as any)?.data || [];
-    return trends.slice(0, 5).map((item: any) => ({
-      label: stripHtml(item.keyword),
-      googleRankChange: item.rankChange || "same",
-      detailHref: `/trends/google?country=KR&trend=${encodeURIComponent(item.keyword)}`,
-    }));
-  }, [googleTrendsQuery.data]);
+  const focusRows = useMemo<TrendRow[]>(() => (focusQuery.data ?? []).map(issue => ({
+    label: issue.article_title?.trim() || issue.title,
+    meta: new Date(issue.created_at).toLocaleDateString("ko-KR", {
+      month: "numeric", day: "numeric", timeZone: "Asia/Seoul",
+    }),
+    image: issue.thumbnail_url,
+    detailHref: `/news/issues/${issue.id}`,
+  })), [focusQuery.data]);
 
   const communityRows = useMemo<TrendRow[]>(() => {
     const responses = [
@@ -437,16 +429,6 @@ export default function ServiceCards() {
         : "수집된 급상승 영상이 없습니다.",
     },
     {
-      id: "search",
-      title: "검색 트렌드",
-      badge: "검색량",
-      href: "/trends/google",
-      icon: <Search aria-hidden="true" className="h-7 w-7 text-sky-400" />,
-      rows: searchRows,
-      loading: googleTrendsQuery.isLoading,
-      emptyText: "실시간 검색 트렌드를 불러오지 못했습니다.",
-    },
-    {
       id: "community",
       title: "커뮤니티 트렌드",
       badge: "커뮤니티 트렌드",
@@ -465,6 +447,16 @@ export default function ServiceCards() {
       rows: newsRows,
       loading: newsQuery.isLoading,
       emptyText: newsQuery.isError ? "최신 뉴스를 불러오지 못했습니다." : "표시할 최신 뉴스가 없습니다.",
+    },
+    {
+      id: "focus",
+      title: issueFocusLabel,
+      badge: issueFocusLabel,
+      href: "/news/issues",
+      icon: <Check aria-hidden="true" className="h-7 w-7 text-sky-400" />,
+      rows: focusRows,
+      loading: focusQuery.isLoading,
+      emptyText: focusQuery.isError ? "이슈 포커스를 불러오지 못했습니다." : "표시할 이슈 포커스가 없습니다.",
     },
   ];
 

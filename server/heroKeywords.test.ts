@@ -35,6 +35,15 @@ describe("hero search keywords", () => {
     expect(() => parseRankedHeroKeywords(Array.from({ length: 21 }, (_, index) => `키워드${index + 1}`).join(","))).toThrow("최대 20개");
   });
 
+  it("keeps commas within ranked keywords and accepts a Markdown-escaped rank", () => {
+    const entries = Array.from({ length: 20 }, (_, index) => `검색어 ${index + 1}`);
+    entries[5] = "코스피 4,870 붕괴";
+    entries[8] = '김건희 "죽어도 이해 못 해"';
+    const input = entries.map((keyword, index) => `${index + 1}${index === 0 ? "\\\\." : "."} ${keyword}`).join(", ");
+    expect(parseRankedHeroKeywords(input)).toEqual(entries);
+    expect(parseRankedHeroKeywords("2. 지수, 8.7 상승 | 1. 첫 검색어")).toEqual(["첫 검색어", "지수, 8.7 상승"]);
+  });
+
   it("returns no keywords for an invalid stored value", () => {
     expect(readHeroKeywords(null)).toEqual([]);
   });

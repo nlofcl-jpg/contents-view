@@ -332,11 +332,11 @@ export default function News() {
               {isLoadingNews ? (
                 <div className="text-center text-gray-400">뉴스를 불러오는 중...</div>
               ) : visibleNews.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 gap-3 md:gap-6">
                   {visibleNews.map((news: NewsItem) => (
                     <div
                       key={news.link}
-                      className="bg-gray-900 rounded-lg overflow-hidden hover:bg-gray-800 transition-colors"
+                      className="flex min-w-0 flex-col overflow-hidden rounded-lg bg-gray-900 transition-colors hover:bg-gray-800"
                     >
                       {news.thumbnail && (
                         <div className="w-full h-32 bg-gray-800 overflow-hidden">
@@ -347,19 +347,19 @@ export default function News() {
                           />
                         </div>
                       )}
-                      <div className="p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-xs text-gray-500">{news.source}</span>
-                          <span className="text-xs text-gray-500">{formatDate(news.publishedAt || news.pubDate)}</span>
+                      <div className="flex flex-1 flex-col p-3 md:p-4">
+                        <div className="mb-2 flex min-w-0 items-center gap-1.5 md:gap-2">
+                          <span className="min-w-0 truncate text-xs text-gray-500" title={news.source}>{news.source}</span>
+                          <span className="shrink-0 whitespace-nowrap text-xs text-gray-500">{formatDate(news.publishedAt || news.pubDate)}</span>
                         </div>
-                        <h3 className="text-base font-semibold text-white mb-2 line-clamp-2">
+                        <h3 className="mb-2 line-clamp-2 min-h-10 text-sm leading-5 font-semibold text-white md:min-h-12 md:text-base md:leading-6">
                           {news.title}
                         </h3>
                         <a
                           href={news.link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-400 hover:text-blue-300 text-sm font-medium"
+                          className="mt-auto self-start text-sm font-medium text-blue-400 hover:text-blue-300"
                         >
                           원문 보기 →
                         </a>

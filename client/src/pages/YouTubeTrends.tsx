@@ -3,9 +3,10 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { AnalysisProgress } from "@/components/AnalysisProgress";
+import LiveTrendNavigation from "@/components/LiveTrendNavigation";
 import { YouTubeApiStatusCard } from "@/components/YouTubeApiStatusCard";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
-import { AlertCircle, CircleAlert, Clock, Play, ChevronDown, RotateCw, Bookmark, Search, Copy, ExternalLink, Plus, ArrowUp, X } from "lucide-react";
+import { AlertCircle, CircleAlert, Clock, Play, ChevronDown, RotateCw, Bookmark, Search, Copy, ExternalLink, Plus, X } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useBookmark } from "@/contexts/BookmarkContext";
 import { useLocation } from "wouter";
@@ -793,16 +794,7 @@ export default function YouTubeTrends() {
     return (
       <section className="youtubeAnalysisPanel" aria-label="영상 분석">
         <form className="heroSearch youtubeAnalysisComposer" role="search" aria-label="유튜브 영상 분석" onSubmit={handleAnalysisSubmit}>
-            <input
-              type="text"
-              value={analysisInput}
-              onChange={(event) => setAnalysisInput(event.target.value)}
-              placeholder={analysisInputType === "url" ? "YouTube URL을 입력해 개별 영상을 분석하세요" : analysisInputType === "keyword" ? "키워드를 입력해 관련 인기 영상을 확인하세요" : "키워드로 인기 영상을, URL로 개별 영상을 분석하세요"}
-              aria-label={analysisInputType === "url" ? "YouTube 영상 URL" : analysisInputType === "keyword" ? "분석할 키워드" : "키워드 또는 YouTube URL"}
-              className="heroSearchInput"
-            />
-            <div className="heroSearchActions">
-              <div className="heroSearchPlatformControls">
+            <div className="heroSearchPlatformControls">
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger
                     ref={analysisTypeTriggerRef}
@@ -817,8 +809,8 @@ export default function YouTubeTrends() {
                     <DropdownMenuRadioGroup value={analysisInputType ?? ""} onValueChange={value => {
                       if (value === "keyword" || value === "url") setAnalysisInputType(value);
                     }}>
-                      <DropdownMenuRadioItem value="keyword" className="heroSearchMenuItem isYoutube">키워드</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="url" className="heroSearchMenuItem isYoutube">URL</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="keyword" className="heroSearchMenuItem youtubeAnalysisModeOption">키워드</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="url" className="heroSearchMenuItem youtubeAnalysisModeOption">URL</DropdownMenuRadioItem>
                     </DropdownMenuRadioGroup>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -832,18 +824,29 @@ export default function YouTubeTrends() {
                     analysisTypeTriggerRef.current?.focus();
                   }}
                 ><X size={14} aria-hidden="true" /></button>}
-              </div>
-              <button
-                type="submit"
-                className="heroSearchButton"
-                aria-label="분석"
-                title="분석"
-                disabled={authLoading || !(canSearchAnalysisKeyword || canAnalyzeVideoUrl)}
-              ><ArrowUp size={19} aria-hidden="true" /></button>
             </div>
+            <input
+              type="text"
+              value={analysisInput}
+              onChange={(event) => setAnalysisInput(event.target.value)}
+              placeholder={analysisInputType === "url" ? "YouTube URL 입력" : analysisInputType === "keyword" ? "키워드 입력" : "키워드 또는 YouTube URL 입력"}
+              aria-label={analysisInputType === "url" ? "YouTube 영상 URL" : analysisInputType === "keyword" ? "분석할 키워드" : "키워드 또는 YouTube URL"}
+              className="heroSearchInput"
+            />
+            <button
+              type="submit"
+              className="heroSearchButton"
+              aria-label="분석"
+              title="분석"
+              disabled={authLoading || !(canSearchAnalysisKeyword || canAnalyzeVideoUrl)}
+            ><Search size={18} aria-hidden="true" /></button>
         </form>
 
-        {!isAuthenticated ? null : !apiKeyData?.exists || apiKeyData?.testStatus !== "success" ? (
+        {!isAuthenticated || !analysisMode ? (
+          <div className="grid min-h-[250px] place-items-center px-4 text-center md:min-h-[300px]">
+            <p className="m-0 text-xs text-slate-400">검색 결과 목록이 여기에 표시됩니다.</p>
+          </div>
+        ) : !apiKeyData?.exists || apiKeyData?.testStatus !== "success" ? (
           <div className="emptyStateContainer youtubeAnalysisState">
             <AlertCircle className="emptyStateIcon" size={42} />
             <p className="emptyStateText">
@@ -1693,6 +1696,7 @@ export default function YouTubeTrends() {
         <p className="pageDescription">
           국가별, 카테고리별 YouTube 콘텐츠 트렌드를 확인하세요.
         </p>
+        <LiveTrendNavigation active="youtube" />
       </div>
 
       {/* Tab Menu */}

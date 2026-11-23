@@ -50,8 +50,8 @@ export default function HeroKeywordSlot({ keywords, onSelect, onMore }: HeroKeyw
   if (!currentKeyword) return null;
 
   return (
-    <section className="heroPopularKeywordSection" aria-label="인기 검색어">
-      <p className="heroPopularKeywordTitle">인기 검색어</p>
+    <section className="heroPopularKeywordSection" aria-label="실시간 인기 검색어">
+      <p className="heroPopularKeywordTitle">실시간 인기 검색어</p>
       <button
         type="button"
         className={`heroKeywordSlot ${count === 1 ? "isSingle" : ""}`}

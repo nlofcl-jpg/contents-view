@@ -579,15 +579,9 @@ export default function Header({
               )}
             </>
           ) : (
-            <div className="headerAuthLinks" aria-label="로그인 메뉴">
-              <a href={getLoginUrl()} className="headerAuthLink">
-                로그인
-              </a>
-              <span className="headerAuthDivider" aria-hidden="true">|</span>
-              <a href={`${getLoginUrl()}?mode=signup`} className="headerAuthLink">
-                가입
-              </a>
-            </div>
+            <a href={getLoginUrl()} className="neonAuthLink">
+              로그인 / 가입
+            </a>
             )}
           </div>
         </div>

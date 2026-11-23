@@ -1,26 +1,21 @@
-import { ArrowRight, ArrowUpRight, ChevronLeft, Clapperboard, Download, ExternalLink, FolderDown, Images, Lock, Video } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ChevronLeft, Clapperboard, Download, ExternalLink, FolderDown, Images, Video } from "lucide-react";
 import { useState } from "react";
 import { Link, Redirect, useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
-import StudioSubnav from "@/components/StudioSubnav";
 import "./studioProductionBanners.css";
 
 type StudioTab = "programs" | "upcoming" | "openSource";
-type ProductionFormat = "video" | "cardNews" | "motionGraphic";
-
-const productionFormats: { id: ProductionFormat; label: string; emptyMessage: string }[] = [
-  { id: "video", label: "쇼츠 제작", emptyMessage: "영상제작 콘텐츠를 준비하고 있습니다." },
-  { id: "cardNews", label: "카드뉴스", emptyMessage: "카드뉴스 콘텐츠를 준비하고 있습니다." },
-  { id: "motionGraphic", label: "모션그래픽", emptyMessage: "모션그래픽 콘텐츠를 준비하고 있습니다." },
-];
+const productionFormats = [
+  { id: "video", label: "영상", icon: Video, href: "/ai-studio/video/styles" },
+  { id: "cardNews", label: "카드 뉴스", icon: Images, href: "/ai-studio/video/card-news" },
+  { id: "motionGraphic", label: "모션그래픽", icon: Clapperboard, href: "/ai-studio/video/motion-graphics" },
+] as const;
 
 const videoStyleGroups = [
   {
     id: "shorts",
     title: "쇼츠 영상",
-    icon: Video,
-    bannerImage: "/studio-shorts-banner.jpg",
     tone: 0,
     sections: [
       {
@@ -53,8 +48,6 @@ const videoStyleGroups = [
   {
     id: "reels",
     title: "릴스 · 이슈",
-    icon: Clapperboard,
-    bannerImage: "/studio-reels-banner.jpg",
     tone: 3,
     sections: [{
       id: "reels",
@@ -92,12 +85,13 @@ export default function AIStudio() {
   const [location, setLocation] = useLocation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [guestProgramPath, setGuestProgramPath] = useState<string | null>(null);
-  const [productionFormat, setProductionFormat] = useState<ProductionFormat>("video");
-  const styleGroup = videoStyleGroups.find(group => location.replace(/\/$/, "") === `/ai-studio/video/${group.id}`);
+  const path = location.replace(/\/$/, "");
+  const productionFormat = productionFormats.find(format => format.href === path);
+  const styleGroup = videoStyleGroups.find(group => path === `/ai-studio/video/${group.id}`);
   const canOpenStylePages = !authLoading && isAuthenticated && user?.role === "admin";
   const activeTab: StudioTab = location === "/ai-studio/open-source"
     ? "openSource"
-    : styleGroup || location === "/ai-studio/video" ||
+    : styleGroup || productionFormat || path === "/ai-studio/video" ||
       (location === "/ai-studio" && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "upcoming")
         ? "upcoming"
         : "programs";
@@ -128,8 +122,7 @@ export default function AIStudio() {
 
   return (
     <div className="aiStudioPageContainer">
-      <StudioSubnav active={activeTab === "upcoming" ? "production" : activeTab} />
-      {!styleGroup && <section className={`aiStudioHero ${activeTab === "upcoming" ? "aiStudioHeroVideo" : ""}`} aria-labelledby="ai-studio-title">
+      {!styleGroup && !productionFormat && <section className={`aiStudioHero ${activeTab === "upcoming" ? "aiStudioHeroVideo" : ""}`} aria-labelledby="ai-studio-title">
         <div className="aiStudioHeroContent">
           <span className="aiStudioHeroEyebrow">CONTENTS VIEW</span>
           <h1 id="ai-studio-title" className="aiStudioHeroTitle">
@@ -153,7 +146,7 @@ export default function AIStudio() {
       {styleGroup ? (
         <section className="aiStudioVideoCatalog" aria-labelledby="studio-style-title">
           <header className="aiStudioVideoDetailHeader">
-            <Link href="/ai-studio/video" className="issueBackButton"><ChevronLeft size={15} aria-hidden="true" />쇼츠 제작</Link>
+            <Link href="/ai-studio/video/styles" className="issueBackButton"><ChevronLeft size={15} aria-hidden="true" />영상</Link>
             <h1 id="studio-style-title" className="pageTitle">{styleGroup.title}</h1>
           </header>
           {styleGroup.sections.map(({ id, title, styles }) => {
@@ -236,56 +229,23 @@ export default function AIStudio() {
             </Link>
           </div>
         </section>
+      ) : productionFormat ? (
+        <section className="aiStudioVideoCatalog" aria-labelledby="studio-format-title">
+          <header className="aiStudioVideoDetailHeader">
+            <Link href="/ai-studio/video" className="issueBackButton"><ChevronLeft size={15} aria-hidden="true" />콘텐츠 제작</Link>
+            <h1 id="studio-format-title" className="pageTitle">{productionFormat.label}</h1>
+          </header>
+        </section>
       ) : (
-        <>
-          <div className="aiStudioFormatFilters" role="group" aria-label="제작 유형 필터">
-            {productionFormats.map(format => (
-              <button
-                key={format.id}
-                type="button"
-                className={`aiStudioFormatFilter ${productionFormat === format.id ? "active" : ""}`}
-                aria-pressed={productionFormat === format.id}
-                onClick={() => setProductionFormat(format.id)}
-              >
-                <span>{format.label}</span>
-              </button>
-            ))}
-          </div>
-          {productionFormat === "video" ? (
-            <div className="aiStudioVideoCatalog">
-              <nav className="studioProductionBanners" aria-label="쇼츠 제작 스타일">
-                {videoStyleGroups.map(({ id, title, icon: Icon, bannerImage }) => {
-                  const Indicator = canOpenStylePages ? ArrowRight : Lock;
-                  const content = (
-                    <>
-                      <img className="studioProductionBannerImage" src={bannerImage} alt="" />
-                      <Icon className="studioProductionBannerIcon" size={40} aria-hidden="true" />
-                      <span>{title}</span>
-                      <Indicator className="studioProductionBannerArrow" size={20} aria-hidden="true" />
-                    </>
-                  );
-                  return canOpenStylePages ? (
-                    <Link key={id} href={`/ai-studio/video/${id}`} className="studioProductionBanner">{content}</Link>
-                  ) : (
-                    <div key={id} className="studioProductionBanner" role="link" aria-disabled="true">{content}</div>
-                  );
-                })}
-              </nav>
-            </div>
-          ) : productionFormat === "cardNews" ? (
-            <section className="aiStudioCardNewsCatalog" aria-label="카드뉴스 썸네일 목록">
-              {Array.from({ length: 4 }, (_, index) => (
-                <div className="aiStudioCardNewsThumbnail" role="img" aria-label={`카드뉴스 썸네일 목업 ${index + 1}`} key={index}>
-                  <Images aria-hidden="true" />
-                </div>
-              ))}
-            </section>
-          ) : (
-            <section className="aiStudioEmptyState aiStudioUpcomingState" aria-live="polite">
-              <p>{productionFormats.find(format => format.id === productionFormat)?.emptyMessage}</p>
-            </section>
-          )}
-        </>
+        <nav className="studioProductionBanners studioProductionThumbnails" aria-label="콘텐츠 제작 유형">
+          {productionFormats.map(({ id, href, label, icon: Icon }) => (
+            <Link key={id} href={href} className="studioProductionBanner">
+              <Icon className="studioProductionBannerIcon" aria-hidden="true" />
+              <span>{label}</span>
+              <ArrowRight className="studioProductionBannerArrow" aria-hidden="true" />
+            </Link>
+          ))}
+        </nav>
       )}
       <GuestAccessPrompt
         open={guestProgramPath !== null}

@@ -94,6 +94,7 @@ export function useNaverTrendComparison({
   const displayedTrendData = trendComparisonData || chartData;
   const comparisonKeywords: string[] = trendComparisonData?.sourceKeywords ?? chartData?.keywords ?? [];
   const shoppingOnly = metric === "shopping";
+  const canSubmitKeyword = !authLoading && !isLoading && !isTrendFilterLoading && Boolean(comparisonKeywordInput.trim());
   const ageOptionsForMetric = shoppingOnly ? SHOPPING_AGE_OPTIONS : AGE_OPTIONS;
   const chartKeywords = (displayedTrendData?.keywords ?? []).filter(keyword => displayedTrendData?.[metric]?.[keyword]?.length);
   const hasComparisonResults = !isLoading && chartKeywords.length > 0;
@@ -311,19 +312,24 @@ export function useNaverTrendComparison({
     }
   };
 
-  const addComparisonKeyword = async () => {
-    const keyword = comparisonKeywordInput.trim().replace(/\s+/g, " ");
-    if (!keyword) return;
+  const submitComparisonKeyword = async (input: string) => {
+    const keyword = input.trim().replace(/\s+/g, " ");
+    if (!keyword || authLoading || isLoading || isTrendFilterLoading) return false;
     if (comparisonKeywords.some(value => value.toLowerCase() === keyword.toLowerCase())) {
       setTrendFilterError("이미 추가한 키워드입니다.");
-      return;
+      return false;
     }
     if (comparisonKeywords.length >= MAX_COMPARISON_KEYWORDS) {
       setTrendFilterError(`비교 키워드는 최대 ${MAX_COMPARISON_KEYWORDS}개까지 추가할 수 있습니다.`);
-      return;
+      return false;
     }
-    if (await loadTrendComparison([...comparisonKeywords, keyword])) {
-      setComparisonKeywordInput(current => current.trim().replace(/\s+/g, " ") === keyword ? "" : current);
+    return loadTrendComparison([...comparisonKeywords, keyword]);
+  };
+
+  const addComparisonKeyword = async () => {
+    const input = comparisonKeywordInput;
+    if (await submitComparisonKeyword(input)) {
+      setComparisonKeywordInput(current => current === input ? "" : current);
     }
   };
 
@@ -406,7 +412,7 @@ export function useNaverTrendComparison({
           <button
             type="submit"
             className={TREND_FILTER_BUTTON_CLASS}
-            disabled={authLoading || isLoading || isTrendFilterLoading || !comparisonKeywordInput.trim()}
+            disabled={!canSubmitKeyword}
           >
             {shoppingOnly ? "분석" : "추가"}
           </button>
@@ -515,5 +521,8 @@ export function useNaverTrendComparison({
     </div>
   );
 
-  return { renderPanel, getBaseRequest, clearComparison, resetComparison, isTrendFilterLoading };
+  return {
+    renderPanel, getBaseRequest, clearComparison, resetComparison, isTrendFilterLoading,
+    submitComparisonKeyword,
+  };
 }

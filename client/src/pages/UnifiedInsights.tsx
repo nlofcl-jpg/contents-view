@@ -7,7 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenu
 import { NAVER_GUEST_DAILY_LIMIT_MESSAGE, NAVER_MEMBER_DAILY_LIMIT_MESSAGE } from "@shared/naverAnalysisQuota";
 import { trpc } from "@/lib/trpc";
 import { useNaverTrendComparison } from "@/components/NaverTrendComparison";
-import { ArrowUp, ChevronDown, CircleAlert, ExternalLink, Heart, ListFilter, Loader2, MessageCircle, Plus, RotateCcw, X } from "lucide-react";
+import { ChevronDown, CircleAlert, ExternalLink, Heart, ListFilter, Loader2, MessageCircle, Plus, RotateCcw, Search, X } from "lucide-react";
 import { useLocation } from "wouter";
 
 
@@ -529,7 +529,7 @@ export default function UnifiedInsights() {
 
       <div className="flex w-full flex-col items-center">
         <form
-          className="heroSearch"
+          className="heroSearch naverAnalysisComposer"
           role="search"
           aria-label="네이버 트렌드 분석"
           onSubmit={event => {
@@ -537,23 +537,7 @@ export default function UnifiedInsights() {
             if (!authLoading && !isLoading && !isBlogLoading && !isBlogPostRankLoading) handleSearch();
           }}
         >
-          <input
-            id="keyword"
-            type="text"
-            value={keywordInput}
-            onChange={event => setKeywordInput(event.target.value)}
-            placeholder={
-              searchMode === "rank"
-                ? "블로그 주소를 입력하세요."
-                : searchMode === "postRank"
-                  ? "블로그 게시글 URL을 입력하세요."
-                  : "분석할 검색어를 입력하세요."
-            }
-            aria-label={searchMode === "analysis" ? "분석할 검색어" : "분석할 블로그 주소"}
-            autoComplete="off"
-            className="heroSearchInput"
-          />
-          <div className="heroSearchActions">
+          <div className="heroSearchPlatformControls">
             <DropdownMenu modal={false} open={isSearchModeOpen} onOpenChange={setIsSearchModeOpen}>
               <DropdownMenuTrigger
                 type="button"
@@ -580,20 +564,34 @@ export default function UnifiedInsights() {
                 </DropdownMenuRadioGroup>
               </DropdownMenuContent>
             </DropdownMenu>
-            <div className="flex items-center gap-1">
-              {searchMode === "analysis" && !isLoading && (
-                <VoiceSearchButton key={voiceInputKey} onTranscript={text => setKeywordInput(value => [value.trimEnd(), text].filter(Boolean).join(" "))} />
-              )}
-              <button
-                type="submit"
-                className="heroSearchButton"
-                aria-label="분석"
-                title="분석"
-                disabled={!keywordInput.trim() || authLoading || isLoading || isTrendFilterLoading || isBlogLoading || isBlogPostRankLoading}
-              >
-                <ArrowUp size={19} aria-hidden="true" />
-              </button>
-            </div>
+          </div>
+          <input
+            id="keyword"
+            type="text"
+            value={keywordInput}
+            onChange={event => setKeywordInput(event.target.value)}
+            placeholder={
+              searchMode === "rank" ? "블로그 주소 입력"
+                : searchMode === "postRank" ? "게시글 URL 입력"
+                  : "검색어 입력"
+            }
+            aria-label={searchMode === "analysis" ? "분석할 검색어" : "분석할 블로그 주소"}
+            autoComplete="off"
+            className="heroSearchInput"
+          />
+          <div className="flex items-center gap-1">
+            {searchMode === "analysis" && !isLoading && (
+              <VoiceSearchButton key={voiceInputKey} onTranscript={text => setKeywordInput(value => [value.trimEnd(), text].filter(Boolean).join(" "))} />
+            )}
+            <button
+              type="submit"
+              className="heroSearchButton"
+              aria-label="분석"
+              title="분석"
+              disabled={!keywordInput.trim() || authLoading || isLoading || isTrendFilterLoading || isBlogLoading || isBlogPostRankLoading}
+            >
+              <Search size={18} aria-hidden="true" />
+            </button>
           </div>
         </form>
         {queryError && !isLoading && !isBlogLoading && !querySuccess && !chartData && !blogAnalysisData && (

@@ -3,7 +3,6 @@ import { ArrowLeft, ExternalLink, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Link, useParams } from "wouter";
 import NotFound from "@/pages/NotFound";
-import StudioSubnav from "@/components/StudioSubnav";
 import { loadKakaoSdk, shareOpenSourceOnKakao } from "@/lib/kakaoShare";
 
 const projects = {
@@ -60,7 +59,6 @@ export default function OpenSourceDetail() {
 
   return (
     <main className="openSourceDetailPage">
-      <StudioSubnav active="openSource" />
       <Link href="/ai-studio/open-source" className="openSourceDetailBack">
         <ArrowLeft aria-hidden="true" />
         오픈소스

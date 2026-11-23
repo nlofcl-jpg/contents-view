@@ -2939,6 +2939,7 @@ function parseGoogleTrendsPage(html, countryCode, observedAt) {
 
 // shared/searchTrendDailyRanking.ts
 var TOP_COUNT = 20;
+var CONTENTS_LIVE_RANK_LIMIT = 50;
 var HOUR_MS = 36e5;
 var seoulDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" });
 function getSeoulDate(date = /* @__PURE__ */ new Date()) {
@@ -2951,6 +2952,21 @@ function getSeoulDayBounds(day) {
   const start = Date.parse(`${day}T00:00:00+09:00`);
   if (!Number.isFinite(start) || getSeoulDate(new Date(start)) !== day) return null;
   return { start: new Date(start).toISOString(), end: new Date(start + 24 * HOUR_MS).toISOString() };
+}
+function placeNewContentsKeywords(cumulative, latestKeywords) {
+  const keywordKey = (keyword) => keyword.normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase("ko-KR");
+  const newEntries = new Map(cumulative.filter((entry) => entry.rankChange === "new").map((entry) => [keywordKey(entry.keyword), entry]));
+  const slots = Array(Math.min(CONTENTS_LIVE_RANK_LIMIT, cumulative.length)).fill(void 0);
+  const placed = /* @__PURE__ */ new Set();
+  latestKeywords.slice(0, slots.length).forEach((keyword, index) => {
+    const entry = newEntries.get(keywordKey(keyword));
+    if (!entry || placed.has(entry)) return;
+    slots[index] = entry;
+    placed.add(entry);
+  });
+  const remaining = cumulative.filter((entry) => !placed.has(entry));
+  let next = 0;
+  return slots.map((entry, index) => ({ ...entry ?? remaining[next++], rank: index + 1 }));
 }
 function aggregateDailySearchRanks(snapshots) {
   const scores = /* @__PURE__ */ new Map();
@@ -4373,14 +4389,24 @@ function translateYouTubeError(error) {
   }
   return `YouTube API \uC624\uB958: ${error}. API Key \uC124\uC815\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694.`;
 }
-async function getContentsViewDailyRanks(date) {
+async function getContentsViewDailyRanks(date, outsideLiveRanking = false) {
   if (!supabaseAdmin4) {
     throw new TRPCError6({ code: "PRECONDITION_FAILED", message: "\uC800\uC7A5\uB41C \uAC80\uC0C9\uC5B4\uB97C \uC870\uD68C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
   }
-  const { data, error } = await supabaseAdmin4.from("contents_view_keyword_daily_rankings").select("rank,keyword,points,appearances,rank_change").eq("ranking_date", date).order("rank").limit(50);
+  const query = supabaseAdmin4.from("contents_view_keyword_daily_rankings").select("rank,keyword,points,appearances,rank_change").eq("ranking_date", date).order("rank");
+  const { data, error } = await (outsideLiveRanking ? query.eq("rank_change", "new").gt("rank", CONTENTS_LIVE_RANK_LIMIT).limit(20) : query.limit(CONTENTS_LIVE_RANK_LIMIT));
   if (error) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "\uCEE8\uD150\uCE20\uBDF0 \uC21C\uC704\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4." });
   const rankings = data ?? [];
   return { rankings: rankings.map(({ rank_change, ...entry }) => ({ ...entry, rankChange: rank_change })) };
+}
+async function getContentsViewLiveRanks() {
+  const date = getSeoulDate();
+  const cumulative = await getContentsViewDailyRanks(date);
+  if (!supabaseAdmin4 || cumulative.rankings.length === 0) return cumulative;
+  const { data: published, error } = await supabaseAdmin4.from("hero_search_settings").select("keywords,updated_at").eq("id", 1).maybeSingle();
+  if (error || !published || getSeoulDate(new Date(published.updated_at)) !== date) return cumulative;
+  const outside = cumulative.rankings.length === CONTENTS_LIVE_RANK_LIMIT ? await getContentsViewDailyRanks(date, true) : { rankings: [] };
+  return { rankings: placeNewContentsKeywords([...cumulative.rankings, ...outside.rankings], published.keywords) };
 }
 var appRouter = router({
   // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -5453,7 +5479,7 @@ var appRouter = router({
     })
   }),
   googleTrends: router({
-    contentsLiveRanking: publicProcedure.query(() => getContentsViewDailyRanks(getSeoulDate())),
+    contentsLiveRanking: publicProcedure.query(getContentsViewLiveRanks),
     dailyRanking: protectedProcedure.input(z6.object({ source: z6.enum(["google", "contents"]), date: z6.string().length(10) })).query(async ({ input }) => {
       const bounds = getSeoulDayBounds(input.date);
       if (!bounds || input.date > getSeoulDate()) {

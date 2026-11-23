@@ -304,6 +304,9 @@ a {
   grid-column: 1;
   grid-row: 2;
   align-self: center;
+}
+
+.socialIcons {
   display: flex;
   align-items: center;
   gap: 18px;
@@ -313,17 +316,17 @@ a {
   list-style: none;
 }
 
-.siteFooterSocialIcons svg {
+.socialIcons svg {
   display: block;
   width: 16px;
   height: 16px;
 }
 
-.siteFooterSocialIcons li {
+.socialIcons li {
   transition: color 0.15s ease;
 }
 
-.siteFooterSocialIcons li:hover {
+.socialIcons li:hover {
   color: #fff;
 }
 
@@ -520,8 +523,7 @@ a {
   }
 
   .siteFooterSocialIcons {
-    order: 2;
-    margin-top: 16px;
+    display: none;
   }
 
   .siteFooterBottom {
@@ -1494,28 +1496,34 @@ a {
   color: #ffffff;
 }
 
-.headerAuthLinks {
+.neonAuthLink {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  color: #64748b;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgb(74 201 255 / 65%);
+  border-radius: 8px;
+  background: rgb(13 35 56 / 90%);
+  color: #e2f7ff;
+  box-shadow: 0 0 12px rgb(41 169 255 / 24%), inset 0 0 8px rgb(41 169 255 / 10%);
   font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
-}
-
-.headerAuthLink {
-  color: #b7c5de;
   text-decoration: none;
-  transition: color 0.18s ease;
+  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.headerAuthLink:hover {
+.neonAuthLink:hover {
   color: #ffffff;
+  background: #103451;
+  border-color: #85ddff;
+  box-shadow: 0 0 16px rgb(41 169 255 / 42%);
 }
 
-.headerAuthDivider {
-  color: rgba(148, 163, 184, 0.48);
+.neonAuthLink:focus-visible {
+  outline: 2px solid #85ddff;
+  outline-offset: 3px;
 }
 
 .profileDropdown {
@@ -1961,7 +1969,8 @@ a {
 }
 
 .heroSearchFilterButton.isNaver,
-.heroSearchMenuItem.isNaver { color: #6ee7b7; }
+.heroSearchMenuItem.isNaver,
+.heroSearchMenuItem.youtubeAnalysisModeOption { color: #6ee7b7; }
 .heroSearchFilterButton.isNews,
 .heroSearchMenuItem.isNews { color: #7dd3fc; }
 .heroSearchFilterButton.isYoutube,
@@ -3609,6 +3618,7 @@ a {
 @media (min-width: 960px) {
   .newsBriefingLayout {
     display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(240px, 2fr);
     align-items: start;
     gap: 24px;
   }
@@ -3645,12 +3655,15 @@ a {
 
   .issueFocusListLayout {
     display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     align-items: start;
     max-width: 1200px;
+    gap: var(--issue-focus-grid-gap);
     margin-inline: auto;
   }
 
   .issueFocusListMain {
+    grid-column: span 2;
     min-width: 0;
   }
 }
@@ -3953,11 +3966,9 @@ a {
     max-width: 1280px;
   }
 
-  .newsBriefingLayout,
-  .issueFocusListLayout,
   .issueDetail:has(> .issueDetailArticle.newsBriefingLayout) {
-    --issue-sidebar-width: clamp(240px, 25%, 280px);
     --issue-column-gap: 24px;
+    --issue-sidebar-width: max(240px, calc((100% - var(--issue-column-gap)) * 2 / 7));
   }
 
   .issueDetail:has(> .issueDetailArticle.newsBriefingLayout) > .issueDetailHeader {
@@ -3965,13 +3976,9 @@ a {
     border-bottom: 1px solid rgba(148, 163, 184, 0.18);
   }
 
-  .newsBriefingLayout,
-  .issueFocusListLayout {
+  .issueDetailArticle.newsBriefingLayout {
     grid-template-columns: minmax(0, 1fr) var(--issue-sidebar-width);
     column-gap: var(--issue-column-gap);
-  }
-
-  .issueDetailArticle.newsBriefingLayout {
     border-top: 0;
   }
 }
@@ -5147,6 +5154,40 @@ a {
   border: 1px solid rgba(34, 211, 238, 0.25);
 }
 
+.liveTrendNavigation.tabMenu {
+  justify-content: safe center;
+  margin-bottom: 0;
+  border: 0;
+  background: transparent;
+}
+
+.liveTrendNavigation .tabButton {
+  text-decoration: none;
+}
+
+.youtubePageContainer:has(> .pageHeader > .liveTrendNavigation) {
+  row-gap: 12px;
+}
+
+.youtubePageContainer:has(> .pageHeader > .liveTrendNavigation) > .youtubeTabMenu,
+.youtubePageContainer:has(> .pageHeader > .liveTrendNavigation) > .searchTrendTabMenu {
+  margin-bottom: 0;
+}
+
+.naverTrendAnalysis {
+  margin-top: 8px;
+}
+
+@media (max-width: 768px) {
+  .heroSearch.naverAnalysisComposer,
+  .heroSearch.youtubeAnalysisComposer {
+    box-shadow:
+      -4px 0 18px -5px rgb(var(--view-logo-blue) / 0.38),
+      4px 0 18px -5px rgb(var(--view-logo-violet) / 0.34),
+      0 10px 24px -9px rgb(5 11 22 / 0.42);
+  }
+}
+
 .searchTrendTabMenu .tabButton {
   min-height: 44px;
   padding: 0 8px;
@@ -5158,6 +5199,7 @@ a {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  margin-top: 24px;
   padding: 0 0 28px;
 }
 
@@ -5188,10 +5230,32 @@ a {
   width: 100%;
 }
 
-.heroSearch.youtubeAnalysisComposer {
+.heroSearch.youtubeAnalysisComposer,
+.heroSearch.naverAnalysisComposer {
   align-self: center;
   margin-top: 0;
   margin-inline: auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 3px 5px;
+}
+
+.heroSearch.naverAnalysisComposer.commerceAnalysisComposer {
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding-inline-start: 12px;
+  box-shadow:
+    -5px 0 20px -3px rgb(var(--view-logo-blue) / 0.34),
+    5px 0 20px -3px rgb(var(--view-logo-violet) / 0.28);
+}
+
+.youtubePageContainer.commerceTrendPage {
+  --commerce-section-spacing: 24px;
+  row-gap: var(--commerce-section-spacing);
+}
+
+.commerceTrendPage > .youtubeTabMenu,
+.commerceTrendPage > .commerceAnalysisComposer {
+  margin-bottom: var(--commerce-section-spacing);
 }
 
 .youtubeAnalysisInputWrap {
@@ -7088,6 +7152,19 @@ input[type="date"].youtubeSelect {
   padding-bottom: 32px;
 }
 
+.mobileDrawerNavigation {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+}
+
+.mobileMenuSocialIcons {
+  justify-content: center;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
 /* Drawer Tabs - REMOVED */
 
 /* Menu Section */
@@ -7207,34 +7284,13 @@ input[type="date"].youtubeSelect {
   border-top: 1px solid rgba(96, 165, 250, 0.14);
 }
 
-.mobileAuthButtonRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
 .mobileMenuTopActions {
   margin-bottom: 18px;
 }
 
-.mobileAuthButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.mobileMenuSection .neonAuthLink {
+  width: 100%;
   min-height: 44px;
-  border-radius: 12px;
-  border: 1px solid rgba(59, 130, 246, 0.5);
-  background: rgba(21, 140, 255, 0.2);
-  color: #eaf4ff;
-  font-size: 14px;
-  font-weight: 400;
-  text-decoration: none;
-}
-
-.mobileAuthButton.secondary {
-  border-color: rgba(148, 163, 184, 0.22);
-  background: rgba(15, 23, 42, 0.28);
-  color: #cbd5e1;
 }
 
 /* Nav Item */

@@ -1,4 +1,5 @@
 const TOP_COUNT = 20;
+export const CONTENTS_LIVE_RANK_LIMIT = 50;
 const HOUR_MS = 3_600_000;
 const seoulDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" });
 
@@ -13,6 +14,25 @@ export function getSeoulDayBounds(day: string) {
   const start = Date.parse(`${day}T00:00:00+09:00`);
   if (!Number.isFinite(start) || getSeoulDate(new Date(start)) !== day) return null;
   return { start: new Date(start).toISOString(), end: new Date(start + 24 * HOUR_MS).toISOString() };
+}
+
+export function placeNewContentsKeywords<T extends { keyword: string; rank: number; rankChange: string }>(
+  cumulative: readonly T[], latestKeywords: readonly string[],
+): T[] {
+  const keywordKey = (keyword: string) => keyword.normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase("ko-KR");
+  const newEntries = new Map(cumulative.filter(entry => entry.rankChange === "new").map(entry => [keywordKey(entry.keyword), entry]));
+  const slots = Array<T | undefined>(Math.min(CONTENTS_LIVE_RANK_LIMIT, cumulative.length)).fill(undefined);
+  const placed = new Set<T>();
+  latestKeywords.slice(0, slots.length).forEach((keyword, index) => {
+    const entry = newEntries.get(keywordKey(keyword));
+    if (!entry || placed.has(entry)) return;
+    slots[index] = entry;
+    placed.add(entry);
+  });
+
+  const remaining = cumulative.filter(entry => !placed.has(entry));
+  let next = 0;
+  return slots.map((entry, index) => ({ ...(entry ?? remaining[next++]), rank: index + 1 }));
 }
 
 export function aggregateDailySearchRanks(snapshots: ReadonlyArray<ReadonlyArray<{ keyword: string; rank: number }>>) {

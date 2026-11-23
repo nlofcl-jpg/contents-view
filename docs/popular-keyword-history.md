@@ -13,7 +13,9 @@ Each changed save also rebuilds and stores the full calculated Contents View
 ranking for that Asia/Seoul date in `public.contents_view_keyword_daily_rankings`.
 Rank changes compare the new cumulative ranking with the same day's cumulative
 ranking before that save. A first appearance in the visible top 50 is marked new.
-The live list shows today's top 50 and refreshes every 30 seconds while open.
+The live list refreshes every 30 seconds. It reserves the latest registration
+positions for new entries, then fills the remaining spots through rank 50
+in cumulative order without changing points or stored ranks.
 Historical dates show the top 50 from the corresponding saved daily ranking.
 Each submitted round still accepts up to 20 terms. Rank 1 receives 20 points
 and rank 20 receives 1 point. Ties use appearances, best rank, then keyword.

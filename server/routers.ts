@@ -20,7 +20,7 @@ import type { InsertYouTubeBookmark, User, YouTubeBookmark } from "../drizzle/sc
 import { getStoredYouTubeRisingVideos, isYouTubeTopicChannel, scoreRisingCandidates, selectBalancedRisingVideos, syncYouTubeRecommendedHistory } from "./youtubeRising";
 import { GOOGLE_TREND_HISTORY_MS, compareGoogleTrendRanks, parseGoogleTrendTraffic, rankGoogleTrends, type GoogleTrendItem, type UnrankedGoogleTrendItem } from "./googleTrendsHistory";
 import { parseGoogleTrendsPage } from "./googleTrendsPage";
-import { aggregateDailySearchRanks, getSeoulDate, getSeoulDayBounds } from "@shared/searchTrendDailyRanking";
+import { aggregateDailySearchRanks, CONTENTS_LIVE_RANK_LIMIT, getSeoulDate, getSeoulDayBounds, placeNewContentsKeywords } from "@shared/searchTrendDailyRanking";
 import { fetchYouTubeBookmarkVideo, parseYouTubeVideoUrl } from "./youtubeBookmarkUrl";
 import { fetchTikTokBookmarkVideo, parseTikTokVideoUrl } from "./tiktokBookmarkUrl";
 import { fetchInstagramBookmarkMetadata, parseInstagramUrl } from "./instagramBookmarkUrl";
@@ -1271,12 +1271,15 @@ function translateYouTubeError(error: string): string {
   return `YouTube API 오류: ${error}. API Key 설정을 확인해주세요.`;
 }
 
-async function getContentsViewDailyRanks(date: string) {
+async function getContentsViewDailyRanks(date: string, outsideLiveRanking = false) {
   if (!supabaseAdmin) {
     throw new TRPCError({ code: "PRECONDITION_FAILED", message: "저장된 검색어를 조회할 수 없습니다." });
   }
-  const { data, error } = await supabaseAdmin.from("contents_view_keyword_daily_rankings")
-    .select("rank,keyword,points,appearances,rank_change").eq("ranking_date", date).order("rank").limit(50);
+  const query = supabaseAdmin.from("contents_view_keyword_daily_rankings")
+    .select("rank,keyword,points,appearances,rank_change").eq("ranking_date", date).order("rank");
+  const { data, error } = await (outsideLiveRanking
+    ? query.eq("rank_change", "new").gt("rank", CONTENTS_LIVE_RANK_LIMIT).limit(20)
+    : query.limit(CONTENTS_LIVE_RANK_LIMIT));
   if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "컨텐츠뷰 순위를 불러오지 못했습니다." });
   const rankings = (data ?? []) as {
     rank: number;
@@ -1286,6 +1289,21 @@ async function getContentsViewDailyRanks(date: string) {
     rank_change: "up" | "down" | "same" | "new";
   }[];
   return { rankings: rankings.map(({ rank_change, ...entry }) => ({ ...entry, rankChange: rank_change })) };
+}
+
+async function getContentsViewLiveRanks() {
+  const date = getSeoulDate();
+  const cumulative = await getContentsViewDailyRanks(date);
+  if (!supabaseAdmin || cumulative.rankings.length === 0) return cumulative;
+
+  const { data: published, error } = await supabaseAdmin.from("hero_search_settings")
+    .select("keywords,updated_at").eq("id", 1).maybeSingle();
+  if (error || !published || getSeoulDate(new Date(published.updated_at)) !== date) return cumulative;
+
+  const outside = cumulative.rankings.length === CONTENTS_LIVE_RANK_LIMIT
+    ? await getContentsViewDailyRanks(date, true)
+    : { rankings: [] };
+  return { rankings: placeNewContentsKeywords([...cumulative.rankings, ...outside.rankings], published.keywords) };
 }
 
 export const appRouter = router({
@@ -2598,7 +2616,7 @@ export const appRouter = router({
   }),
 
   googleTrends: router({
-    contentsLiveRanking: publicProcedure.query(() => getContentsViewDailyRanks(getSeoulDate())),
+    contentsLiveRanking: publicProcedure.query(getContentsViewLiveRanks),
 
     dailyRanking: protectedProcedure
       .input(z.object({ source: z.enum(["google", "contents"]), date: z.string().length(10) }))
