@@ -362,7 +362,7 @@ export function YouTubeApiKeySettingsPanel({
         <p className={`text-slate-300 text-sm ${compact ? "mb-4" : "mb-6"}`}>
           {isEditing && maskedKey
             ? "새 YouTube Data API Key를 입력하면 기존 키가 새 키로 교체됩니다."
-            : "YouTube 트렌드 데이터를 불러오기 위해 본인의 YouTube Data API Key를 등록해주세요."}
+            : "유튜브 트렌드 데이터를 불러오기 위해 본인의 YouTube Data API Key를 등록해주세요."}
         </p>
 
         {/* Error Message */}

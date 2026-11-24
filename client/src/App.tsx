@@ -18,6 +18,7 @@ import NewsClipDetail from "@/pages/NewsClipDetail";
 import NewsSearchResults from "@/pages/NewsSearchResults";
 import IssueDetail from "@/pages/IssueDetail";
 import AIStudio from "@/pages/AIStudio";
+import StudioResources from "@/pages/StudioResources";
 import OpenSourceDetail from "@/pages/OpenSourceDetail";
 import FlowAutomation from "@/pages/FlowAutomation";
 import Login from "@/pages/Login";
@@ -62,6 +63,8 @@ function Router() {
       <Route path={"/ai-studio/programs"} component={AIStudio} />
       <Route path={"/ai-studio/open-source/:slug"} component={OpenSourceDetail} />
       <Route path={"/ai-studio/open-source"} component={AIStudio} />
+      <Route path={"/ai-studio/resources/analog-clocks"}><StudioResources showClocks /></Route>
+      <Route path={"/ai-studio/resources"}><StudioResources /></Route>
       <Route path={"/ai-studio"} component={AIStudio} />
       <Route path={"/login"} component={Login} />
       <Route path={"/admin"} component={Admin} />

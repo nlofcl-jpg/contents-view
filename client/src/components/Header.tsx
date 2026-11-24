@@ -46,7 +46,7 @@ export default function Header({
   const studioMenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const trendItems = [
-    { name: "YouTube", path: "/trends/youtube" },
+    { name: "유튜브 트렌드", path: "/trends/youtube" },
     { name: "네이버 트렌드", path: "/trends/naver" },
     { name: "검색 트렌드", path: "/trends/google" },
   ];
@@ -55,6 +55,7 @@ export default function Header({
     { name: "콘텐츠 제작", path: "/ai-studio/video" },
     { name: "프로그램", path: "/ai-studio/programs" },
     { name: "오픈소스", path: "/ai-studio/open-source" },
+    { name: "자료실", path: "/ai-studio/resources" },
   ];
 
   const latestNoticeId = notices[0]?.id ?? null;

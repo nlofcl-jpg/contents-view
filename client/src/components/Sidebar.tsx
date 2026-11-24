@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation, Link } from "wouter";
 
 const trendItems = [
-  { name: "YouTube", badge: "▶", path: "/trends/youtube" },
+  { name: "유튜브 트렌드", badge: "▶", path: "/trends/youtube" },
   { name: "네이버", badge: "N", path: "/trends/naver" },
   { name: "검색 트렌드", badge: "G", path: "/trends/google" },
 ];

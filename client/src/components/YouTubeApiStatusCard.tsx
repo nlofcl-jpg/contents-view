@@ -121,7 +121,7 @@ export function YouTubeApiStatusCard({
           YouTube API 키 설정이 필요합니다
         </h3>
         <p className="apiEmptyDescription">
-          YouTube 트렌드 데이터를 불러오려면 API 키를 설정해주세요.
+          유튜브 트렌드 데이터를 불러오려면 API 키를 설정해주세요.
         </p>
         <button
           onClick={() => setIsModalOpen(true)}

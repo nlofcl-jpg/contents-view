@@ -5,8 +5,7 @@ export const issueFocusCategories = [
   { id: "marketing", label: "마케팅·광고" },
   { id: "commerce", label: "커머스·비즈니스" },
   { id: "creator", label: "크리에이터·콘텐츠" },
-  { id: "economy", label: "경제" },
-  { id: "society", label: "사회" },
+  { id: "economy", label: "경제·사회" },
 ] as const;
 
 export type IssueFocusCategory = typeof issueFocusCategories[number]["id"];
@@ -16,6 +15,15 @@ export function isIssueFocusCategoryId(value: unknown): value is IssueFocusCateg
   return issueFocusCategories.some(({ id }) => id !== "all" && id === value);
 }
 
-export function matchesIssueFocusCategory(savedCategory: IssueFocusCategoryId | null, category: IssueFocusCategory) {
-  return category === "all" || savedCategory === category;
+export function normalizeIssueFocusCategory(value: unknown): IssueFocusCategoryId | null {
+  if (value === "society") return "economy";
+  return isIssueFocusCategoryId(value) ? value : null;
+}
+
+export function getIssueFocusCategoryValues(category: IssueFocusCategoryId) {
+  return category === "economy" ? ["economy", "society"] : [category];
+}
+
+export function matchesIssueFocusCategory(savedCategory: string | null, category: IssueFocusCategory) {
+  return category === "all" || normalizeIssueFocusCategory(savedCategory) === category;
 }

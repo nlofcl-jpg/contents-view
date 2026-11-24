@@ -1197,7 +1197,7 @@ export default function YouTubeTrends() {
 
     if (isLoading && !isCacheValid) {
       return (
-        <YouTubeVideoListLoading message="YouTube 트렌드 데이터를 불러오는 중입니다..." />
+        <YouTubeVideoListLoading message="유튜브 트렌드 데이터를 불러오는 중입니다..." />
       );
     }
 
@@ -1692,7 +1692,7 @@ export default function YouTubeTrends() {
     <div className={`youtubePageContainer ${!isAuthenticated && activeTab !== "analysis" ? "youtubeGuestUnframed" : ""}`}>
       {/* Page Header */}
       <div className="pageHeader">
-        <h1 className="pageTitle">YouTube 트렌드</h1>
+        <h1 className="pageTitle">유튜브 트렌드</h1>
         <p className="pageDescription">
           국가별, 카테고리별 YouTube 콘텐츠 트렌드를 확인하세요.
         </p>
@@ -1700,7 +1700,7 @@ export default function YouTubeTrends() {
       </div>
 
       {/* Tab Menu */}
-      <div className="tabMenu youtubeTabMenu" ref={tabMenuRef} role="group" aria-label="YouTube 트렌드 선택">
+      <div className="tabMenu youtubeTabMenu" ref={tabMenuRef} role="group" aria-label="유튜브 트렌드 선택">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -1830,7 +1830,7 @@ export default function YouTubeTrends() {
       ) : activeTab === "rising" ? (
         renderRisingTab()
       ) : !isAuthenticated ? (
-        renderGuestLoginNotice("YouTube 트렌드와 개인 API 키 기능은 로그인 후 이용할 수 있습니다.")
+        renderGuestLoginNotice("유튜브 트렌드와 개인 API 키 기능은 로그인 후 이용할 수 있습니다.")
       ) : isAuthenticated && !apiKeyData?.exists ? (
         <YouTubeApiStatusCard activeTab={activeTab} apiKeyMessage={TAB_MESSAGES.trending} />
       ) : activeTab === "trending" || activeTab === "category" ? (

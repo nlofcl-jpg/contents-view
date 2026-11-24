@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import useEmblaCarousel from "embla-carousel-react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
-import type { IssueFocusCategoryId } from "@/lib/issueFocusCategories";
+import { getIssueFocusCategoryValues, type IssueFocusCategoryId } from "@/lib/issueFocusCategories";
 import { supabase } from "@/lib/supabase";
 
 const MAX_RELATED_ISSUES = 5;
@@ -86,15 +86,15 @@ function RelatedIssueCarousel({ issues }: { issues: RelatedIssue[] }) {
   );
 }
 
-export default function RelatedFocusIssues({ issueId, category }: { issueId: string; category: IssueFocusCategoryId }) {
+export default function RelatedFocusIssues({ issueId, category }: { issueId: string; category: IssueFocusCategoryId | null }) {
   const { data } = useQuery({
     queryKey: ["related-focus-issues", issueId, category],
     queryFn: async ({ signal }) => {
-      if (!supabase) return [];
+      if (!supabase || !category) return [];
       const { data, error } = await supabase.from("issues")
         .select("id,title,article_title,thumbnail_url")
         .eq("is_published", true)
-        .eq("category", category)
+        .in("category", getIssueFocusCategoryValues(category))
         .neq("id", issueId)
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
@@ -103,6 +103,7 @@ export default function RelatedFocusIssues({ issueId, category }: { issueId: str
       if (error) throw error;
       return data as RelatedIssue[];
     },
+    enabled: category !== null,
     staleTime: 60_000,
     retry: false,
   });

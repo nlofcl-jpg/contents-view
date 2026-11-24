@@ -5257,6 +5257,17 @@ a {
   padding: 3px 5px;
 }
 
+@media (min-width: 1024px) {
+  .heroSearch.youtubeAnalysisComposer,
+  .heroSearch.naverAnalysisComposer {
+    width: min(100%, 720px);
+  }
+
+  :is(.youtubeAnalysisComposer, .naverAnalysisComposer) .heroSearchInput {
+    height: 46px;
+  }
+}
+
 .heroSearch.naverAnalysisComposer.commerceAnalysisComposer {
   grid-template-columns: minmax(0, 1fr) auto;
   padding-inline-start: 12px;

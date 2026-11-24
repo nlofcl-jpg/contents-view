@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { issueFocusCategories, isIssueFocusCategoryId, type IssueFocusCategoryId } from "@/lib/issueFocusCategories";
+import { issueFocusCategories, isIssueFocusCategoryId, normalizeIssueFocusCategory, type IssueFocusCategoryId } from "@/lib/issueFocusCategories";
 import { issueClippingLabel, issueFocusLabel } from "@/lib/newsNavigation";
 import { ChevronDown, ChevronLeft, ChevronRight, Paperclip, RefreshCw, X } from "lucide-react";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
@@ -166,7 +166,7 @@ type IssueRecord = {
   attachment_name?: string | null;
   is_published: boolean;
   registration_status?: "connecting" | "complete" | "failed";
-  category?: IssueFocusCategoryId | null;
+  category?: string | null;
   created_at: string;
 };
 
@@ -408,7 +408,7 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
     setEditingId(issue.id);
     setTitle(issue.title);
     setSummary(issue.summary);
-    setCategory(issue.category ?? "");
+    setCategory(normalizeIssueFocusCategory(issue.category) ?? "");
     setThumbnailUrl(issue.thumbnail_url ?? "");
     setThumbnailCredit(issue.thumbnail_credit ?? "");
     setThumbnailFile(null);

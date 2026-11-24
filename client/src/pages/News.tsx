@@ -7,7 +7,7 @@ import { getIssueOpeningParagraph, stripIssueBodyFormatting } from "@shared/issu
 import IssueDate from "@/components/IssueDate";
 import NewsTrendHeader from "@/components/NewsTrendHeader";
 import NewsBriefingSidebar from "@/components/NewsBriefingSidebar";
-import { issueFocusCategories, matchesIssueFocusCategory, type IssueFocusCategory, type IssueFocusCategoryId } from "@/lib/issueFocusCategories";
+import { issueFocusCategories, matchesIssueFocusCategory, type IssueFocusCategory } from "@/lib/issueFocusCategories";
 import { issueFocusLabel } from "@/lib/newsNavigation";
 
 interface NewsItem {
@@ -27,7 +27,7 @@ interface PublishedIssue {
   thumbnail_url: string | null;
   article_title: string | null;
   article_summary: string | null;
-  category: IssueFocusCategoryId | null;
+  category: string | null;
   created_at: string;
 }
 

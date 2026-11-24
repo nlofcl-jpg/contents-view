@@ -5,7 +5,7 @@ import { useLocation, useRoute } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { loadWithNewsAttachments } from "@/lib/newsAttachments";
 import { issueFocusLabel } from "@/lib/newsNavigation";
-import { isIssueFocusCategoryId, type IssueFocusCategoryId } from "@/lib/issueFocusCategories";
+import { normalizeIssueFocusCategory } from "@/lib/issueFocusCategories";
 import { loadKakaoSdk, shareIssueOnKakao } from "@/lib/kakaoShare";
 import IssueBody from "@/components/IssueBody";
 import IssueThumbnail from "@/components/IssueThumbnail";
@@ -23,7 +23,7 @@ type IssueDetailRecord = {
   attachment_name?: string | null;
   article_title: string | null;
   article_summary: string | null;
-  category: IssueFocusCategoryId | null;
+  category: string | null;
   created_at: string;
 };
 
@@ -173,7 +173,7 @@ export default function IssueDetail() {
               <footer className="issueDetailCopyright">
                 © CONTENTS VIEW. 무단 전재 및 재배포 금지
               </footer>
-              {isIssueFocusCategoryId(issue.category) && <RelatedFocusIssues issueId={issue.id} category={issue.category} />}
+              <RelatedFocusIssues issueId={issue.id} category={normalizeIssueFocusCategory(issue.category)} />
             </div>
             <NewsBriefingSidebar showBriefings />
           </div>

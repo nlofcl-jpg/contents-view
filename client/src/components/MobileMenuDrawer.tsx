@@ -59,6 +59,7 @@ export function MobileMenuDrawer({
   const isVideoProductionPage = location === "/ai-studio/video" || location.startsWith("/ai-studio/video/") ||
     (location === "/ai-studio" && new URLSearchParams(window.location.search).get("tab") === "upcoming");
   const isOpenSourcePage = location?.startsWith("/ai-studio/open-source");
+  const isStudioResourcesPage = location === "/ai-studio/resources" || location.startsWith("/ai-studio/resources/");
   const isAdminPage = location === "/admin";
   const isAdmin = isAuthenticated && user?.role === "admin";
 
@@ -191,7 +192,7 @@ export function MobileMenuDrawer({
                     type="button"
                   >
                     <img className="mobileTrendLogo" src="/youtube-favicon.png" alt="" aria-hidden="true" />
-                    <span>YouTube</span>
+                    <span>유튜브 트렌드</span>
                   </button>
 
                   <button
@@ -282,7 +283,7 @@ export function MobileMenuDrawer({
                     <span>콘텐츠 제작</span>
                   </button>
                   <button
-                    className={`mobileNavItem subNavItem ${isAIStudioPage && !isVideoProductionPage && !isOpenSourcePage ? "active" : ""}`}
+                    className={`mobileNavItem subNavItem ${isAIStudioPage && !isVideoProductionPage && !isOpenSourcePage && !isStudioResourcesPage ? "active" : ""}`}
                     onClick={() => handleNavigation("/ai-studio/programs")}
                     type="button"
                   >
@@ -294,6 +295,14 @@ export function MobileMenuDrawer({
                     type="button"
                   >
                     <span>오픈소스</span>
+                  </button>
+                  <button
+                    className={`mobileNavItem subNavItem ${isStudioResourcesPage ? "active" : ""}`}
+                    aria-current={isStudioResourcesPage ? "page" : undefined}
+                    onClick={() => handleNavigation("/ai-studio/resources")}
+                    type="button"
+                  >
+                    <span>자료실</span>
                   </button>
                 </div>
               )}

@@ -1,0 +1,750 @@
+.studioResourceHeader {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+
+.studioResourceHeader .issueBackButton {
+  margin-bottom: 0;
+}
+
+.studioResourceGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 16px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.studioResourceItem {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgb(148 163 184 / 0.2);
+  border-radius: 8px;
+  background: #10151d;
+}
+
+.studioResourceLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.studioResourceLink:hover,
+.studioResourceLink:focus-visible {
+  border-color: #649ec8;
+}
+
+.studioResourceThumbnail {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 9;
+}
+
+.studioResourceCaption {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 14px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.studioResourceLink .studioResourceCaption {
+  padding-inline: 36px;
+}
+
+.studioResourceLink .studioResourceCaption > svg {
+  position: absolute;
+  inset-inline-end: 14px;
+}
+
+.studioAnalogClock {
+  display: block;
+  width: min(42%, 124px);
+  aspect-ratio: 1;
+}
+
+.studioClockPreview {
+  display: grid;
+  justify-items: center;
+  margin: 0;
+}
+
+.studioClockReadout {
+  --studio-clock-face-size: min(96%, 480px);
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.studioClockFaceStage {
+  display: grid;
+  grid-template-areas: "face";
+  place-items: center;
+  width: 100%;
+}
+
+.studioClockFaceStage::before {
+  grid-area: face;
+  width: var(--studio-clock-face-size);
+  aspect-ratio: 1;
+  content: "";
+}
+
+.studioClockFaceStage > :is(.studioAnalogClock, .studioFlipClock, .studioDeskClock, .studioClockDigits) {
+  grid-area: face;
+}
+
+.studioClockFaceStage > .studioAnalogClock {
+  width: var(--studio-clock-face-size);
+}
+
+.studioClockDate {
+  min-height: 30px;
+  color: #e2ebf4;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 30px;
+  font-variant-numeric: tabular-nums;
+}
+
+.studioWorldClockGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px 16px;
+  width: min(100%, 1040px);
+  margin: 0;
+  padding: 12px 8px 24px;
+  list-style: none;
+}
+
+.studioWorldClock {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 5px;
+  min-width: 0;
+  text-align: center;
+}
+
+.studioWorldClock .studioAnalogClock {
+  width: min(96%, 198px);
+}
+
+.studioWorldClockName {
+  margin: 0;
+  color: #f0f4f9;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.studioWorldClockDate {
+  color: #aebccc;
+  font-size: 13px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.studioWorldClockDate[aria-hidden="true"] {
+  visibility: hidden;
+}
+
+.studioWorldClockThumbnail {
+  width: min(42%, 54px);
+  height: auto;
+  color: #c4cedc;
+  stroke-width: 1.25;
+}
+
+:is(.studioClockPreview:fullscreen, .studioClockFullscreenDialog) .studioClockWorldReadout {
+  max-height: calc(100dvh - 104px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.studioClockFullscreenDialog > .studioClockPreview {
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .studioWorldClockGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 12px;
+  }
+
+  .studioWorldClock .studioAnalogClock {
+    width: min(96%, 148px);
+  }
+}
+
+.studioClockReadout[data-neon="true"] :is(.studioAnalogClock, .studioFlipClock, .studioDeskClock, .studioClockDigits) {
+  overflow: visible;
+  filter: drop-shadow(0 0 10px rgb(var(--view-logo-blue, 21 140 255) / 0.78))
+    drop-shadow(0 0 24px rgb(var(--view-logo-violet, 124 58 237) / 0.55));
+}
+
+.studioDeskClock {
+  display: block;
+  width: min(96%, 740px);
+  aspect-ratio: 400 / 144;
+}
+
+.studioResourceThumbnail .studioDeskClock {
+  width: 94%;
+}
+
+.studioClockPreview:fullscreen .studioDeskClock,
+.studioClockFullscreenDialog .studioDeskClock {
+  width: min(94%, 1040px, 220dvh);
+}
+
+.studioClockDigits {
+  --studio-digits-size: 124px;
+  --studio-digits-full-size: 168px;
+  color: #fff;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: var(--studio-digits-size);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.studioResourceThumbnail .studioClockDigits {
+  font-size: 20px;
+}
+
+.studioClockPreview:fullscreen .studioClockDigits,
+.studioClockFullscreenDialog .studioClockDigits {
+  font-size: var(--studio-digits-full-size);
+}
+
+@media (max-width: 900px) {
+  .studioClockDigits {
+    --studio-digits-size: 96px;
+    --studio-digits-full-size: 112px;
+  }
+}
+
+@media (max-width: 640px) {
+  .studioClockDigits {
+    --studio-digits-size: 58px;
+    --studio-digits-full-size: 70px;
+  }
+}
+
+@media (max-width: 420px) {
+  .studioClockDigits {
+    --studio-digits-size: 42px;
+    --studio-digits-full-size: 52px;
+  }
+}
+
+.studioFlipClock {
+  --studio-flip-width: min(100%, 1140px);
+  --studio-flip-gap: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--studio-flip-gap);
+  width: var(--studio-flip-width);
+  font-size: 112px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.studioFlipClock[data-seconds="false"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: calc((var(--studio-flip-width) - var(--studio-flip-gap)) * 2 / 3);
+}
+
+.studioFlipPair {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.studioFlipPair + .studioFlipPair::before {
+  position: absolute;
+  top: 50%;
+  left: -8px;
+  transform: translate(-50%, -50%);
+  color: #9daabd;
+  content: ":";
+  font-size: 0.44em;
+}
+
+.studioFlipDigit {
+  --studio-flip-duration: 700ms;
+  position: relative;
+  display: block;
+  aspect-ratio: 0.8;
+  overflow: hidden;
+  border-radius: 0.13em;
+  background: #303030;
+  color: #f0f4f9;
+  perspective: 280px;
+  perspective-origin: 50% 54%;
+}
+
+.studioFlipDigit::after {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  inset-inline: 0;
+  height: 1px;
+  background: #080b11;
+  content: "";
+}
+
+.studioFlipHalf {
+  position: absolute;
+  inset-inline: 0;
+  height: 50%;
+  overflow: hidden;
+  backface-visibility: hidden;
+}
+
+.studioFlipHalf > span {
+  position: absolute;
+  inset-inline: 0;
+  display: grid;
+  place-items: center;
+  height: 200%;
+}
+
+.studioFlipTop,
+.studioFlipTop > span {
+  top: 0;
+}
+
+.studioFlipBottom,
+.studioFlipBottom > span {
+  bottom: 0;
+}
+
+.studioFlipTop,
+.studioFlipBottom {
+  background: #303030;
+}
+
+.studioFlipLayers {
+  display: contents;
+}
+
+.studioFlipOldBottom {
+  animation: studioFlipOldBottom var(--studio-flip-duration) step-end forwards;
+}
+
+.studioFlipOldBottom::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgb(0 0 0 / 0.88), transparent);
+  content: "";
+  animation: studioFlipCastShadow var(--studio-flip-duration) both;
+}
+
+.studioFlipFlap {
+  position: absolute;
+  z-index: 1;
+  inset: 0 0 50%;
+  transform-origin: center bottom;
+  transform-style: preserve-3d;
+  animation: studioFlipTurn var(--studio-flip-duration) both;
+}
+
+.studioFlipFlapFace {
+  inset: 0;
+  height: 100%;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.32), inset 0 -1px 0 rgb(0 0 0 / 0.46);
+}
+
+.studioFlipFlapFace::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgb(255 255 255 / 0.15), rgb(0 0 0 / 0.68));
+  content: "";
+  animation: studioFlipFaceShade var(--studio-flip-duration) both;
+}
+
+.studioFlipFlapBack {
+  transform: rotateX(180deg);
+}
+
+@keyframes studioFlipOldBottom {
+  to { opacity: 0; }
+}
+
+@keyframes studioFlipTurn {
+  0% { transform: rotateX(0); animation-timing-function: cubic-bezier(0.3, 0, 0.62, 1); }
+  24% { transform: rotateX(-32deg); animation-timing-function: linear; }
+  48% { transform: rotateX(-92deg); animation-timing-function: cubic-bezier(0.35, 0, 0.67, 1); }
+  83% { transform: rotateX(-184deg); }
+  92% { transform: rotateX(-177deg); }
+  100% { transform: rotateX(-180deg); }
+}
+
+@keyframes studioFlipCastShadow {
+  0%, 100% { opacity: 0; }
+  52% { opacity: 0.9; }
+  80% { opacity: 0.36; }
+}
+
+@keyframes studioFlipFaceShade {
+  0%, 100% { opacity: 0; }
+  47% { opacity: 0.84; }
+  78% { opacity: 0.24; }
+}
+
+.studioResourceThumbnail .studioFlipClock {
+  --studio-flip-gap: 6px;
+  --studio-flip-width: 90%;
+  font-size: 16px;
+}
+
+.studioResourceThumbnail .studioFlipPair {
+  gap: 2px;
+}
+
+.studioResourceThumbnail .studioFlipPair + .studioFlipPair::before {
+  left: -3px;
+}
+
+.studioClockPreview:fullscreen .studioFlipClock,
+.studioClockFullscreenDialog .studioFlipClock {
+  --studio-flip-width: min(96%, 1360px, 345dvh);
+  font-size: 132px;
+}
+
+.studioClockFaceStage .studioFlipDigit {
+  aspect-ratio: 0.67;
+}
+
+@media (max-width: 640px) {
+  .studioFlipClock,
+  .studioClockPreview:fullscreen .studioFlipClock,
+  .studioClockFullscreenDialog .studioFlipClock {
+    --studio-flip-gap: 12px;
+    font-size: 42px;
+  }
+
+  .studioClockFaceStage .studioFlipDigit {
+    aspect-ratio: 0.54;
+  }
+
+  .studioFlipPair + .studioFlipPair::before {
+    left: -6px;
+  }
+}
+
+@media (max-height: 440px) and (min-width: 641px) {
+  .studioClockPreview:fullscreen .studioFlipClock,
+  .studioClockFullscreenDialog .studioFlipClock {
+    font-size: 64px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studioFlipLayers {
+    display: none;
+  }
+}
+
+.studioClockGallery {
+  min-width: 0;
+}
+
+.aiStudioPageContainer:has(> .aiStudioVideoCatalog > .studioClockGallery) {
+  padding-top: 16px;
+}
+
+.aiStudioVideoCatalog:has(> .studioClockGallery) {
+  gap: 6px;
+  padding-top: 0;
+}
+
+.studioClockToolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  justify-items: center;
+  gap: 12px;
+  width: min(100%, 380px);
+  margin: 12px auto 0;
+}
+
+.studioClockControl {
+  display: inline-grid;
+  place-items: center;
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #c4cedc;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.studioClockControl:hover {
+  color: #fff;
+  background: rgb(148 163 184 / 0.1);
+}
+
+.studioClockControl:focus-visible {
+  outline: 1px solid #8fc5ff;
+  outline-offset: 2px;
+}
+
+.studioClockDisplayToggles {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+}
+
+.studioClockDisplayToggles label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  color: #c4cedc;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+:is(.studioClockDisplayToggles, .studioClockFullscreenLight) [role="switch"][data-state="checked"] {
+  background: #367cce;
+}
+
+:is(.studioClockDisplayToggles, .studioClockFullscreenLight) [role="switch"][data-state="unchecked"] {
+  background: #394656;
+}
+
+.studioClockThemeTrigger,
+.studioClockCountry {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.studioClockThemeTrigger {
+  justify-self: start;
+}
+
+.studioClockCountry {
+  justify-self: end;
+}
+
+.studioClockThemeDialog {
+  border-color: #283545;
+  background: #10151d;
+  color: #e2ebf4;
+}
+
+.studioClockCountryList {
+  max-height: 58dvh;
+  overflow: auto;
+  margin: 0;
+  padding: 2px;
+  list-style: none;
+}
+
+.studioClockCountryList > li + li {
+  border-top: 1px solid rgb(148 163 184 / 0.12);
+}
+
+.studioClockCountryOption {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.studioClockCountryOption:hover {
+  background: rgb(148 163 184 / 0.1);
+}
+
+.studioClockCountryOption[aria-pressed="true"] {
+  color: #8fc5ff;
+}
+
+.studioClockCountryOption:focus-visible {
+  outline: 1px solid #8fc5ff;
+  outline-offset: -1px;
+}
+
+.studioClockCountryFlag {
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+}
+
+.studioClockCountryTime {
+  font-variant-numeric: tabular-nums;
+}
+
+.studioClockThemeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 130px), 1fr));
+  gap: 12px;
+  max-height: 58dvh;
+  overflow: auto;
+  margin: 0;
+  padding: 5px;
+  list-style: none;
+}
+
+.studioClockPreview > :is(.studioClockExit, .studioClockFullscreenLight) {
+  display: none;
+}
+
+.studioClockPreview:fullscreen,
+.studioClockFullscreenDialog {
+  display: grid;
+  place-items: center;
+  background: #000;
+}
+
+.studioClockFullscreenDialog {
+  z-index: 10030;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  translate: none;
+}
+
+.studioClockPreview:fullscreen .studioClockReadout,
+.studioClockFullscreenDialog .studioClockReadout {
+  --studio-clock-face-size: min(90vw, 86dvh, calc(100dvh - 64px));
+}
+
+:is(.studioClockPreview:fullscreen, .studioClockFullscreenDialog) > :is(.studioClockExit, .studioClockFullscreenLight) {
+  position: absolute;
+  inset-block-end: max(16px, env(safe-area-inset-bottom));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+:is(.studioClockPreview:fullscreen, .studioClockFullscreenDialog)[data-controls-visible="true"] > :is(.studioClockExit, .studioClockFullscreenLight),
+:is(.studioClockPreview:fullscreen, .studioClockFullscreenDialog) > :is(.studioClockExit:focus-visible, .studioClockFullscreenLight:has(:focus-visible)) {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.studioClockPreview:fullscreen, .studioClockFullscreenDialog) > :is(.studioClockExit, .studioClockFullscreenLight) {
+    transition: none;
+  }
+}
+
+:is(.studioClockPreview:fullscreen, .studioClockFullscreenDialog) > .studioClockExit {
+  display: inline-grid;
+  inset-inline-end: max(16px, env(safe-area-inset-right));
+}
+
+.studioClockControl.studioClockExit:hover {
+  background: transparent;
+}
+
+:is(.studioClockPreview:fullscreen, .studioClockFullscreenDialog) > .studioClockFullscreenLight {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  inset-inline-start: max(16px, env(safe-area-inset-left));
+  padding: 0 10px;
+  min-height: 38px;
+  color: #c4cedc;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.studioClockOption {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.studioClockOption:is(:hover, [aria-pressed="true"]) .studioResourceCaption {
+  color: #8fc5ff;
+}
+
+.studioClockOption:focus-visible {
+  outline: 1px solid #8fc5ff;
+  outline-offset: 4px;
+}
+
+.studioClockFace {
+  fill: #000;
+  stroke: #45576a;
+}
+
+.studioClockHourMark,
+.studioClockHands {
+  stroke: #e2ebf4;
+  stroke-linecap: round;
+}
+
+.studioClockHourMark {
+  stroke-width: 2;
+}
+
+.studioClockMinuteMark {
+  stroke: #607389;
+}
+
+.studioAnalogClock[data-numerals="true"] .studioClockHourMark {
+  stroke-width: 1;
+}
+
+.studioAnalogClock[data-numerals="true"] .studioClockMinuteMark {
+  stroke-width: 0.75;
+}
+
+.studioClockNumerals {
+  fill: #e2ebf4;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.studioClockDots {
+  fill: #e2ebf4;
+}
+
+.studioClockSecondHand {
+  stroke: #f87171;
+}
+
+.studioClockHub {
+  fill: #f87171;
+  stroke: none;
+}
