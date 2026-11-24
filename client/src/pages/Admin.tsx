@@ -5,13 +5,15 @@ import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { issueFocusCategories, isIssueFocusCategoryId, type IssueFocusCategoryId } from "@/lib/issueFocusCategories";
 import { issueClippingLabel, issueFocusLabel } from "@/lib/newsNavigation";
-import { ChevronDown, ChevronLeft, ChevronRight, RefreshCw, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Paperclip, RefreshCw, X } from "lucide-react";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
 import HeroKeywordsPanel from "@/components/HeroKeywordsPanel";
 import SiteBannerPanel from "@/components/SiteBannerPanel";
 import { getStoredIssueImagePath, removeStoredIssueImages, uploadIssueImage, validateIssueImage, validateIssueImageUrl } from "@/lib/issueImages";
+import { loadWithNewsAttachments, newsAttachmentAccept, removeUnusedNewsAttachments, uploadNewsAttachment, validateNewsAttachment } from "@/lib/newsAttachments";
 import { stripIssueBodyFormatting } from "@shared/issueBody";
 import { issueBodyImages } from "@shared/issueDocument";
+import { newsImageKeyFromUrl } from "@shared/newsMedia";
 
 const IssueBodyEditor = lazy(() => import("@/components/IssueBodyEditor"));
 
@@ -160,6 +162,8 @@ type IssueRecord = {
   summary: string;
   thumbnail_url: string | null;
   thumbnail_credit: string | null;
+  attachment_path?: string | null;
+  attachment_name?: string | null;
   is_published: boolean;
   registration_status?: "connecting" | "complete" | "failed";
   category?: IssueFocusCategoryId | null;
@@ -278,6 +282,9 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [thumbnailCredit, setThumbnailCredit] = useState("");
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [savedAttachment, setSavedAttachment] = useState<{ path: string; name: string } | null>(null);
+  const [attachmentsAvailable, setAttachmentsAvailable] = useState(false);
   const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null);
   const [imagePreviewError, setImagePreviewError] = useState(false);
   const [isPublished, setIsPublished] = useState(!isClip);
@@ -320,12 +327,12 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
     }
 
     const source = supabase.from(table);
-    const selection = isClip
-      ? source.select("id,title,summary,thumbnail_url,thumbnail_credit,is_published,created_at")
-      : source.select("id,title,summary,thumbnail_url,thumbnail_credit,is_published,registration_status,category,created_at");
-    const { data, error: loadError } = await selection
+    const columns = `id,title,summary,thumbnail_url,thumbnail_credit,is_published,created_at${isClip ? "" : ",registration_status,category"}`;
+    const { data, error: loadError, attachmentColumnsAvailable } = await loadWithNewsAttachments(attachmentColumns => source
+      .select(columns + attachmentColumns)
       .order("created_at", { ascending: false })
-      .order("id", { ascending: false });
+      .order("id", { ascending: false })
+      .overrideTypes<IssueRecord[], { merge: false }>());
 
     if (loadError) {
       setError(isClip ? `${label}을 불러오지 못했습니다. 저장소 설정을 확인해 주세요.` : loadError.message);
@@ -333,12 +340,15 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
     }
 
     setIssues(data ?? []);
+    setAttachmentsAvailable(attachmentColumnsAvailable);
     setIssuesPage(current => Math.min(current, Math.max(1, Math.ceil((data?.length ?? 0) / ISSUE_FOCUS_ADMIN_PAGE_SIZE))));
     setHasLoaded(true);
   };
 
   const removeArticleImages = async (urls: Array<string | null>) => {
     if (!supabase) return;
+    const r2 = urls.filter((url): url is string => Boolean(url && newsImageKeyFromUrl(url)));
+    if (r2.length) await removeStoredIssueImages(r2);
     const candidates = urls.flatMap(url => {
       const path = url && getStoredIssueImagePath(url);
       return url && path ? [{ url, path }] : [];
@@ -372,6 +382,9 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
     loadIssues();
   }, []);
 
+  const cleanUpAttachments = (paths: Array<string | null | undefined>) =>
+    removeUnusedNewsAttachments(paths).catch(error => console.error("[News attachment] Cleanup failed", error));
+
   const resetForm = () => {
     if (bodyUploading || isSaving) return;
     const unused = bodyUploadsRef.current;
@@ -384,6 +397,8 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
     setThumbnailUrl("");
     setThumbnailCredit("");
     setThumbnailFile(null);
+    setAttachmentFile(null);
+    setSavedAttachment(null);
     if (imageInputRef.current) imageInputRef.current.value = "";
     setIsPublished(!isClip);
     setIsFormOpen(false);
@@ -397,6 +412,8 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
     setThumbnailUrl(issue.thumbnail_url ?? "");
     setThumbnailCredit(issue.thumbnail_credit ?? "");
     setThumbnailFile(null);
+    setAttachmentFile(null);
+    setSavedAttachment(issue.attachment_path && issue.attachment_name ? { path: issue.attachment_path, name: issue.attachment_name } : null);
     if (imageInputRef.current) imageInputRef.current.value = "";
     setIsPublished(issue.is_published);
     setIsFormOpen(true);
@@ -413,6 +430,10 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
 
   const handleSave = async () => {
     if (!supabase || !user || bodyUploading || isSaving) return;
+    if (attachmentFile && !attachmentsAvailable) {
+      setError("동영상·MP3·문서 저장소가 아직 준비되지 않았습니다.");
+      return;
+    }
     if (!isClip && !isIssueFocusCategoryId(category)) {
       setError("카테고리를 선택해 주세요.");
       setMessage(null);
@@ -440,28 +461,33 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
 
     const previousIssue = issues.find(issue => issue.id === editingId);
     let uploadedImageUrl: string | null = null;
+    let uploadedAttachment: Awaited<ReturnType<typeof uploadNewsAttachment>> | null = null;
 
     try {
       if (thumbnailFile) {
         const uploaded = await uploadIssueImage(thumbnailFile);
         uploadedImageUrl = uploaded.url;
       }
+      if (attachmentFile) uploadedAttachment = await uploadNewsAttachment(attachmentFile);
     } catch (uploadError) {
+      if (uploadedImageUrl) await removeStoredIssueImages([uploadedImageUrl]).catch(error => console.error("[Issue image] Cleanup failed", error));
       setIsSaving(false);
       draftStateRef.current.saving = false;
       if (!draftStateRef.current.mounted) {
         void removeStoredIssueImages(bodyUploadsRef.current).catch(error => console.error("[Issue image] Failed to remove draft images", error));
         bodyUploadsRef.current = [];
       }
-      setError(uploadError instanceof Error ? uploadError.message : "이미지를 업로드하지 못했습니다.");
+      setError(uploadError instanceof Error ? uploadError.message : "파일을 업로드하지 못했습니다.");
       return;
     }
 
+    const attachment = uploadedAttachment ?? savedAttachment;
     const values = {
       title: title.trim(),
       summary: summary.trim(),
       thumbnail_url: uploadedImageUrl || thumbnailUrl.trim() || null,
       thumbnail_credit: thumbnailCredit.trim() || null,
+      ...(attachmentsAvailable ? { attachment_path: attachment?.path ?? null, attachment_name: attachment?.name ?? null } : {}),
       is_published: isPublished,
       ...(!isClip ? { article_url: null, source_name: null, article_title: null, article_summary: null, registration_status: "complete", category: category || null } : {}),
     };
@@ -486,6 +512,7 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
       if (uploadedImageUrl) {
         try { await removeStoredIssueImages([uploadedImageUrl]); } catch (cleanupError) { console.error("[Issue image] Failed to remove unused upload", cleanupError); }
       }
+      if (uploadedAttachment) await cleanUpAttachments([uploadedAttachment.path]);
       setIsSaving(false);
       setError(saveErrorMessage);
       return;
@@ -499,6 +526,7 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
       .filter((url): url is string => Boolean(url) && !retained.has(url));
     bodyUploadsRef.current = [];
     try { await removeArticleImages(Array.from(new Set(unused))); } catch (cleanupError) { console.error("[Issue image] Failed to remove unused images", cleanupError); }
+    if (attachmentsAvailable && previousIssue?.attachment_path !== values.attachment_path) await cleanUpAttachments([previousIssue?.attachment_path]);
 
     setIsSaving(false);
     draftStateRef.current.saving = false;
@@ -509,6 +537,8 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
     setCategory("");
     setThumbnailUrl("");
     setThumbnailFile(null);
+    setAttachmentFile(null);
+    setSavedAttachment(null);
     setIsPublished(!isClip);
     setThumbnailCredit("");
     setIsFormOpen(false);
@@ -530,6 +560,7 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
 
     const retainedImages = new Set(issues.filter(item => item.id !== issue.id).flatMap(item => [item.thumbnail_url, ...issueBodyImages(item.summary)]));
     try { await removeArticleImages([issue.thumbnail_url, ...issueBodyImages(issue.summary)].filter(url => !retainedImages.has(url))); } catch (cleanupError) { console.error("[Issue image] Failed to remove deleted issue image", cleanupError); }
+    await cleanUpAttachments([issue.attachment_path]);
 
     if (editingId === issue.id) resetForm();
     setSelectedIssueIds(current => {
@@ -620,6 +651,7 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
     const retainedImages = new Set(issues.filter(issue => !deletedIds.has(issue.id)).flatMap(issue => [issue.thumbnail_url, ...issueBodyImages(issue.summary)]));
     const deletedImageUrls = issues.filter(issue => deletedIds.has(issue.id)).flatMap(issue => [issue.thumbnail_url, ...issueBodyImages(issue.summary)]).filter(url => !retainedImages.has(url));
     try { await removeArticleImages(deletedImageUrls); } catch (cleanupError) { console.error("[Issue image] Failed to remove deleted issue images", cleanupError); }
+    await cleanUpAttachments(issues.filter(issue => deletedIds.has(issue.id)).map(issue => issue.attachment_path));
 
     setSelectedIssueIds(current => {
       const next = new Set(current);
@@ -708,42 +740,76 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
         </div>
         <div>
           <label htmlFor="issue-image-url" className="mb-2 block text-sm font-medium text-slate-200">대표 이미지</label>
+          <div className="relative">
+            <input
+              id="issue-image-url"
+              type="url"
+              className="h-11 w-full rounded-md border border-slate-700 bg-slate-950/70 pl-3 pr-12 text-sm text-slate-100 outline-none placeholder:text-slate-400 focus:border-blue-400"
+              placeholder={thumbnailFile?.name ?? "이미지 URL을 입력하세요"}
+              value={thumbnailUrl}
+              disabled={isSaving}
+              onChange={event => {
+                setThumbnailUrl(event.target.value);
+                setThumbnailFile(null);
+                setError(null);
+              }}
+            />
+            <button
+              type="button"
+              title={attachmentsAvailable ? "이미지·동영상·MP3·문서 첨부" : "이미지 첨부"}
+              aria-label={attachmentsAvailable ? "이미지·동영상·MP3·문서 첨부" : "이미지 첨부"}
+              className="absolute inset-y-0 right-1.5 my-auto grid size-8 place-items-center rounded text-slate-400 transition-colors hover:text-sky-300 disabled:opacity-50"
+              onClick={() => imageInputRef.current?.click()}
+              disabled={isSaving}
+            >
+              <Paperclip size={17} aria-hidden="true" />
+            </button>
+          </div>
           <input
-            id="issue-image-url"
-            type="url"
-            className="h-11 w-full rounded-md border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none placeholder:text-slate-400 focus:border-blue-400"
-            placeholder="이미지 URL을 입력하세요 (예: https://example.com/image.jpg)"
-            value={thumbnailUrl}
-            onChange={event => {
-              setThumbnailUrl(event.target.value);
-              setThumbnailFile(null);
-              if (imageInputRef.current) imageInputRef.current.value = "";
-              setError(null);
-            }}
-          />
-          <p className="mb-3 mt-2 text-xs text-slate-400">공개적으로 접근 가능한 이미지 URL을 입력하거나, 아래에서 직접 업로드하세요.</p>
-          <input
-            id="issue-image-file"
             ref={imageInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="block h-11 w-full cursor-pointer rounded-md border border-slate-700 bg-slate-950/70 text-sm leading-[42px] text-slate-300 file:mr-3 file:h-[42px] file:cursor-pointer file:border-0 file:bg-transparent file:px-3 file:text-sm file:font-medium file:text-slate-200 focus:border-blue-400"
-            aria-label="썸네일 이미지 파일"
+            hidden
+            disabled={isSaving}
+            accept={`image/jpeg,image/png,image/webp${attachmentsAvailable ? `,${newsAttachmentAccept}` : ""}`}
             onChange={event => {
               const file = event.target.files?.[0];
+              event.target.value = "";
               if (!file) return;
-              const validationError = validateIssueImage(file);
+              const isImage = file.type.startsWith("image/");
+              if (!isImage && !attachmentsAvailable) {
+                setError("동영상·MP3·문서 저장소가 아직 준비되지 않았습니다.");
+                return;
+              }
+              const validationError = isImage ? validateIssueImage(file) : validateNewsAttachment(file);
               if (validationError) {
-                event.target.value = "";
                 setError(validationError);
                 return;
               }
               setError(null);
-              setThumbnailFile(file);
-              setThumbnailUrl("");
+              if (isImage) {
+                setThumbnailFile(file);
+                setThumbnailUrl("");
+              } else {
+                setAttachmentFile(file);
+              }
             }}
           />
-          <p className="mt-2 text-xs text-slate-400">JPG, PNG, WebP 이미지를 업로드할 수 있습니다.</p>
+          {(attachmentFile || savedAttachment) && (
+            <div className="mt-2 flex min-w-0 items-center gap-2 text-xs text-slate-300">
+              <Paperclip size={14} className="shrink-0" aria-hidden="true" />
+              <span className="truncate" title={attachmentFile?.name ?? savedAttachment?.name}>{attachmentFile?.name ?? savedAttachment?.name}</span>
+              <button
+                type="button"
+                title="첨부 파일 제거"
+                aria-label="첨부 파일 제거"
+                className="grid size-7 shrink-0 place-items-center text-slate-400 hover:text-red-300 disabled:opacity-50"
+                disabled={isSaving}
+                onClick={() => { if (attachmentFile) setAttachmentFile(null); else setSavedAttachment(null); }}
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
+            </div>
+          )}
           <label htmlFor="issue-image-credit" className="mb-2 mt-4 block text-sm font-medium text-slate-300">이미지 출처 <span className="text-xs font-normal text-slate-500">(선택)</span></label>
           <input
             id="issue-image-credit"

@@ -1,7 +1,9 @@
 import { supabase } from "@/lib/supabase";
+import { NEWS_IMAGE_LIMIT, newsImageKeyFromUrl } from "@shared/newsMedia";
+import { compressNewsImage, removeR2NewsMedia, uploadR2NewsMedia } from "@/lib/newsMediaUpload";
 
 export const ISSUE_IMAGE_BUCKET = "issue-images";
-export const MAX_ISSUE_IMAGE_SIZE = 5 * 1024 * 1024;
+export const MAX_ISSUE_IMAGE_SIZE = NEWS_IMAGE_LIMIT;
 
 const imageExtensions: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -41,19 +43,20 @@ export function getStoredIssueImagePath(url: string, supabaseUrl = import.meta.e
 }
 
 export async function uploadIssueImage(file: File) {
-  if (!supabase) throw new Error("이미지 저장소에 연결할 수 없습니다.");
   const validationError = validateIssueImage(file);
   if (validationError) throw new Error(validationError);
 
-  const path = `issues/${crypto.randomUUID()}.${imageExtensions[file.type]}`;
-  const storage = supabase.storage.from(ISSUE_IMAGE_BUCKET);
-  const { error } = await storage.upload(path, file, { contentType: file.type });
-  if (error) throw new Error(`이미지 업로드에 실패했습니다: ${error.message}`);
-
-  return { path, url: storage.getPublicUrl(path).data.publicUrl };
+  const optimized = await compressNewsImage(file);
+  if (optimized.size > MAX_ISSUE_IMAGE_SIZE) throw new Error("압축된 이미지가 5MB를 초과합니다.");
+  return uploadR2NewsMedia(optimized, "images", imageExtensions[optimized.type]);
 }
 
 export async function removeStoredIssueImages(urls: Array<string | null>) {
+  const r2Keys = urls.flatMap(url => {
+    const key = url && newsImageKeyFromUrl(url);
+    return key ? [key] : [];
+  });
+  if (r2Keys.length) await removeR2NewsMedia(r2Keys);
   if (!supabase) return;
   const paths = urls.map(url => url && getStoredIssueImagePath(url)).filter((path): path is string => Boolean(path));
   if (paths.length === 0) return;

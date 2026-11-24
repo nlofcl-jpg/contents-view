@@ -3,11 +3,13 @@ import { ChevronLeft, Copy, LoaderCircle, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation, useRoute } from "wouter";
 import { supabase } from "@/lib/supabase";
+import { loadWithNewsAttachments } from "@/lib/newsAttachments";
 import { issueFocusLabel } from "@/lib/newsNavigation";
 import { isIssueFocusCategoryId, type IssueFocusCategoryId } from "@/lib/issueFocusCategories";
 import { loadKakaoSdk, shareIssueOnKakao } from "@/lib/kakaoShare";
 import IssueBody from "@/components/IssueBody";
 import IssueThumbnail from "@/components/IssueThumbnail";
+import NewsAttachment from "@/components/NewsAttachment";
 import NewsBriefingSidebar from "@/components/NewsBriefingSidebar";
 import RelatedFocusIssues from "@/components/RelatedFocusIssues";
 
@@ -17,6 +19,8 @@ type IssueDetailRecord = {
   summary: string;
   thumbnail_url: string | null;
   thumbnail_credit: string | null;
+  attachment_path?: string | null;
+  attachment_name?: string | null;
   article_title: string | null;
   article_summary: string | null;
   category: IssueFocusCategoryId | null;
@@ -31,19 +35,21 @@ export default function IssueDetail() {
   const [kakaoSdkStatus, setKakaoSdkStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
 
   useEffect(() => {
-    if (!supabase || !params?.id) {
+    const storage = supabase;
+    const id = params?.id;
+    if (!storage || !id) {
       setIsLoading(false);
       return;
     }
 
     let cancelled = false;
     setIsLoading(true);
-    supabase
+    loadWithNewsAttachments(attachmentColumns => storage
       .from("issues")
-      .select("id,title,summary,thumbnail_url,thumbnail_credit,article_title,article_summary,category,created_at")
-      .eq("id", params.id)
+      .select("id,title,summary,thumbnail_url,thumbnail_credit,article_title,article_summary,category,created_at" + attachmentColumns)
+      .eq("id", id)
       .eq("is_published", true)
-      .maybeSingle()
+      .maybeSingle())
       .then(({ data }) => {
         if (!cancelled) {
           setIssue(data as IssueDetailRecord | null);
@@ -163,6 +169,7 @@ export default function IssueDetail() {
                   <IssueBody value={issue.summary || issue.article_summary || ""} />
                 </div>
               )}
+              {issue.attachment_path && issue.attachment_name && <NewsAttachment path={issue.attachment_path} name={issue.attachment_name} />}
               <footer className="issueDetailCopyright">
                 © CONTENTS VIEW. 무단 전재 및 재배포 금지
               </footer>

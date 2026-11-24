@@ -4432,17 +4432,21 @@ a {
 .issueFontSizeMenu button:hover, .issueFontSizeMenu button:focus-visible { background: #1e293b; outline: none; }
 .issueFontSizeMenu button[aria-selected="true"] { background: #1d4ed8; color: #fff; }
 .issueBodyToolbar .issueFontColorTrigger { position: relative; }
-.issueFontColorTrigger span { position: absolute; inset: auto 10px 4px; height: 2px; border-radius: 1px; }
+.issueFontColorGlyph { padding-bottom: 4px; font-size: 17px; font-weight: 800; line-height: 1; }
+.issueFontColorUnderline { position: absolute; inset: auto 9px 5px; height: 3px; border-radius: 1px; }
 .issueFontColorMenu { width: 184px; padding: 10px; border-color: #334155; background: #0f172a; color: #e2e8f0; }
 .issueFontColorSwatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .issueFontColorSwatches button { height: 26px; border: 1px solid rgb(255 255 255 / 30%); border-radius: 4px; }
 .issueFontColorSwatches button[aria-pressed="true"],
 .issueFontColorSwatches button:hover,
 .issueFontColorMenu :focus-visible { outline: 2px solid #e2e8f0; outline-offset: 1px; }
-.issueFontColorActions { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
-.issueFontColorActions input { width: 32px; height: 30px; padding: 3px; cursor: pointer; }
-.issueFontColorActions button { flex: 1; min-height: 30px; border: 1px solid #334155; border-radius: 4px; font-size: 12px; }
-.issueFontColorActions button:hover { background: #1e293b; }
+.issueFontColorActions { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #334155; }
+.issueFontColorCurrent { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-variant-numeric: tabular-nums; }
+.issueFontColorCurrent span { width: 15px; height: 15px; border: 1px solid rgb(255 255 255 / 30%); border-radius: 3px; }
+.issueFontColorPicker { position: relative; display: inline-grid; place-items: center; width: 28px; height: 28px; margin-inline-start: -6px; border: 1px solid rgb(148 163 184 / 32%); border-radius: 4px; background: transparent; color: #cbd5e1; }
+.issueFontColorPicker:hover { border-color: rgb(147 197 253 / 60%); color: #93c5fd; }
+.issueFontColorPicker:focus-within { outline: 2px solid #93c5fd; outline-offset: 1px; border-radius: 4px; }
+.issueFontColorPicker input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 .issueEditor .tiptap { min-height: 240px; max-height: 640px; overflow-y: auto; resize: vertical; padding: 16px; outline: none; }
 .issueEditor .issueRichContent { font-weight: 300; }
 .issueEditor .issueRichContent span[style*="color"] strong { color: inherit; }

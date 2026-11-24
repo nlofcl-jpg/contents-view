@@ -9,6 +9,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { downloadFlowAutomation } from "../downloadFlowAutomation";
+import newsMediaHandler from "../newsMedia";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -38,6 +39,7 @@ async function startServer() {
   registerStorageProxy(app);
   registerOAuthRoutes(app);
   app.get("/api/download-flow-automation", downloadFlowAutomation);
+  app.all("/api/news-media", newsMediaHandler);
   // tRPC API
   app.use(
     "/api/trpc",

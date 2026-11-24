@@ -4,7 +4,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import { Color, TextStyle, FontSize } from "@tiptap/extension-text-style";
 import { TableKit, TableCell, TableHeader } from "@tiptap/extension-table";
-import { Bold, ChevronDown, ImagePlus, List, ListOrdered, Palette, Redo2, Undo2 } from "lucide-react";
+import { Bold, ChevronDown, ImagePlus, List, ListOrdered, Redo2, SlidersHorizontal, Undo2 } from "lucide-react";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ISSUE_DOCUMENT_PREFIX, issueFontColor, issueFontSize, safeIssueUrl } from "@shared/issueDocument";
 import { issueEditorDocument } from "@shared/issueBody";
@@ -52,6 +52,7 @@ const colorSwatches = [
   { label: "보라색", value: "#a78bfa" },
   { label: "분홍색", value: "#f472b6" },
 ] as const;
+const defaultFontColor = "#d8e0ec";
 const alignmentAttribute = {
   textAlign: {
     default: "left",
@@ -82,7 +83,6 @@ export default function IssueBodyEditor({ value, disabled, onChange, onUpload, o
   const [fontSize, setFontSize] = useState("17");
   const [sizeMenuOpen, setSizeMenuOpen] = useState(false);
   const [colorMenuOpen, setColorMenuOpen] = useState(false);
-  const [customColor, setCustomColor] = useState("#d8e0ec");
   const editor = useEditor({
     extensions,
     content: issueEditorDocument(value),
@@ -96,6 +96,7 @@ export default function IssueBodyEditor({ value, disabled, onChange, onUpload, o
     bullet: editor?.isActive("bulletList"), ordered: editor?.isActive("orderedList"),
     undo: editor?.can().undo(), redo: editor?.can().redo(),
   }) });
+  const activeColor = state?.color ?? defaultFontColor;
   useEffect(() => { setFontSize(String(Number.parseFloat(state?.size || "17"))); }, [state?.size]);
   useEffect(() => { editor?.setEditable(!disabled && !uploading); }, [editor, disabled, uploading]);
   const applySize = (value = fontSize) => {
@@ -110,13 +111,10 @@ export default function IssueBodyEditor({ value, disabled, onChange, onUpload, o
     setSizeMenuOpen(false);
     editor?.chain().focus().setFontSize(`${size}px`).run();
   };
-  const applyColor = (value?: string) => {
+  const applyColor = (value: string) => {
     if (!editor || disabled || uploading) return;
     const color = issueFontColor(value);
-    setColorMenuOpen(false);
-    const chain = editor.chain().focus();
-    if (color) chain.setColor(color).run();
-    else chain.unsetColor().run();
+    if (color) editor.commands.setColor(color);
   };
   const attachImage = async (file?: File) => {
     if (!file || !editor || disabled || uploading) return;
@@ -163,17 +161,14 @@ export default function IssueBodyEditor({ value, disabled, onChange, onUpload, o
             </div>
           </PopoverContent>
         </Popover>
-        <Popover open={colorMenuOpen && !disabled && !uploading} onOpenChange={open => {
-          if (open) setCustomColor(state?.color ?? "#d8e0ec");
-          setColorMenuOpen(open);
-        }}>
+        <Popover open={colorMenuOpen && !disabled && !uploading} onOpenChange={setColorMenuOpen}>
           <PopoverTrigger asChild>
             <button type="button" className="issueFontColorTrigger" aria-label="글자 색상" title="글자 색상" onMouseDown={event => event.preventDefault()}>
-              <Palette size={16} aria-hidden="true" />
-              <span style={{ backgroundColor: state?.color ?? "#d8e0ec" }} aria-hidden="true" />
+              <span className="issueFontColorGlyph" aria-hidden="true">A</span>
+              <span className="issueFontColorUnderline" style={{ backgroundColor: activeColor }} aria-hidden="true" />
             </button>
           </PopoverTrigger>
-          <PopoverContent side="bottom" align="start" className="issueFontColorMenu" aria-label="글자 색상 팔레트" onCloseAutoFocus={event => event.preventDefault()}>
+          <PopoverContent side="bottom" align="start" className="issueFontColorMenu" aria-label="글자 색상 팔레트">
             <div className="issueFontColorSwatches" role="group" aria-label="기본 팔레트">
               {colorSwatches.map(({ label, value }) => (
                 <button type="button" key={value} aria-label={label} title={label} aria-pressed={state?.color === value}
@@ -181,9 +176,13 @@ export default function IssueBodyEditor({ value, disabled, onChange, onUpload, o
               ))}
             </div>
             <div className="issueFontColorActions">
-              <input type="color" aria-label="사용자 지정 글자 색상" title="사용자 지정 색상" value={customColor} onChange={event => setCustomColor(event.target.value)} />
-              <button type="button" onClick={() => applyColor(customColor)}>적용</button>
-              <button type="button" onClick={() => applyColor()}>기본색</button>
+              <label className="issueFontColorPicker" title="더 많은 색상">
+                <SlidersHorizontal size={15} aria-hidden="true" />
+                <input type="color" aria-label="더 많은 색상" value={activeColor} onChange={event => applyColor(event.target.value)} />
+              </label>
+              <output className="issueFontColorCurrent" aria-label="현재 글자 색상">
+                <span style={{ backgroundColor: activeColor }} aria-hidden="true" />{activeColor.toUpperCase()}
+              </output>
             </div>
           </PopoverContent>
         </Popover>

@@ -4,9 +4,21 @@ import { Link, useRoute } from "wouter";
 import IssueBody from "@/components/IssueBody";
 import IssueDate from "@/components/IssueDate";
 import IssueThumbnail from "@/components/IssueThumbnail";
+import NewsAttachment from "@/components/NewsAttachment";
 import NewsBriefingSidebar from "@/components/NewsBriefingSidebar";
 import { supabase } from "@/lib/supabase";
+import { loadWithNewsAttachments } from "@/lib/newsAttachments";
 import { issueClippingLabel } from "@/lib/newsNavigation";
+
+type NewsClipDetailRecord = {
+  title: string;
+  summary: string;
+  thumbnail_url: string | null;
+  thumbnail_credit: string | null;
+  attachment_path?: string | null;
+  attachment_name?: string | null;
+  created_at: string;
+};
 
 export default function NewsClipDetail() {
   const [, params] = useRoute("/news/clips/:id");
@@ -15,9 +27,11 @@ export default function NewsClipDetail() {
     queryKey: ["news-clip", id],
     queryFn: async () => {
       if (!id || !/^[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/i.test(id)) return null;
-      if (!supabase) throw new Error("Missing news clip storage");
-      const { data, error } = await supabase.from("news_clips")
-        .select("title,summary,thumbnail_url,thumbnail_credit,created_at").eq("id", id).eq("is_published", true).maybeSingle();
+      const storage = supabase;
+      if (!storage) throw new Error("Missing news clip storage");
+      const { data, error } = await loadWithNewsAttachments(attachmentColumns => storage.from("news_clips")
+        .select("title,summary,thumbnail_url,thumbnail_credit,created_at" + attachmentColumns).eq("id", id).eq("is_published", true)
+        .maybeSingle().overrideTypes<NewsClipDetailRecord, { merge: false }>());
       if (error) throw error;
       return data;
     },
@@ -48,6 +62,7 @@ export default function NewsClipDetail() {
             <div className="min-w-0">
               <IssueThumbnail src={clip.thumbnail_url} credit={clip.thumbnail_credit} />
               <div className="issueDetailBody"><IssueBody value={clip.summary} /></div>
+              {clip.attachment_path && clip.attachment_name && <NewsAttachment path={clip.attachment_path} name={clip.attachment_name} />}
             </div>
             <NewsBriefingSidebar />
           </div>
