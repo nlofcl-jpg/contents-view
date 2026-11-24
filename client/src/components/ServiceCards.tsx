@@ -139,7 +139,6 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
         {card.loading ? (
           Array.from({ length: 5 }).map((_, index) => (
             <div key={index} className={`flex items-center gap-3 p-2.5 ${isFeaturedCard ? `h-[72px] ${glassRowClass}` : "min-h-[62px] rounded-md border border-slate-800/70 bg-slate-900/35"}`}>
-              <div className="h-6 w-6 rounded-full bg-slate-800/80" />
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="h-3 w-4/5 rounded bg-slate-800/80" />
                 <div className="h-2 w-2/5 rounded bg-slate-800/70" />
@@ -153,10 +152,9 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
               href={row.externalHref || card.href}
               target={row.externalHref ? "_blank" : undefined}
               rel={row.externalHref ? "noopener noreferrer" : undefined}
-              className={`grid h-[72px] w-full grid-cols-[18px_40px_minmax(0,1fr)_auto] items-center gap-2 py-1.5 pl-1.5 pr-3.5 text-left ${glassRowClass}`}
+              className={`grid h-[72px] w-full grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-2 py-1.5 pl-2.5 pr-3.5 text-left ${glassRowClass}`}
               aria-label={`${row.communityName} 최신 글: ${row.label} 원문 보기`}
             >
-              <span className="text-center text-base font-bold text-blue-300">{index + 1}</span>
               <CommunitySourceMark name={row.communityName} />
               <span className="flex min-w-0 flex-col justify-center gap-1">
                 <span className="block min-w-0 truncate text-xs font-semibold leading-4 text-slate-100" title={row.label}>{row.label}</span>
@@ -174,7 +172,6 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
               href={row.detailHref}
               className={`flex h-[72px] items-center gap-3 p-2.5 ${glassRowClass}`}
             >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-xs font-bold text-blue-200">{index + 1}</span>
               {row.image && <img src={row.image} alt="" className="h-10 w-14 shrink-0 rounded object-cover" loading="lazy" />}
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold text-slate-100" title={row.label}>{row.label}</span>
@@ -185,15 +182,12 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
             <button
               key={`${card.id}-${index}-${row.label}`}
               type="button"
-              className={`grid w-full grid-cols-[76px_minmax(0,1fr)] items-center gap-2 p-1.5 text-left ${glassRowClass}`}
+              className={`grid h-[72px] w-full grid-cols-[76px_minmax(0,1fr)] items-center gap-2 px-2.5 py-1.5 text-left ${glassRowClass}`}
               onClick={() => row.video && onVideoSelect?.(row.video)}
-              aria-label={`${index + 1}위 ${row.label} 분석 보기`}
+              aria-label={`${row.label} 분석 보기`}
             >
               <span className="relative h-[58px] w-[76px] overflow-hidden rounded-md bg-slate-800">
                 {row.image && <img src={row.image} alt="" className="h-full w-full object-cover" loading="lazy" />}
-                <span className={`absolute left-0 top-0 flex h-6 min-w-6 items-center justify-center px-1 text-xs font-bold text-white ${index === 0 ? "bg-rose-500" : "bg-blue-500"}`}>
-                  {index + 1}
-                </span>
                 {row.durationText && <span className="absolute bottom-1 right-1 rounded bg-black/80 px-1 text-[10px] leading-4 text-white">{row.durationText}</span>}
               </span>
               <span className="flex min-w-0 flex-col justify-center gap-0.5">
@@ -229,11 +223,6 @@ function TrendDashboardCard({ card, onVideoSelect }: { card: TrendCard; onVideoS
                 }
               }}
             >
-              {!row.minimal && (
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-xs font-bold text-blue-200">
-                  {index + 1}
-                </div>
-              )}
               {row.image && (
                 <img
                   src={row.image}
@@ -414,7 +403,7 @@ export default function ServiceCards() {
   const cards: TrendCard[] = [
     {
       id: "youtube",
-      title: "급상승 영상",
+      title: "유튜브 트렌드",
       badge: "급상승 영상",
       href: "/trends/youtube?tab=rising",
       icon: <YouTubeLogo />,
@@ -456,7 +445,7 @@ export default function ServiceCards() {
       icon: <Check aria-hidden="true" className="h-7 w-7 text-sky-400" />,
       rows: focusRows,
       loading: focusQuery.isLoading,
-      emptyText: focusQuery.isError ? "이슈 포커스를 불러오지 못했습니다." : "표시할 이슈 포커스가 없습니다.",
+      emptyText: focusQuery.isError ? `${issueFocusLabel}를 불러오지 못했습니다.` : `표시할 ${issueFocusLabel}가 없습니다.`,
     },
   ];
 

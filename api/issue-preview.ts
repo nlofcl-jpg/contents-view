@@ -113,7 +113,7 @@ export default async function handler(req: any, res: any) {
   const origin = `${protocol}://${host}`;
   const issue = data as IssuePreview;
   const title = issue.article_title || issue.title;
-  const description = stripIssueBodyFormatting(issue.summary || issue.article_summary || "CONTENTS VIEW 이슈");
+  const description = stripIssueBodyFormatting(issue.summary || issue.article_summary || "CONTENTS VIEW 뉴스 포커스");
   const imageUrl = issue.thumbnail_url || `${origin}/contents-view-symbol.png`;
 
   res.setHeader("Content-Type", "text/html; charset=utf-8");

@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
-import { TextStyle, FontSize } from "@tiptap/extension-text-style";
+import { Color, TextStyle, FontSize } from "@tiptap/extension-text-style";
 import { TableKit, TableCell, TableHeader } from "@tiptap/extension-table";
-import { Bold, ChevronDown, ImagePlus, Italic, List, ListOrdered, Redo2, Undo2 } from "lucide-react";
+import { Bold, ChevronDown, ImagePlus, List, ListOrdered, Palette, Redo2, Undo2 } from "lucide-react";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ISSUE_DOCUMENT_PREFIX, issueFontSize, safeIssueUrl } from "@shared/issueDocument";
+import { ISSUE_DOCUMENT_PREFIX, issueFontColor, issueFontSize, safeIssueUrl } from "@shared/issueDocument";
 import { issueEditorDocument } from "@shared/issueBody";
 import { uploadIssueImage } from "@/lib/issueImages";
 
@@ -28,6 +28,30 @@ const SafeFontSize = FontSize.extend({
     } } }];
   },
 });
+const SafeColor = Color.extend({
+  addGlobalAttributes() {
+    return [{ types: this.options.types, attributes: { color: {
+      default: null,
+      parseHTML: element => issueFontColor(element.style.color) ?? null,
+      renderHTML: attributes => {
+        const color = issueFontColor(attributes.color);
+        return color ? { style: `color: ${color}` } : {};
+      },
+    } } }];
+  },
+});
+const colorSwatches = [
+  { label: "흰색", value: "#f8fafc" },
+  { label: "회색", value: "#94a3b8" },
+  { label: "빨간색", value: "#f87171" },
+  { label: "주황색", value: "#fb923c" },
+  { label: "노란색", value: "#facc15" },
+  { label: "초록색", value: "#4ade80" },
+  { label: "하늘색", value: "#38bdf8" },
+  { label: "파란색", value: "#60a5fa" },
+  { label: "보라색", value: "#a78bfa" },
+  { label: "분홍색", value: "#f472b6" },
+] as const;
 const alignmentAttribute = {
   textAlign: {
     default: "left",
@@ -39,7 +63,7 @@ const extensions = [
   StarterKit.configure({
     heading: { levels: [2, 3] },
     link: { autolink: true, linkOnPaste: true, defaultProtocol: "https", openOnClick: false },
-  }), SafeImage, TextStyle, SafeFontSize,
+  }), SafeImage, TextStyle, SafeFontSize, SafeColor,
   TableKit.configure({ tableCell: false, tableHeader: false }),
   TableCell.extend({ addAttributes() { return { ...this.parent?.(), ...alignmentAttribute }; } }),
   TableHeader.extend({ addAttributes() { return { ...this.parent?.(), ...alignmentAttribute }; } }),
@@ -57,6 +81,8 @@ export default function IssueBodyEditor({ value, disabled, onChange, onUpload, o
   const [error, setError] = useState("");
   const [fontSize, setFontSize] = useState("17");
   const [sizeMenuOpen, setSizeMenuOpen] = useState(false);
+  const [colorMenuOpen, setColorMenuOpen] = useState(false);
+  const [customColor, setCustomColor] = useState("#d8e0ec");
   const editor = useEditor({
     extensions,
     content: issueEditorDocument(value),
@@ -66,9 +92,8 @@ export default function IssueBodyEditor({ value, disabled, onChange, onUpload, o
   });
   const state = useEditorState({ editor, selector: ({ editor }) => ({
     size: editor?.getAttributes("textStyle").fontSize || (editor?.isActive("heading", { level: 2 }) ? "24px" : editor?.isActive("heading", { level: 3 }) ? "20px" : "17px"),
-    bold: editor?.isActive("bold"), italic: editor?.isActive("italic"),
+    bold: editor?.isActive("bold"), color: issueFontColor(editor?.getAttributes("textStyle").color),
     bullet: editor?.isActive("bulletList"), ordered: editor?.isActive("orderedList"),
-    heading: editor?.isActive("heading", { level: 2 }) ? "2" : editor?.isActive("heading", { level: 3 }) ? "3" : "0",
     undo: editor?.can().undo(), redo: editor?.can().redo(),
   }) });
   useEffect(() => { setFontSize(String(Number.parseFloat(state?.size || "17"))); }, [state?.size]);
@@ -84,6 +109,14 @@ export default function IssueBodyEditor({ value, disabled, onChange, onUpload, o
     setFontSize(String(size));
     setSizeMenuOpen(false);
     editor?.chain().focus().setFontSize(`${size}px`).run();
+  };
+  const applyColor = (value?: string) => {
+    if (!editor || disabled || uploading) return;
+    const color = issueFontColor(value);
+    setColorMenuOpen(false);
+    const chain = editor.chain().focus();
+    if (color) chain.setColor(color).run();
+    else chain.unsetColor().run();
   };
   const attachImage = async (file?: File) => {
     if (!file || !editor || disabled || uploading) return;
@@ -106,17 +139,16 @@ export default function IssueBodyEditor({ value, disabled, onChange, onUpload, o
     <div className="issueBodyToolbar" role="toolbar" aria-label="본문 서식">
       <fieldset disabled={disabled || uploading || !editor} className="issueEditorControls">
         <button type="button" title="굵게" aria-label="굵게" aria-pressed={state?.bold || false} onClick={() => editor?.chain().focus().toggleBold().run()}><Bold size={16} /></button>
-        <button type="button" title="기울임" aria-label="기울임" aria-pressed={state?.italic || false} onClick={() => editor?.chain().focus().toggleItalic().run()}><Italic size={16} /></button>
-        <select aria-label="본문 서식" value={state?.heading || "0"} onChange={event => { const level = Number(event.target.value); if (level) editor?.chain().focus().setHeading({ level: level as 2 | 3 }).run(); else editor?.chain().focus().setParagraph().run(); }}>
-          <option value="0">본문</option><option value="3">소제목</option><option value="2">큰 소제목</option>
-        </select>
         <Popover open={sizeMenuOpen && !disabled && !uploading} onOpenChange={setSizeMenuOpen}>
           <PopoverAnchor asChild><div className="issueFontSize" data-font-size-control>
             <input type="number" aria-label="본문 글자 크기 (px)" min="10" max="72" step="1" value={fontSize}
               onClick={() => setSizeMenuOpen(true)}
               onChange={event => setFontSize(event.target.value)}
               onBlur={event => {
-                if (!(event.relatedTarget instanceof Element && event.relatedTarget.closest("[data-font-size-control]"))) applySize();
+                if (!(event.relatedTarget instanceof Element && event.relatedTarget.closest("[data-font-size-control]"))) {
+                  if (Number(fontSize) !== Number.parseFloat(state?.size || "17")) applySize();
+                  else setSizeMenuOpen(false);
+                }
               }}
               onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); applySize(); } if (event.key === "Escape") setSizeMenuOpen(false); }} />
             <span>px</span>
@@ -128,6 +160,30 @@ export default function IssueBodyEditor({ value, disabled, onChange, onUpload, o
                 <button type="button" role="option" key={size} aria-selected={Number(fontSize) === size}
                   onMouseDown={event => event.preventDefault()} onClick={() => applySize(String(size))}>{size}</button>
               ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+        <Popover open={colorMenuOpen && !disabled && !uploading} onOpenChange={open => {
+          if (open) setCustomColor(state?.color ?? "#d8e0ec");
+          setColorMenuOpen(open);
+        }}>
+          <PopoverTrigger asChild>
+            <button type="button" className="issueFontColorTrigger" aria-label="글자 색상" title="글자 색상" onMouseDown={event => event.preventDefault()}>
+              <Palette size={16} aria-hidden="true" />
+              <span style={{ backgroundColor: state?.color ?? "#d8e0ec" }} aria-hidden="true" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent side="bottom" align="start" className="issueFontColorMenu" aria-label="글자 색상 팔레트" onCloseAutoFocus={event => event.preventDefault()}>
+            <div className="issueFontColorSwatches" role="group" aria-label="기본 팔레트">
+              {colorSwatches.map(({ label, value }) => (
+                <button type="button" key={value} aria-label={label} title={label} aria-pressed={state?.color === value}
+                  style={{ backgroundColor: value }} onClick={() => applyColor(value)} />
+              ))}
+            </div>
+            <div className="issueFontColorActions">
+              <input type="color" aria-label="사용자 지정 글자 색상" title="사용자 지정 색상" value={customColor} onChange={event => setCustomColor(event.target.value)} />
+              <button type="button" onClick={() => applyColor(customColor)}>적용</button>
+              <button type="button" onClick={() => applyColor()}>기본색</button>
             </div>
           </PopoverContent>
         </Popover>

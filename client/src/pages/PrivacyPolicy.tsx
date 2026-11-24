@@ -88,7 +88,7 @@ export default function PrivacyPolicy() {
                 <thead><tr><th>사업자</th><th>이용 기능</th><th>관련 정보</th></tr></thead>
                 <tbody>
                   <tr><td>Google</td><td>Google 계정 로그인 및 이용자가 선택한 Google·YouTube API 연동</td><td>로그인 계정 정보, API 요청에 필요한 키·입력값</td></tr>
-                  <tr><td>Supabase Pte. Ltd.</td><td>회원 인증, 데이터베이스 및 이슈 이미지 저장</td><td>계정·프로필, 보관함, 사용자 API 키, 제휴 문의 등 서비스 저장정보</td></tr>
+                  <tr><td>Supabase Pte. Ltd.</td><td>회원 인증, 데이터베이스 및 뉴스 포커스·뉴스 클리핑 이미지 저장</td><td>계정·프로필, 보관함, 사용자 API 키, 제휴 문의 등 서비스 저장정보</td></tr>
                   <tr><td>Vercel Inc.</td><td>웹사이트 호스팅 및 서버 함수 실행</td><td>접속 정보, 인증 정보, API 요청에 포함되는 입력값</td></tr>
                 </tbody>
               </table>
@@ -115,7 +115,7 @@ export default function PrivacyPolicy() {
                 </tbody>
               </table>
             </div>
-            <p>Supabase는 주 저장 지역 외에서도 지원·보안 대응, 운영 로그 및 콘텐츠 전송 등 제한된 업무를 처리할 수 있습니다. 운영자는 지원 문의 등에 회원 개인정보를 불필요하게 포함하지 않습니다. 이슈 대표 이미지 등 공개 콘텐츠는 전송망을 통해 다른 지역에서 제공될 수 있으며, 비공개 회원 보관함을 공개 이미지로 전송하지 않습니다.</p>
+            <p>Supabase는 주 저장 지역 외에서도 지원·보안 대응, 운영 로그 및 콘텐츠 전송 등 제한된 업무를 처리할 수 있습니다. 운영자는 지원 문의 등에 회원 개인정보를 불필요하게 포함하지 않습니다. 뉴스 포커스·뉴스 클리핑의 대표 이미지 등 공개 콘텐츠는 전송망을 통해 다른 지역에서 제공될 수 있으며, 비공개 회원 보관함을 공개 이미지로 전송하지 않습니다.</p>
             <p>사업자별 세부 처리 조건은 <a href="https://supabase.com/legal/privacy-resources/data-residency-and-transfers-faq" target="_blank" rel="noopener noreferrer">Supabase의 데이터 위치·이전 안내</a> 및 <a href="https://vercel.com/legal/dpa" target="_blank" rel="noopener noreferrer">Vercel의 개인정보 처리계약</a>에서 확인할 수 있습니다. 저장·실행 지역이나 처리 업무가 변경되면 방침과 필요한 안내·동의 절차를 함께 변경합니다.</p>
             <p>외부 플랫폼의 개인정보 처리에 관한 내용은 각 사업자의 방침에서도 확인할 수 있습니다.</p>
             <ul>

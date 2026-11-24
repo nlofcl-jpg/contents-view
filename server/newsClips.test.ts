@@ -22,7 +22,7 @@ vi.mock("../client/src/lib/trpc", () => ({
 
 const id = "00000000-0000-0000-0000-000000000001";
 const clip = {
-  id, title: "뉴스 클립 테스트", summary: "클립 본문",
+  id, title: "뉴스 클리핑 테스트", summary: "클립 본문",
   thumbnail_url: null, thumbnail_credit: null, created_at: "2026-11-10T00:00:00Z",
 };
 
@@ -45,8 +45,9 @@ describe("news clips pages", () => {
   it("links a published clip from its list row to the detail page", () => {
     const html = renderPage(NewsClips, "/news/clips", ["news-clips", 0], [clip]);
     expect(html).toContain(`href="/news/clips/${id}"`);
-    expect(html).toContain("[이슈 클리핑]");
+    expect(html).toContain("[뉴스 클리핑]");
     expect(html).toContain("2026.11.10");
+    expect(html).toContain('<span class="issueDateDesktopYear">2026.</span>11.10');
     expect(html).toContain("운영자");
     expect(html).toContain('class="pageDescription"');
     expect(html).not.toContain("제목 예시");
@@ -61,7 +62,7 @@ describe("news clips pages", () => {
     expect(html.match(/href="https:\/\/example\.com\/news\//g)).toHaveLength(7);
     expect(html.indexOf("기사 8번")).toBeLessThan(html.indexOf("기사 2번"));
     expect(html).not.toContain("기사 1번");
-    expect(html).toContain("최신 이슈 포커스");
+    expect(html).toContain("최신 뉴스 포커스");
   });
 
   it("shows linked briefing titles without thumbnails in the issue focus sidebar", () => {
@@ -69,8 +70,8 @@ describe("news clips pages", () => {
     const html = renderPage(Sidebar, "/news/issues", ["news-sidebar-entries", "/news/clips"], [
       { ...clip, thumbnail_url: "https://example.com/thumbnail.jpg" },
     ]);
-    expect(html).toContain('id="sidebar-latest-briefings">최신 이슈 클리핑');
-    expect(html).toMatch(/<a(?=[^>]*href="\/news\/clips")(?=[^>]*aria-label="이슈 클리핑 더보기")[^>]*>/);
+    expect(html).toContain('id="sidebar-latest-briefings">최신 뉴스 클리핑');
+    expect(html).toMatch(/<a(?=[^>]*href="\/news\/clips")(?=[^>]*aria-label="뉴스 클리핑 더보기")[^>]*>/);
     expect(html).toMatch(/<a(?=[^>]*href="\/news")(?=[^>]*aria-label="최신 뉴스 더보기")[^>]*>/);
     expect(html).toContain(`href="/news/clips/${id}"`);
     expect(html).toContain(`<span>${clip.title}</span>`);
@@ -82,8 +83,8 @@ describe("news clips pages", () => {
     const html = renderPage(Sidebar, "/news", ["news-sidebar-entries", "/news/issues"], [
       { ...clip, title: "포커스 글", thumbnail_url: "https://example.com/focus.jpg" },
     ]);
-    expect(html).toContain('aria-label="이슈 포커스 더보기"');
-    expect(html).toContain('aria-label="이슈 클리핑 더보기"');
+    expect(html).toContain('aria-label="뉴스 포커스 더보기"');
+    expect(html).toContain('aria-label="뉴스 클리핑 더보기"');
     expect(html).toContain(`href="/news/issues/${id}"`);
     expect(html).toContain("https://example.com/focus.jpg");
     expect(html).not.toContain("최신 뉴스 더보기");
@@ -91,8 +92,8 @@ describe("news clips pages", () => {
 
   it.each([
     ["/news", "최신 뉴스"],
-    ["/news/issues", "이슈 포커스"],
-    ["/news/clips", "이슈 클리핑"],
+    ["/news/issues", "뉴스 포커스"],
+    ["/news/clips", "뉴스 클리핑"],
     ["/news/search", "뉴스 검색"],
   ])("renders the section title and active filter tab on %s", (path, title) => {
     const html = renderPage(NewsTrendHeader, path, [], null);
@@ -105,16 +106,16 @@ describe("news clips pages", () => {
   it("renders the detail body and retains the active parent tab", () => {
     const path = `/news/clips/${id}`;
     const html = renderPage(NewsClipDetail, path, ["news-clip", id], clip);
-    expect(html).toContain("<h1>뉴스 클립 테스트</h1>");
+    expect(html).toContain("<h1>뉴스 클리핑 테스트</h1>");
     expect(html).toContain("클립 본문");
     expect(html).toContain('href="/news/clips"');
-    expect(html).toMatch(/class="issueBackButton"[^>]*>.*?<\/svg>이슈 클리핑<\/a>/);
+    expect(html).toMatch(/class="issueBackButton"[^>]*>.*?<\/svg>뉴스 클리핑<\/a>/);
     expect(html).not.toContain("뉴스 트렌드 하위 메뉴");
     expect(getActiveNewsPath(path)).toBe("/news/clips");
   });
 
   it("shows a not-found state for unpublished or missing clips", () => {
     const html = renderPage(NewsClipDetail, `/news/clips/${id}`, ["news-clip", id], null);
-    expect(html).toContain("공개된 이슈 클리핑을 찾을 수 없습니다.");
+    expect(html).toContain("공개된 뉴스 클리핑을 찾을 수 없습니다.");
   });
 });

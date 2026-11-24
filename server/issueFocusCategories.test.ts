@@ -21,7 +21,7 @@ describe("issue focus category filters", () => {
   });
   it("uses the new editorial categories without mixing their results", () => {
     expect(issueFocusCategories.map(({ id }) => id)).toEqual([
-      "all", "technology", "platform", "marketing", "commerce", "creator",
+      "all", "technology", "platform", "marketing", "commerce", "creator", "economy", "society",
     ]);
     for (const { id } of issueFocusCategories) {
       if (id === "all") continue;
@@ -30,6 +30,12 @@ describe("issue focus category filters", () => {
         if (filter !== "all") expect(matchesIssueFocusCategory(id, filter)).toBe(id === filter);
       }
     }
+  });
+
+  it("keeps database-allowed categories in sync with the editor", () => {
+    const migration = readFileSync(new URL("../supabase/migrations/20261124052533_add_economy_and_society_issue_categories.sql", import.meta.url), "utf8");
+    const storedIds = [...migration.matchAll(/'([a-z]+)'/g)].map(([, id]) => id);
+    expect(storedIds).toEqual(issueFocusCategories.map(({ id }) => id).filter(id => id !== "all"));
   });
 
   it("keeps unclassified articles visible under all", () => {

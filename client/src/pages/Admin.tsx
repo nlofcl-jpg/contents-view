@@ -20,7 +20,7 @@ type AdminTab = "notices" | "banner" | "issues" | "newsClips" | "users" | "apiKe
 const adminTabs: Array<{ id: AdminTab; label: string }> = [
   { id: "notices", label: "공지" },
   { id: "banner", label: "배너" },
-  { id: "users", label: "사용자" },
+  { id: "users", label: "관리자" },
   { id: "apiKeys", label: "API 키" },
   { id: "issues", label: issueFocusLabel },
   { id: "newsClips", label: issueClippingLabel },
@@ -666,7 +666,7 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
             {!isClip && (
               <AdminSelect
                 id="issue-category"
-                aria-label="이슈 포커스 카테고리"
+                aria-label={`${issueFocusLabel} 카테고리`}
                 aria-required="true"
                 required
                 className="h-10 w-[144px] rounded-md border border-slate-700 bg-slate-950/80 pl-2 text-sm text-slate-200 outline-none focus:border-blue-400"
@@ -897,7 +897,7 @@ function IssuesPanel({ table = "issues" }: { table?: "issues" | "news_clips" }) 
           !error && <p className="text-sm text-slate-500">{isClip && !hasLoaded ? `${label}을 불러오는 중입니다.` : `등록된 ${label} 글이 없습니다.`}</p>
         )}
         {!isClip && issuePageCount > 1 && (
-          <nav className="issuePagination issueFocusPagination" aria-label="관리자 이슈 포커스 페이지 이동">
+          <nav className="issuePagination issueFocusPagination" aria-label={`관리자 ${issueFocusLabel} 페이지 이동`}>
             <button type="button" aria-label="이전 페이지" disabled={issuesPage === 1} onClick={() => changeIssuesPage(issuesPage - 1)}>
               <ChevronLeft size={16} aria-hidden="true" />
             </button>
@@ -1150,7 +1150,7 @@ function NoticePanel() {
 function UsersPanel({ adminEmail }: { adminEmail: string }) {
   return (
     <section className="rounded-lg border border-blue-500/20 bg-slate-900/60 p-5">
-      <h2 className="mb-5 text-xl font-semibold text-white">사용자</h2>
+      <h2 className="mb-5 text-xl font-semibold text-white">관리자</h2>
       <div className="overflow-hidden rounded-md border border-slate-800">
         <div className="grid grid-cols-[1fr_120px] bg-slate-950/70 px-4 py-3 text-xs font-semibold uppercase text-slate-500">
           <span>계정</span>

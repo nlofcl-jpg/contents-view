@@ -1,5 +1,5 @@
-export const issueFocusLabel = "이슈 포커스";
-export const issueClippingLabel = "이슈 클리핑";
+export const issueFocusLabel = "뉴스 포커스";
+export const issueClippingLabel = "뉴스 클리핑";
 
 export const newsLinks = [
   { label: "최신 뉴스", href: "/news" },

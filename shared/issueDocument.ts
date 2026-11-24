@@ -36,6 +36,19 @@ export function issueFontSize(value: unknown): string | undefined {
   return size >= 10 && size <= 72 ? `${size}px` : undefined;
 }
 
+export function issueFontColor(value: unknown): string | undefined {
+  if (typeof value !== "string") return;
+  const color = value.trim().toLowerCase();
+  if (/^#[0-9a-f]{6}$/.test(color)) return color;
+  if (/^#[0-9a-f]{3}$/.test(color)) return `#${color.slice(1).split("").map(channel => channel.repeat(2)).join("")}`;
+  const rgb = /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/.exec(color);
+  if (!rgb) return;
+  const channels = rgb.slice(1).map(Number);
+  if (channels.every(channel => channel <= 255)) {
+    return `#${channels.map(channel => channel.toString(16).padStart(2, "0")).join("")}`;
+  }
+}
+
 export function issueDocumentText(node: IssueNode): string {
   if (node.type === "text") return node.text || "";
   if (node.type === "hardBreak") return " ";

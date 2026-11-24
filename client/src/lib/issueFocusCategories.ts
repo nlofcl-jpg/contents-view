@@ -5,6 +5,8 @@ export const issueFocusCategories = [
   { id: "marketing", label: "마케팅·광고" },
   { id: "commerce", label: "커머스·비즈니스" },
   { id: "creator", label: "크리에이터·콘텐츠" },
+  { id: "economy", label: "경제" },
+  { id: "society", label: "사회" },
 ] as const;
 
 export type IssueFocusCategory = typeof issueFocusCategories[number]["id"];

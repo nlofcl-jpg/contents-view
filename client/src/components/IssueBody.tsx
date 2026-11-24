@@ -1,6 +1,6 @@
 import React from "react";
 import { find } from "linkifyjs";
-import { readIssueDocument, safeIssueUrl, issueFontSize, type IssueNode } from "@shared/issueDocument";
+import { readIssueDocument, safeIssueUrl, issueFontColor, issueFontSize, type IssueNode } from "@shared/issueDocument";
 import { parseIssueBodyBlocks, parseIssueBodyLine } from "@shared/issueBody";
 
 function renderInlineText(text: string) {
@@ -67,13 +67,16 @@ function RichNode({ node }: { node: IssueNode }) {
   if (node.type === "text") {
     const hasLinkOrCode = node.marks?.some(mark => mark.type === "link" || mark.type === "code");
     let text: React.ReactNode = hasLinkOrCode ? node.text || "" : renderLinkedText(node.text || "");
+    const textStyle = node.marks?.find(mark => mark.type === "textStyle")?.attrs;
+    const fontSize = issueFontSize(textStyle?.fontSize);
+    const color = issueFontColor(textStyle?.color);
+    if (fontSize || color) text = <span style={{ fontSize, color }}>{text}</span>;
     for (const mark of node.marks || []) {
       if (mark.type === "bold") text = <strong>{text}</strong>;
       if (mark.type === "italic") text = <em>{text}</em>;
       if (mark.type === "strike") text = <s>{text}</s>;
       if (mark.type === "underline") text = <u>{text}</u>;
       if (mark.type === "code") text = <code>{text}</code>;
-      if (mark.type === "textStyle") text = <span style={{ fontSize: issueFontSize(mark.attrs?.fontSize) }}>{text}</span>;
       if (mark.type === "link" && safeIssueUrl(mark.attrs?.href)) text = <a href={safeIssueUrl(mark.attrs?.href)} target="_blank" rel="noopener noreferrer">{text}</a>;
     }
     return <>{text}</>;

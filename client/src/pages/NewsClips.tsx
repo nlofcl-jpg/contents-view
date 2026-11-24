@@ -43,7 +43,7 @@ export default function NewsClips() {
                   <Link href={`/news/clips/${clip.id}`} className="newsClipRow">
                     <span className="newsClipLabel">[{issueClippingLabel}]</span>
                     <span className="newsClipTitle" title={clip.title}>{clip.title}</span>
-                    <span className="newsClipDate"><IssueDate value={clip.created_at} /></span>
+                    <span className="newsClipDate"><IssueDate value={clip.created_at} omitYearOnMobile /></span>
                     <span className="newsClipAuthor">운영자</span>
                   </Link>
                 </li>

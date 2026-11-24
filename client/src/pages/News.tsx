@@ -8,6 +8,7 @@ import IssueDate from "@/components/IssueDate";
 import NewsTrendHeader from "@/components/NewsTrendHeader";
 import NewsBriefingSidebar from "@/components/NewsBriefingSidebar";
 import { issueFocusCategories, matchesIssueFocusCategory, type IssueFocusCategory, type IssueFocusCategoryId } from "@/lib/issueFocusCategories";
+import { issueFocusLabel } from "@/lib/newsNavigation";
 
 interface NewsItem {
   title: string;
@@ -375,7 +376,7 @@ export default function News() {
           </div>
         </section>
       ) : activeContentTab === "issues" ? (
-        <section className="issuesSection" role="tabpanel" aria-label="이슈 목록">
+        <section className="issuesSection" role="tabpanel" aria-label={`${issueFocusLabel} 목록`}>
           {!isLoadingIssues && !issuesError && featuredIssue && (
             <Link href={`/news/issues/${featuredIssue.id}`} className="issueFeaturedCard">
               <div className="issueFeaturedMedia issueCardImageFallback">
@@ -390,14 +391,14 @@ export default function News() {
           )}
 
           {isLoadingIssues ? (
-            <p className="issuesStatus">이슈를 불러오는 중입니다.</p>
+            <p className="issuesStatus">{issueFocusLabel}를 불러오는 중입니다.</p>
           ) : issuesError ? (
-            <p className="issuesStatus">이슈를 불러오지 못했습니다.</p>
+            <p className="issuesStatus">{issueFocusLabel}를 불러오지 못했습니다.</p>
           ) : issues.length === 0 ? (
-            <p className="issuesStatus">공개된 이슈가 아직 없습니다.</p>
+            <p className="issuesStatus">공개된 {issueFocusLabel}가 아직 없습니다.</p>
           ) : (
             <>
-              <div className="tabMenu issueFocusCategoryMenu" role="group" aria-label="이슈 포커스 카테고리">
+              <div className="tabMenu issueFocusCategoryMenu" role="group" aria-label={`${issueFocusLabel} 카테고리`}>
                 {issueFocusCategories.map(({ id, label }) => (
                   <button
                     key={id}
@@ -417,10 +418,10 @@ export default function News() {
               <div className="issueFocusListLayout">
                 <div className="issueFocusListMain">
                   {issueCategory !== "all" && remainingIssues.length === 0 && (
-                    <p className="issuesStatus">이 카테고리에 등록된 이슈가 없습니다.</p>
+                    <p className="issuesStatus">이 카테고리에 등록된 글이 없습니다.</p>
                   )}
                   {remainingIssues.length > 0 && (
-                    <div className="issueList" aria-label="이슈 목록">
+                    <div className="issueList" aria-label={`${issueFocusLabel} 글 목록`}>
                       {visibleIssueList.map((issue) => (
                         <Link
                           key={issue.id}
@@ -443,10 +444,10 @@ export default function News() {
                   )}
 
                   {remainingIssues.length > 10 && (
-                    <nav className="issuePagination issueFocusPagination" aria-label="이슈 포커스 페이지 이동">
+                    <nav className="issuePagination issueFocusPagination" aria-label={`${issueFocusLabel} 페이지 이동`}>
                       <button
                         type="button"
-                        aria-label="이전 이슈 페이지"
+                        aria-label="이전 페이지"
                         disabled={issuesPage === 1}
                         onClick={() => setIssuesPage(page => Math.max(1, page - 1))}
                       >
@@ -465,7 +466,7 @@ export default function News() {
                       ))}
                       <button
                         type="button"
-                        aria-label="다음 이슈 페이지"
+                        aria-label="다음 페이지"
                         disabled={issuesPage === issuePageCount}
                         onClick={() => setIssuesPage(page => Math.min(issuePageCount, page + 1))}
                       >

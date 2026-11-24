@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import IssueBody from "../client/src/components/IssueBody";
 import { issueEditorDocument, stripIssueBodyFormatting } from "../shared/issueBody";
-import { ISSUE_DOCUMENT_PREFIX, issueBodyImages, issueFontSize, readIssueDocument, type IssueNode } from "../shared/issueDocument";
+import { ISSUE_DOCUMENT_PREFIX, issueBodyImages, issueFontColor, issueFontSize, readIssueDocument, type IssueNode } from "../shared/issueDocument";
 
 const serialize = (doc: IssueNode) => ISSUE_DOCUMENT_PREFIX + JSON.stringify(doc);
 
@@ -18,9 +18,9 @@ describe("rich issue documents", () => {
     expect(html).toContain('style="text-align:right"');
   });
 
-  it("round trips numeric font size and inline images while keeping share text clean", () => {
+  it("round trips numeric size, color and inline images while keeping share text clean", () => {
     const doc: IssueNode = { type: "doc", content: [
-      { type: "paragraph", content: [{ type: "text", text: "본문", marks: [{ type: "textStyle", attrs: { fontSize: "28px" } }, { type: "bold" }] }] },
+      { type: "paragraph", content: [{ type: "text", text: "본문", marks: [{ type: "textStyle", attrs: { fontSize: "28px", color: "#38bdf8" } }, { type: "bold" }] }] },
       { type: "image", attrs: { src: "https://example.com/body.webp", alt: "이미지" } },
       { type: "paragraph", content: [{ type: "text", text: "다음 문장" }] },
     ] };
@@ -29,7 +29,7 @@ describe("rich issue documents", () => {
     expect(stripIssueBodyFormatting(value)).toBe("본문 다음 문장");
     expect(issueBodyImages(value)).toEqual(["https://example.com/body.webp"]);
     const html = renderToStaticMarkup(createElement(IssueBody, { value }));
-    expect(html).toContain('font-size:28px');
+    expect(html).toContain('<strong><span style="font-size:28px;color:#38bdf8">본문</span></strong>');
     expect(html).toContain('src="https://example.com/body.webp"');
     expect(html).toContain('<p>다음 문장</p>');
   });
@@ -37,7 +37,7 @@ describe("rich issue documents", () => {
   it("does not render unsafe URLs, arbitrary HTML, CSS or event handlers", () => {
     const value = serialize({ type: "doc", content: [
       { type: "image", attrs: { src: "javascript:alert(1)", onerror: "alert(1)" } },
-      { type: "paragraph", content: [{ type: "text", text: "<script>alert(1)</script>", marks: [{ type: "textStyle", attrs: { fontSize: "200px;color:red" } }, { type: "link", attrs: { href: "javascript:alert(1)" } }] }] },
+      { type: "paragraph", content: [{ type: "text", text: "<script>alert(1)</script>", marks: [{ type: "textStyle", attrs: { fontSize: "200px;color:red", color: "#fff;display:none" } }, { type: "link", attrs: { href: "javascript:alert(1)" } }] }] },
     ] });
     const html = renderToStaticMarkup(createElement(IssueBody, { value }));
     expect(html).not.toContain("<img");
@@ -45,6 +45,14 @@ describe("rich issue documents", () => {
     expect(html).not.toContain("style=");
     expect(html).toContain("&lt;script&gt;");
     expect(issueBodyImages(value)).toEqual([]);
+  });
+
+  it("normalizes safe pasted colors and discards unsafe or unsupported CSS", () => {
+    expect(issueFontColor("#ABC")).toBe("#aabbcc");
+    expect(issueFontColor("rgb(0, 128, 255)")).toBe("#0080ff");
+    for (const color of ["#fff;display:none", "rgb(256, 0, 0)", "url(https://example.com/a)", "var(--x)"]) {
+      expect(issueFontColor(color)).toBeUndefined();
+    }
   });
 
   it("rejects malformed rich documents and constrains numeric size", () => {

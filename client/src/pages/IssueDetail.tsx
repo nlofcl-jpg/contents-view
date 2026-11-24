@@ -115,9 +115,9 @@ export default function IssueDetail() {
       </button>
 
       {isLoading || (issue && issue.id !== params?.id) ? (
-        <p className="issuesStatus">이슈를 불러오는 중입니다.</p>
+        <p className="issuesStatus">{issueFocusLabel}를 불러오는 중입니다.</p>
       ) : !issue ? (
-        <p className="issuesStatus">이슈를 찾을 수 없습니다.</p>
+        <p className="issuesStatus">{issueFocusLabel} 글을 찾을 수 없습니다.</p>
       ) : (
         <article className="issueDetail">
           <header className="issueDetailHeader">
@@ -142,7 +142,7 @@ export default function IssueDetail() {
                 onClick={handleKakaoShare}
                 disabled={kakaoSdkStatus === "loading"}
                 title="카카오톡으로 공유"
-                aria-label="카카오톡으로 이슈 공유"
+                aria-label={`카카오톡으로 ${issueFocusLabel} 공유`}
               >
                 {kakaoSdkStatus === "loading" ? (
                   <LoaderCircle size={20} className="animate-spin" aria-hidden="true" />

@@ -1,4 +1,4 @@
-import { newsLinks } from "./newsNavigation";
+import { issueClippingLabel, issueFocusLabel, newsLinks } from "./newsNavigation";
 
 export type SupportAction = { label: string; href: string } | { label: string; inquiry: true };
 export type SupportReply = { text: string; actions?: SupportAction[]; questions?: string[] };
@@ -112,8 +112,8 @@ export function getSupportReply(question: string): SupportReply {
     actions: [{ label: "검색 트렌드", href: "/trends/google" }],
     questions: trendTabQuestions.search,
   };
-  if (/뉴스|이슈|기사/.test(text)) return {
-    text: "뉴스 트렌드 이용 안내\n\n최신 뉴스에서는 카테고리별 기사와 원문을 확인할 수 있습니다. 이슈 포커스에서는 썸네일이나 제목을 눌러 정리된 이슈를 읽고 공유할 수 있습니다. 이슈 클리핑에서는 제목을 눌러 글 내용을 확인할 수 있습니다. 특정 기사를 찾으려면 뉴스 검색에 키워드를 입력하세요.",
+  if (/뉴스|이슈|기사|포커스|클리핑/.test(text)) return {
+    text: `뉴스 트렌드 이용 안내\n\n최신 뉴스에서는 카테고리별 기사와 원문을 확인할 수 있습니다. ${issueFocusLabel}에서는 썸네일이나 제목을 눌러 정리된 이슈를 읽고 공유할 수 있습니다. ${issueClippingLabel}에서는 제목을 눌러 글 내용을 확인할 수 있습니다. 특정 기사를 찾으려면 뉴스 검색에 키워드를 입력하세요.`,
     actions: newsLinks,
   };
   if (/커뮤니티|커뮤/.test(text)) return {
