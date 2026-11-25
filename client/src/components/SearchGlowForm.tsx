@@ -23,7 +23,7 @@ function SearchBorderGlow() {
       </defs>
       <g mask={`url(#${beam})`} stroke={`url(#${colors})`}>
         <use href={`#${track}`} className="searchBorderGlowHalo" strokeWidth="9" />
-        <use href={`#${track}`} strokeWidth="1.1" />
+        <use href={`#${track}`} className="searchBorderGlowEdge" strokeWidth="1.1" />
       </g>
     </svg>
   );

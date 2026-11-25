@@ -5330,6 +5330,12 @@ a {
   padding: 3px 5px;
 }
 
+@media (max-width: 768px) {
+  .heroSearch:is(.searchGlowForm, .commerceAnalysisComposer) {
+    width: 100%;
+  }
+}
+
 @media (min-width: 1024px) {
   .heroSearch.youtubeAnalysisComposer,
   .heroSearch.naverAnalysisComposer {
@@ -5455,6 +5461,26 @@ a {
 .searchBorderGlowHalo {
   filter: blur(9px);
   opacity: 0.9;
+}
+
+@media (max-width: 767px) {
+  .searchBorderGlow {
+    /* Soften the composited mask, including its leading and trailing edges. */
+    filter: blur(6px);
+  }
+
+  .searchBorderGlowHalo {
+    stroke-width: 12px;
+  }
+
+  .searchBorderGlowEdge {
+    display: none;
+  }
+
+  .heroSearch.searchGlowForm:focus-within,
+  .newsSearchForm.searchGlowForm:focus-within .newsSearchInput {
+    border-color: rgb(101 158 238 / 0.58);
+  }
 }
 
 @keyframes searchBorderGlowEnvelope {
