@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
-import { ArrowUpRight, ImageOff, LoaderCircle, RefreshCw, Search, X } from "lucide-react";
+import { ArrowUpRight, ChevronLeft, ChevronRight, ImageOff, LoaderCircle, RefreshCw, Rocket, Search, X } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
@@ -10,6 +10,9 @@ import { coupangCategories, type CoupangCategoryId } from "@shared/coupangPartne
 import type { AppRouter } from "../../../server/routers";
 
 const won = new Intl.NumberFormat("ko-KR");
+const productPageSize = 18;
+const affiliateDisclosure = "이 페이지는 쿠팡 파트너스 활동의 일환으로, 상품 구매 시 일정액의 수수료를 제공받습니다.";
+const productQueryOptions = { staleTime: 10 * 60 * 1000, retry: false, refetchOnWindowFocus: false } as const;
 
 type ProductData = inferRouterOutputs<AppRouter>["coupang"]["products"];
 type ProductResult = {
@@ -18,7 +21,8 @@ type ProductResult = {
   data?: ProductData;
 };
 
-function ProductResults({ result }: { result: ProductResult }) {
+function ProductResults({ result, layout = "search", ranked = false }: { result: ProductResult; layout?: "search" | "feed"; ranked?: boolean }) {
+  const [visibleCount, setVisibleCount] = useState(productPageSize);
   if (result.isPending) return (
     <p role="status" className="flex items-center gap-2 py-4 text-sm text-slate-300"><LoaderCircle className="animate-spin" size={16} aria-hidden="true" />쿠팡 상품을 불러오는 중입니다.</p>
   );
@@ -26,28 +30,41 @@ function ProductResults({ result }: { result: ProductResult }) {
   if (result.data?.configured === false) return <p className="text-sm text-slate-300">쿠팡 파트너스 API 연결을 준비 중입니다.</p>;
   const items = result.data?.productList ?? [];
   if (!items.length) return <p className="text-sm text-slate-300">표시할 상품이 없습니다.</p>;
+  const List = ranked ? "ol" : "ul";
 
   return (
     <>
-      <p className="mb-3 text-sm text-slate-300">이 페이지는 쿠팡 파트너스 활동의 일환으로, 상품 구매 시 일정액의 수수료를 제공받습니다.</p>
-      <ul className="grid gap-3 lg:grid-cols-2">
-        {items.map(item => (
+      {layout === "search" && <p className="mb-3 text-sm text-slate-300">{affiliateDisclosure}</p>}
+      <List className={`grid grid-cols-2 gap-x-3 gap-y-5 sm:gap-x-4 ${layout === "search" ? "md:grid-cols-3" : "md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"}`}>
+        {items.slice(0, visibleCount).map((item, index) => (
           <li key={item.id} className="min-w-0">
-            <a href={item.url} target="_blank" rel="sponsored noopener noreferrer" className="flex h-full items-center gap-3 rounded-md border border-slate-800 bg-slate-950/40 p-3 text-inherit hover:border-slate-500">
-              <div className="grid size-20 shrink-0 place-items-center overflow-hidden rounded bg-slate-800">
-                {item.image ? <img src={item.image} alt="" loading="lazy" className="size-full bg-white object-contain" /> : <ImageOff size={20} className="text-slate-400" aria-hidden="true" />}
+            <a href={item.url} target="_blank" rel="sponsored noopener noreferrer" className="group block h-full rounded-md text-inherit focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sky-300">
+              <div className="relative grid aspect-square w-full place-items-center overflow-hidden rounded-md bg-slate-800">
+                {item.image ? <img src={item.image} alt="" loading="lazy" className="absolute inset-0 size-full bg-white object-contain" /> : <ImageOff size={20} className="text-slate-400" aria-hidden="true" />}
+                <span className="absolute inset-x-0 bottom-0 flex items-center justify-end gap-1 bg-slate-950/55 px-2 py-1.5 text-xs font-medium text-white backdrop-blur-md transition-colors group-hover:bg-slate-950/75">
+                  제품 보기 <ArrowUpRight size={13} aria-hidden="true" />
+                </span>
               </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="line-clamp-2 break-words text-sm font-medium leading-5 text-slate-100">{item.name}</h3>
-                <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm font-semibold text-slate-100">{won.format(item.price)}원
-                  {item.isRocket && <span className="text-xs font-normal text-sky-300">로켓배송</span>}
+              <div className="min-w-0 pt-2">
+                <div className="flex min-w-0 items-start gap-1.5">
+                  {ranked && <span className="mt-0.5 shrink-0 text-xs font-semibold tabular-nums text-sky-300">{index + 1}위</span>}
+                  <p className="line-clamp-2 min-w-0 break-words text-sm font-medium leading-5 text-slate-100 group-hover:text-white">{item.name}</p>
+                </div>
+                <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-sm font-semibold tabular-nums text-slate-100">
+                  {item.discountRate !== undefined && <span className="text-rose-400">{item.discountRate}%</span>}
+                  <span>{won.format(item.price)}원</span>
+                  {item.isRocket && <span className="inline-flex text-sky-300" title="로켓배송"><Rocket size={15} aria-hidden="true" /><span className="sr-only">로켓배송</span></span>}
                 </p>
               </div>
-              <ArrowUpRight size={16} className="shrink-0 text-slate-400" aria-hidden="true" />
             </a>
           </li>
         ))}
-      </ul>
+      </List>
+      {layout === "feed" && items.length > visibleCount && (
+        <div className="mt-4 flex justify-center">
+          <button type="button" className="tabButton" onClick={() => setVisibleCount(count => count + productPageSize)}>상품 더보기</button>
+        </div>
+      )}
     </>
   );
 }
@@ -63,11 +80,9 @@ export default function CoupangTrendPanel() {
   const [guestPrompt, setGuestPrompt] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const feedResult = trpc.coupang.products.useQuery(feed === "deals" ? { feed } : { feed, category }, {
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
+  const categoryRailRef = useRef<HTMLDivElement>(null);
+  const feedResult = trpc.coupang.products.useQuery(feed === "deals" ? { feed } : { feed, category }, productQueryOptions);
+  const categoryLabel = coupangCategories.find(item => item.id === category)?.label;
   const search = trpc.coupang.search.useMutation();
   const configured = feedResult.data?.configured;
 
@@ -75,6 +90,11 @@ export default function CoupangTrendPanel() {
     const params = new URLSearchParams({ redirect: "/commerce?tab=coupang" });
     if (signup) params.set("mode", "signup");
     navigate(`/login?${params}`);
+  }
+
+  function slideCategories(direction: -1 | 1) {
+    const rail = categoryRailRef.current;
+    rail?.scrollBy({ left: direction * rail.clientWidth * 0.75, behavior: "smooth" });
   }
 
   return (
@@ -136,21 +156,30 @@ export default function CoupangTrendPanel() {
           ))}
         </div>
         {feed === "popular" && (
-          <div className="flex flex-wrap gap-2" role="group" aria-label="쿠팡 상품 카테고리">
-            {coupangCategories.map(item => (
-              <button key={item.id} type="button" className={`tabButton${item.id === category ? " active" : ""}`} aria-pressed={item.id === category} onClick={() => setCategory(item.id)}>{item.label}</button>
-            ))}
+          <div className="flex min-w-0 items-center gap-1">
+            <button type="button" className="hidden size-7 shrink-0 place-items-center rounded text-slate-400 hover:bg-white/10 hover:text-white sm:grid" aria-label="이전 카테고리 보기" title="이전 카테고리 보기" aria-controls="coupang-category-rail" onClick={() => slideCategories(-1)}>
+              <ChevronLeft size={16} aria-hidden="true" />
+            </button>
+            <div ref={categoryRailRef} id="coupang-category-rail" className="flex min-w-0 flex-1 snap-x gap-2 overflow-x-auto overscroll-x-contain py-1 [scrollbar-width:none]" role="group" aria-label="쿠팡 상품 카테고리">
+              {coupangCategories.map(item => (
+                <button key={item.id} type="button" className={`tabButton shrink-0 snap-start whitespace-nowrap${item.id === category ? " active" : ""}`} aria-pressed={item.id === category} onClick={() => setCategory(item.id)}>{item.label}</button>
+              ))}
+            </div>
+            <button type="button" className="hidden size-7 shrink-0 place-items-center rounded text-slate-400 hover:bg-white/10 hover:text-white sm:grid" aria-label="다음 카테고리 보기" title="다음 카테고리 보기" aria-controls="coupang-category-rail" onClick={() => slideCategories(1)}>
+              <ChevronRight size={16} aria-hidden="true" />
+            </button>
           </div>
         )}
         <div className="flex items-center justify-between gap-3">
           <h2 id="coupang-products-title" className="min-w-0 break-words text-lg font-semibold text-white">
-            {feed === "deals" ? "골드박스 특가" : "카테고리별 인기 추천"}
+            {feed === "deals" ? "골드박스 특가" : `${categoryLabel} 인기 순위`}
           </h2>
           {feedResult.isError && <button type="button" className="refreshButton refreshButtonIconOnly" title="다시 불러오기" aria-label="다시 불러오기" disabled={feedResult.isFetching} onClick={() => void feedResult.refetch()}>
             <RefreshCw size={16} aria-hidden="true" />
           </button>}
         </div>
-        <ProductResults result={feedResult} />
+        {Boolean(feedResult.data?.productList.length) && <p className="text-sm text-slate-300">{affiliateDisclosure}</p>}
+        <ProductResults key={feed === "deals" ? feed : category} result={feedResult} layout="feed" ranked={feed === "popular"} />
       </section>
       <GuestAccessPrompt open={guestPrompt} description="쿠팡 상품 검색은 로그인 후 이용할 수 있습니다." onBrowse={() => setGuestPrompt(false)} onLogin={() => goToAuth()} onSignup={() => goToAuth(true)} />
     </>

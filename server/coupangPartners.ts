@@ -19,7 +19,7 @@ const productQuery = z.discriminatedUnion("feed", [
   z.object({ feed: z.literal("deals") }),
 ]);
 type ProductQuery = z.infer<typeof productQuery> | { keyword: string };
-type Product = { id: number; name: string; price: number; url: string; image: string | null; isRocket: boolean };
+type Product = { id: number; name: string; price: number; url: string; image: string | null; isRocket: boolean; discountRate?: number };
 
 const upstreamProduct = z.object({
   productId: z.number().int().positive(),
@@ -28,6 +28,8 @@ const upstreamProduct = z.object({
   productUrl: z.string(),
   productImage: z.string().optional(),
   isRocket: z.boolean().optional(),
+  discountRate: z.unknown().optional(),
+  productDiscountRate: z.unknown().optional(),
 });
 const upstreamEnvelope = z.object({
   rCode: z.union([z.string(), z.number()]),
@@ -69,11 +71,19 @@ function safeUrl(value: string | undefined, hosts: string[]) {
   }
 }
 
+function parseDiscountRate(value: unknown) {
+  const rate = typeof value === "number" ? value
+    : typeof value === "string" && /^\d{1,3}(\.\d+)?%?$/.test(value.trim())
+      ? Number(value.trim().replace(/%$/, "")) : NaN;
+  return rate > 0 && rate <= 100 ? rate : undefined;
+}
+
 export async function fetchCoupangProducts(credentials: Credentials, input: ProductQuery, request = fetch, now = new Date()): Promise<Product[]> {
   const isSearch = "keyword" in input;
   const path = isSearch ? `${PRODUCT_PATH}/search`
     : input.feed === "deals" ? `${PRODUCT_PATH}/goldbox` : `${PRODUCT_PATH}/bestcategories/${input.category}`;
-  const query = new URLSearchParams(isSearch ? { keyword: input.keyword, limit: "10" } : { limit: "10" }).toString();
+  const limit = isSearch ? 10 : input.feed === "deals" ? 20 : 50;
+  const query = new URLSearchParams(isSearch ? { keyword: input.keyword, limit: String(limit) } : { limit: String(limit) }).toString();
   const authorization = signCoupangRequest(credentials, path, query, now);
 
   let response: Response;
@@ -102,12 +112,13 @@ export async function fetchCoupangProducts(credentials: Credentials, input: Prod
   }
 
   const products = new Map<number, Product>();
-  for (const entry of items.slice(0, 10)) {
+  for (const entry of items) {
     const parsed = upstreamProduct.safeParse(entry);
     if (!parsed.success) continue;
     const { productId, productName, productPrice, productUrl, productImage, isRocket } = parsed.data;
     const url = safeUrl(productUrl, ["coupang.com", "coupa.ng"]);
     if (!url) continue;
+    const discountRate = parseDiscountRate(parsed.data.discountRate) ?? parseDiscountRate(parsed.data.productDiscountRate);
     products.set(productId, {
       id: productId,
       name: productName,
@@ -115,7 +126,9 @@ export async function fetchCoupangProducts(credentials: Credentials, input: Prod
       url,
       image: safeUrl(productImage, ["coupangcdn.com", "coupang.com"]),
       isRocket: isRocket === true,
+      ...(discountRate !== undefined && { discountRate }),
     });
+    if (products.size >= limit) break;
   }
   return Array.from(products.values());
 }

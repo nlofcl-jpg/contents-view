@@ -30,7 +30,7 @@ function setup(configured = false) {
     rpc,
     from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: row, error: null }) }) }), update }),
   } as unknown as SupabaseClient;
-  const fetcher = vi.fn(async () => Response.json({ rCode: "0", data: [sample] }));
+  const fetcher = vi.fn<typeof fetch>(async () => Response.json({ rCode: "0", data: [sample] }));
   vi.stubGlobal("fetch", fetcher);
   const router = createCoupangPartnersRouter(db, storeKey);
   return { row, update, rpc, fetcher, admin: router.createCaller(context("admin")), guest: router.createCaller(context(null)), member: router.createCaller(context("user")) };
@@ -51,6 +51,7 @@ describe("Coupang Partners", () => {
     const expectedSignature = createHmac("sha256", credentials.secretKey)
       .update("261125T093040ZGET" + endpoint.pathname + endpoint.search.slice(1)).digest("hex");
     expect(endpoint.searchParams.get("keyword")).toBe("커피 원두");
+    expect(endpoint.searchParams.get("limit")).toBe("10");
     expect(new Headers(init?.headers).get("Authorization")).toBe(
       `CEA algorithm=HmacSHA256, access-key=test-access, signed-date=261125T093040Z, signature=${expectedSignature}`,
     );
@@ -97,6 +98,32 @@ describe("Coupang Partners", () => {
   it("reads Gold Box deals from the separate Coupang feed", async () => {
     const request = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ rCode: "0", data: [sample] }));
     await expect(fetchCoupangProducts(credentials, { feed: "deals" }, request)).resolves.toMatchObject([{ id: 123 }]);
-    expect(request.mock.calls[0][0]).toBe("https://api-gateway.coupang.com/v2/providers/affiliate_open_api/apis/openapi/v1/products/goldbox?limit=10");
+    expect(request.mock.calls[0][0]).toBe("https://api-gateway.coupang.com/v2/providers/affiliate_open_api/apis/openapi/v1/products/goldbox?limit=20");
+  });
+
+  it("only displays a valid discount rate supplied with the product", async () => {
+    const request = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ rCode: "0", data: [
+      { ...sample, discountRate: 22 },
+      { ...sample, productId: 124, productDiscountRate: "12.5%" },
+      { ...sample, productId: 125, discountRate: "150%" },
+      { ...sample, productId: 126, discountRate: 0 },
+      { ...sample, productId: 127, originalPrice: 25000 },
+    ] }));
+    const products = await fetchCoupangProducts(credentials, { feed: "deals" }, request);
+    expect(products.map(product => product.discountRate)).toEqual([22, 12.5, undefined, undefined, undefined]);
+  });
+
+  it("accepts added Best categories and returns up to 50 distinct products", async () => {
+    const { guest, fetcher, rpc } = setup(true);
+    fetcher.mockResolvedValueOnce(Response.json({ rCode: "0", data: [
+      sample,
+      ...Array.from({ length: 55 }, (_, index) => ({ ...sample, productId: index === 0 ? sample.productId : 300 - index })),
+    ] }));
+    const result = await guest.products({ feed: "popular", category: "1029" });
+    expect(result.productList).toHaveLength(50);
+    expect(new Set(result.productList.map(product => product.id)).size).toBe(50);
+    expect(result.productList.slice(0, 3).map(product => product.id)).toEqual([123, 299, 298]);
+    expect(fetcher.mock.calls[0][0]).toMatch(/\/bestcategories\/1029\?limit=50$/);
+    expect(rpc).toHaveBeenCalledTimes(1);
   });
 });
