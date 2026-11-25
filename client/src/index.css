@@ -2201,6 +2201,7 @@ a {
 
 .heroHomePlatformMenu .heroSearchMenuItem {
   color: rgb(255 255 255 / 0.82);
+  font-weight: 400;
 }
 
 .heroSearchMenuItem[data-highlighted],
@@ -2563,11 +2564,11 @@ a {
 
   .heroSearch {
     width: min(100%, 520px);
-    margin-top: 26px;
+    margin-top: 34px;
   }
 
   .heroPopularKeywordSection {
-    margin-top: 22px;
+    margin-top: 30px;
   }
 
   .heroPopularKeywords {
@@ -5434,21 +5435,23 @@ a {
 }
 
 .searchBorderGlow {
+  --search-glow-bleed: 36px;
   position: absolute;
-  inset: -9px;
+  inset: calc(-1 * var(--search-glow-bleed));
   z-index: -2;
-  width: calc(100% + 18px);
-  height: calc(100% + 18px);
+  width: calc(100% + 2 * var(--search-glow-bleed));
+  height: calc(100% + 2 * var(--search-glow-bleed));
   overflow: visible;
   pointer-events: none;
   animation: searchBorderGlowEnvelope 6.4s linear both;
 }
 
 .searchBorderGlowTrack {
-  x: 8px;
-  y: 8px;
-  width: calc(100% - 16px);
-  height: calc(100% - 16px);
+  --search-glow-track-inset: calc(var(--search-glow-bleed) - 1px);
+  x: var(--search-glow-track-inset);
+  y: var(--search-glow-track-inset);
+  width: calc(100% - 2 * var(--search-glow-track-inset));
+  height: calc(100% - 2 * var(--search-glow-track-inset));
   rx: var(--search-glow-corner-radius, 20px);
 }
 
@@ -5464,6 +5467,10 @@ a {
 }
 
 @media (max-width: 767px) {
+  .mainContent > .youtubePageContainer:has(.searchGlowForm) {
+    overflow: visible;
+  }
+
   .searchBorderGlow {
     /* Soften the composited mask, including its leading and trailing edges. */
     filter: blur(6px);
@@ -12284,12 +12291,16 @@ input[type="date"].youtubeSelect {
   }
 }
 
-.trend-comparison-glass {
-  border-color: rgb(109 161 211 / 0.24);
+.trend-comparison-glass,
+.coupangMobileCategoryPanel {
   background: linear-gradient(145deg, rgb(37 67 97 / 0.36), rgb(13 25 43 / 0.62) 48%, rgb(12 33 48 / 0.48));
-  box-shadow: inset 0 1px 0 rgb(187 220 255 / 0.1), 0 12px 32px rgb(0 0 0 / 0.16);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
+}
+
+.trend-comparison-glass {
+  border-color: rgb(109 161 211 / 0.24);
+  box-shadow: inset 0 1px 0 rgb(187 220 255 / 0.1), 0 12px 32px rgb(0 0 0 / 0.16);
 }
 
 .trend-glass-card {

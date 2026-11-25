@@ -1,6 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { httpBatchLink } from "@trpc/client";
+import { httpBatchLink, httpLink, splitLink } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
@@ -45,40 +45,45 @@ queryClient.getMutationCache().subscribe(event => {
 
 const trpcClient = trpc.createClient({
   links: [
-    httpBatchLink({
-      url: "/api/trpc",
-      transformer: superjson,
-      async headers() {
-        if (!supabase) return {};
+    splitLink({
+      // Let the public stored rankings render without waiting for the external refresh batch.
+      condition: ({ path }) => path === "googleTrends.savedGoogleRanking" || path === "googleTrends.contentsLiveRanking",
+      true: httpLink({ url: "/api/trpc", transformer: superjson }),
+      false: httpBatchLink({
+        url: "/api/trpc",
+        transformer: superjson,
+        async headers() {
+          if (!supabase) return {};
 
-        const { data } = await supabase.auth.getSession();
-        const token = data.session?.access_token;
-        setSupabaseAccessTokenCookie(token ?? null);
-        if (!token) return {};
-
-        return {
-          Authorization: `Bearer ${token}`,
-          "x-supabase-access-token": token,
-        };
-      },
-      async fetch(input, init) {
-        const headers = new Headers(init?.headers);
-        if (supabase) {
           const { data } = await supabase.auth.getSession();
           const token = data.session?.access_token;
           setSupabaseAccessTokenCookie(token ?? null);
-          if (token) {
-            headers.set("Authorization", `Bearer ${token}`);
-            headers.set("x-supabase-access-token", token);
-          }
-        }
+          if (!token) return {};
 
-        return globalThis.fetch(input, {
-          ...(init ?? {}),
-          headers,
-          credentials: "include",
-        });
-      },
+          return {
+            Authorization: `Bearer ${token}`,
+            "x-supabase-access-token": token,
+          };
+        },
+        async fetch(input, init) {
+          const headers = new Headers(init?.headers);
+          if (supabase) {
+            const { data } = await supabase.auth.getSession();
+            const token = data.session?.access_token;
+            setSupabaseAccessTokenCookie(token ?? null);
+            if (token) {
+              headers.set("Authorization", `Bearer ${token}`);
+              headers.set("x-supabase-access-token", token);
+            }
+          }
+
+          return globalThis.fetch(input, {
+            ...(init ?? {}),
+            headers,
+            credentials: "include",
+          });
+        },
+      }),
     }),
   ],
 });

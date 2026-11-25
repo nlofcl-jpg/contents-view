@@ -10,7 +10,7 @@ type HeroKeywordSlotProps = {
 export default function HeroKeywordSlot({ keywords, onSelect, onMore }: HeroKeywordSlotProps) {
   const [index, setIndex] = useState(0);
   const [animated, setAnimated] = useState(true);
-  const [interacting, setInteracting] = useState(false);
+  const [keyboardFocused, setKeyboardFocused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const count = keywords.length;
   const currentIndex = count ? index % count : 0;
@@ -30,13 +30,13 @@ export default function HeroKeywordSlot({ keywords, onSelect, onMore }: HeroKeyw
   }, [keywords]);
 
   useEffect(() => {
-    if (count < 2 || interacting || reducedMotion) return;
+    if (count < 2 || keyboardFocused || reducedMotion) return;
     const timer = window.setInterval(() => {
       setAnimated(true);
       setIndex(value => value + 1);
     }, 3200);
     return () => window.clearInterval(timer);
-  }, [count, interacting, reducedMotion]);
+  }, [count, keyboardFocused, reducedMotion]);
 
   useEffect(() => {
     if (index < count || count === 0) return;
@@ -50,18 +50,16 @@ export default function HeroKeywordSlot({ keywords, onSelect, onMore }: HeroKeyw
   if (!currentKeyword) return null;
 
   return (
-    <section className="heroPopularKeywordSection" aria-label="실시간 인기 검색어">
-      <p className="heroPopularKeywordTitle">실시간 인기 검색어</p>
+    <section className="heroPopularKeywordSection" aria-label="실시간 검색어">
+      <p className="heroPopularKeywordTitle">실시간 검색어</p>
       <button
         type="button"
         className={`heroKeywordSlot ${count === 1 ? "isSingle" : ""}`}
         aria-label={`인기 검색어 ${currentIndex + 1}위 ${currentKeyword} 검색`}
         title={`${currentKeyword} 검색`}
         onClick={() => onSelect(currentKeyword)}
-        onMouseEnter={() => setInteracting(true)}
-        onMouseLeave={() => setInteracting(false)}
-        onFocus={() => setInteracting(true)}
-        onBlur={() => setInteracting(false)}
+        onFocus={event => setKeyboardFocused(event.currentTarget.matches(":focus-visible"))}
+        onBlur={() => setKeyboardFocused(false)}
       >
         <span className="heroKeywordSlotViewport" aria-hidden="true">
           <span className={`heroKeywordSlotTrack ${animated ? "isAnimated" : ""}`} style={{ transform: `translateY(calc(var(--keyword-slot-peek) - ${index + 1} * var(--keyword-slot-height)))` }}>

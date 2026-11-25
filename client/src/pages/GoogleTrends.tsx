@@ -13,6 +13,7 @@ import { GoogleTrendRankChange, type RankChange } from "@/components/GoogleTrend
 import { readHeroKeywords } from "@/lib/heroKeywords";
 import { supabase } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
+import { useGoogleLiveRanking, useRetainedRanking } from "@/lib/useLiveSearchRankings";
 import { getSeoulDate } from "@shared/searchTrendDailyRanking";
 
 interface NewsItem {
@@ -162,7 +163,8 @@ function SearchKeywordTrends({ isAuthenticated, authLoading, onGuestAccess }: {
     refetchInterval: 30_000,
     retry: false,
   });
-  const showPublishedKeywords = !date && Boolean(supabase) && (
+  const retained = useRetainedRanking("contents", current.data?.date === getSeoulDate() ? current.data.rankings : undefined);
+  const showPublishedKeywords = !date && retained.length === 0 && Boolean(supabase) && (
     current.data?.rankings.length === 0 || (import.meta.env.DEV && current.isError)
   );
   const fallback = useQuery({
@@ -178,11 +180,11 @@ function SearchKeywordTrends({ isAuthenticated, authLoading, onGuestAccess }: {
     refetchInterval: 30_000,
     retry: false,
   });
-  const liveKeywords = (showPublishedKeywords ? fallback.data?.map(keyword => ({ keyword })) : current.data?.rankings) ?? [];
+  const liveKeywords = retained.length ? retained : (showPublishedKeywords ? fallback.data?.map(keyword => ({ keyword })) ?? [] : []);
   const canShowMoreLiveRanks = liveKeywords.length > LIVE_RANKING_PREVIEW_SIZE;
   const visibleLiveRanks = showAllLiveRanks ? liveKeywords : liveKeywords.slice(0, LIVE_RANKING_PREVIEW_SIZE);
-  const liveLoading = current.isPending || (showPublishedKeywords && fallback.isPending);
-  const liveError = showPublishedKeywords ? fallback.isError : current.isError;
+  const liveLoading = liveKeywords.length === 0 && (current.isPending || (showPublishedKeywords && fallback.isPending));
+  const liveError = liveKeywords.length === 0 && (showPublishedKeywords ? fallback.isError : current.isError);
   const history = useInfiniteQuery({
     queryKey: ["contents-view-keyword-history"],
     enabled: historyOpen && isAuthenticated,
@@ -207,7 +209,7 @@ function SearchKeywordTrends({ isAuthenticated, authLoading, onGuestAccess }: {
 
   return (
     <section aria-labelledby="search-keyword-trends-heading">
-      <RankingHeader id="search-keyword-trends-heading" title="컨텐츠뷰" date={date} onGuestAccess={!authLoading && !isAuthenticated ? onGuestAccess : undefined} onChange={value => {
+      <RankingHeader id="search-keyword-trends-heading" title="실시간" date={date} onGuestAccess={!authLoading && !isAuthenticated ? onGuestAccess : undefined} onChange={value => {
         if (value && !isAuthenticated) {
           if (!authLoading) onGuestAccess();
           return;
@@ -316,9 +318,7 @@ export default function GoogleTrends() {
   };
 
   const [selectedKeywordFromUrl, setSelectedKeywordFromUrl] = useState(getInitialParams);
-  const [popularSearches, setPopularSearches] = useState<TrendItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { ranking: popularSearches, isPending: isLoading } = useGoogleLiveRanking();
   const [selectedTrend, setSelectedTrend] = useState<TrendItem | null>(null);
   const [isNewsOpen, setIsNewsOpen] = useState(false);
   const [showAllGoogleRanks, setShowAllGoogleRanks] = useState(false);
@@ -356,53 +356,19 @@ export default function GoogleTrends() {
     document.getElementById(nextTab === "google" ? "google-trends-tab" : "search-keyword-trends-tab")?.focus();
   };
 
-  // Fetch Google Trends data
-  const { data: trendsData, isLoading: isTrendsLoading, error: trendsError } = trpc.googleTrends.realtimeTrending.useQuery(
-    { country: "KR" },
-    {
-      enabled: true,
-      retry: 1,
-      refetchInterval: 10 * 60 * 1000,
-    }
-  );
-
-  // Update popular searches when data changes
   useEffect(() => {
-    if (trendsData?.success && trendsData.data && trendsData.data.length > 0) {
-      setPopularSearches(trendsData.data);
-      setError(null);
-      setSelectedTrend(previous => {
-        const keyword = selectedKeywordFromUrl || previous?.keyword;
-        return trendsData.data.find((item: TrendItem) => item.keyword === keyword) || null;
-      });
-      if (selectedKeywordFromUrl) {
-        const hasMatchingTrend = trendsData.data.some((item: TrendItem) => item.keyword === selectedKeywordFromUrl);
-        setIsNewsOpen(hasMatchingTrend && !window.matchMedia("(max-width: 1023px)").matches);
+    if (!popularSearches.length) return;
+    if (selectedKeywordFromUrl) {
+      const match = popularSearches.find(item => item.keyword === selectedKeywordFromUrl);
+      if (match) {
+        setSelectedTrend(match);
+        setIsNewsOpen(!window.matchMedia("(max-width: 1023px)").matches);
         setSelectedKeywordFromUrl("");
-      }
-    } else if (trendsData?.success && (!trendsData.data || trendsData.data.length === 0)) {
-      setError("실시간 인기 검색어 데이터를 불러올 수 없습니다.");
-      setPopularSearches([]);
-      setSelectedTrend(null);
-      setIsNewsOpen(false);
-    } else if (trendsData?.error) {
-      setError("실시간 인기 검색어 데이터를 불러올 수 없습니다.");
-      setPopularSearches([]);
-      setSelectedTrend(null);
-      setIsNewsOpen(false);
+      } else if (!isLoading) setSelectedKeywordFromUrl("");
+      return;
     }
-    setIsLoading(isTrendsLoading);
-  }, [trendsData, isTrendsLoading, selectedKeywordFromUrl]);
-
-  // Handle error from tRPC
-  useEffect(() => {
-    if (trendsError) {
-      setError("실시간 인기 검색어 데이터를 불러올 수 없습니다.");
-      setPopularSearches([]);
-      setSelectedTrend(null);
-      setIsNewsOpen(false);
-    }
-  }, [trendsError]);
+    setSelectedTrend(previous => previous && (popularSearches.find(item => item.keyword === previous.keyword) ?? previous));
+  }, [popularSearches, isLoading, selectedKeywordFromUrl]);
 
   const handleSelectTrend = (item: TrendItem) => {
     setSelectedKeywordFromUrl("");
@@ -428,7 +394,7 @@ export default function GoogleTrends() {
           )}
         </div>
         <p className="pageDescription">
-          현재 검색 흐름과 인기 검색어를 확인하세요.
+          현재 검색 흐름과 실시간 인기 검색어 트렌드를 확인하세요.
         </p>
         <LiveTrendNavigation active="search" />
       </div>
@@ -458,7 +424,7 @@ export default function GoogleTrends() {
           onKeyDown={handleMobileTabKeyDown}
           className={`tabButton${mobileTab === "keywords" ? " active" : ""}`}
         >
-          컨텐츠뷰
+          실시간
         </button>
       </div>
 
@@ -484,11 +450,7 @@ export default function GoogleTrends() {
             setIsNewsOpen(false);
           }} />
 
-        {googleDate ? <DailyKeywordRanking source="google" date={googleDate} isAuthenticated={isAuthenticated} /> : error ? (
-          <div className="flex h-[562px] items-center justify-center rounded-md border border-slate-800 bg-slate-900/25 p-8 text-center">
-            <p className="text-slate-500">{error}</p>
-          </div>
-        ) : isLoading ? (
+        {googleDate ? <DailyKeywordRanking source="google" date={googleDate} isAuthenticated={isAuthenticated} /> : isLoading && !popularSearches.length ? (
           <div className="flex h-[562px] items-center justify-center rounded-md border border-slate-800 bg-slate-900/25 p-8 text-center">
             <p className="text-slate-500">로딩 중...</p>
           </div>

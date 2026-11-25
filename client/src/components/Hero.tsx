@@ -3,7 +3,7 @@ import HeroKeywordSlot from "@/components/HeroKeywordSlot";
 import HeroAiChat from "@/components/HeroAiChat";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { trpc } from "@/lib/trpc";
+import { useGoogleLiveRanking } from "@/lib/useLiveSearchRankings";
 import { useAuth } from "@/_core/hooks/useAuth";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 import { SearchGlowForm } from "@/components/SearchGlowForm";
@@ -41,13 +41,10 @@ export default function Hero() {
   const [keyword, setKeyword] = useState("");
   const [guestKeyword, setGuestKeyword] = useState<string | null>(null);
   const isAiMode = selectedPlatform?.value === "ai";
-  const { data: googleTrends } = trpc.googleTrends.realtimeTrending.useQuery(
-    { country: "KR" },
-    { retry: 1, refetchOnWindowFocus: false }
-  );
+  const { ranking: googleRanking } = useGoogleLiveRanking();
   const popularKeywords = useMemo(
-    () => googleTrends?.success ? (googleTrends.data ?? []).slice(0, 7).map(item => item.keyword) : [],
-    [googleTrends]
+    () => googleRanking.slice(0, 7).map(item => item.keyword),
+    [googleRanking]
   );
 
   useLayoutEffect(() => {

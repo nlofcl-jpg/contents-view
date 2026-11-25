@@ -1057,6 +1057,37 @@ async function getGoogleTrendHistoryFallback(countryCode: string): Promise<Googl
   return mergeGoogleTrendHistory(countryCode, [], Date.now());
 }
 
+async function getSavedGoogleTrendRanking(): Promise<GoogleTrendItem[]> {
+  const bounds = getSeoulDayBounds(getSeoulDate());
+  if (!supabaseAdmin || !bounds) return [];
+  const { data: snapshots, error } = await supabaseAdmin.from("google_trend_rank_snapshots")
+    .select("rankings,captured_at").eq("country_code", "KR")
+    .gte("captured_at", bounds.start).lt("captured_at", bounds.end)
+    .order("captured_at", { ascending: false }).limit(2);
+  if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "저장된 구글 순위를 불러오지 못했습니다." });
+  const [latest, previous] = snapshots ?? [];
+  if (!latest?.rankings || typeof latest.rankings !== "object" || Array.isArray(latest.rankings)) return [];
+  const entries = Object.entries(latest.rankings as Record<string, number>)
+    .filter(([keyword, rank]) => keyword && Number.isInteger(rank) && rank > 0 && rank <= 50)
+    .sort((a, b) => a[1] - b[1]);
+  if (entries.length === 0) return [];
+
+  const { data: history } = await supabaseAdmin.from("google_trend_history")
+    .select("keyword_key,keyword,traffic,traffic_count,news,last_seen_at")
+    .eq("country_code", "KR").in("keyword_key", entries.map(([key]) => key));
+  const details = new Map((history ?? []).map(row => [row.keyword_key, row as StoredGoogleTrend]));
+  return compareGoogleTrendRanks(entries.map(([key, rank]) => {
+    const item = details.get(key);
+    return {
+      rank, rankChange: "same", keyword: item?.keyword ?? key, country: "KR", source: "Google Trends",
+      traffic: item?.traffic ?? "", trafficCount: Number(item?.traffic_count) || 0,
+      news: Array.isArray(item?.news) ? item.news : [], isCurrent: false, lastSeenAt: latest.captured_at,
+    };
+  }), previous?.rankings && typeof previous.rankings === "object" && !Array.isArray(previous.rankings)
+    ? previous.rankings as Record<string, number>
+    : null);
+}
+
 // 국가별 Google Trends RSS URL
 const GOOGLE_TRENDS_RSS_URLS: Record<string, string> = {
   KR: "https://trends.google.com/trending/rss?geo=KR",
@@ -1294,17 +1325,21 @@ async function getContentsViewDailyRanks(date: string, outsideLiveRanking = fals
 
 async function getContentsViewLiveRanks() {
   const date = getSeoulDate();
-  const cumulative = await getContentsViewDailyRanks(date);
-  if (!supabaseAdmin || cumulative.rankings.length === 0) return cumulative;
-
-  const { data: published, error } = await supabaseAdmin.from("hero_search_settings")
-    .select("keywords,updated_at").eq("id", 1).maybeSingle();
-  if (error || !published || getSeoulDate(new Date(published.updated_at)) !== date) return cumulative;
+  if (!supabaseAdmin) {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "저장된 검색어를 조회할 수 없습니다." });
+  }
+  const [cumulative, { data: published, error }] = await Promise.all([
+    getContentsViewDailyRanks(date),
+    supabaseAdmin.from("hero_search_settings").select("keywords,updated_at").eq("id", 1).maybeSingle(),
+  ]);
+  if (!cumulative.rankings.length || error || !published || getSeoulDate(new Date(published.updated_at)) !== date) {
+    return { date, ...cumulative };
+  }
 
   const outside = cumulative.rankings.length === CONTENTS_LIVE_RANK_LIMIT
     ? await getContentsViewDailyRanks(date, true)
     : { rankings: [] };
-  return { rankings: placeNewContentsKeywords([...cumulative.rankings, ...outside.rankings], published.keywords) };
+  return { date, rankings: placeNewContentsKeywords([...cumulative.rankings, ...outside.rankings], published.keywords) };
 }
 
 export const appRouter = router({
@@ -2618,6 +2653,7 @@ export const appRouter = router({
   }),
 
   googleTrends: router({
+    savedGoogleRanking: publicProcedure.query(getSavedGoogleTrendRanking),
     contentsLiveRanking: publicProcedure.query(getContentsViewLiveRanks),
 
     dailyRanking: protectedProcedure

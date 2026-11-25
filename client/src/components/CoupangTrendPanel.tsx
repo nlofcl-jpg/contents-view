@@ -239,7 +239,7 @@ export default function CoupangTrendPanel() {
           avoidCollisions={false}
           collisionBoundary={mobileCategoryBoundary ?? undefined}
           aria-label="쿠팡 상품 카테고리"
-          className="coupangMobileCategoryPanel h-[var(--radix-popover-content-available-height)] w-44 min-w-0 max-w-[calc(100vw-1rem)] overflow-y-auto overscroll-contain rounded-none border-y-0 border-l-0 border-slate-700 bg-slate-950 p-1.5 md:hidden"
+          className="coupangMobileCategoryPanel h-[var(--radix-popover-content-available-height)] w-44 min-w-0 max-w-[calc(100vw-1rem)] overflow-y-auto overscroll-contain rounded-none border-y-0 border-l-0 border-slate-700 p-1.5 md:hidden"
         >
           <ul>
             {coupangCategories.map(item => (
