@@ -151,7 +151,7 @@ export default function CoupangTrendPanel() {
           align="center"
           avoidCollisions={false}
           collisionPadding={12}
-          className="flex max-h-[min(70dvh,40rem,max(10rem,var(--radix-popover-content-available-height)))] w-[var(--radix-popover-trigger-width)] flex-col border-slate-700 bg-slate-950 p-0 shadow-xl"
+          className="coupangSearchResultsPopover flex max-h-[min(70dvh,40rem,max(10rem,var(--radix-popover-content-available-height)))] w-[var(--radix-popover-trigger-width)] flex-col border-slate-700 p-0 shadow-xl"
           onCloseAutoFocus={event => event.preventDefault()}
           onEscapeKeyDown={() => {
             if (!formRef.current?.contains(document.activeElement)) inputRef.current?.focus();
@@ -207,7 +207,7 @@ export default function CoupangTrendPanel() {
         )}
         <div className="flex items-center justify-between gap-3">
           <h2 id="coupang-products-title" className="min-w-0 break-words text-lg font-semibold text-white">
-            {feed === "deals" ? "골드박스 특가" : `${categoryLabel} 인기 순위`}
+            {feed === "deals" ? "골드박스 특가" : categoryLabel}
           </h2>
           {feedResult.isError && <button type="button" className="refreshButton refreshButtonIconOnly" title="다시 불러오기" aria-label="다시 불러오기" disabled={feedResult.isFetching} onClick={() => void feedResult.refetch()}>
             <RefreshCw size={16} aria-hidden="true" />
@@ -217,7 +217,7 @@ export default function CoupangTrendPanel() {
       </section>
       <Popover open={mobileCategoriesOpen} onOpenChange={setMobileCategoriesOpen}>
         <PopoverAnchor asChild>
-          <nav ref={setMobileNavRef} aria-label="쿠팡 트렌드 하단 메뉴" className="coupangMobileNav fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-white/10 bg-slate-950/95 px-2 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-md md:hidden">
+          <nav ref={setMobileNavRef} aria-label="쿠팡 트렌드 하단 메뉴" className="coupangMobileNav fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-white/10 px-2 pb-[env(safe-area-inset-bottom,0px)] md:hidden">
             {productFeeds.map(({ id, label, Icon }) => (
               <button key={id} type="button" aria-pressed={feed === id} className="flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded text-xs font-medium text-slate-300 outline-sky-300 focus-visible:outline-2 aria-pressed:text-sky-300" onClick={() => selectMobileFeed(id)}>
                 <Icon size={18} aria-hidden="true" />

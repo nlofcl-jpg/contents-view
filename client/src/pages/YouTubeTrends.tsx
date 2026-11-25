@@ -2,7 +2,6 @@ import { useState, useEffect, useLayoutEffect, useRef, type FormEvent } from "re
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
-import { AnalysisProgress } from "@/components/AnalysisProgress";
 import { SearchGlowForm } from "@/components/SearchGlowForm";
 import LiveTrendNavigation from "@/components/LiveTrendNavigation";
 import { YouTubeApiStatusCard } from "@/components/YouTubeApiStatusCard";
@@ -30,10 +29,12 @@ const TABS = [
   { id: "shorts", label: "인기 쇼츠" },
 ] as const;
 
+const DEFAULT_YOUTUBE_TAB: TabType = "analysis";
+
 function getInitialYouTubeTab(): TabType {
-  if (typeof window === "undefined") return "rising";
+  if (typeof window === "undefined") return DEFAULT_YOUTUBE_TAB;
   const requestedTab = new URLSearchParams(window.location.search).get("tab");
-  return TABS.some(tab => tab.id === requestedTab) ? requestedTab as TabType : "rising";
+  return TABS.some(tab => tab.id === requestedTab) ? requestedTab as TabType : DEFAULT_YOUTUBE_TAB;
 }
 
 const ANALYSIS_SORT_OPTIONS: { value: AnalysisSortType; label: string }[] = [
@@ -234,8 +235,9 @@ function YouTubeLoadingState({ message }: { message: string }) {
 
 function YouTubeVideoListLoading({ message }: { message: string }) {
   return (
-    <div className="min-h-[180px]">
-      <AnalysisProgress label={message} />
+    <div className="flex min-h-28 flex-col items-center gap-3 px-3 pt-5 text-center text-[13px] text-slate-300" role="status">
+      <span className="naverAnalysisProgressTrack" aria-hidden="true" />
+      <p className="m-0">{message}</p>
     </div>
   );
 }
@@ -311,7 +313,7 @@ export default function YouTubeTrends() {
     const keywordFromUrl = searchParams.get("keyword")?.trim() || "";
 
     if (!TABS.some(tab => tab.id === targetTab)) {
-      setActiveTab("rising");
+      setActiveTab(DEFAULT_YOUTUBE_TAB);
       return;
     }
 
@@ -706,7 +708,7 @@ export default function YouTubeTrends() {
     setVisiblePreviousRecommendedCount(0);
     setVisiblePreviousShortsCount(0);
     setIsExposureCountryInfoOpen(false);
-    setLocation(tabId === "rising" ? "/trends/youtube" : `/trends/youtube?tab=${tabId}`);
+    setLocation(tabId === DEFAULT_YOUTUBE_TAB ? "/trends/youtube" : `/trends/youtube?tab=${tabId}`);
   };
 
   useEffect(() => {
@@ -1892,6 +1894,12 @@ export default function YouTubeTrends() {
 
       {!isMobile && activeTab !== "analysis" && tabFilters}
 
+      {isRefreshing && !authLoading && (
+        (activeTab === "rising" && !isRisingLoading) ||
+        (activeTab === "shorts" && isAuthenticated && (!isShortsLoading || isShortsCacheValid)) ||
+        ((activeTab === "trending" || activeTab === "category") && isAuthenticated && (!isLoading || isCacheValid))
+      ) && <YouTubeVideoListLoading message="영상 목록을 새로고침하는 중입니다..." />}
+
       {/* Content Section */}
       {activeTab === "analysis" ? (
         renderAnalysisTab()
@@ -1908,12 +1916,6 @@ export default function YouTubeTrends() {
       ) : activeTab === "shorts" ? (
         renderShortsTab()
       ) : null}
-
-      {isRefreshing && !authLoading && (
-        (activeTab === "rising" && !isRisingLoading) ||
-        (activeTab === "shorts" && isAuthenticated && (!isShortsLoading || isShortsCacheValid)) ||
-        ((activeTab === "trending" || activeTab === "category") && isAuthenticated && (!isLoading || isCacheValid))
-      ) && <AnalysisProgress label="영상 목록을 새로고침하는 중입니다..." />}
 
       <GuestAccessPrompt
         open={isRisingGuestPromptOpen && !isAuthenticated}

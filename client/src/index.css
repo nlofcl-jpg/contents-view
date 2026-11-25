@@ -12291,11 +12291,25 @@ input[type="date"].youtubeSelect {
   }
 }
 
+:root {
+  --trend-glass-background: linear-gradient(145deg, rgb(37 67 97 / 0.36), rgb(13 25 43 / 0.62) 48%, rgb(12 33 48 / 0.48));
+}
+
 .trend-comparison-glass,
-.coupangMobileCategoryPanel {
-  background: linear-gradient(145deg, rgb(37 67 97 / 0.36), rgb(13 25 43 / 0.62) 48%, rgb(12 33 48 / 0.48));
+.coupangSearchResultsPopover {
+  background: var(--trend-glass-background);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
+}
+
+@media (max-width: 767px) {
+  .coupangMobileCategoryPanel,
+  .creatorTrendMobileNav,
+  .coupangMobileNav {
+    background: var(--trend-glass-background);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
 }
 
 .trend-comparison-glass {

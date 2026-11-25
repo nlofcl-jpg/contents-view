@@ -31,7 +31,7 @@ export default function LiveTrendNavigation({ active }: { active: (typeof links)
           </Link>
         ))}
       </nav>
-      <nav aria-label="크리에이터 트렌드 하단 메뉴" className="creatorTrendMobileNav fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-white/10 bg-slate-950/95 px-2 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-md md:hidden">
+      <nav aria-label="크리에이터 트렌드 하단 메뉴" className="creatorTrendMobileNav fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-white/10 px-2 pb-[env(safe-area-inset-bottom,0px)] md:hidden">
         {links.map(item => (
           <Link
             key={item.id}
