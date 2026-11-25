@@ -5286,6 +5286,49 @@ a {
   margin-bottom: var(--commerce-section-spacing);
 }
 
+.coupangSearchComposer {
+  position: relative;
+}
+
+@property --coupang-search-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.coupangSearchGlow {
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--coupang-search-angle),
+    transparent 0deg 230deg,
+    rgb(var(--view-logo-violet) / 0.25) 268deg,
+    rgb(var(--view-logo-blue)) 310deg,
+    #d8faff 348deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: coupangSearchGlowSweep 900ms linear both;
+}
+
+@keyframes coupangSearchGlowSweep {
+  0% { --coupang-search-angle: 0deg; opacity: 0; }
+  14%, 78% { opacity: 1; }
+  100% { --coupang-search-angle: 360deg; opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coupangSearchGlow {
+    display: none;
+  }
+}
+
 .youtubeAnalysisInputWrap {
   position: relative;
   min-width: 0;
