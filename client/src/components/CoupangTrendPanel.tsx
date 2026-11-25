@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 import { SearchGlowForm } from "@/components/SearchGlowForm";
+import { useMobileNavScroll } from "@/hooks/useMobileNavScroll";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { trpc } from "@/lib/trpc";
 import { coupangCategories, type CoupangCategoryId } from "@shared/coupangPartners";
@@ -87,6 +88,7 @@ export default function CoupangTrendPanel() {
   const [searchedKeyword, setSearchedKeyword] = useState("");
   const [resultsOpen, setResultsOpen] = useState(false);
   const [mobileCategoriesOpen, setMobileCategoriesOpen] = useState(false);
+  const mobileNavHidden = useMobileNavScroll(mobileCategoriesOpen);
   const [mobileCategoryBoundary, setMobileCategoryBoundary] = useState<HTMLElement | null>(null);
   const [guestPrompt, setGuestPrompt] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -217,7 +219,7 @@ export default function CoupangTrendPanel() {
       </section>
       <Popover open={mobileCategoriesOpen} onOpenChange={setMobileCategoriesOpen}>
         <PopoverAnchor asChild>
-          <nav ref={setMobileNavRef} aria-label="쿠팡 트렌드 하단 메뉴" className="coupangMobileNav fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-white/10 px-2 pb-[env(safe-area-inset-bottom,0px)] md:hidden">
+          <nav ref={setMobileNavRef} aria-label="쿠팡 트렌드 하단 메뉴" data-scroll-hidden={mobileNavHidden} className="coupangMobileNav fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-white/10 px-2 pb-[env(safe-area-inset-bottom,0px)] md:hidden">
             {productFeeds.map(({ id, label, Icon }) => (
               <button key={id} type="button" aria-pressed={feed === id} className="flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded text-xs font-medium text-slate-300 outline-sky-300 focus-visible:outline-2 aria-pressed:text-sky-300" onClick={() => selectMobileFeed(id)}>
                 <Icon size={18} aria-hidden="true" />

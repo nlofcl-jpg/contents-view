@@ -5395,6 +5395,16 @@ a {
     display: none;
   }
 
+  :is(.creatorTrendMobileNav, .coupangMobileNav) {
+    transform: translateY(0);
+    transition: transform 240ms ease;
+  }
+
+  :is(.creatorTrendMobileNav, .coupangMobileNav)[data-scroll-hidden="true"]:not(:has(:focus-visible)) {
+    transform: translateY(100%);
+    pointer-events: none;
+  }
+
   .app:has(.coupangMobileNav, .creatorTrendMobileNav) .mainContent {
     padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
     scroll-padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
@@ -5407,6 +5417,12 @@ a {
   .app:has(.coupangMobileNav, .creatorTrendMobileNav) .supportChat {
     bottom: calc(114px + env(safe-area-inset-bottom, 0px));
     max-height: calc(100dvh - 184px - env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.creatorTrendMobileNav, .coupangMobileNav) {
+    transition: none;
   }
 }
 

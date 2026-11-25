@@ -233,9 +233,9 @@ function YouTubeLoadingState({ message }: { message: string }) {
   );
 }
 
-function YouTubeVideoListLoading({ message }: { message: string }) {
+function YouTubeVideoListLoading({ message, centered = false }: { message: string; centered?: boolean }) {
   return (
-    <div className="flex min-h-28 flex-col items-center gap-3 px-3 pt-5 text-center text-[13px] text-slate-300" role="status">
+    <div className={`flex flex-col items-center gap-3 px-3 text-center text-[13px] text-slate-300 ${centered ? "min-h-[max(12rem,calc(100dvh-24rem))] justify-center" : "min-h-28 pt-5"}`} role="status">
       <span className="naverAnalysisProgressTrack" aria-hidden="true" />
       <p className="m-0">{message}</p>
     </div>
@@ -1321,7 +1321,7 @@ export default function YouTubeTrends() {
   const renderRisingTab = () => {
     if (isRisingLoading) {
       return (
-        <YouTubeVideoListLoading message="급상승 영상을 불러오는 중입니다..." />
+        <YouTubeVideoListLoading message="급상승 영상을 불러오는 중입니다..." centered />
       );
     }
 
