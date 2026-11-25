@@ -6,6 +6,11 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
 
+function getClientEntry(url: string) {
+  const pathname = new URL(url, "http://localhost").pathname.replace(/\/$/, "");
+  return pathname === "/ai-studio/resources/analog-clocks" ? "ai-studio/resources/analog-clocks.html" : "index.html";
+}
+
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
     middlewareMode: true,
@@ -29,7 +34,7 @@ export async function setupVite(app: Express, server: Server) {
         import.meta.dirname,
         "../..",
         "client",
-        "index.html"
+        getClientEntry(url)
       );
 
       // always reload the index.html file from disk incase it changes
@@ -60,8 +65,8 @@ export function serveStatic(app: Express) {
 
   app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+  // Use the route's entry page if there is no matching static file.
+  app.use("*", (req, res) => {
+    res.sendFile(path.resolve(distPath, getClientEntry(req.originalUrl)));
   });
 }

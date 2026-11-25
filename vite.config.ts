@@ -167,6 +167,12 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: path.join(PROJECT_ROOT, "client", "index.html"),
+        clockShare: path.join(PROJECT_ROOT, "client", "ai-studio", "resources", "analog-clocks.html"),
+      },
+    },
   },
   server: {
     host: true,

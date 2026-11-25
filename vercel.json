@@ -13,6 +13,10 @@
   },
   "rewrites": [
     {
+      "source": "/ai-studio/resources/analog-clocks",
+      "destination": "/ai-studio/resources/analog-clocks.html"
+    },
+    {
       "source": "/news/issues/:id",
       "has": [
         {

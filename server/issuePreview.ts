@@ -1,6 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { stripIssueBodyFormatting } from "../shared/issueBody";
 
+const SITE_ORIGIN = "https://contents-view-chi.vercel.app";
+const FALLBACK_IMAGE = `${SITE_ORIGIN}/contents-view-symbol.png`;
+
 type IssuePreview = {
   title: string;
   summary: string | null;
@@ -31,9 +34,19 @@ function getIssueId(req: any) {
   if (queryId) return queryId;
 
   try {
-    return new URL(req.url ?? "", "https://contents-view-chi.vercel.app").searchParams.get("id");
+    return new URL(req.url ?? "", SITE_ORIGIN).searchParams.get("id");
   } catch {
     return null;
+  }
+}
+
+function getPreviewImage(value: string | null) {
+  if (!value?.trim()) return FALLBACK_IMAGE;
+  try {
+    const url = new URL(value, SITE_ORIGIN);
+    return url.protocol === "https:" && !url.username && !url.password ? url.href : FALLBACK_IMAGE;
+  } catch {
+    return FALLBACK_IMAGE;
   }
 }
 
@@ -106,15 +119,10 @@ export default async function handler(req: any, res: any) {
     return;
   }
 
-  const forwardedHost = getQueryValue(req.headers?.["x-forwarded-host"]);
-  const host = forwardedHost ?? req.headers?.host ?? "contents-view-chi.vercel.app";
-  const forwardedProtocol = getQueryValue(req.headers?.["x-forwarded-proto"]);
-  const protocol = forwardedProtocol ?? "https";
-  const origin = `${protocol}://${host}`;
   const issue = data as IssuePreview;
   const title = issue.article_title || issue.title;
   const description = stripIssueBodyFormatting(issue.summary || issue.article_summary || "CONTENTS VIEW 뉴스 포커스");
-  const imageUrl = issue.thumbnail_url || `${origin}/contents-view-symbol.png`;
+  const imageUrl = getPreviewImage(issue.thumbnail_url);
 
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=600");
@@ -124,7 +132,7 @@ export default async function handler(req: any, res: any) {
       title,
       description,
       imageUrl,
-      pageUrl: `${origin}/news/issues/${issueId}`,
+      pageUrl: `${SITE_ORIGIN}/news/issues/${encodeURIComponent(issueId)}`,
     }),
   );
 }
