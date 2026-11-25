@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 import VoiceSearchButton from "@/components/VoiceSearchButton";
+import CoupangTrendPanel from "@/components/CoupangTrendPanel";
 import { useNaverTrendComparison } from "@/components/NaverTrendComparison";
 import { NAVER_GUEST_DAILY_LIMIT_MESSAGE, NAVER_MEMBER_DAILY_LIMIT_MESSAGE } from "@shared/naverAnalysisQuota";
 
 export default function CommerceTrends() {
   const [, navigate] = useLocation();
+  const coupangActive = new URLSearchParams(useSearch()).get("tab") === "coupang";
   const { loading: authLoading } = useAuth();
   const [guestPromptOpen, setGuestPromptOpen] = useState(false);
   const [keywordInput, setKeywordInput] = useState("");
@@ -40,10 +42,15 @@ export default function CommerceTrends() {
         </h1>
       </div>
       <div className="tabMenu youtubeTabMenu" role="group" aria-label="커머스 트렌드 선택">
-        <button type="button" className="tabButton active" aria-pressed="true">
+        <button type="button" className={`tabButton${coupangActive ? "" : " active"}`} aria-pressed={!coupangActive} onClick={() => navigate("/commerce")}>
           쇼핑 트렌드 비교
         </button>
+        <button type="button" className={`tabButton${coupangActive ? " active" : ""}`} aria-pressed={coupangActive} onClick={() => navigate("/commerce?tab=coupang")}>
+          쿠팡 트렌드
+        </button>
       </div>
+      {coupangActive ? <CoupangTrendPanel /> : (
+      <>
       <form
         className="heroSearch naverAnalysisComposer commerceAnalysisComposer"
         role="search"
@@ -83,6 +90,8 @@ export default function CommerceTrends() {
         onLogin={() => goToAuth("login")}
         onSignup={() => goToAuth("signup")}
       />
+      </>
+      )}
     </div>
   );
 }

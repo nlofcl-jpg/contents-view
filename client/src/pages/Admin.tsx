@@ -7,6 +7,7 @@ import { issueFocusCategories, isIssueFocusCategoryId, normalizeIssueFocusCatego
 import { issueClippingLabel, issueFocusLabel } from "@/lib/newsNavigation";
 import { ChevronDown, ChevronLeft, ChevronRight, Paperclip, RefreshCw, X } from "lucide-react";
 import NaverSearchAdKeyPanel from "@/components/NaverSearchAdKeyPanel";
+import CoupangPartnersKeyPanel from "@/components/CoupangPartnersKeyPanel";
 import HeroKeywordsPanel from "@/components/HeroKeywordsPanel";
 import SiteBannerPanel from "@/components/SiteBannerPanel";
 import { getStoredIssueImagePath, removeStoredIssueImages, uploadIssueImage, validateIssueImage, validateIssueImageUrl } from "@/lib/issueImages";
@@ -1271,6 +1272,7 @@ function ApiKeysPanel() {
             <NaverSearchAdKeyPanel isActive />
           </div>
         </div>
+        <CoupangPartnersKeyPanel />
       </div>
     </section>
   );

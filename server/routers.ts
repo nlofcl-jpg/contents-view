@@ -29,6 +29,7 @@ import { getLatestRssNews } from "./latestNews";
 import { partnershipInquiryInput, partnershipConsentRecord } from "../shared/partnershipConsent";
 import { createAccountWithdrawalProcedure } from "./accountWithdrawal";
 import { createAiTestRouter } from "./aiTest";
+import { createCoupangPartnersRouter } from "./coupangPartners";
 
 const require = createRequire(import.meta.url);
 
@@ -1310,6 +1311,7 @@ export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   aiTest: createAiTestRouter(),
+  coupang: createCoupangPartnersRouter(supabaseAdmin, process.env.API_KEY_ENCRYPTION_SECRET?.trim() || ENV.supabaseServiceRoleKey),
   partnership: router({
     submit: publicProcedure.input(partnershipInquiryInput).mutation(async ({ input }) => {
       if (!supabaseAdmin) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "문의 접수를 사용할 수 없습니다." });
