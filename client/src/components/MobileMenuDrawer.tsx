@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
-import { X, Home, LogOut, User, ShieldCheck, Bookmark } from "lucide-react";
+import { X, Home, LogOut, User, ShieldCheck, Bookmark, MessageCircle } from "lucide-react";
 import { useState } from "react";
 import { getActiveNewsPath, newsLinks } from "@/lib/newsNavigation";
 import SocialIcons from "@/components/SocialIcons";
@@ -172,13 +172,13 @@ export function MobileMenuDrawer({
                 <span>홈</span>
               </button>
 
-              {/* 실시간 트렌드 그룹 */}
+              {/* 크리에이터 트렌드 그룹 */}
               <button
                 className="mobileNavItem groupTitle"
                 onClick={() => setIsTrendOpen(!isTrendOpen)}
                 type="button"
               >
-                <span>실시간 트렌드</span>
+                <span>크리에이터 트렌드</span>
                 <span style={{ marginLeft: "auto", transition: "transform 0.2s" }}>
                   {isTrendOpen ? "⌄" : "⌃"}
                 </span>
@@ -202,6 +202,16 @@ export function MobileMenuDrawer({
                   >
                     <img className="mobileTrendLogo" src="/naver-favicon.png" alt="" aria-hidden="true" />
                     <span>네이버 트렌드</span>
+                  </button>
+
+                  <button
+                    className={`mobileNavItem subNavItem ${isCommunityPage ? "active" : ""}`}
+                    aria-current={isCommunityPage ? "page" : undefined}
+                    onClick={() => handleNavigation("/community")}
+                    type="button"
+                  >
+                    <MessageCircle className="mobileTrendLogo" aria-hidden="true" />
+                    <span>커뮤니티 트렌드</span>
                   </button>
 
                   <button
@@ -244,13 +254,6 @@ export function MobileMenuDrawer({
                 </div>
               )}
 
-              <button
-                className={`mobileNavItem ${isCommunityPage ? "active" : ""}`}
-                onClick={() => handleNavigation("/community")}
-                type="button"
-              >
-                <span>커뮤니티 트렌드</span>
-              </button>
               <button
                 className={`mobileNavItem ${isCommercePage ? "active" : ""}`}
                 aria-current={isCommercePage ? "page" : undefined}
@@ -302,7 +305,7 @@ export function MobileMenuDrawer({
                     onClick={() => handleNavigation("/ai-studio/resources")}
                     type="button"
                   >
-                    <span>자료실</span>
+                    <span>도구</span>
                   </button>
                 </div>
               )}

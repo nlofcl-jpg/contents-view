@@ -4,6 +4,7 @@ import { ChevronDown, Loader2, RotateCcw, Search } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { AnalysisProgress } from "@/components/AnalysisProgress";
+import { SearchGlowForm } from "@/components/SearchGlowForm";
 import NewsTrendHeader from "@/components/NewsTrendHeader";
 
 interface NewsItem {
@@ -93,7 +94,7 @@ export default function NewsSearchResults() {
 
       <section className="newsSearchSection" aria-labelledby="news-search-result-title">
         <h2 id="news-search-result-title" className="newsSearchTitle">뉴스 검색</h2>
-        <form onSubmit={handleSearch} className="newsSearchForm">
+        <SearchGlowForm onSubmit={handleSearch} className="newsSearchForm">
           <input
             ref={searchInputRef}
             type="text"
@@ -105,7 +106,7 @@ export default function NewsSearchResults() {
           <button type="submit" className="newsSearchIconButton" aria-label="검색">
             <Search size={19} strokeWidth={2.1} />
           </button>
-        </form>
+        </SearchGlowForm>
       </section>
 
       <section className="newsSearchResultsSection">

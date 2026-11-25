@@ -17,7 +17,7 @@ export default function Footer() {
             </span>
           </Link>
           <p className="siteFooterDescription">
-            실시간 트렌드와 이슈 흐름을
+            크리에이터 트렌드와 이슈 흐름을
             <br />
             한 곳에서 확인하는 콘텐츠 인사이트 서비스
           </p>

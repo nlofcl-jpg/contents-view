@@ -5,6 +5,7 @@ import { Link, useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { getIssueOpeningParagraph, stripIssueBodyFormatting } from "@shared/issueBody";
 import IssueDate from "@/components/IssueDate";
+import { SearchGlowForm } from "@/components/SearchGlowForm";
 import NewsTrendHeader from "@/components/NewsTrendHeader";
 import NewsBriefingSidebar from "@/components/NewsBriefingSidebar";
 import { issueFocusCategories, matchesIssueFocusCategory, type IssueFocusCategory } from "@/lib/issueFocusCategories";
@@ -482,7 +483,7 @@ export default function News() {
         </section>
       ) : (
         <section className="newsSearchSection newsSearchTabPanel" role="tabpanel" aria-label="뉴스 검색">
-          <form onSubmit={handleSearch} className="newsSearchForm">
+          <SearchGlowForm onSubmit={handleSearch} className="newsSearchForm">
             <input
               type="text"
               placeholder="관심 키워드를 검색해보세요."
@@ -494,7 +495,7 @@ export default function News() {
             <button type="submit" className="newsSearchIconButton" aria-label="검색">
               <Search size={19} strokeWidth={2.1} />
             </button>
-          </form>
+          </SearchGlowForm>
         </section>
       )}
     </div>

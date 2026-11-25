@@ -4,6 +4,7 @@ import { useLocation, Link } from "wouter";
 const trendItems = [
   { name: "유튜브 트렌드", badge: "▶", path: "/trends/youtube" },
   { name: "네이버", badge: "N", path: "/trends/naver" },
+  { name: "커뮤니티 트렌드", badge: "☷", path: "/community" },
   { name: "검색 트렌드", badge: "G", path: "/trends/google" },
 ];
 
@@ -42,7 +43,7 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
             aria-expanded={isTrendOpen}
           >
             <span className="navIcon">◉</span>
-            <span className="navLabel">실시간 트렌드</span>
+            <span className="navLabel">크리에이터 트렌드</span>
             <span className={`groupChevron ${isTrendOpen ? "open" : ""}`}>⌄</span>
           </button>
 
@@ -61,11 +62,6 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }: Sidebar
         <Link href="/news" className={`navItem ${location === "/news" ? "active" : ""}`} onClick={handleLinkClick}>
           <span className="navIcon">▤</span>
           <span className="navLabel">뉴스 트렌드</span>
-        </Link>
-
-        <Link href="/community" className={`navItem ${location === "/community" ? "active" : ""}`} onClick={handleLinkClick}>
-          <span className="navIcon">☷</span>
-          <span className="navLabel">커뮤니티 트렌드</span>
         </Link>
 
         <Link href="/saved-contents" className={`navItem ${location === "/saved-contents" ? "active" : ""}`} onClick={handleLinkClick}>

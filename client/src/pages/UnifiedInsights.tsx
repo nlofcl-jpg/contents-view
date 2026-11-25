@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnalysisProgress } from "@/components/AnalysisProgress";
+import { SearchGlowForm } from "@/components/SearchGlowForm";
 import { useAuth } from "@/_core/hooks/useAuth";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 import VoiceSearchButton from "@/components/VoiceSearchButton";
@@ -528,7 +529,7 @@ export default function UnifiedInsights() {
       )}
 
       <div className="flex w-full flex-col items-center">
-        <form
+        <SearchGlowForm
           className="heroSearch naverAnalysisComposer"
           role="search"
           aria-label="네이버 트렌드 분석"
@@ -593,7 +594,7 @@ export default function UnifiedInsights() {
               <Search size={18} aria-hidden="true" />
             </button>
           </div>
-        </form>
+        </SearchGlowForm>
         {queryError && !isLoading && !isBlogLoading && !querySuccess && !chartData && !blogAnalysisData && (
           <p className="mt-3 text-sm text-red-300" role="alert">{queryError}</p>
         )}

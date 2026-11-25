@@ -1229,6 +1229,27 @@ a {
   position: relative;
 }
 
+.headerNavGroup {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.headerNavToggle {
+  display: grid;
+  width: 22px;
+  place-items: center;
+  color: #b7c5de;
+  cursor: pointer;
+}
+
+.headerNavToggle:hover {
+  color: #fff;
+}
+
+.headerNavGroup:has(.headerNavButton.active) .headerNavToggle {
+  color: #158cff;
+}
+
 .headerNavButton {
   display: inline-flex;
   align-items: center;
@@ -2176,6 +2197,10 @@ a {
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+}
+
+.heroHomePlatformMenu .heroSearchMenuItem {
+  color: rgb(255 255 255 / 0.82);
 }
 
 .heroSearchMenuItem[data-highlighted],
@@ -5171,6 +5196,54 @@ a {
   border: 1px solid rgba(34, 211, 238, 0.25);
 }
 
+.youtubeTabMenu > .youtubeFilterTab.tabButton {
+  display: inline-flex;
+  flex: 0 0 auto;
+  padding: 0;
+}
+
+.youtubeFilterTab > button {
+  border-radius: 6px;
+  outline-offset: -2px;
+}
+
+.youtubeFilterTabTrigger {
+  display: grid;
+  width: 34px;
+  flex: 0 0 34px;
+  place-items: center;
+  cursor: pointer;
+}
+
+.youtubeFilterTabTrigger[aria-expanded="true"] > svg {
+  transform: rotate(180deg);
+}
+
+.youtubeTabFilterPopover .filterSection {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+  border: 0;
+  background: transparent;
+}
+
+.youtubeTabFilterPopover .selectWrapper {
+  width: 100%;
+}
+
+.youtubeTabFilterPopover .filterGroup {
+  position: relative;
+}
+
+.youtubeTabFilterPopover .exposureCountryInfo {
+  position: static;
+}
+
+.youtubeTabFilterPopover .exposureCountryInfoPopup {
+  left: 0;
+  width: 100%;
+}
+
 .liveTrendNavigation.tabMenu {
   justify-content: safe center;
   margin-bottom: 0;
@@ -5286,45 +5359,116 @@ a {
   margin-bottom: var(--commerce-section-spacing);
 }
 
-.coupangSearchComposer {
-  position: relative;
+.coupangMobileCategoryPanel[data-state="open"] {
+  animation: coupangCategorySlideIn 240ms ease-out both;
 }
 
-@property --coupang-search-angle {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
+.coupangMobileCategoryPanel[data-state="closed"] {
+  animation: coupangCategorySlideOut 180ms ease-in both;
 }
 
-.coupangSearchGlow {
-  position: absolute;
-  inset: -3px;
-  border-radius: inherit;
-  padding: 2px;
-  background: conic-gradient(
-    from var(--coupang-search-angle),
-    transparent 0deg 230deg,
-    rgb(var(--view-logo-violet) / 0.25) 268deg,
-    rgb(var(--view-logo-blue)) 310deg,
-    #d8faff 348deg,
-    transparent 360deg
-  );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  animation: coupangSearchGlowSweep 900ms linear both;
+@keyframes coupangCategorySlideIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
 }
 
-@keyframes coupangSearchGlowSweep {
-  0% { --coupang-search-angle: 0deg; opacity: 0; }
-  14%, 78% { opacity: 1; }
-  100% { --coupang-search-angle: 360deg; opacity: 0; }
+@keyframes coupangCategorySlideOut {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .coupangSearchGlow {
+  .coupangMobileCategoryPanel[data-state] {
+    animation: none;
+  }
+}
+
+@media (width < 768px) {
+  .pageHeader > .liveTrendNavigation.tabMenu {
+    display: none;
+  }
+
+  .app:has(.coupangMobileNav, .creatorTrendMobileNav) .mainContent {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    scroll-padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .app:has(.coupangMobileNav, .creatorTrendMobileNav) .supportChatLauncher {
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .app:has(.coupangMobileNav, .creatorTrendMobileNav) .supportChat {
+    bottom: calc(114px + env(safe-area-inset-bottom, 0px));
+    max-height: calc(100dvh - 184px - env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.searchGlowForm {
+  position: relative;
+  isolation: isolate;
+}
+
+.heroSearch.searchGlowForm {
+  background: transparent;
+}
+
+.heroSearch.searchGlowForm::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  border: 2px solid transparent;
+  border-radius: inherit;
+  background: #111a2b padding-box;
+  pointer-events: none;
+}
+
+.newsSearchForm.searchGlowForm {
+  --search-glow-corner-radius: 23px;
+}
+
+.searchBorderGlow {
+  position: absolute;
+  inset: -9px;
+  z-index: -2;
+  width: calc(100% + 18px);
+  height: calc(100% + 18px);
+  overflow: visible;
+  pointer-events: none;
+  animation: searchBorderGlowEnvelope 6.4s linear both;
+}
+
+.searchBorderGlowTrack {
+  x: 8px;
+  y: 8px;
+  width: calc(100% - 16px);
+  height: calc(100% - 16px);
+  rx: var(--search-glow-corner-radius, 20px);
+}
+
+.searchBorderGlowBeam {
+  stroke-dasharray: 38 62;
+  filter: blur(10px);
+  animation: searchBorderGlowTravel 6.4s linear both;
+}
+
+.searchBorderGlowHalo {
+  filter: blur(9px);
+  opacity: 0.9;
+}
+
+@keyframes searchBorderGlowEnvelope {
+  0%, 100% { opacity: 0; }
+  10%, 88% { opacity: 0.9; }
+}
+
+@keyframes searchBorderGlowTravel {
+  from { stroke-dashoffset: 8; }
+  to { stroke-dashoffset: -92; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .searchBorderGlow {
     display: none;
   }
 }
@@ -10551,17 +10695,6 @@ input[type="date"].youtubeSelect {
 }
 
 
-/* Community Page Container */
-.communityPage {
-  width: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 64px 1rem 96px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
 .communitySourceFilters.tabMenu {
   align-self: stretch;
   flex-wrap: nowrap;
@@ -10647,18 +10780,6 @@ input[type="date"].youtubeSelect {
 
   .communityMobileTime {
     display: inline-flex;
-  }
-}
-
-@media (min-width: 640px) {
-  .communityPage {
-    padding: 64px 1.5rem 96px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .communityPage {
-    padding: 64px 2rem 96px;
   }
 }
 

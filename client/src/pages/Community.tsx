@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { formatCommunityDateTime } from "@/lib/communityDateTime";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
+import LiveTrendNavigation from "@/components/LiveTrendNavigation";
 import { useAuth } from "@/_core/hooks/useAuth";
 
 const COMMUNITY_OPTIONS = [
@@ -119,10 +120,11 @@ export default function Community() {
   };
 
   return (
-    <div className="communityPage">
+    <div className="youtubePageContainer">
       <div className="pageHeader">
         <h1 className="pageTitle">커뮤니티 트렌드</h1>
         <p className="pageDescription">커뮤니티별 신규 글과 반응을 한 곳에서 확인하고 컨텐츠로 만들어보세요.</p>
+        <LiveTrendNavigation active="community" />
       </div>
 
       <div className="tabMenu communitySourceFilters" role="group" aria-label="커뮤니티 선택">

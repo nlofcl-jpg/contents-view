@@ -48,6 +48,7 @@ export default function Header({
   const trendItems = [
     { name: "유튜브 트렌드", path: "/trends/youtube" },
     { name: "네이버 트렌드", path: "/trends/naver" },
+    { name: "커뮤니티 트렌드", path: "/community" },
     { name: "검색 트렌드", path: "/trends/google" },
   ];
 
@@ -55,7 +56,7 @@ export default function Header({
     { name: "콘텐츠 제작", path: "/ai-studio/video" },
     { name: "프로그램", path: "/ai-studio/programs" },
     { name: "오픈소스", path: "/ai-studio/open-source" },
-    { name: "자료실", path: "/ai-studio/resources" },
+    { name: "도구", path: "/ai-studio/resources" },
   ];
 
   const latestNoticeId = notices[0]?.id ?? null;
@@ -218,10 +219,6 @@ export default function Header({
     if (!onGuestMenuAccess?.(path)) setLocation(path);
   };
 
-  const handleNavLinkClick = (event: React.MouseEvent<HTMLAnchorElement>, path: string) => {
-    if (onGuestMenuAccess?.(path)) event.preventDefault();
-  };
-
   const handleLogout = async () => {
     setIsDropdownOpen(false);
     await logout();
@@ -333,15 +330,25 @@ export default function Header({
 
         {/* 헤더 중앙 네비게이션 메뉴 */}
         <nav className="headerNavMenu desktopOnly">
-        <div 
-          className="headerNavItem"
+        <div
+          className="headerNavItem headerNavGroup"
           ref={trendMenuRef}
           onMouseEnter={() => handleTrendMenuHover(true)}
           onMouseLeave={() => handleTrendMenuHover(false)}
         >
-          <button 
+          <button
             type="button"
-            className="headerNavButton"
+            className={`headerNavButton ${trendItems.some(item => item.path === location) ? "active" : ""}`}
+            onClick={() => handleTrendItemClick(trendItems[0].path)}
+          >
+            크리에이터 트렌드
+          </button>
+          <button
+            type="button"
+            className="headerNavToggle"
+            aria-label="크리에이터 트렌드 하위 메뉴"
+            aria-expanded={openTrendMenu}
+            aria-controls="header-creator-submenu"
             onClick={() => {
               if (onGuestMenuAccess?.("/trends/youtube", () => setOpenTrendMenu(true))) {
                 setOpenTrendMenu(false);
@@ -350,19 +357,19 @@ export default function Header({
               setOpenTrendMenu(!openTrendMenu);
             }}
           >
-            실시간 트렌드
             <ChevronDown
               className={`headerNavChevron ${openTrendMenu ? "open" : ""}`}
               aria-hidden="true"
             />
           </button>
           {openTrendMenu && (
-            <div className="headerNavDropdown" onMouseEnter={() => handleTrendMenuHover(true)} onMouseLeave={() => handleTrendMenuHover(false)}>
+            <div id="header-creator-submenu" className="headerNavDropdown" onMouseEnter={() => handleTrendMenuHover(true)} onMouseLeave={() => handleTrendMenuHover(false)}>
               {trendItems.map((item) => (
                 <button
                   key={item.name}
                   type="button"
                   className="headerNavDropdownItem"
+                  aria-current={location === item.path ? "page" : undefined}
                   onClick={() => handleTrendItemClick(item.path)}
                 >
                   {item.name}
@@ -373,7 +380,7 @@ export default function Header({
         </div>
 
         <div
-          className="headerNavItem"
+          className="headerNavItem headerNavGroup"
           ref={newsMenuRef}
           onMouseEnter={() => handleNewsMenuHover(true)}
           onMouseLeave={() => handleNewsMenuHover(false)}
@@ -381,11 +388,20 @@ export default function Header({
           <button
             type="button"
             className={`headerNavButton ${location.startsWith("/news") ? "active" : ""}`}
+            onClick={() => handleNewsItemClick(newsLinks[0].href)}
+          >
+            뉴스 트렌드
+          </button>
+          <button
+            type="button"
+            className="headerNavToggle"
+            aria-label="뉴스 트렌드 하위 메뉴"
+            aria-expanded={openNewsMenu}
+            aria-controls="header-news-submenu"
             onClick={() => {
               setOpenNewsMenu(!openNewsMenu);
             }}
           >
-            뉴스 트렌드
             <ChevronDown
               className={`headerNavChevron ${openNewsMenu ? "open" : ""}`}
               aria-hidden="true"
@@ -393,6 +409,7 @@ export default function Header({
           </button>
           {openNewsMenu && (
             <div
+              id="header-news-submenu"
               className="headerNavDropdown"
               onMouseEnter={() => handleNewsMenuHover(true)}
               onMouseLeave={() => handleNewsMenuHover(false)}
@@ -411,15 +428,12 @@ export default function Header({
           )}
         </div>
 
-        <a href="/community" onClick={(event) => handleNavLinkClick(event, "/community")} className={`headerNavItem headerNavLink ${location === "/community" ? "active" : ""}`}>
-          커뮤니티 트렌드
-        </a>
         <a href="/commerce" className={`headerNavItem headerNavLink ${location === "/commerce" ? "active" : ""}`} aria-current={location === "/commerce" ? "page" : undefined}>
           커머스 트렌드
         </a>
 
         <div
-          className="headerNavItem"
+          className="headerNavItem headerNavGroup"
           ref={studioMenuRef}
           onMouseEnter={() => handleStudioMenuHover(true)}
           onMouseLeave={() => handleStudioMenuHover(false)}
@@ -427,7 +441,16 @@ export default function Header({
           <button
             type="button"
             className={`headerNavButton ${location.startsWith("/ai-studio") ? "active" : ""}`}
+            onClick={() => handleStudioItemClick(studioItems[0].path)}
+          >
+            스튜디오
+          </button>
+          <button
+            type="button"
+            className="headerNavToggle"
+            aria-label="스튜디오 하위 메뉴"
             aria-expanded={openStudioMenu}
+            aria-controls="header-studio-submenu"
             onClick={() => {
               if (onGuestMenuAccess?.("/ai-studio", () => setOpenStudioMenu(true))) {
                 setOpenStudioMenu(false);
@@ -436,11 +459,10 @@ export default function Header({
               setOpenStudioMenu(true);
             }}
           >
-            스튜디오
             <ChevronDown className={`headerNavChevron ${openStudioMenu ? "open" : ""}`} aria-hidden="true" />
           </button>
           {openStudioMenu && (
-            <div className="headerNavDropdown" onMouseEnter={() => handleStudioMenuHover(true)} onMouseLeave={() => handleStudioMenuHover(false)}>
+            <div id="header-studio-submenu" className="headerNavDropdown" onMouseEnter={() => handleStudioMenuHover(true)} onMouseLeave={() => handleStudioMenuHover(false)}>
               {studioItems.map((item) => (
                 <button
                   key={item.name}

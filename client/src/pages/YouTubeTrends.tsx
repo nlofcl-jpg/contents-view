@@ -3,11 +3,13 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { AnalysisProgress } from "@/components/AnalysisProgress";
+import { SearchGlowForm } from "@/components/SearchGlowForm";
 import LiveTrendNavigation from "@/components/LiveTrendNavigation";
 import { YouTubeApiStatusCard } from "@/components/YouTubeApiStatusCard";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
 import { AlertCircle, CircleAlert, Clock, Play, ChevronDown, RotateCw, Bookmark, Search, Copy, ExternalLink, Plus, X } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useBookmark } from "@/contexts/BookmarkContext";
 import { useLocation } from "wouter";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
@@ -244,6 +246,7 @@ export default function YouTubeTrends() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { toggleYouTubeBookmark, isYouTubeVideoBookmarked, isBookmarkPending } = useBookmark();
   const [activeTab, setActiveTab] = useState<TabType>(getInitialYouTubeTab);
+  const [openFilterTab, setOpenFilterTab] = useState<TabType | null>(null);
   const tabMenuRef = useRef<HTMLDivElement>(null);
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
   const [selectedRisingVideo, setSelectedRisingVideo] = useState<any>(null);
@@ -708,13 +711,13 @@ export default function YouTubeTrends() {
 
   useEffect(() => {
     const menu = tabMenuRef.current;
-    if (!menu || !window.matchMedia("(max-width: 768px)").matches) return;
-    const selected = menu.querySelector<HTMLButtonElement>(".tabButton.active");
+    if (!menu || !isMobile) return;
+    const selected = menu.querySelector<HTMLElement>(".youtubeFilterTab.active");
     if (!selected) return;
     const menuBounds = menu.getBoundingClientRect();
     const selectedBounds = selected.getBoundingClientRect();
     menu.scrollTo({ left: menu.scrollLeft + selectedBounds.left - menuBounds.left - 8, behavior: "smooth" });
-  }, [activeTab]);
+  }, [activeTab, isMobile]);
 
   const handleAnalysisKeywordSearch = () => {
     if (!canSearchAnalysisKeyword || authLoading) return;
@@ -725,8 +728,10 @@ export default function YouTubeTrends() {
     setAnalysisMode("keyword");
     setSubmittedAnalysisVideoId("");
     setSubmittedAnalysisKeyword(analysisInputValue);
-    setAnalysisSort("relevance");
-    setAnalysisDurationType("all");
+    if (!isMobile) {
+      setAnalysisSort("relevance");
+      setAnalysisDurationType("all");
+    }
     setVisibleAnalysisCount(10);
   };
 
@@ -793,7 +798,7 @@ export default function YouTubeTrends() {
 
     return (
       <section className="youtubeAnalysisPanel" aria-label="영상 분석">
-        <form className="heroSearch youtubeAnalysisComposer" role="search" aria-label="유튜브 영상 분석" onSubmit={handleAnalysisSubmit}>
+        <SearchGlowForm className="heroSearch youtubeAnalysisComposer" role="search" aria-label="유튜브 영상 분석" onSubmit={handleAnalysisSubmit}>
             <div className="heroSearchPlatformControls">
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger
@@ -840,7 +845,7 @@ export default function YouTubeTrends() {
               title="분석"
               disabled={authLoading || !(canSearchAnalysisKeyword || canAnalyzeVideoUrl)}
             ><Search size={18} aria-hidden="true" /></button>
-        </form>
+        </SearchGlowForm>
 
         {!isAuthenticated || !analysisMode ? (
           <div className="grid min-h-[250px] place-items-center px-4 text-center md:min-h-[300px]">
@@ -990,32 +995,30 @@ export default function YouTubeTrends() {
                 <strong>{submittedAnalysisKeyword}</strong>
               </div>
             </div>
-            <div className="youtubeAnalysisFilterBar">
-              <div className="youtubeAnalysisSegmentGroup" aria-label="영상 유형 필터">
-                {ANALYSIS_DURATION_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={`youtubeAnalysisSegmentButton ${analysisDurationType === option.value ? "active" : ""}`}
-                    onClick={() => handleAnalysisDurationChange(option.value)}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+            {!isMobile && (
+              <div className="youtubeAnalysisFilterBar">
+                <div className="youtubeAnalysisSegmentGroup" aria-label="영상 유형 필터">
+                  {ANALYSIS_DURATION_OPTIONS.map(option => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`youtubeAnalysisSegmentButton ${analysisDurationType === option.value ? "active" : ""}`}
+                      onClick={() => handleAnalysisDurationChange(option.value)}
+                    >{option.label}</button>
+                  ))}
+                </div>
+                <div className="youtubeAnalysisSegmentGroup" aria-label="영상 분석 결과 정렬">
+                  {ANALYSIS_SORT_OPTIONS.map(option => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`youtubeAnalysisSegmentButton ${analysisSort === option.value ? "active" : ""}`}
+                      onClick={() => handleAnalysisSortChange(option.value)}
+                    >{option.label}</button>
+                  ))}
+                </div>
               </div>
-              <div className="youtubeAnalysisSegmentGroup" aria-label="영상 분석 결과 정렬">
-                {ANALYSIS_SORT_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={`youtubeAnalysisSegmentButton ${analysisSort === option.value ? "active" : ""}`}
-                    onClick={() => handleAnalysisSortChange(option.value)}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            )}
             <div className="videosGrid">
               {visibleAnalysisVideos.map((video: any) => {
                 const isBookmarked = isYouTubeVideoBookmarked(video.id);
@@ -1688,34 +1691,29 @@ export default function YouTubeTrends() {
     );
   };
 
-  return (
-    <div className={`youtubePageContainer ${!isAuthenticated && activeTab !== "analysis" ? "youtubeGuestUnframed" : ""}`}>
-      {/* Page Header */}
-      <div className="pageHeader">
-        <h1 className="pageTitle">유튜브 트렌드</h1>
-        <p className="pageDescription">
-          국가별, 카테고리별 YouTube 콘텐츠 트렌드를 확인하세요.
-        </p>
-        <LiveTrendNavigation active="youtube" />
+  const tabFilters = activeTab === "analysis" ? (
+    <div className="filterSection">
+      <div className="filterGroup">
+        <label htmlFor="analysis-duration-select" className="filterLabel">영상 유형</label>
+        <div className="selectWrapper">
+          <select id="analysis-duration-select" className="youtubeSelect" value={analysisDurationType} onChange={event => handleAnalysisDurationChange(event.target.value as AnalysisDurationType)}>
+            {ANALYSIS_DURATION_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select>
+          <ChevronDown className="selectChevron" aria-hidden="true" />
+        </div>
       </div>
-
-      {/* Tab Menu */}
-      <div className="tabMenu youtubeTabMenu" ref={tabMenuRef} role="group" aria-label="유튜브 트렌드 선택">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => handleTabChange(tab.id as TabType)}
-            className={`tabButton ${activeTab === tab.id ? "active" : ""}`}
-            aria-pressed={activeTab === tab.id}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="filterGroup">
+        <label htmlFor="analysis-sort-select" className="filterLabel">정렬</label>
+        <div className="selectWrapper">
+          <select id="analysis-sort-select" className="youtubeSelect" value={analysisSort} onChange={event => handleAnalysisSortChange(event.target.value as AnalysisSortType)}>
+            {ANALYSIS_SORT_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select>
+          <ChevronDown className="selectChevron" aria-hidden="true" />
+        </div>
       </div>
-
-      {/* Filter Section */}
-      {activeTab !== "analysis" && <div className="filterSection">
+    </div>
+  ) : (
+    <div className="filterSection">
         <div className="filterGroup">
           <div className="filterLabelRow">
             <label htmlFor="country-select" className="filterLabel">
@@ -1820,7 +1818,79 @@ export default function YouTubeTrends() {
             <ChevronDown className="selectChevron" />
           </div>
         </div>
-      </div>}
+    </div>
+  );
+
+  return (
+    <div className={`youtubePageContainer ${!isAuthenticated && activeTab !== "analysis" ? "youtubeGuestUnframed" : ""}`}>
+      <div className="pageHeader">
+        <h1 className="pageTitle">유튜브 트렌드</h1>
+        <p className="pageDescription">
+          국가별, 카테고리별 YouTube 콘텐츠 트렌드를 확인하세요.
+        </p>
+        <LiveTrendNavigation active="youtube" />
+      </div>
+
+      <div className="tabMenu youtubeTabMenu" ref={tabMenuRef} role="group" aria-label="유튜브 트렌드 선택">
+        {TABS.map(tab => !isMobile ? (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => handleTabChange(tab.id)}
+            className={`tabButton ${activeTab === tab.id ? "active" : ""}`}
+            aria-pressed={activeTab === tab.id}
+          >{tab.label}</button>
+        ) : (
+          <Popover
+            key={tab.id}
+            open={activeTab === tab.id && openFilterTab === tab.id}
+            onOpenChange={open => {
+              if (open) {
+                if (activeTab !== tab.id) handleTabChange(tab.id);
+                setOpenFilterTab(tab.id);
+              } else {
+                setOpenFilterTab(current => current === tab.id ? null : current);
+                if (activeTab === tab.id) setIsExposureCountryInfoOpen(false);
+              }
+            }}
+          >
+            <PopoverAnchor asChild>
+              <div className={`youtubeFilterTab tabButton${activeTab === tab.id ? " active" : ""}`}>
+                <button
+                  type="button"
+                  className="px-3 py-2"
+                  aria-pressed={activeTab === tab.id}
+                  onClick={() => {
+                    setOpenFilterTab(null);
+                    if (activeTab !== tab.id) handleTabChange(tab.id);
+                  }}
+                >{tab.label}</button>
+                <PopoverTrigger
+                  type="button"
+                  className="youtubeFilterTabTrigger"
+                  aria-label={`${tab.label} 필터`}
+                  title={`${tab.label} 필터`}
+                >
+                  <ChevronDown size={14} aria-hidden="true" />
+                </PopoverTrigger>
+              </div>
+            </PopoverAnchor>
+            {activeTab === tab.id && (
+              <PopoverContent
+                className="youtubeTabFilterPopover w-64 max-w-[calc(100vw-24px)] border-slate-700 bg-slate-950 p-0"
+                align="start"
+                sideOffset={6}
+                collisionPadding={12}
+                aria-label={`${tab.label} 필터`}
+              >
+                {tabFilters}
+              </PopoverContent>
+            )}
+          </Popover>
+        ))}
+      </div>
+
+      {!isMobile && activeTab !== "analysis" && tabFilters}
 
       {/* Content Section */}
       {activeTab === "analysis" ? (

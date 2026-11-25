@@ -409,11 +409,11 @@ export default function StudioResources({ showClocks = false }: { showClocks?: b
         <header className="studioResourceHeader">
           {showClocks && (
             <Link href="/ai-studio/resources" className="issueBackButton">
-              <ChevronLeft size={15} aria-hidden="true" />자료실
+              <ChevronLeft size={15} aria-hidden="true" />도구
             </Link>
           )}
           <h1 id="studio-resources-title" className={showClocks ? "sr-only" : "pageTitle"}>
-            {showClocks ? "시계" : "자료실"}
+            {showClocks ? "시계" : "도구"}
           </h1>
         </header>
         {showClocks ? <ClockGallery /> : (

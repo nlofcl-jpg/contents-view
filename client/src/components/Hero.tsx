@@ -6,6 +6,7 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
+import { SearchGlowForm } from "@/components/SearchGlowForm";
 import VoiceSearchButton from "@/components/VoiceSearchButton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
@@ -198,7 +199,7 @@ export default function Hero() {
                     <Plus size={18} aria-hidden="true" />
                     {selectedPlatform && <span>{selectedPlatform.label}</span>}
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" sideOffset={8} collisionPadding={12} className="heroSearchMenu" aria-label="분석 플랫폼">
+                  <DropdownMenuContent align="start" sideOffset={8} collisionPadding={12} className={`heroSearchMenu${isAiPageOpen ? "" : " heroHomePlatformMenu"}`} aria-label="분석 플랫폼">
                     <DropdownMenuRadioGroup
                       value={selectedPlatform?.value ?? ""}
                       onValueChange={selectPlatform}
@@ -253,12 +254,12 @@ export default function Hero() {
             <br />
             한곳에서 확인하고 <span>새로운 기회로</span>
           </h2>
-          <form ref={searchFormRef} className="heroSearch" role="search" aria-label="트렌드 분석" onSubmit={event => {
+          <SearchGlowForm ref={searchFormRef} className="heroSearch" role="search" aria-label="트렌드 분석" onSubmit={event => {
             event.preventDefault();
             handleHeroSearch();
           }}>
             {renderInput(!keyword.trim())}
-          </form>
+          </SearchGlowForm>
           {popularKeywords.length > 0 && (
             <HeroKeywordSlot
               keywords={popularKeywords}
