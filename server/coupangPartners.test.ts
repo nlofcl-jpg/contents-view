@@ -39,13 +39,17 @@ function setup(configured = false) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Coupang Partners", () => {
-  it("signs the exact UTF-8 query sent and returns only validated public products", async () => {
+  it("signs the exact UTF-8 query and builds direct product links without tracking", async () => {
     const now = new Date("2026-11-25T09:30:40Z");
     const request = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ rCode: "0", data: { productData: [
       sample, { ...sample, productId: 124, productUrl: "https://fake.example/a" },
+      { ...sample, productId: "123?tracking=unexpected" },
     ] } }));
     const result = await fetchCoupangProducts(credentials, { keyword: "커피 원두" }, request, now);
-    expect(result).toEqual([{ id: 123, name: sample.productName, price: 11900, image: sample.productImage, url: sample.productUrl, isRocket: true }]);
+    expect(result.map(product => ({ id: product.id, url: product.url }))).toEqual([
+      { id: 123, url: "https://www.coupang.com/vp/products/123" },
+      { id: 124, url: "https://www.coupang.com/vp/products/124" },
+    ]);
     const [url, init] = request.mock.calls[0];
     const endpoint = new URL(String(url));
     const expectedSignature = createHmac("sha256", credentials.secretKey)

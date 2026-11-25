@@ -25,7 +25,6 @@ const upstreamProduct = z.object({
   productId: z.number().int().positive(),
   productName: z.string().trim().min(1).max(500),
   productPrice: z.number().finite().nonnegative(),
-  productUrl: z.string(),
   productImage: z.string().optional(),
   isRocket: z.boolean().optional(),
   discountRate: z.unknown().optional(),
@@ -115,15 +114,13 @@ export async function fetchCoupangProducts(credentials: Credentials, input: Prod
   for (const entry of items) {
     const parsed = upstreamProduct.safeParse(entry);
     if (!parsed.success) continue;
-    const { productId, productName, productPrice, productUrl, productImage, isRocket } = parsed.data;
-    const url = safeUrl(productUrl, ["coupang.com", "coupa.ng"]);
-    if (!url) continue;
+    const { productId, productName, productPrice, productImage, isRocket } = parsed.data;
     const discountRate = parseDiscountRate(parsed.data.discountRate) ?? parseDiscountRate(parsed.data.productDiscountRate);
     products.set(productId, {
       id: productId,
       name: productName,
       price: productPrice,
-      url,
+      url: `https://www.coupang.com/vp/products/${productId}`,
       image: safeUrl(productImage, ["coupangcdn.com", "coupang.com"]),
       isRocket: isRocket === true,
       ...(discountRate !== undefined && { discountRate }),

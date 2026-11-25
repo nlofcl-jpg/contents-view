@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
-import { ArrowUpRight, ChevronLeft, ChevronRight, ImageOff, LoaderCircle, RefreshCw, Rocket, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, ImageOff, LoaderCircle, RefreshCw, Search, Truck, X } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
@@ -11,7 +11,7 @@ import type { AppRouter } from "../../../server/routers";
 
 const won = new Intl.NumberFormat("ko-KR");
 const productPageSize = 18;
-const affiliateDisclosure = "이 페이지는 쿠팡 파트너스 활동의 일환으로, 상품 구매 시 일정액의 수수료를 제공받습니다.";
+const podiumRankStyles = ["bg-amber-300 text-amber-950", "bg-sky-300 text-sky-950", "bg-rose-300 text-rose-950"];
 const productQueryOptions = { staleTime: 10 * 60 * 1000, retry: false, refetchOnWindowFocus: false } as const;
 
 type ProductData = inferRouterOutputs<AppRouter>["coupang"]["products"];
@@ -34,26 +34,27 @@ function ProductResults({ result, layout = "search", ranked = false }: { result:
 
   return (
     <>
-      {layout === "search" && <p className="mb-3 text-sm text-slate-300">{affiliateDisclosure}</p>}
       <List className={`grid grid-cols-2 gap-x-3 gap-y-5 sm:gap-x-4 ${layout === "search" ? "md:grid-cols-3" : "md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"}`}>
         {items.slice(0, visibleCount).map((item, index) => (
           <li key={item.id} className="min-w-0">
-            <a href={item.url} target="_blank" rel="sponsored noopener noreferrer" className="group block h-full rounded-md text-inherit focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sky-300">
+            <a href={item.url} target="_blank" rel="noopener noreferrer" className="group block h-full rounded-md text-inherit focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sky-300">
               <div className="relative grid aspect-square w-full place-items-center overflow-hidden rounded-md bg-slate-800">
                 {item.image ? <img src={item.image} alt="" loading="lazy" className="absolute inset-0 size-full bg-white object-contain" /> : <ImageOff size={20} className="text-slate-400" aria-hidden="true" />}
-                <span className="absolute inset-x-0 bottom-0 flex items-center justify-end gap-1 bg-slate-950/55 px-2 py-1.5 text-xs font-medium text-white backdrop-blur-md transition-colors group-hover:bg-slate-950/75">
-                  제품 보기 <ArrowUpRight size={13} aria-hidden="true" />
+                {ranked && (
+                  <span className={`absolute left-2 top-2 grid size-7 place-items-center rounded-md text-xs font-bold tabular-nums ${podiumRankStyles[index] ?? "border border-white/40 bg-black/45 text-white backdrop-blur-md"}`}>
+                    {index + 1}<span className="sr-only">위</span>
+                  </span>
+                )}
+                <span className="absolute inset-0 flex items-center justify-center gap-1.5 text-xs font-semibold text-white drop-shadow-[0_1px_2px_#000] [text-shadow:0_1px_4px_#000] group-hover:underline group-focus-visible:underline sm:text-sm">
+                  <ExternalLink size={16} aria-hidden="true" /> 제품 보기
                 </span>
               </div>
               <div className="min-w-0 pt-2">
-                <div className="flex min-w-0 items-start gap-1.5">
-                  {ranked && <span className="mt-0.5 shrink-0 text-xs font-semibold tabular-nums text-sky-300">{index + 1}위</span>}
-                  <p className="line-clamp-2 min-w-0 break-words text-sm font-medium leading-5 text-slate-100 group-hover:text-white">{item.name}</p>
-                </div>
+                <p className="line-clamp-2 h-10 min-w-0 break-words text-sm font-medium leading-5 text-slate-100 group-hover:text-white">{item.name}</p>
                 <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-sm font-semibold tabular-nums text-slate-100">
                   {item.discountRate !== undefined && <span className="text-rose-400">{item.discountRate}%</span>}
                   <span>{won.format(item.price)}원</span>
-                  {item.isRocket && <span className="inline-flex text-sky-300" title="로켓배송"><Rocket size={15} aria-hidden="true" /><span className="sr-only">로켓배송</span></span>}
+                  {item.isRocket && <span className="inline-flex text-sky-300" title="로켓배송"><Truck size={15} aria-hidden="true" /><span className="sr-only">로켓배송</span></span>}
                 </p>
               </div>
             </a>
@@ -178,7 +179,6 @@ export default function CoupangTrendPanel() {
             <RefreshCw size={16} aria-hidden="true" />
           </button>}
         </div>
-        {Boolean(feedResult.data?.productList.length) && <p className="text-sm text-slate-300">{affiliateDisclosure}</p>}
         <ProductResults key={feed === "deals" ? feed : category} result={feedResult} layout="feed" ranked={feed === "popular"} />
       </section>
       <GuestAccessPrompt open={guestPrompt} description="쿠팡 상품 검색은 로그인 후 이용할 수 있습니다." onBrowse={() => setGuestPrompt(false)} onLogin={() => goToAuth()} onSignup={() => goToAuth(true)} />
