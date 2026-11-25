@@ -54,7 +54,7 @@ function ProductResults({ result, layout = "search", ranked = false }: { result:
                     {index + 1}<span className="sr-only">위</span>
                   </span>
                 )}
-                <span className="absolute inset-x-0 bottom-2 flex items-center justify-center gap-1.5 text-xs font-bold text-white/75 group-hover:text-white group-hover:underline group-focus-visible:text-white group-focus-visible:underline sm:text-sm">
+                <span className="absolute inset-x-0 bottom-2 flex items-center justify-center gap-1.5 text-xs font-bold text-neutral-400/75 group-hover:text-neutral-200 group-hover:underline group-focus-visible:text-neutral-200 group-focus-visible:underline sm:text-sm">
                   <ExternalLink size={16} strokeWidth={2.5} aria-hidden="true" /> 제품 보기
                 </span>
               </div>
@@ -220,18 +220,18 @@ export default function CoupangTrendPanel() {
       <Popover open={mobileCategoriesOpen} onOpenChange={setMobileCategoriesOpen}>
         <PopoverAnchor asChild>
           <nav ref={setMobileNavRef} aria-label="쿠팡 트렌드 하단 메뉴" data-scroll-hidden={mobileNavHidden} className="coupangMobileNav fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-white/10 px-2 pb-[env(safe-area-inset-bottom,0px)] md:hidden">
-            {productFeeds.map(({ id, label, Icon }) => (
-              <button key={id} type="button" aria-pressed={feed === id} className="flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded text-xs font-medium text-slate-300 outline-sky-300 focus-visible:outline-2 aria-pressed:text-sky-300" onClick={() => selectMobileFeed(id)}>
-                <Icon size={18} aria-hidden="true" />
-                {label}
-              </button>
-            ))}
             <PopoverTrigger asChild>
               <button type="button" className="flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded text-xs font-medium text-slate-300 outline-sky-300 focus-visible:outline-2 aria-expanded:text-sky-300">
                 <LayoutGrid size={18} aria-hidden="true" />
                 카테고리
               </button>
             </PopoverTrigger>
+            {productFeeds.map(({ id, label, Icon }) => (
+              <button key={id} type="button" aria-pressed={feed === id} className="flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded text-xs font-medium text-slate-300 outline-sky-300 focus-visible:outline-2 aria-pressed:text-sky-300" onClick={() => selectMobileFeed(id)}>
+                <Icon size={18} aria-hidden="true" />
+                {label}
+              </button>
+            ))}
           </nav>
         </PopoverAnchor>
         <PopoverContent

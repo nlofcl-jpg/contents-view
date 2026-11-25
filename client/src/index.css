@@ -3121,7 +3121,7 @@ a {
   gap: 8px;
 }
 
-.naverSearchAdKeyGrid {
+.apiCredentialFieldStack {
   display: flex;
   flex-direction: column;
   gap: 7px;

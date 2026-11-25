@@ -185,7 +185,7 @@ export default function NaverSearchAdKeyPanel({ isActive }: { isActive: boolean 
         </div>
       ) : null}
 
-      <div className="naverSearchAdKeyGrid">
+      <div className="apiCredentialFieldStack">
         <input
           type="text"
           className="mypageModalNameInput"
