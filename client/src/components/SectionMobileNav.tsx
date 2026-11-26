@@ -18,7 +18,7 @@ export default function SectionMobileNav({ label, activeHref, items }: SectionMo
           key={href}
           href={href}
           aria-current={activeHref === href ? "page" : undefined}
-          className="flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded text-xs font-medium text-slate-300 no-underline outline-sky-300 focus-visible:outline-2 aria-[current=page]:text-sky-300"
+          className="flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded text-xs font-medium no-underline outline-sky-300 focus-visible:outline-2"
         >
           {Icon && <Icon size={18} aria-hidden="true" />}
           <span className="whitespace-pre-line text-center leading-4">{label}</span>

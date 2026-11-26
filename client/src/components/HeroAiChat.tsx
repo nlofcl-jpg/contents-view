@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Globe, LoaderCircle, RotateCcw } from "lucide-react";
+import { Globe, LoaderCircle, RotateCcw, X } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,6 @@ import { trpc } from "@/lib/trpc";
 type ChatText = { role: "user" | "assistant"; text: string };
 type Message = ChatText & {
   sources?: { title: string; url: string }[];
-  searchSuggestions?: string | null;
 };
 
 type HeroAiChatProps = {
@@ -17,15 +16,18 @@ type HeroAiChatProps = {
   setInput: (value: string) => void;
   renderInput: (sendDisabled: boolean) => ReactNode;
   onAnalyze?: () => void;
+  onClose: () => void;
   entryOrigin: DOMRectReadOnly | null;
 };
 
-export default function HeroAiChat({ input, setInput, renderInput, onAnalyze, entryOrigin }: HeroAiChatProps) {
+export default function HeroAiChat({ input, setInput, renderInput, onAnalyze, onClose, entryOrigin }: HeroAiChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [consent, setConsent] = useState(false);
   const [consentOpen, setConsentOpen] = useState(false);
   const [analysisConfirmOpen, setAnalysisConfirmOpen] = useState(false);
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
+  const [headerPinned, setHeaderPinned] = useState(false);
+  const headerTriggerRef = useRef<HTMLButtonElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const logRef = useRef<HTMLDivElement>(null);
   const status = trpc.aiTest.status.useQuery(undefined, { retry: false });
@@ -53,6 +55,29 @@ export default function HeroAiChat({ input, setInput, renderInput, onAnalyze, en
     if (log) log.scrollTop = log.scrollHeight;
   }, [messages, pendingQuestion]);
 
+  useEffect(() => {
+    if (!headerPinned) return;
+    const header = document.getElementById("site-header");
+    const dismissOnOutsidePress = (event: PointerEvent) => {
+      if (!(event.target instanceof Node)) return;
+      if (!header?.contains(event.target) && !headerTriggerRef.current?.contains(event.target)) {
+        setHeaderPinned(false);
+      }
+    };
+    const dismissOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      setHeaderPinned(false);
+      headerTriggerRef.current?.focus();
+    };
+
+    document.addEventListener("pointerdown", dismissOnOutsidePress);
+    document.addEventListener("keydown", dismissOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", dismissOnOutsidePress);
+      document.removeEventListener("keydown", dismissOnEscape);
+    };
+  }, [headerPinned]);
+
   const send = async () => {
     const question = input.trim();
     if (status.error || !status.data?.configured || !question || busy) return;
@@ -71,7 +96,7 @@ export default function HeroAiChat({ input, setInput, renderInput, onAnalyze, en
     try {
       const result = await chat.mutateAsync({ consent: true, messages: history });
       setMessages(previous => [...previous, nextMessage, {
-        role: "assistant", text: result.reply, sources: result.sources, searchSuggestions: result.searchSuggestions,
+        role: "assistant", text: result.reply, sources: result.sources,
       }]);
     } catch (cause) {
       if (logRef.current && !inputRef.current.trim()) setInput(question);
@@ -111,6 +136,24 @@ export default function HeroAiChat({ input, setInput, renderInput, onAnalyze, en
 
   return (
     <section className="heroAiPage" aria-label="AI 대화">
+      <button
+        ref={headerTriggerRef}
+        type="button"
+        className="heroAiHeaderTrigger"
+        aria-label={headerPinned ? "사이트 메뉴 닫기" : "사이트 메뉴 열기"}
+        aria-controls="site-header"
+        aria-expanded={headerPinned}
+        onClick={event => {
+          if (event.detail > 0 && window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+          setHeaderPinned(!headerPinned);
+          if (!headerPinned && event.detail === 0) {
+            requestAnimationFrame(() => document.querySelector<HTMLButtonElement>("#site-header .headerBrand")?.focus());
+          }
+        }}
+      />
+      <button type="button" className="aiTestIcon heroAiClose" aria-label="AI 모드 닫기" title="AI 모드 닫기" onClick={onClose}>
+        <X size={20} aria-hidden="true" />
+      </button>
       <section className="heroAiChatPanel" aria-label="AI 모드">
         <header className="aiTestHeader">
           <p className="m-0 flex items-center gap-1.5 text-sm font-semibold">
@@ -127,9 +170,13 @@ export default function HeroAiChat({ input, setInput, renderInput, onAnalyze, en
           </div>
         </header>
         <div className="aiTestLog" ref={logRef} role="log" aria-label="Gemini 테스트 대화" aria-live="polite">
-          {messages.map((message, index) => (
-            <div className={`aiTestMessage ${message.role === "user" ? "isUser" : "isAssistant"}`} key={index}>
-              <span className="sr-only">{message.role === "user" ? "나" : "Gemini"}</span>
+          {messages.map((message, index) => message.role === "user" ? (
+            <div className="aiTestUserMessage" key={index}>
+              <span className="sr-only">나</span>
+              <p>{message.text}</p>
+            </div>
+          ) : (
+            <article className="aiTestReply" aria-label="Gemini 답변" key={index}>
               <p>{message.text}</p>
               {Boolean(message.sources?.length) && (
                 <ul className="mt-3 space-y-1.5 text-xs" aria-label="Google 검색 출처">
@@ -140,20 +187,11 @@ export default function HeroAiChat({ input, setInput, renderInput, onAnalyze, en
                   ))}
                 </ul>
               )}
-              {message.searchSuggestions && (
-                <iframe
-                  title="Google 추천 검색어"
-                  sandbox="allow-popups allow-popups-to-escape-sandbox"
-                  referrerPolicy="no-referrer"
-                  className="mt-2 block h-[95px] w-full border-0"
-                  srcDoc={`<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data: https://www.gstatic.com"><base target="_blank"><body style="margin:0">${message.searchSuggestions}</body>`}
-                />
-              )}
-            </div>
+            </article>
           ))}
           {pendingQuestion && (
             <>
-              <div className="aiTestMessage isUser"><span className="sr-only">나</span><p>{pendingQuestion}</p></div>
+              <div className="aiTestUserMessage"><span className="sr-only">나</span><p>{pendingQuestion}</p></div>
               <div role="status" aria-label="답변을 작성하고 있습니다" className="text-blue-300">
                 <LoaderCircle size={16} aria-hidden="true" className="motion-safe:animate-spin" />
               </div>
@@ -161,10 +199,12 @@ export default function HeroAiChat({ input, setInput, renderInput, onAnalyze, en
           )}
         </div>
       </section>
-      <form ref={formRef} className="heroSearch heroSearchAi" aria-label={onAnalyze ? "트렌드 분석" : "Gemini 대화"} onSubmit={submit}>
-        {renderInput(sendDisabled)}
+      <div className="heroAiComposer">
+        <form ref={formRef} className="heroSearch heroSearchAi" aria-label={onAnalyze ? "트렌드 분석" : "Gemini 대화"} onSubmit={submit}>
+          {renderInput(sendDisabled)}
+        </form>
         <p className="aiTestFootnote">AI 답변은 부정확할 수 있습니다.</p>
-      </form>
+      </div>
     <Dialog open={consentOpen} onOpenChange={setConsentOpen}>
       <DialogContent onCloseAutoFocus={restoreInputFocus}>
         <DialogHeader>

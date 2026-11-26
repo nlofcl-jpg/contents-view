@@ -43,6 +43,7 @@
 }
 
 :root {
+  --support-launcher-background: linear-gradient(135deg, #158cff, #7044db);
   --primary: var(--color-blue-700);
   --primary-foreground: var(--color-blue-50);
   --sidebar-primary: var(--color-blue-600);
@@ -2002,6 +2003,64 @@ a {
   height: 100dvh;
 }
 
+.app:has(.heroAiPage) > .header {
+  position: fixed;
+  inset: 0 0 auto;
+  visibility: hidden;
+  transform: translateY(-100%);
+  transition: transform 240ms ease, visibility 0s linear 240ms;
+}
+
+.app:has(.heroAiHeaderTrigger[aria-expanded="true"]) > .header,
+.app:has(.heroAiPage) > .header:has(:focus-visible) {
+  visibility: visible;
+  transform: translateY(0);
+  transition-delay: 0s;
+}
+
+.heroAiHeaderTrigger {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 10001;
+  display: grid;
+  width: 100%;
+  height: 18px;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.heroAiHeaderTrigger:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: -2px;
+}
+
+@media (hover: hover) {
+  .app:has(.heroAiHeaderTrigger:hover) > .header,
+  .app:has(.heroAiPage) > .header:hover {
+    visibility: visible;
+    transform: translateY(0);
+    transition-delay: 0s;
+  }
+}
+
+@media (hover: none) {
+  .heroAiHeaderTrigger[aria-expanded="false"]::after {
+    width: 28px;
+    height: 2px;
+    border-radius: 2px;
+    background: rgb(255 255 255 / 0.3);
+    content: "";
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app:has(.heroAiPage) > .header {
+    transition: none;
+  }
+}
+
 .app:has(.heroAiPage) > :is(.flowDownloadBanner, .supportChatLauncher, .supportChat),
 .mainContent:has(.heroAiPage) > .siteFooter,
 .homePage:has(> .heroAiPage) > .homeTrendContent {
@@ -2087,10 +2146,17 @@ a {
   padding: 16px 16px max(16px, env(safe-area-inset-bottom));
 }
 
+.heroAiComposer {
+  display: grid;
+  flex: none;
+  gap: 4px;
+}
+
 .heroSearch.heroSearchAi {
   flex: none;
   width: 100%;
   margin: 0;
+  padding-bottom: 5px;
   background: transparent;
 }
 
@@ -2111,6 +2177,7 @@ a {
 .heroSearchAi .heroAiInput {
   --ai-input-line-height: 20px;
   height: auto;
+  min-height: 45px;
   max-height: calc(3 * var(--ai-input-line-height) + 8px);
   overflow-y: auto;
   padding-block: 4px;
@@ -2143,6 +2210,30 @@ a {
   opacity: 0.45;
 }
 
+.aiTestIcon.heroAiClose {
+  position: absolute;
+  inset-block-start: 20px;
+  inset-inline-end: max(16px, env(safe-area-inset-right, 0px));
+  z-index: 9;
+  width: 36px;
+  height: 36px;
+}
+
+.heroAiClose:hover {
+  color: #fff;
+}
+
+.heroAiClose:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+@media (max-width: 840px) {
+  .aiTestHeader {
+    padding-inline-end: 52px;
+  }
+}
+
 .aiTestLog {
   flex: 1 1 auto;
   min-height: 0;
@@ -2151,11 +2242,12 @@ a {
   padding: 10px 16px;
 }
 
-.aiTestMessage {
+.aiTestUserMessage,
+.aiTestReply {
   margin-bottom: 18px;
 }
 
-.aiTestMessage p {
+:is(.aiTestUserMessage, .aiTestReply) > p {
   margin: 0;
   color: #e1eaf8;
   font-size: 14px;
@@ -2164,7 +2256,7 @@ a {
   overflow-wrap: anywhere;
 }
 
-.aiTestMessage.isUser {
+.aiTestUserMessage {
   margin-left: 32px;
   padding: 10px 14px;
   border-radius: 8px;
@@ -2245,10 +2337,29 @@ a {
   background: #174eaa;
 }
 
-.heroSearchButton:disabled {
+.heroSearchButton:disabled,
+.heroSearchButton.heroAiEntryButton,
+.heroSearchButton.heroAiEntryButton:not(:disabled):hover {
   background: #23334c;
   color: #95a7c1;
+}
+
+.heroSearchButton:disabled {
   cursor: default;
+}
+
+.heroSearchButton.heroAiSendButton,
+.heroSearchButton.heroAiSendButton:not(:disabled):hover {
+  background: var(--support-launcher-background);
+  color: #fff;
+}
+
+.heroSearchButton.heroAiSendButton:not(:disabled):hover {
+  filter: brightness(1.1);
+}
+
+.heroSearchButton.heroAiSendButton:disabled {
+  opacity: 0.5;
 }
 
 .naverAnalysisProgress {
@@ -5218,6 +5329,35 @@ a {
   margin-top: 8px;
 }
 
+.youtubePageContainer:has(.analysisEmptyState),
+.pageContainer:has(> .analysisEmptyState) {
+  min-height: calc(100% + 60px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: 0;
+}
+
+.naverTrendAnalysis:has(.analysisEmptyState),
+.naverTrendAnalysis > :has(> .analysisEmptyState) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.analysisEmptyState {
+  display: grid;
+  flex: 1;
+  min-height: 10rem;
+  place-items: center;
+  padding-inline: 1rem;
+  color: var(--color-slate-400);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  text-align: center;
+}
+
+.analysisEmptyState > p {
+  margin: 0;
+}
+
 @media (max-width: 768px) {
   .heroSearch.naverAnalysisComposer,
   .heroSearch.youtubeAnalysisComposer,
@@ -5282,6 +5422,7 @@ a {
   padding: 3px 5px;
 }
 
+.heroSearch.naverAnalysisComposer,
 .heroSearch.newsAnalysisComposer {
   grid-template-columns: minmax(0, 1fr) auto;
   padding-inline-start: 12px;
@@ -5306,8 +5447,6 @@ a {
 }
 
 .heroSearch.naverAnalysisComposer.commerceAnalysisComposer {
-  grid-template-columns: minmax(0, 1fr) auto;
-  padding-inline-start: 12px;
   box-shadow:
     -5px 0 20px -3px rgb(var(--view-logo-blue) / 0.34),
     5px 0 20px -3px rgb(var(--view-logo-violet) / 0.28);
@@ -5360,6 +5499,14 @@ a {
   :is(.creatorTrendMobileNav, .coupangMobileNav, .sectionMobileNav)[data-scroll-hidden="true"]:not(:has(:focus-visible)) {
     transform: translateY(100%);
     pointer-events: none;
+  }
+
+  :is(.creatorTrendMobileNav, .coupangMobileNav, .sectionMobileNav) > :is(a, button) {
+    color: var(--color-slate-300);
+  }
+
+  :is(.creatorTrendMobileNav, .coupangMobileNav, .sectionMobileNav) > :is([aria-current="page"], [aria-pressed="true"], [aria-expanded="true"]) {
+    color: var(--color-sky-300);
   }
 
   .app:has(.coupangMobileNav, .creatorTrendMobileNav, .sectionMobileNav) .mainContent {
@@ -12264,6 +12411,7 @@ input[type="date"].youtubeSelect {
 .trend-comparison-glass,
 .guestAccessPrompt,
 .loginPanel,
+.heroHomePlatformMenu,
 .coupangSearchResultsPopover {
   background: var(--trend-glass-background);
   -webkit-backdrop-filter: blur(12px);
@@ -12359,10 +12507,10 @@ input[type="date"].youtubeSelect {
 
 @media (max-width: 767px) {
   .trend-cards-carousel {
-    grid-auto-columns: min(28rem, calc(100vw - 4rem));
+    grid-auto-columns: 100%;
+    column-gap: 0.75rem;
     margin-inline: -1rem;
-    padding: 0.5rem 1rem;
-    scroll-padding-inline: 1rem;
+    padding: 0.5rem 2rem;
     overscroll-behavior-inline: contain;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
@@ -12373,7 +12521,7 @@ input[type="date"].youtubeSelect {
   }
 
   .trend-cards-carousel > article {
-    scroll-snap-align: start;
+    scroll-snap-align: center;
   }
 }
 
@@ -12393,7 +12541,7 @@ input[type="date"].youtubeSelect {
   place-items: center;
   border: 1px solid rgba(175, 209, 255, 0.35);
   border-radius: 50%;
-  background: linear-gradient(135deg, #158cff, #7044db);
+  background: var(--support-launcher-background);
   color: #fff;
   box-shadow: 0 6px 24px rgba(12, 50, 114, 0.32);
   cursor: pointer;

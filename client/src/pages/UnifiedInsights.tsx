@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { AnalysisProgress } from "@/components/AnalysisProgress";
+import { CompactSegmentedControl } from "@/components/CompactSegmentedControl";
 import { SearchGlowForm } from "@/components/SearchGlowForm";
 import { useAuth } from "@/_core/hooks/useAuth";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 import VoiceSearchButton from "@/components/VoiceSearchButton";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NAVER_GUEST_DAILY_LIMIT_MESSAGE, NAVER_MEMBER_DAILY_LIMIT_MESSAGE } from "@shared/naverAnalysisQuota";
 import { trpc } from "@/lib/trpc";
 import { useNaverTrendComparison } from "@/components/NaverTrendComparison";
-import { ChevronDown, CircleAlert, ExternalLink, Heart, ListFilter, Loader2, MessageCircle, Plus, RotateCcw, Search, X } from "lucide-react";
+import { ChevronDown, CircleAlert, ExternalLink, Heart, ListFilter, Loader2, MessageCircle, RotateCcw, Search, UserRound } from "lucide-react";
 import { useLocation } from "wouter";
 
 
@@ -118,11 +119,9 @@ export default function UnifiedInsights() {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState("");
   const [voiceInputKey, setVoiceInputKey] = useState(0);
-  const [selectedSearchMode, setSearchMode] = useState<SearchMode | null>(null);
+  const [selectedSearchMode, setSearchMode] = useState<SearchMode | null>("analysis");
   const searchMode = selectedSearchMode ?? "analysis";
-  const selectedModeLabel = SEARCH_MODE_OPTIONS.find(option => option.value === selectedSearchMode)?.label;
-  const searchModeTriggerRef = useRef<HTMLButtonElement>(null);
-  const [isSearchModeOpen, setIsSearchModeOpen] = useState(false);
+  const showKeywordAnalysis = searchMode === "analysis" && (selectedSearchMode === "analysis" || keywords.length > 0);
   const [infoPopup, setInfoPopup] = useState<{ title: string; body: string } | null>(null);
   const [isKeywordGradeInfoOpen, setIsKeywordGradeInfoOpen] = useState(false);
   const [relatedSortMode, setRelatedSortMode] = useState<"related" | "recommended">("related");
@@ -135,7 +134,6 @@ export default function UnifiedInsights() {
   const [blogPostAnalysisData, setBlogPostAnalysisData] = useState<Record<string, BlogPostAnalysisData>>({});
   const [blogPostAnalysisErrors, setBlogPostAnalysisErrors] = useState<Record<string, string>>({});
   const [blogPostAnalysisLoading, setBlogPostAnalysisLoading] = useState<string | null>(null);
-  const [blogPostAnalysisOpen, setBlogPostAnalysisOpen] = useState<Record<string, boolean>>({});
   const [blogPostKeywordInputs, setBlogPostKeywordInputs] = useState<Record<string, string>>({});
   const [blogPostEngagementData, setBlogPostEngagementData] = useState<Record<string, BlogPostEngagement>>({});
   const [blogPostEngagementLoading, setBlogPostEngagementLoading] = useState<string | null>(null);
@@ -181,7 +179,6 @@ export default function UnifiedInsights() {
     else setBlogPostRankData(null);
     setBlogPostAnalysisData({});
     setBlogPostAnalysisErrors({});
-    setBlogPostAnalysisOpen({});
     setBlogPostKeywordInputs({});
     setBlogPostEngagementData({});
   };
@@ -331,7 +328,6 @@ export default function UnifiedInsights() {
 
   const runBlogAnalysis = (blogUrl: string) => {
     setIsBlogLoading(true);
-    setIsSearchModeOpen(false);
     setQueryError("");
     setQuerySuccess(false);
     setKeywords([]);
@@ -340,7 +336,6 @@ export default function UnifiedInsights() {
     setBlogAnalysisData(null);
     setBlogPostAnalysisData({});
     setBlogPostAnalysisErrors({});
-    setBlogPostAnalysisOpen({});
     setBlogPostKeywordInputs({});
     setBlogPostEngagementData({});
     setBlogPostEngagementLoading(null);
@@ -353,7 +348,6 @@ export default function UnifiedInsights() {
     setBlogPostRankData(null);
     setBlogPostAnalysisData({});
     setBlogPostAnalysisErrors({});
-    setBlogPostAnalysisOpen({});
     setBlogPostKeywordInputs({});
     setBlogPostEngagementData({});
 
@@ -365,7 +359,6 @@ export default function UnifiedInsights() {
       }
 
       setBlogPostRankData(data);
-      setBlogPostAnalysisOpen({ [data.post.link]: true });
       runBlogPostEngagement(data.post);
     } catch (error) {
       setQueryError(analysisErrorMessage(error, "게시글 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요."));
@@ -459,7 +452,6 @@ export default function UnifiedInsights() {
     setIsLoading(true);
     setQueryError("");
     setQuerySuccess(false);
-    setIsSearchModeOpen(false);
     setKeywords(nextKeywords);
 
     queryUnifiedInsight({ keywords: nextKeywords, ...getBaseRequest() });
@@ -506,6 +498,11 @@ export default function UnifiedInsights() {
   }, [authLoading]);
 
 
+  const blog = !isBlogLoading ? blogAnalysisData?.blog : undefined;
+  const blogPosts = searchMode === "postRank"
+    ? [blogPostRankData?.post ?? null]
+    : blog ? (blogAnalysisData?.posts ?? []) : [null];
+
   return (
     <div className="w-full">
       {infoPopup && (
@@ -540,49 +537,6 @@ export default function UnifiedInsights() {
             if (!authLoading && !isLoading && !isBlogLoading && !isBlogPostRankLoading) handleSearch();
           }}
         >
-          <div className="heroSearchPlatformControls">
-            <DropdownMenu modal={false} open={isSearchModeOpen} onOpenChange={setIsSearchModeOpen}>
-              <DropdownMenuTrigger
-                type="button"
-                ref={searchModeTriggerRef}
-                className={`heroSearchFilterButton ${selectedSearchMode ? "isNaver" : "isUnselected"}`}
-                aria-label={selectedModeLabel ? `분석 방식 선택: ${selectedModeLabel}` : "분석 방식 선택"}
-                title="분석 방식 선택"
-              >
-                <Plus size={18} aria-hidden="true" />
-                {selectedModeLabel && <span>{selectedModeLabel}</span>}
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" sideOffset={8} collisionPadding={12} className="heroSearchMenu" aria-label="분석 방식">
-                <DropdownMenuRadioGroup
-                  value={selectedSearchMode ?? ""}
-                  onValueChange={value => {
-                    const mode = SEARCH_MODE_OPTIONS.find(option => option.value === value);
-                    if (mode) setSearchMode(mode.value);
-                  }}
-                >
-                  {SEARCH_MODE_OPTIONS.map(option => (
-                    <DropdownMenuRadioItem key={option.value} value={option.value} className="heroSearchMenuItem isNaver">
-                      {option.label}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {selectedSearchMode && (
-              <button
-                type="button"
-                className="heroSearchClearPlatform"
-                aria-label="분석 방식 선택 취소"
-                title="분석 방식 선택 취소"
-                onClick={() => {
-                  setSearchMode(null);
-                  searchModeTriggerRef.current?.focus();
-                }}
-              >
-                <X size={14} aria-hidden="true" />
-              </button>
-            )}
-          </div>
           <input
             id="keyword"
             type="text"
@@ -612,6 +566,14 @@ export default function UnifiedInsights() {
             </button>
           </div>
         </SearchGlowForm>
+        <div className="mt-4">
+          <CompactSegmentedControl
+            label="네이버 트렌드 분석 방식"
+            options={SEARCH_MODE_OPTIONS}
+            value={selectedSearchMode}
+            onChange={mode => setSearchMode(current => current === mode ? null : mode)}
+          />
+        </div>
         {queryError && !isLoading && !isBlogLoading && !querySuccess && !chartData && !blogAnalysisData && (
           <p className="mt-3 text-sm text-red-300" role="alert">{queryError}</p>
         )}
@@ -630,26 +592,6 @@ export default function UnifiedInsights() {
         </button>
       </div>
 
-      {/* Empty State */}
-      {searchMode === "rank" && !isBlogLoading && !blogAnalysisData && !queryError && (
-        <div className="mt-3 flex min-h-[260px] items-center justify-center rounded-lg border border-slate-700 bg-slate-900/30 p-8 text-center sm:min-h-[320px] lg:min-h-[380px]">
-          <p className="text-slate-400">
-            블로그 메인 주소를 입력하고 검색 버튼을 눌러주세요.
-          </p>
-        </div>
-      )}
-
-      {searchMode === "postRank" && !isBlogPostRankLoading && !blogPostRankData && !queryError && (
-        <div className="mt-3 flex min-h-[260px] items-center justify-center rounded-lg border border-slate-700 bg-slate-900/30 p-8 text-center sm:min-h-[320px] lg:min-h-[380px]">
-          <div className="max-w-md">
-            <h2 className="text-lg font-medium text-slate-100">블로그 게시글 순위</h2>
-            <p className="mt-2 text-sm text-slate-400">
-              블로그 게시글 URL을 입력해 키워드별 검색 노출 순위를 분석합니다.
-            </p>
-          </div>
-        </div>
-      )}
-
       {(isLoading || isBlogLoading || isBlogPostRankLoading) && <AnalysisProgress />}
 
       {searchMode === "rank" && queryError && !isBlogLoading && !blogAnalysisData && (
@@ -658,105 +600,111 @@ export default function UnifiedInsights() {
         </div>
       )}
 
-      {((searchMode === "rank" && !isBlogLoading && blogAnalysisData?.blog) || (searchMode === "postRank" && !isBlogPostRankLoading && blogPostRankData?.post)) && (
+      {searchMode !== "analysis" && (
         <div className="mt-3 space-y-6">
-          {searchMode === "rank" && blogAnalysisData?.blog && (
-          <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-5">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start">
-              <div className="flex min-w-0 items-stretch gap-4 sm:gap-5">
-                {blogAnalysisData.blog.profileImageUrl && (
-                  <img
-                    src={blogAnalysisData.blog.profileImageUrl}
-                    alt=""
-                    className="h-24 w-24 shrink-0 self-center rounded-full border border-slate-700 object-cover sm:h-28 sm:w-28"
-                  />
-                )}
-                <div className="flex min-w-0 flex-1 flex-col justify-center py-1">
+          {searchMode === "rank" && (
+            <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-5">
+              <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 md:flex md:gap-x-5">
+                <Avatar className={`size-10 border border-slate-700 md:size-28 ${blog && !blog.profileImageUrl ? "md:hidden" : ""}`}>
+                  <AvatarImage src={blog?.profileImageUrl ?? undefined} alt="" className="object-cover" />
+                  <AvatarFallback className="bg-slate-800 text-slate-400">
+                    <UserRound size={18} aria-hidden="true" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="contents md:flex md:min-w-0 md:flex-col md:justify-center md:py-1">
                   <div className="flex min-w-0 items-center gap-2">
-                    <h3 className="truncate text-xl font-semibold text-white sm:text-2xl">{blogAnalysisData.blog.title}</h3>
-                    <a
-                      href={blogAnalysisData.blog.link}
+                    <h3 className="min-w-0 break-words text-base font-semibold text-white md:truncate md:text-2xl">{blog?.title || "블로그 이름"}</h3>
+                    {blog ? <a
+                      href={blog.link}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-800 hover:text-blue-200"
-                      aria-label="블로그 바로가기"
+                      aria-label="블로그 원문 보기"
+                      title="원문 보기"
                     >
                       <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                    </a>
+                    </a> : (
+                      <button type="button" disabled aria-label="블로그 원문 보기" className="inline-grid size-7 shrink-0 place-items-center text-slate-500">
+                        <ExternalLink size={16} aria-hidden="true" />
+                      </button>
+                    )}
                   </div>
-                  <p className="mt-2 line-clamp-2 text-xs font-normal leading-5 text-slate-400 sm:text-sm">
-                    {blogAnalysisData.blog.description || "블로그 설명 정보가 없습니다."}
+                  <p className="col-span-2 mt-3 whitespace-pre-line break-words text-xs leading-5 text-slate-400 md:mt-2 md:line-clamp-2 md:whitespace-normal md:text-sm">
+                    {blog ? blog.description || "블로그 설명 정보가 없습니다." : "블로그 메인 주소를 입력하고 검색 버튼을 눌러주세요."}
                   </p>
-                  <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 sm:text-sm">
-                    <span>블로그 ID {blogAnalysisData.blog.blogId}</span>
-                    {blogAnalysisData.fetchedAt && <span>최근 확인 {formatBlogDate(blogAnalysisData.fetchedAt)}</span>}
+                  <div className="col-span-2 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 md:mt-3 md:text-sm">
+                    <span className="break-all">블로그 ID{blog ? ` ${blog.blogId}` : ""}</span>
+                    {(!blog || blogAnalysisData?.fetchedAt) && <span>최근 확인{blogAnalysisData?.fetchedAt && blog ? ` ${formatBlogDate(blogAnalysisData.fetchedAt)}` : ""}</span>}
                   </div>
                 </div>
               </div>
             </div>
-          </div>
           )}
 
           <div className="rounded-lg border border-slate-700 bg-slate-900/35 p-4">
             {searchMode !== "postRank" && (
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h3 className="text-base font-semibold text-white">최신글</h3>
-                <span className="text-xs text-slate-500">{`${blogAnalysisData?.posts?.length || 0}개 표시`}</span>
+                {blog && <span className="text-xs text-slate-500">{blogPosts.length}개 표시</span>}
               </div>
             )}
             <div className="divide-y divide-slate-800/80">
-              {(searchMode === "postRank"
-                ? (blogPostRankData?.post ? [blogPostRankData.post] : [])
-                : (blogAnalysisData?.posts || [])
-              ).map((post) => {
-                const postAnalysis = blogPostAnalysisData[post.link];
-                const postError = blogPostAnalysisErrors[post.link];
-                const isPostLoading = blogPostAnalysisLoading === post.link;
-                const isPostAnalysisOpen = Boolean(blogPostAnalysisOpen[post.link]);
-                const keywordInputValue = blogPostKeywordInputs[post.link] || "";
-                const postEngagement = blogPostEngagementData[post.link];
-                const isEngagementLoading = blogPostEngagementLoading === post.link;
+              {blogPosts.map((post) => {
+                const postLink = post?.link ?? "";
+                const postAnalysis = blogPostAnalysisData[postLink];
+                const postError = blogPostAnalysisErrors[postLink];
+                const isPostLoading = blogPostAnalysisLoading === postLink;
+                const keywordInputValue = blogPostKeywordInputs[postLink] || "";
+                const postEngagement = blogPostEngagementData[postLink];
+                const isEngagementLoading = blogPostEngagementLoading === postLink;
 
                 return (
                 <article
-                  key={`${post.rank}-${post.link}`}
+                  key={postLink || "empty"}
                   className={searchMode === "postRank" ? "py-1" : "py-4 transition-colors hover:bg-slate-800/30 md:px-2"}
                 >
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div className={`flex min-w-0 flex-1 ${searchMode === "postRank" ? "" : "gap-3"}`}>
                     {searchMode !== "postRank" && (
                       <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-600/20 text-xs font-semibold text-blue-200">
-                        {post.rank}
+                        {post?.rank}
                       </span>
                     )}
                     <div className="min-w-0 flex-1">
                       {searchMode === "postRank" && (
                         <p className="mb-1 text-xs text-slate-500">
-                          블로그 이름 <span className="ml-1 text-slate-300">{post.blogTitle || "블로그 이름 정보 없음"}</span>
+                          블로그 이름 {post && <span className="ml-1 text-slate-300">{post.blogTitle || "블로그 이름 정보 없음"}</span>}
                         </p>
                       )}
                       <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                        <a
+                        {post ? <a
                           href={post.link}
                           target="_blank"
                           rel="noreferrer"
                           className="line-clamp-1 text-sm font-medium text-slate-100 transition-colors hover:text-blue-200 md:text-base"
                         >
                           {post.title}
-                        </a>
+                        </a> : (
+                          <h3 className="text-sm font-medium text-slate-100 md:text-base">
+                            {searchMode === "postRank" ? "블로그 게시글 순위" : "게시글 제목"}
+                          </h3>
+                        )}
                       </div>
+                      {!post && searchMode === "postRank" && (
+                        <p className="mt-2 text-xs leading-5 text-slate-400">블로그 게시글 URL을 입력해 키워드별 검색 노출 순위를 분석합니다.</p>
+                      )}
                       {searchMode === "postRank" ? (
                         <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(270px,360px)] lg:items-stretch">
                           <div className="space-y-3 rounded-lg border border-slate-700/70 bg-slate-950/40 px-3.5 py-3">
                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                               <span className="text-slate-500">발행일</span>
-                              <span className="text-slate-300">{formatBlogDate(post.pubDate)}</span>
+                              {post && <span className="text-slate-300">{formatBlogDate(post.pubDate)}</span>}
                             </div>
                             <div className="flex flex-wrap items-start gap-x-3 gap-y-1.5 text-xs">
                               <span className="pt-0.5 text-slate-500">태그</span>
                               <div className="flex flex-1 flex-wrap gap-1.5">
-                                {(post.tags || []).map((tag) => <span key={`${post.link}-tag-${tag}`} className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] text-slate-300">#{tag}</span>)}
-                                {(!post.tags || post.tags.length === 0) && <span className="text-slate-500">등록된 태그 없음</span>}
+                                {post?.tags?.map((tag) => <span key={tag} className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] text-slate-300">#{tag}</span>)}
+                                {post && !post.tags?.length && <span className="text-slate-500">등록된 태그 없음</span>}
                               </div>
                             </div>
                             {postEngagement ? (
@@ -764,32 +712,38 @@ export default function UnifiedInsights() {
                                 {postEngagement.likeCount !== null && <span className="inline-flex items-center gap-1"><Heart className="h-3.5 w-3.5 text-rose-300" aria-hidden="true" />공감 {formatNumber(postEngagement.likeCount)}</span>}
                                 {postEngagement.commentCount !== null && <span className="inline-flex items-center gap-1"><MessageCircle className="h-3.5 w-3.5 text-sky-300" aria-hidden="true" />댓글 {formatNumber(postEngagement.commentCount)}</span>}
                               </div>
-                            ) : (
+                            ) : isEngagementLoading ? (
                               <div className="inline-flex items-center gap-1.5 text-xs text-slate-500"><Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />공감·댓글 확인 중</div>
+                            ) : (
+                              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                                <span className="inline-flex items-center gap-1"><Heart size={14} aria-hidden="true" />공감</span>
+                                <span className="inline-flex items-center gap-1"><MessageCircle size={14} aria-hidden="true" />댓글</span>
+                              </div>
                             )}
                           </div>
                           <div className="grid grid-cols-3 gap-2">
                             <div className="flex min-w-0 flex-col items-center justify-center rounded-lg border border-slate-700/70 bg-slate-950/40 px-2 py-3 text-center">
                               <span className="text-[11px] text-slate-500">글자 수</span>
-                              <span className="mt-1 text-base font-medium text-slate-100">{formatNumber(postEngagement?.characterCount)}</span>
+                              <span className="mt-1 min-h-6 text-base font-medium text-slate-100">{postEngagement && formatNumber(postEngagement.characterCount)}</span>
                             </div>
                             <div className="flex min-w-0 flex-col items-center justify-center rounded-lg border border-slate-700/70 bg-slate-950/40 px-2 py-3 text-center">
                               <span className="text-[11px] text-slate-500">이미지 수</span>
-                              <span className="mt-1 text-base font-medium text-slate-100">{formatNumber(postEngagement?.imageCount)}</span>
+                              <span className="mt-1 min-h-6 text-base font-medium text-slate-100">{postEngagement && formatNumber(postEngagement.imageCount)}</span>
                             </div>
                             <div className="flex min-w-0 flex-col items-center justify-center rounded-lg border border-slate-700/70 bg-slate-950/40 px-2 py-3 text-center">
                               <span className="text-[11px] text-slate-500">영상 수</span>
-                              <span className="mt-1 text-base font-medium text-slate-100">{formatNumber(postEngagement?.videoCount)}</span>
+                              <span className="mt-1 min-h-6 text-base font-medium text-slate-100">{postEngagement && formatNumber(postEngagement.videoCount)}</span>
                             </div>
                           </div>
                         </div>
                       ) : (
                         <>
                           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-                            <span>{formatBlogDate(post.pubDate)}</span>
-                            {post.category && <span>{post.category}</span>}
+                            <span>{post ? formatBlogDate(post.pubDate) : "발행일"}</span>
+                            {!post && <span>카테고리</span>}
+                            {post?.category && <span>{post.category}</span>}
                           </div>
-                          {post.tags && post.tags.length > 0 && (
+                          {post?.tags && post.tags.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-1.5">
                               {post.tags.map((tag) => <span key={`${post.link}-tag-${tag}`} className="rounded-full border border-slate-600/40 bg-slate-800/45 px-2 py-0.5 text-[11px] text-slate-300">#{tag}</span>)}
                             </div>
@@ -800,16 +754,17 @@ export default function UnifiedInsights() {
                     </div>
                     {searchMode === "rank" && <button
                       type="button"
+                      disabled={!post}
                       onClick={() => {
+                        if (!post) return;
                         setSearchMode("postRank");
                         setKeywordInput(post.link);
-                        setIsSearchModeOpen(false);
                         setBlogAnalysisData(null);
                         setQuerySuccess(false);
                         window.scrollTo({ top: 0, behavior: "smooth" });
                         runBlogPostRankAnalysis(post.link);
                       }}
-                      className="h-9 shrink-0 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-500 md:self-center"
+                      className="h-9 shrink-0 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-500 md:self-center"
                     >
                       순위 확인
                     </button>}
@@ -819,16 +774,14 @@ export default function UnifiedInsights() {
                       {postError}
                     </div>
                   )}
-                  {searchMode === "postRank" && isPostAnalysisOpen && (
+                  {searchMode === "postRank" && (
                     <div className="mt-4 rounded-lg border border-blue-500/15 bg-slate-950/45 p-4">
                       <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                         <div>
                           <h4 className="text-sm font-semibold text-white">키워드 순위 분석</h4>
-                          {postAnalysis?.success && (
-                            <p className="mt-1 text-xs text-slate-500">
-                              네이버 블로그 검색 상위 {postAnalysis.results?.[0]?.checkedCount || 100}개 기준
-                            </p>
-                          )}
+                          <p className="mt-1 text-xs text-slate-500">
+                            네이버 블로그 검색 상위 {postAnalysis?.results?.[0]?.checkedCount || 100}개 기준
+                          </p>
                           {postAnalysis?.searchVolumeAvailable === false && (
                             <p className="mt-1 text-xs text-amber-300">
                               검색광고 키를 확인하지 못해 검색량은 비어 있을 수 있습니다.
@@ -838,23 +791,24 @@ export default function UnifiedInsights() {
                         <div className="flex gap-2">
                           <input
                             type="text"
+                            disabled={!post}
                             value={keywordInputValue}
                             onChange={(event) => setBlogPostKeywordInputs(prev => ({
                               ...prev,
-                              [post.link]: event.target.value,
+                              [postLink]: event.target.value,
                             }))}
                             onKeyDown={(event) => {
-                              if (event.key === "Enter" && keywordInputValue.trim()) {
+                              if (event.key === "Enter" && post && !isPostLoading && keywordInputValue.trim()) {
                                 runBlogPostAnalysis(post, keywordInputValue);
                               }
                             }}
                             placeholder="키워드 입력"
-                            className="h-9 w-36 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-blue-500 md:w-48"
+                            className="h-9 w-36 min-w-0 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-blue-500 md:w-48"
                           />
                           <button
                             type="button"
-                            onClick={() => runBlogPostAnalysis(post, keywordInputValue)}
-                            disabled={isPostLoading || !keywordInputValue.trim()}
+                            onClick={() => post && runBlogPostAnalysis(post, keywordInputValue)}
+                            disabled={!post || isPostLoading || !keywordInputValue.trim()}
                             className="inline-flex h-9 min-w-14 items-center justify-center gap-1.5 rounded-lg border border-blue-500/30 px-3 text-sm text-blue-100 transition-colors hover:border-blue-400 hover:text-white disabled:border-slate-700 disabled:text-slate-500"
                           >
                             {isPostLoading ? (
@@ -867,7 +821,7 @@ export default function UnifiedInsights() {
                         </div>
                       </div>
                       <div className="overflow-x-auto">
-                        <div className="min-w-[520px] overflow-hidden rounded-lg border border-slate-800">
+                        <div className="overflow-hidden rounded-lg border border-slate-800">
                           <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr] bg-slate-900/70 px-3 py-2 text-xs font-semibold text-slate-400">
                             <span>키워드</span>
                             <span className="text-right">검색량</span>
@@ -876,7 +830,7 @@ export default function UnifiedInsights() {
                           </div>
                           {(postAnalysis?.results || []).map((result) => (
                             <div
-                              key={`${post.link}-${result.keyword}`}
+                              key={result.keyword}
                               className="grid grid-cols-[1.4fr_1fr_1fr_1fr] border-t border-slate-800 px-3 py-2 text-sm text-slate-200"
                             >
                               <span className="truncate pr-2">{result.keyword}</span>
@@ -896,7 +850,7 @@ export default function UnifiedInsights() {
                 </article>
                 );
               })}
-              {searchMode === "rank" && (!blogAnalysisData?.posts || blogAnalysisData.posts.length === 0) && (
+              {searchMode === "rank" && blog && blogPosts.length === 0 && (
                 <div className="py-8 text-center text-sm text-slate-500">표시할 최신글이 없습니다.</div>
               )}
             </div>
@@ -904,8 +858,14 @@ export default function UnifiedInsights() {
         </div>
       )}
 
+      {!selectedSearchMode && !showKeywordAnalysis && (
+        <div className="analysisEmptyState">
+          <p>분석할 메뉴를 선택하세요.</p>
+        </div>
+      )}
+
       {/* Chart Display */}
-      {searchMode === "analysis" && (
+      {showKeywordAnalysis && (
         <div className="mt-3 space-y-6">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="rounded-lg border border-blue-500/20 bg-slate-900/50 p-5">

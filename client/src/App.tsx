@@ -92,7 +92,7 @@ function App() {
   const guestBrowseAction = useRef<(() => void) | null>(null);
 
   const requestGuestMenuAccess = (path?: string, onBrowse?: () => void) => {
-    if (path === "/commerce") return false;
+    if (path?.split("?")[0] === "/commerce") return false;
     if (path === "/news/issues" || path?.startsWith("/news/issues/")) return false;
     if (path?.startsWith("/saved-contents")) return false;
     if (authLoading || isAuthenticated || guestMenuPromptSeen.current) return false;

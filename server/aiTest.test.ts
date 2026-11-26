@@ -145,10 +145,12 @@ describe("Gemini test access", () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
-  it("places AI test last and keeps ordinary analysis routes intact", () => {
+  it("opens AI from a dedicated button and keeps ordinary analysis routes intact", () => {
     const hero = readFileSync(new URL("../client/src/components/Hero.tsx", import.meta.url), "utf8");
-    const menu = hero.slice(hero.indexOf("const searchPlatforms"), hero.indexOf("export default"));
-    expect(menu.lastIndexOf("aiPlatform")).toBeGreaterThan(menu.indexOf('value: "news"'));
+    const menu = hero.match(/const searchPlatforms = \[([\s\S]*?)\];/)?.[1];
+    expect(menu?.match(/value: "(.*?)"/g)).toEqual(['value: "youtube"', 'value: "naver"', 'value: "news"']);
+    expect(menu).not.toContain("aiPlatform");
+    expect(hero).toContain('onClick={() => selectPlatform("ai")}');
     expect(hero).toContain('selectedPlatform?.value === "ai"');
     expect(hero).toContain("/trends/naver?keyword=");
     expect(hero).toContain("HeroAiChat");

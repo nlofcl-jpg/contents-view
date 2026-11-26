@@ -9,6 +9,7 @@ import { SearchGlowForm } from "@/components/SearchGlowForm";
 import { TrendResetButton } from "@/components/TrendResetButton";
 import { TREND_FILTER_CONTROL_CLASS, useNaverTrendComparison } from "@/components/NaverTrendComparison";
 import { trpc } from "@/lib/trpc";
+import { commerceLinks, getCommerceTab } from "@/lib/commerceNavigation";
 import { NAVER_GUEST_DAILY_LIMIT_MESSAGE, NAVER_MEMBER_DAILY_LIMIT_MESSAGE } from "@shared/naverAnalysisQuota";
 import { naverShoppingCategories } from "@shared/naverShoppingCategories";
 const rootCategoryFallback = Object.entries(naverShoppingCategories).map(([value, label]) => ({ value, label }));
@@ -42,7 +43,8 @@ function CategoryFilter({ label, value, options, disabled, onChange }: {
 
 export default function CommerceTrends() {
   const [, navigate] = useLocation();
-  const coupangActive = new URLSearchParams(useSearch()).get("tab") === "coupang";
+  const activeTab = getCommerceTab(useSearch());
+  const coupangActive = activeTab === "coupang";
   const { loading: authLoading } = useAuth();
   const [guestPromptOpen, setGuestPromptOpen] = useState(false);
   const [keywordInput, setKeywordInput] = useState("");
@@ -141,12 +143,11 @@ export default function CommerceTrends() {
         </h1>
       </div>
       <div className="tabMenu youtubeTabMenu" role="group" aria-label="커머스 트렌드 선택">
-        <button type="button" className={`tabButton${coupangActive ? "" : " active"}`} aria-pressed={!coupangActive} onClick={() => navigate("/commerce")}>
-          쇼핑 트렌드 비교
-        </button>
-        <button type="button" className={`tabButton${coupangActive ? " active" : ""}`} aria-pressed={coupangActive} onClick={() => navigate("/commerce?tab=coupang")}>
-          쿠팡 트렌드
-        </button>
+        {commerceLinks.map(({ id, label, href }) => (
+          <button key={id} type="button" className={`tabButton${activeTab === id ? " active" : ""}`} aria-pressed={activeTab === id} onClick={() => navigate(href)}>
+            {label}
+          </button>
+        ))}
       </div>
       {coupangActive ? <CoupangTrendPanel /> : (
       <>

@@ -39,7 +39,7 @@ export default function LiveTrendNavigation({ active }: { active: (typeof links)
             key={item.id}
             href={item.href}
             aria-current={active === item.id ? "page" : undefined}
-            className="flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded text-xs font-medium text-slate-300 no-underline outline-sky-300 focus-visible:outline-2 aria-[current=page]:text-sky-300"
+            className="flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded text-xs font-medium no-underline outline-sky-300 focus-visible:outline-2"
           >
             {"logo" in item
               ? <img src={item.logo} className="mobileTrendLogo" alt="" aria-hidden="true" />

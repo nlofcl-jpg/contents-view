@@ -16,7 +16,6 @@ const searchPlatforms = [
   { value: "youtube", label: "YOUTUBE", className: "isYoutube" },
   { value: "naver", label: "NAVER", className: "isNaver" },
   { value: "news", label: "뉴스", className: "isNews" },
-  aiPlatform,
 ];
 
 function resizeAiInput(input: HTMLTextAreaElement) {
@@ -30,6 +29,7 @@ export default function Hero() {
   const heroRef = useRef<HTMLElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
   const platformTriggerRef = useRef<HTMLButtonElement>(null);
+  const aiEntryButtonRef = useRef<HTMLButtonElement>(null);
   const aiInputRef = useRef<HTMLTextAreaElement>(null);
   const searchFormRef = useRef<HTMLFormElement>(null);
   const [, setLocation] = useLocation();
@@ -40,6 +40,7 @@ export default function Hero() {
   const [keyword, setKeyword] = useState("");
   const [guestKeyword, setGuestKeyword] = useState<string | null>(null);
   const isAiMode = selectedPlatform?.value === "ai";
+  const displayedPlatform = isAiMode ? null : selectedPlatform;
   const { ranking: googleRanking } = useGoogleLiveRanking();
   const popularKeywords = useMemo(
     () => googleRanking.slice(0, 7).map(item => item.keyword),
@@ -130,7 +131,7 @@ export default function Hero() {
   };
 
   const selectPlatform = (value: string) => {
-    const platform = searchPlatforms.find(item => item.value === value);
+    const platform = value === aiPlatform.value ? aiPlatform : searchPlatforms.find(item => item.value === value);
     if (!platform) return;
     setSelectedPlatform(platform);
     if (platform.value === "ai" && !isAiPageOpen) {
@@ -140,13 +141,15 @@ export default function Hero() {
   };
 
   const clearPlatform = () => {
-    if (isAiPageOpen && !isAiMode) {
-      setSelectedPlatform(aiPlatform);
-    } else {
-      setSelectedPlatform(null);
-      setIsAiPageOpen(false);
-    }
+    setSelectedPlatform(isAiPageOpen ? aiPlatform : null);
     requestAnimationFrame(() => platformTriggerRef.current?.focus());
+  };
+
+  const closeAiPage = () => {
+    setIsAiPageOpen(false);
+    setSelectedPlatform(null);
+    setAiEntryOrigin(null);
+    requestAnimationFrame(() => aiEntryButtonRef.current?.focus({ preventScroll: true }));
   };
 
   const renderInput = (sendDisabled: boolean) => (
@@ -184,16 +187,16 @@ export default function Hero() {
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger
                     ref={platformTriggerRef}
-                    className={`heroSearchFilterButton ${selectedPlatform?.className ?? "isUnselected"}`}
-                    aria-label={selectedPlatform ? `분석 플랫폼 선택: ${selectedPlatform.label}` : "분석 플랫폼 선택"}
+                    className={`heroSearchFilterButton ${displayedPlatform?.className ?? "isUnselected"}`}
+                    aria-label={displayedPlatform ? `분석 플랫폼 선택: ${displayedPlatform.label}` : "분석 플랫폼 선택"}
                     title="분석 플랫폼 선택"
                   >
                     <Plus size={18} aria-hidden="true" />
-                    {selectedPlatform && <span>{selectedPlatform.label}</span>}
+                    {displayedPlatform && <span>{displayedPlatform.label}</span>}
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" sideOffset={8} collisionPadding={12} className={`heroSearchMenu${isAiPageOpen ? "" : " heroHomePlatformMenu"}`} aria-label="분석 플랫폼">
                     <DropdownMenuRadioGroup
-                      value={selectedPlatform?.value ?? ""}
+                      value={displayedPlatform?.value ?? ""}
                       onValueChange={selectPlatform}
                     >
                       {searchPlatforms.map(platform => (
@@ -208,11 +211,11 @@ export default function Hero() {
                     </DropdownMenuRadioGroup>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                {selectedPlatform && (
+                {displayedPlatform && (
                   <button
                     type="button"
                     className="heroSearchClearPlatform"
-                    aria-label={`${selectedPlatform.label} 선택 취소`}
+                    aria-label={`${displayedPlatform.label} 선택 취소`}
                     title="플랫폼 선택 취소"
                     onClick={clearPlatform}
                   >
@@ -222,16 +225,22 @@ export default function Hero() {
               </div>
               <div className="flex items-center gap-1">
                 <VoiceSearchButton onTranscript={text => setKeyword(value => [value.trimEnd(), text].filter(Boolean).join(" "))} />
-                <button type="submit" className="heroSearchButton" aria-label={isAiMode ? "질문 보내기" : "분석"} title={isAiMode ? "질문 보내기" : "분석"} disabled={sendDisabled}>
-                  <ArrowUp size={19} aria-hidden="true" />
-                </button>
+                {!isAiPageOpen && !selectedPlatform ? (
+                  <button ref={aiEntryButtonRef} type="button" className="heroSearchButton heroAiEntryButton text-xs font-semibold" onClick={() => selectPlatform("ai")} aria-label="AI 모드 열기" title="AI 모드 열기">
+                    AI
+                  </button>
+                ) : (
+                  <button type="submit" className={`heroSearchButton${isAiMode ? " heroAiSendButton" : ""}`} aria-label={isAiMode ? "질문 보내기" : "분석"} title={isAiMode ? "질문 보내기" : "분석"} disabled={sendDisabled}>
+                    <ArrowUp size={19} aria-hidden="true" />
+                  </button>
+                )}
               </div>
             </div>
             </>
   );
 
   if (isAiPageOpen) {
-    return <HeroAiChat input={keyword} setInput={setKeyword} renderInput={renderInput} onAnalyze={isAiMode ? undefined : handleHeroSearch} entryOrigin={aiEntryOrigin} />;
+    return <HeroAiChat input={keyword} setInput={setKeyword} renderInput={renderInput} onAnalyze={isAiMode ? undefined : handleHeroSearch} onClose={closeAiPage} entryOrigin={aiEntryOrigin} />;
   }
 
   return (
@@ -248,6 +257,10 @@ export default function Hero() {
           </h2>
           <SearchGlowForm ref={searchFormRef} className="heroSearch" role="search" aria-label="트렌드 분석" onSubmit={event => {
             event.preventDefault();
+            if (!selectedPlatform) {
+              if (keyword.trim()) selectPlatform("ai");
+              return;
+            }
             handleHeroSearch();
           }}>
             {renderInput(!keyword.trim())}

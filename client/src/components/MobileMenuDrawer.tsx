@@ -1,9 +1,10 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
-import { useLocation } from "wouter";
-import { X, Home, LogOut, User, ShieldCheck, Bookmark, MessageCircle } from "lucide-react";
+import { useLocation, useSearch } from "wouter";
+import { ChevronDown, X, Home, LogOut, User, ShieldCheck, Bookmark, MessageCircle } from "lucide-react";
 import { useState } from "react";
 import { getActiveNewsPath, newsLinks } from "@/lib/newsNavigation";
+import { commerceLinks, getCommerceTab } from "@/lib/commerceNavigation";
 import SocialIcons from "@/components/SocialIcons";
 
 interface MobileMenuDrawerProps {
@@ -23,8 +24,10 @@ export function MobileMenuDrawer({
 }: MobileMenuDrawerProps) {
   const { user, isAuthenticated, logout } = useAuth();
   const [location, navigate] = useLocation();
+  const search = useSearch();
   const [isTrendOpen, setIsTrendOpen] = useState(true);
   const [isNewsOpen, setIsNewsOpen] = useState(false);
+  const [isCommerceOpen, setIsCommerceOpen] = useState(false);
   const [isStudioOpen, setIsStudioOpen] = useState(false);
 
   const isOpen = panelType !== null;
@@ -55,6 +58,7 @@ export function MobileMenuDrawer({
   const isSavedContentsPage = location === "/saved-contents";
   const isCommunityPage = location === "/community";
   const isCommercePage = location === "/commerce";
+  const activeCommerceTab = isCommercePage ? getCommerceTab(search) : null;
   const isAIStudioPage = location?.startsWith("/ai-studio");
   const isVideoProductionPage = location === "/ai-studio/video" || location.startsWith("/ai-studio/video/") ||
     (location === "/ai-studio" && new URLSearchParams(window.location.search).get("tab") === "upcoming");
@@ -255,13 +259,31 @@ export function MobileMenuDrawer({
               )}
 
               <button
-                className={`mobileNavItem ${isCommercePage ? "active" : ""}`}
-                aria-current={isCommercePage ? "page" : undefined}
-                onClick={() => handleNavigation("/commerce")}
+                className={`mobileNavItem groupTitle ${isCommercePage ? "active" : ""}`}
+                aria-expanded={isCommerceOpen}
+                aria-controls="mobile-commerce-submenu"
+                onClick={() => setIsCommerceOpen(open => !open)}
                 type="button"
               >
                 <span>커머스 트렌드</span>
+                <ChevronDown size={16} className={`ml-auto transition-transform${isCommerceOpen ? " rotate-180" : ""}`} aria-hidden="true" />
               </button>
+
+              {isCommerceOpen && (
+                <div id="mobile-commerce-submenu">
+                  {commerceLinks.map(({ id, label, href }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`mobileNavItem subNavItem ${activeCommerceTab === id ? "active" : ""}`}
+                      aria-current={activeCommerceTab === id ? "page" : undefined}
+                      onClick={() => handleNavigation(href)}
+                    >
+                      <span>{label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <button
                 className={`mobileNavItem groupTitle ${isAIStudioPage ? "active" : ""}`}

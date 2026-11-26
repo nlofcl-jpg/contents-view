@@ -3,10 +3,11 @@ import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { supabase } from "@/lib/supabase";
 import { useState, useRef, useEffect } from "react";
-import { useLocation, Link } from "wouter";
+import { useLocation, useSearch, Link } from "wouter";
 import { ChevronDown, Menu } from "lucide-react";
 import FlowDownloadBanner from "@/components/FlowDownloadBanner";
 import { newsLinks } from "@/lib/newsNavigation";
+import { commerceLinks, getCommerceTab } from "@/lib/commerceNavigation";
 
 interface HeaderProps {
   onOpenMyPageModal?: () => void;
@@ -30,19 +31,25 @@ export default function Header({
 }: HeaderProps) {
   const { user, isAuthenticated, logout } = useAuth();
   const [location, setLocation] = useLocation();
+  const search = useSearch();
+  const activeCommerceTab = location === "/commerce" ? getCommerceTab(search) : null;
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNoticeOpen, setIsNoticeOpen] = useState(false);
   const [notices, setNotices] = useState<NoticeItem[]>([]);
   const [openTrendMenu, setOpenTrendMenu] = useState(false);
   const [openNewsMenu, setOpenNewsMenu] = useState(false);
+  const [openCommerceMenu, setOpenCommerceMenu] = useState(false);
   const [openStudioMenu, setOpenStudioMenu] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const noticeRef = useRef<HTMLDivElement>(null);
   const trendMenuRef = useRef<HTMLDivElement>(null);
   const newsMenuRef = useRef<HTMLDivElement>(null);
+  const commerceMenuRef = useRef<HTMLDivElement>(null);
+  const commerceMenuButtonRef = useRef<HTMLButtonElement>(null);
   const studioMenuRef = useRef<HTMLDivElement>(null);
   const trendMenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const newsMenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const commerceMenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const studioMenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const trendItems = [
@@ -112,6 +119,20 @@ export default function Header({
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [openNewsMenu]);
+
+  useEffect(() => {
+    if (!openCommerceMenu) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!commerceMenuRef.current?.contains(event.target as Node)) setOpenCommerceMenu(false);
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      if (commerceMenuTimeoutRef.current) clearTimeout(commerceMenuTimeoutRef.current);
+    };
+  }, [openCommerceMenu]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -201,6 +222,15 @@ export default function Header({
     if (!onGuestMenuAccess?.(path)) setLocation(path);
   };
 
+  const handleCommerceMenuHover = (isHovering: boolean) => {
+    if (commerceMenuTimeoutRef.current) clearTimeout(commerceMenuTimeoutRef.current);
+    if (isHovering) {
+      setOpenCommerceMenu(true);
+    } else {
+      commerceMenuTimeoutRef.current = setTimeout(() => setOpenCommerceMenu(false), 200);
+    }
+  };
+
   const handleStudioMenuHover = (isHovering: boolean) => {
     if (studioMenuTimeoutRef.current) {
       clearTimeout(studioMenuTimeoutRef.current);
@@ -268,7 +298,7 @@ export default function Header({
 
   return (
     <>
-      <header className="header">
+      <header id="site-header" className="header">
       <div className="headerContentWrapper">
         {/* 모바일: 오른쪽 알림/메뉴 버튼 */}
         <div className="mobileMenuButtonWrapper">
@@ -404,9 +434,41 @@ export default function Header({
           )}
         </div>
 
-        <a href="/commerce" className={`headerNavItem headerNavLink ${location === "/commerce" ? "active" : ""}`} aria-current={location === "/commerce" ? "page" : undefined}>
-          커머스 트렌드
-        </a>
+        <div
+          className="headerNavItem headerNavGroup"
+          ref={commerceMenuRef}
+          onMouseEnter={() => handleCommerceMenuHover(true)}
+          onMouseLeave={() => handleCommerceMenuHover(false)}
+          onKeyDown={event => {
+            if (event.key === "Escape" && openCommerceMenu) {
+              setOpenCommerceMenu(false);
+              commerceMenuButtonRef.current?.focus();
+            }
+          }}
+        >
+          <button
+            ref={commerceMenuButtonRef}
+            type="button"
+            className={`headerNavButton ${activeCommerceTab ? "active" : ""}`}
+            aria-expanded={openCommerceMenu}
+            aria-controls="header-commerce-submenu"
+            onClick={() => handleCommerceMenuHover(true)}
+          >
+            커머스 트렌드
+            <span className="headerNavToggle" aria-hidden="true">
+              <ChevronDown className={`headerNavChevron ${openCommerceMenu ? "open" : ""}`} />
+            </span>
+          </button>
+          {openCommerceMenu && (
+            <div id="header-commerce-submenu" className="headerNavDropdown">
+              {commerceLinks.map(({ id, href, label }) => (
+                <Link key={id} href={href} className="headerNavDropdownItem" aria-current={activeCommerceTab === id ? "page" : undefined} onClick={() => setOpenCommerceMenu(false)}>
+                  {label}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div
           className="headerNavItem headerNavGroup"

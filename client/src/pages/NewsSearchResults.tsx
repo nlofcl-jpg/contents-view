@@ -109,7 +109,7 @@ export default function NewsSearchResults() {
         </SearchGlowForm>
       </section>
 
-      <section className="newsSearchResultsSection">
+      <section className={keyword ? "newsSearchResultsSection" : "analysisEmptyState"}>
         {keyword && (
           <div className="newsSearchResultsHeader">
             <h2 className="newsSearchResultTitle">뉴스 검색결과: {keyword}</h2>
@@ -119,12 +119,14 @@ export default function NewsSearchResults() {
           </div>
         )}
 
-        {authLoading ? (
+        {!keyword ? (
+          <p>검색할 키워드를 입력해 주세요.</p>
+        ) : authLoading ? (
           <div className="newsSearchLoading" role="status" aria-live="polite">
             <Loader2 className="newsSearchLoadingIcon" aria-hidden="true" />
             <span>로그인 상태를 확인하는 중</span>
           </div>
-        ) : keyword && (!isAuthenticated || searchError?.data?.code === "UNAUTHORIZED") ? (
+        ) : !isAuthenticated || searchError?.data?.code === "UNAUTHORIZED" ? (
           <div className="py-10 text-center" role="status">
             <p className="text-base font-medium text-slate-100">로그인 후 뉴스 검색 서비스를 이용해 주세요.</p>
             <p className="mt-2 text-sm leading-6 text-slate-400">간편 회원가입 후 컨텐츠뷰의 더욱 다양한 서비스를 이용해 보세요.</p>
@@ -134,8 +136,6 @@ export default function NewsSearchResults() {
           </div>
         ) : isLoadingSearch ? (
           <AnalysisProgress label="검색중..." />
-        ) : !keyword ? (
-          <div className="text-center text-gray-400">검색할 키워드를 입력해 주세요.</div>
         ) : searchError ? (
           <div className="text-center text-gray-400">뉴스 검색결과를 불러오지 못했습니다. 잠시 후 다시 검색해 주세요.</div>
         ) : searchResults.length > 0 ? (

@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, ExternalLink, ImageOff, LayoutGrid, RefreshC
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
+import { CompactSegmentedControl } from "@/components/CompactSegmentedControl";
 import { SearchGlowForm } from "@/components/SearchGlowForm";
 import { useMobileNavScroll } from "@/hooks/useMobileNavScroll";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -18,6 +19,7 @@ const productFeeds = [
   { id: "popular", label: "인기순", Icon: ShoppingBag },
   { id: "deals", label: "특가·행사", Icon: Ticket },
 ] as const;
+const productFeedOptions = productFeeds.map(({ id, label }) => ({ value: id, label: id === "deals" ? "특가" : label }));
 
 type ProductData = inferRouterOutputs<AppRouter>["coupang"]["products"];
 type ProductResult = {
@@ -126,7 +128,7 @@ export default function CoupangTrendPanel() {
   return (
     <>
       <Popover open={resultsOpen} onOpenChange={setResultsOpen}>
-        <PopoverAnchor className="mb-[var(--commerce-section-spacing)] w-full">
+        <PopoverAnchor className="mb-[var(--commerce-section-spacing)] w-full md:mb-0">
           <SearchGlowForm ref={formRef} className="heroSearch naverAnalysisComposer commerceAnalysisComposer" role="search" aria-label="쿠팡 상품 검색" onSubmit={event => {
             event.preventDefault();
             const term = keyword.trim();
@@ -186,10 +188,8 @@ export default function CoupangTrendPanel() {
         </PopoverContent>
       </Popover>
       <section ref={productsRef} className="scroll-mt-4 space-y-4" aria-labelledby="coupang-products-title">
-        <div className="hidden flex-wrap justify-center gap-2 md:flex" role="group" aria-label="쿠팡 상품 목록">
-          {productFeeds.map(item => (
-            <button key={item.id} type="button" className={`tabButton${item.id === feed ? " active" : ""}`} aria-pressed={item.id === feed} onClick={() => setFeed(item.id)}>{item.label}</button>
-          ))}
+        <div className="hidden justify-center md:flex">
+          <CompactSegmentedControl label="쿠팡 상품 목록" options={productFeedOptions} value={feed} onChange={setFeed} />
         </div>
         <div className="flex items-center justify-between gap-3">
           <h2 id="coupang-products-title" className="min-w-0 break-words text-lg font-semibold text-white">
@@ -220,13 +220,13 @@ export default function CoupangTrendPanel() {
         <PopoverAnchor asChild>
           <nav ref={setMobileNavRef} aria-label="쿠팡 트렌드 하단 메뉴" data-scroll-hidden={mobileNavHidden} className="coupangMobileNav fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-white/10 px-2 pb-[env(safe-area-inset-bottom,0px)] md:hidden">
             <PopoverTrigger asChild>
-              <button type="button" className="flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded text-xs font-medium text-slate-300 outline-sky-300 focus-visible:outline-2 aria-expanded:text-sky-300">
+              <button type="button" className="flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded text-xs font-medium outline-sky-300 focus-visible:outline-2">
                 <LayoutGrid size={18} aria-hidden="true" />
                 카테고리
               </button>
             </PopoverTrigger>
             {productFeeds.map(({ id, label, Icon }) => (
-              <button key={id} type="button" aria-pressed={feed === id} className="flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded text-xs font-medium text-slate-300 outline-sky-300 focus-visible:outline-2 aria-pressed:text-sky-300" onClick={() => selectMobileFeed(id)}>
+              <button key={id} type="button" aria-pressed={feed === id} className="flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded text-xs font-medium outline-sky-300 focus-visible:outline-2" onClick={() => selectMobileFeed(id)}>
                 <Icon size={18} aria-hidden="true" />
                 {label}
               </button>
