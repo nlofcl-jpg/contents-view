@@ -54,10 +54,9 @@ export default function FlowAutomation() {
     }
   };
 
-  const handleGuestAuth = (mode: "login" | "signup") => {
+  const handleGuestAuth = () => {
     setShowGuestPrompt(false);
-    const signupParam = mode === "signup" ? "mode=signup&" : "";
-    setLocation(`/login?${signupParam}redirect=%2Fai-studio%2Fflow-automation`);
+    setLocation("/login?redirect=%2Fai-studio%2Fflow-automation");
   };
 
   return (
@@ -119,8 +118,7 @@ export default function FlowAutomation() {
       <GuestAccessPrompt
         open={showGuestPrompt}
         onBrowse={() => setShowGuestPrompt(false)}
-        onLogin={() => handleGuestAuth("login")}
-        onSignup={() => handleGuestAuth("signup")}
+        onLogin={handleGuestAuth}
       />
     </div>
   );

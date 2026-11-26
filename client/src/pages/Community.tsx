@@ -248,10 +248,6 @@ export default function Community() {
           setShowGuestPrompt(false);
           setLocation("/login?redirect=%2Fcommunity");
         }}
-        onSignup={() => {
-          setShowGuestPrompt(false);
-          setLocation("/login?mode=signup&redirect=%2Fcommunity");
-        }}
       />
     </div>
   );

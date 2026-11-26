@@ -103,9 +103,8 @@ export default function CoupangTrendPanel() {
     setMobileCategoryBoundary(nav?.closest("main") ?? null);
   }, []);
 
-  function goToAuth(signup = false) {
+  function goToAuth() {
     const params = new URLSearchParams({ redirect: "/commerce?tab=coupang" });
-    if (signup) params.set("mode", "signup");
     navigate(`/login?${params}`);
   }
 
@@ -254,7 +253,7 @@ export default function CoupangTrendPanel() {
           </ul>
         </PopoverContent>
       </Popover>
-      <GuestAccessPrompt open={guestPrompt} description="쿠팡 상품 검색은 로그인 후 이용할 수 있습니다." onBrowse={() => setGuestPrompt(false)} onLogin={() => goToAuth()} onSignup={() => goToAuth(true)} />
+      <GuestAccessPrompt open={guestPrompt} description="쿠팡 상품 검색은 로그인 후 이용할 수 있습니다." onBrowse={() => setGuestPrompt(false)} onLogin={goToAuth} />
     </>
   );
 }

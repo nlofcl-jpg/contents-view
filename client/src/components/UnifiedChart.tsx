@@ -12,6 +12,7 @@ import {
   Tooltip,
   Legend,
   ChartOptions,
+  type Plugin,
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 
@@ -25,6 +26,27 @@ ChartJS.register(
   Tooltip,
   Legend
 );
+
+const shoppingHoverGuide: Plugin<'line'> = {
+  id: 'shoppingHoverGuide',
+  beforeDatasetsDraw(chart) {
+    const [activePoint] = chart.getActiveElements();
+    if (!activePoint) return;
+
+    const { ctx, chartArea } = chart;
+    const { x } = activePoint.element;
+    ctx.save();
+    ctx.strokeStyle = '#60a5fa';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, chartArea.top);
+    ctx.lineTo(x, chartArea.bottom);
+    ctx.stroke();
+    ctx.restore();
+  },
+};
+
+const shoppingChartPlugins = [shoppingHoverGuide];
 
 interface DataPoint {
   period: string;
@@ -469,7 +491,7 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
         </div>
       )}
       <div ref={plotRef} className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
-        <Line data={chartData} options={options} />
+        <Line data={chartData} options={options} plugins={visibleLayers.shopping ? shoppingChartPlugins : undefined} />
       </div>
     </div>
   );

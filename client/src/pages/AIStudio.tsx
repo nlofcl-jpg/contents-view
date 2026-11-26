@@ -108,9 +108,8 @@ export default function AIStudio() {
     }
   };
 
-  const handleGuestAuth = (mode: "login" | "signup") => {
+  const handleGuestAuth = () => {
     const params = new URLSearchParams();
-    if (mode === "signup") params.set("mode", "signup");
     params.set("redirect", guestProgramPath || "/ai-studio");
     setGuestProgramPath(null);
     setLocation(`/login?${params.toString()}`);
@@ -250,8 +249,7 @@ export default function AIStudio() {
       <GuestAccessPrompt
         open={guestProgramPath !== null}
         onBrowse={() => setGuestProgramPath(null)}
-        onLogin={() => handleGuestAuth("login")}
-        onSignup={() => handleGuestAuth("signup")}
+        onLogin={handleGuestAuth}
       />
     </div>
   );

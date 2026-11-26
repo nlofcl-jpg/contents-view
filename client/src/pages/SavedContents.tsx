@@ -493,9 +493,8 @@ export default function SavedContents() {
     syncSavedContentsUrl(sectionId);
   };
 
-  const handleGuestAuth = (mode: "login" | "signup") => {
+  const handleGuestAuth = () => {
     const params = new URLSearchParams({ redirect: "/saved-contents" });
-    if (mode === "signup") params.set("mode", "signup");
     setShowGuestPrompt(false);
     setLocation(`/login?${params.toString()}`);
   };
@@ -685,8 +684,7 @@ export default function SavedContents() {
       <GuestAccessPrompt
         open={!authLoading && !isAuthenticated && showGuestPrompt}
         onBrowse={() => setShowGuestPrompt(false)}
-        onLogin={() => handleGuestAuth("login")}
-        onSignup={() => handleGuestAuth("signup")}
+        onLogin={handleGuestAuth}
       />
     </div>
   );

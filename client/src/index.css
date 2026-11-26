@@ -4872,11 +4872,9 @@ a {
   padding: 42px 40px 36px;
   border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: 18px;
-  background: rgba(15, 18, 26, 0.9);
   box-shadow:
     0 28px 80px rgba(0, 0, 0, 0.38),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(18px);
 }
 
 .loginCloseButton {
@@ -5350,37 +5348,37 @@ a {
 }
 
 @media (width < 768px) {
-  .pageHeader > .liveTrendNavigation.tabMenu {
+  .pageHeader > :is(.liveTrendNavigation, .newsTrendTabMenu).tabMenu {
     display: none;
   }
 
-  :is(.creatorTrendMobileNav, .coupangMobileNav) {
+  :is(.creatorTrendMobileNav, .coupangMobileNav, .sectionMobileNav) {
     transform: translateY(0);
     transition: transform 240ms ease;
   }
 
-  :is(.creatorTrendMobileNav, .coupangMobileNav)[data-scroll-hidden="true"]:not(:has(:focus-visible)) {
+  :is(.creatorTrendMobileNav, .coupangMobileNav, .sectionMobileNav)[data-scroll-hidden="true"]:not(:has(:focus-visible)) {
     transform: translateY(100%);
     pointer-events: none;
   }
 
-  .app:has(.coupangMobileNav, .creatorTrendMobileNav) .mainContent {
+  .app:has(.coupangMobileNav, .creatorTrendMobileNav, .sectionMobileNav) .mainContent {
     padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
     scroll-padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
   }
 
-  .app:has(.coupangMobileNav, .creatorTrendMobileNav) .supportChatLauncher {
+  .app:has(.coupangMobileNav, .creatorTrendMobileNav, .sectionMobileNav) .supportChatLauncher {
     bottom: calc(68px + env(safe-area-inset-bottom, 0px));
   }
 
-  .app:has(.coupangMobileNav, .creatorTrendMobileNav) .supportChat {
+  .app:has(.coupangMobileNav, .creatorTrendMobileNav, .sectionMobileNav) .supportChat {
     bottom: calc(114px + env(safe-area-inset-bottom, 0px));
     max-height: calc(100dvh - 184px - env(safe-area-inset-bottom, 0px));
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :is(.creatorTrendMobileNav, .coupangMobileNav) {
+  :is(.creatorTrendMobileNav, .coupangMobileNav, .sectionMobileNav) {
     transition: none;
   }
 }
@@ -10713,7 +10711,6 @@ input[type="date"].youtubeSelect {
 @media (max-width: 768px) {
   .communitySourceFilters.tabMenu,
   .issueFocusCategoryMenu.tabMenu,
-  .newsTrendTabMenu.tabMenu,
   .youtubeTabMenu.tabMenu {
     display: flex;
     flex-wrap: nowrap;
@@ -10723,7 +10720,6 @@ input[type="date"].youtubeSelect {
 
   .communitySourceFilter.tabButton,
   .issueFocusCategoryMenu .tabButton,
-  .newsTrendTabMenu .tabButton,
   .youtubeTabMenu .tabButton {
     flex: 0 0 auto;
     width: auto;
@@ -12266,15 +12262,18 @@ input[type="date"].youtubeSelect {
 }
 
 .trend-comparison-glass,
+.guestAccessPrompt,
+.loginPanel,
 .coupangSearchResultsPopover {
   background: var(--trend-glass-background);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
 }
 
-@media (max-width: 767px) {
+@media (width < 768px) {
   .coupangMobileCategoryPanel,
   .creatorTrendMobileNav,
+  .sectionMobileNav,
   .coupangMobileNav {
     background: var(--trend-glass-background);
     -webkit-backdrop-filter: blur(12px);

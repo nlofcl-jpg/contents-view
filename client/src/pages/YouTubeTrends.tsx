@@ -260,10 +260,10 @@ export default function YouTubeTrends() {
   );
   const [risingGridColumns, setRisingGridColumns] = useState(1);
   const risingPreviewGridRef = useRef<HTMLDivElement>(null);
-  const goToRisingAuth = (mode: "login" | "signup") => {
+  const goToRisingAuth = () => {
     setIsRisingGuestPromptOpen(false);
     const redirect = encodeURIComponent(window.location.pathname + window.location.search);
-    setLocation(`/login?${mode === "signup" ? "mode=signup&" : ""}redirect=${redirect}`);
+    setLocation(`/login?redirect=${redirect}`);
   };
   const guestLoginButton = (className = "") => (
     <button
@@ -1921,8 +1921,7 @@ export default function YouTubeTrends() {
         open={isRisingGuestPromptOpen && !isAuthenticated}
         description="로그인하거나 가입하면 급상승 영상 전체 목록을 볼 수 있어요."
         onBrowse={() => setIsRisingGuestPromptOpen(false)}
-        onLogin={() => goToRisingAuth("login")}
-        onSignup={() => goToRisingAuth("signup")}
+        onLogin={goToRisingAuth}
       />
 
       <GuestAccessPrompt
@@ -1931,10 +1930,6 @@ export default function YouTubeTrends() {
         onLogin={() => {
           setIsAnalysisGuestPromptOpen(false);
           setLocation("/login?redirect=" + encodeURIComponent("/trends/youtube?tab=analysis"));
-        }}
-        onSignup={() => {
-          setIsAnalysisGuestPromptOpen(false);
-          setLocation("/login?mode=signup&redirect=" + encodeURIComponent("/trends/youtube?tab=analysis"));
         }}
       />
 

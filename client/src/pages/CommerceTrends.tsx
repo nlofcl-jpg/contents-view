@@ -127,9 +127,8 @@ export default function CommerceTrends() {
     setAutoCategoryPath([]);
   };
 
-  const goToAuth = (mode: "login" | "signup") => {
+  const goToAuth = () => {
     const params = new URLSearchParams({ redirect: "/commerce" });
-    if (mode === "signup") params.set("mode", "signup");
     setGuestPromptOpen(false);
     navigate(`/login?${params.toString()}`);
   };
@@ -189,8 +188,7 @@ export default function CommerceTrends() {
         open={guestPromptOpen}
         description={NAVER_GUEST_DAILY_LIMIT_MESSAGE}
         onBrowse={() => setGuestPromptOpen(false)}
-        onLogin={() => goToAuth("login")}
-        onSignup={() => goToAuth("signup")}
+        onLogin={goToAuth}
       />
       </>
       )}

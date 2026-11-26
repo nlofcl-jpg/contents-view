@@ -551,10 +551,6 @@ export default function GoogleTrends() {
           setShowGuestPrompt(false);
           setLocation("/login?redirect=%2Ftrends%2Fgoogle");
         }}
-        onSignup={() => {
-          setShowGuestPrompt(false);
-          setLocation("/login?mode=signup&redirect=%2Ftrends%2Fgoogle");
-        }}
       />
     </div>
   );

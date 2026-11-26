@@ -3,6 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SupportChat from "@/components/SupportChat";
+import StudioMobileNav from "@/components/StudioMobileNav";
 
 import NotFound from "@/pages/NotFound";
 import Home from "@/pages/Home";
@@ -81,6 +82,7 @@ function App() {
   const [location, setLocation] = useLocation();
   const isPrivacyPage = location === "/privacy" || location === "/privacy/";
   const isTermsPage = location === "/terms" || location === "/terms/";
+  const isStudioPage = location === "/ai-studio" || location.startsWith("/ai-studio/");
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [isMyPageModalOpen, setIsMyPageModalOpen] = useState(false);
 
@@ -118,9 +120,8 @@ function App() {
     else if (target) setLocation(target);
   };
 
-  const goToGuestAuth = (mode: "login" | "signup") => {
+  const goToGuestAuth = () => {
     const params = new URLSearchParams();
-    if (mode === "signup") params.set("mode", "signup");
     if (guestMenuTarget) params.set("redirect", guestMenuTarget);
     guestBrowseAction.current = null;
     setGuestMenuTarget(undefined);
@@ -175,14 +176,14 @@ function App() {
               </WouterRouter>
             </main>
 
+            {isStudioPage && <StudioMobileNav key={location} path={location.replace(/\/$/, "")} />}
             <SupportChat />
 
             <MyPageModal isOpen={isMyPageModalOpen} onClose={() => setIsMyPageModalOpen(false)} />
             <GuestAccessPrompt
               open={guestMenuTarget !== undefined}
               onBrowse={continueAsGuest}
-              onLogin={() => goToGuestAuth("login")}
-              onSignup={() => goToGuestAuth("signup")}
+              onLogin={goToGuestAuth}
             />
             </div>
             )}

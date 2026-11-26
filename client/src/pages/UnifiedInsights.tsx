@@ -110,9 +110,8 @@ export default function UnifiedInsights() {
     return fallback;
   };
 
-  const goToAnalysisAuth = (mode: "login" | "signup") => {
+  const goToAnalysisAuth = () => {
     const params = new URLSearchParams({ redirect: `/trends/naver${window.location.search}` });
-    if (mode === "signup") params.set("mode", "signup");
     setGuestAnalysisPromptOpen(false);
     setLocation(`/login?${params.toString()}`);
   };
@@ -1129,8 +1128,7 @@ export default function UnifiedInsights() {
         open={guestAnalysisPromptOpen}
         description={NAVER_GUEST_DAILY_LIMIT_MESSAGE}
         onBrowse={() => setGuestAnalysisPromptOpen(false)}
-        onLogin={() => goToAnalysisAuth("login")}
-        onSignup={() => goToAnalysisAuth("signup")}
+        onLogin={goToAnalysisAuth}
       />
     </div>
   );

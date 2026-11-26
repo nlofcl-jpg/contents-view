@@ -1,6 +1,12 @@
 import { Link, useLocation } from "wouter";
+import { Search } from "lucide-react";
 import LatestNewsInfo from "@/components/LatestNewsInfo";
+import SectionMobileNav from "@/components/SectionMobileNav";
 import { getActiveNewsPath, newsLinks } from "@/lib/newsNavigation";
+
+const mobileLinks = newsLinks.map(({ href, label }) => href === "/news/search"
+  ? { href, label: "검색", Icon: Search }
+  : { href, label: label.replace(" ", "\n") });
 
 export default function NewsTrendHeader() {
   const [location] = useLocation();
@@ -25,6 +31,7 @@ export default function NewsTrendHeader() {
           </Link>
         ))}
       </nav>
+      <SectionMobileNav label="뉴스 트렌드 하단 메뉴" activeHref={selectedPath} items={mobileLinks} />
     </header>
   );
 }

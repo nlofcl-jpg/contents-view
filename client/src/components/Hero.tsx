@@ -122,9 +122,8 @@ export default function Hero() {
     handleHeroSearch(searchKeyword);
   };
 
-  const goToGuestAuth = (mode: "login" | "signup") => {
+  const goToGuestAuth = () => {
     const params = new URLSearchParams();
-    if (mode === "signup") params.set("mode", "signup");
     if (guestKeyword) params.set("redirect", getSearchPath(guestKeyword));
     setGuestKeyword(null);
     setLocation(`/login?${params.toString()}`);
@@ -265,8 +264,7 @@ export default function Hero() {
       <GuestAccessPrompt
         open={guestKeyword !== null}
         onBrowse={() => setGuestKeyword(null)}
-        onLogin={() => goToGuestAuth("login")}
-        onSignup={() => goToGuestAuth("signup")}
+        onLogin={goToGuestAuth}
       />
     </section>
     </>
