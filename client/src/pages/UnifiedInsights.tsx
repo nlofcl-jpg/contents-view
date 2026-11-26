@@ -119,7 +119,10 @@ export default function UnifiedInsights() {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState("");
   const [voiceInputKey, setVoiceInputKey] = useState(0);
-  const [searchMode, setSearchMode] = useState<SearchMode>("analysis");
+  const [selectedSearchMode, setSearchMode] = useState<SearchMode | null>(null);
+  const searchMode = selectedSearchMode ?? "analysis";
+  const selectedModeLabel = SEARCH_MODE_OPTIONS.find(option => option.value === selectedSearchMode)?.label;
+  const searchModeTriggerRef = useRef<HTMLButtonElement>(null);
   const [isSearchModeOpen, setIsSearchModeOpen] = useState(false);
   const [infoPopup, setInfoPopup] = useState<{ title: string; body: string } | null>(null);
   const [isKeywordGradeInfoOpen, setIsKeywordGradeInfoOpen] = useState(false);
@@ -542,16 +545,17 @@ export default function UnifiedInsights() {
             <DropdownMenu modal={false} open={isSearchModeOpen} onOpenChange={setIsSearchModeOpen}>
               <DropdownMenuTrigger
                 type="button"
-                className="heroSearchFilterButton isNaver"
-                aria-label={`분석 방식 선택: ${SEARCH_MODE_OPTIONS.find(option => option.value === searchMode)?.label}`}
+                ref={searchModeTriggerRef}
+                className={`heroSearchFilterButton ${selectedSearchMode ? "isNaver" : "isUnselected"}`}
+                aria-label={selectedModeLabel ? `분석 방식 선택: ${selectedModeLabel}` : "분석 방식 선택"}
                 title="분석 방식 선택"
               >
                 <Plus size={18} aria-hidden="true" />
-                <span>{SEARCH_MODE_OPTIONS.find(option => option.value === searchMode)?.label}</span>
+                {selectedModeLabel && <span>{selectedModeLabel}</span>}
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" sideOffset={8} collisionPadding={12} className="heroSearchMenu" aria-label="분석 방식">
                 <DropdownMenuRadioGroup
-                  value={searchMode}
+                  value={selectedSearchMode ?? ""}
                   onValueChange={value => {
                     const mode = SEARCH_MODE_OPTIONS.find(option => option.value === value);
                     if (mode) setSearchMode(mode.value);
@@ -565,6 +569,20 @@ export default function UnifiedInsights() {
                 </DropdownMenuRadioGroup>
               </DropdownMenuContent>
             </DropdownMenu>
+            {selectedSearchMode && (
+              <button
+                type="button"
+                className="heroSearchClearPlatform"
+                aria-label="분석 방식 선택 취소"
+                title="분석 방식 선택 취소"
+                onClick={() => {
+                  setSearchMode(null);
+                  searchModeTriggerRef.current?.focus();
+                }}
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
+            )}
           </div>
           <input
             id="keyword"

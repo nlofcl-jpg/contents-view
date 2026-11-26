@@ -94,17 +94,17 @@ export default function NewsSearchResults() {
 
       <section className="newsSearchSection" aria-labelledby="news-search-result-title">
         <h2 id="news-search-result-title" className="newsSearchTitle">뉴스 검색</h2>
-        <SearchGlowForm onSubmit={handleSearch} className="newsSearchForm">
+        <SearchGlowForm onSubmit={handleSearch} className="heroSearch newsAnalysisComposer" role="search" aria-label="뉴스 검색">
           <input
             ref={searchInputRef}
             type="text"
             placeholder="관심 키워드를 검색해보세요."
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            className="newsSearchInput"
+            className="heroSearchInput"
           />
-          <button type="submit" className="newsSearchIconButton" aria-label="검색">
-            <Search size={19} strokeWidth={2.1} />
+          <button type="submit" className="heroSearchButton" aria-label="검색">
+            <Search size={18} aria-hidden="true" />
           </button>
         </SearchGlowForm>
       </section>

@@ -4,7 +4,7 @@ import { generateCacheKey, getFromCache, setInCache } from "./naver.cache";
 import { ENV } from "./_core/env";
 import { createClient } from "@supabase/supabase-js";
 import { createHmac } from "crypto";
-import { categoryFilterInput, fetchNaverCategoryTrend } from "./naverShoppingCategories";
+import { categoryFilterInput, fetchNaverCategoryTrend, resolveShoppingCategoryPath } from "./naverShoppingCategories";
 
 const REQUEST_TIMEOUT_MS = 8000; // 8 seconds
 const NAVER_SEARCH_AD_PROVIDER = "naver-search-ad";
@@ -1339,6 +1339,7 @@ export const shoppingStatisticsProcedure = naverAnalysisProcedure
   .input(z.object({
     requests: z.array(unifiedInsightInput).max(12),
     categoryCode: z.string().regex(/^\d{8}$/).optional(),
+    keywordForCategory: z.string().trim().min(1).max(100).optional(),
     categoryFilters: categoryFilterInput,
   }).refine(input => input.requests.length > 0 || input.categoryCode, "검색어나 카테고리를 선택해 주세요."))
   .mutation(async ({ input }) => {
@@ -1349,9 +1350,12 @@ export const shoppingStatisticsProcedure = naverAnalysisProcedure
     });
     const manualCategory = input.categoryCode ? fetchCategory(input.categoryCode) : null;
     const comparisons = await comparisonsPromise;
-    const firstMatch = input.requests.flatMap((request, index) =>
+    const focusedKeyword = input.keywordForCategory ? normalizeKeywordInput(input.keywordForCategory) : undefined;
+    const firstMatch = focusedKeyword ? comparisons.map(result => result.matchedCategories?.[focusedKeyword]).find(Boolean) : input.requests.flatMap((request, index) =>
       request.keywords.map(keyword => comparisons[index].matchedCategories?.[normalizeKeywordInput(keyword)])
     ).find(Boolean);
-    const category = manualCategory ? await manualCategory : firstMatch ? await fetchCategory(firstMatch) : null;
-    return { success: Boolean(category?.success) || comparisons.some(result => result.success), comparisons, category };
+    const categoryPath = !manualCategory && focusedKeyword && firstMatch ? await resolveShoppingCategoryPath(firstMatch, focusedKeyword) : [];
+    const autoCode = categoryPath.at(-1)?.value ?? firstMatch;
+    const category = manualCategory ? await manualCategory : autoCode ? await fetchCategory(autoCode) : null;
+    return { success: Boolean(category?.success) || comparisons.some(result => result.success), comparisons, category, categoryPath };
   });

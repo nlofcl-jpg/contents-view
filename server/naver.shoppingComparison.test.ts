@@ -103,4 +103,32 @@ describe("shopping trend comparison", () => {
       categoryFilters: { startDate: request.startDate, endDate: request.endDate, timeUnit: request.timeUnit },
     })).resolves.toMatchObject({ category: { success: true, categoryCode: "50000000" } });
   });
+
+  it("resolves and returns the three category levels for a newly submitted keyword", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (url: URL | string, options: RequestInit) => {
+      if (url instanceof URL) {
+        const pid = Number(url.searchParams.get("cid"));
+        const item = pid === 50000000
+          ? { cid: 50000167, name: "여성의류", level: 2 }
+          : { cid: 50000815, name: "재킷", level: 3 };
+        return Response.json({ childList: [{ ...item, pid, deleted: false, svcUse: true }] });
+      }
+      if (url === endpoint) return Response.json({ results: [{ title: "여성 재킷", data: [point] }] });
+      expect(JSON.parse(String(options.body)).category[0].param).toEqual(["50000815"]);
+      return Response.json({ results: [{ data: [point] }] });
+    }));
+
+    await expect(caller.statistics({
+      requests: [{ ...request, keywords: ["여성 재킷"] }],
+      keywordForCategory: "여성 재킷",
+      categoryFilters: { startDate: request.startDate, endDate: request.endDate, timeUnit: request.timeUnit },
+    })).resolves.toMatchObject({
+      categoryPath: [
+        { value: "50000000", label: "패션의류" },
+        { value: "50000167", label: "여성의류" },
+        { value: "50000815", label: "재킷" },
+      ],
+      category: { success: true, categoryCode: "50000815" },
+    });
+  });
 });

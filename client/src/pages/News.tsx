@@ -483,17 +483,17 @@ export default function News() {
         </section>
       ) : (
         <section className="newsSearchSection newsSearchTabPanel" role="tabpanel" aria-label="뉴스 검색">
-          <SearchGlowForm onSubmit={handleSearch} className="newsSearchForm">
+          <SearchGlowForm onSubmit={handleSearch} className="heroSearch newsAnalysisComposer" role="search" aria-label="뉴스 검색">
             <input
               type="text"
               placeholder="관심 키워드를 검색해보세요."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="newsSearchInput"
+              className="heroSearchInput"
               autoFocus
             />
-            <button type="submit" className="newsSearchIconButton" aria-label="검색">
-              <Search size={19} strokeWidth={2.1} />
+            <button type="submit" className="heroSearchButton" aria-label="검색">
+              <Search size={18} aria-hidden="true" />
             </button>
           </SearchGlowForm>
         </section>

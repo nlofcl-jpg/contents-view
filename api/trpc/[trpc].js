@@ -1031,8 +1031,8 @@ var systemRouter = router({
 });
 
 // server/routers.ts
-import { z as z6 } from "zod";
-import { TRPCError as TRPCError6 } from "@trpc/server";
+import { z as z8 } from "zod";
+import { TRPCError as TRPCError8 } from "@trpc/server";
 
 // server/naverAnalysisQuota.ts
 import { createHmac } from "node:crypto";
@@ -1110,7 +1110,7 @@ var naverAnalysisProcedure = publicProcedure.use(async ({ ctx, next }) => {
 });
 
 // server/naver.unifiedInsight.ts
-import { z as z2 } from "zod";
+import { z as z3 } from "zod";
 
 // server/naver.cache.ts
 var CACHE_TTL_MS = 10 * 60 * 1e3;
@@ -1140,6 +1140,140 @@ function setInCache(key, data) {
 // server/naver.unifiedInsight.ts
 import { createClient as createClient3 } from "@supabase/supabase-js";
 import { createHmac as createHmac2 } from "crypto";
+
+// server/naverShoppingCategories.ts
+import { TRPCError as TRPCError4 } from "@trpc/server";
+import { z as z2 } from "zod";
+
+// shared/naverShoppingCategories.ts
+var naverShoppingCategories = {
+  "50000000": "\uD328\uC158\uC758\uB958",
+  "50000001": "\uD328\uC158\uC7A1\uD654",
+  "50000002": "\uD654\uC7A5\uD488/\uBBF8\uC6A9",
+  "50000003": "\uB514\uC9C0\uD138/\uAC00\uC804",
+  "50000004": "\uAC00\uAD6C/\uC778\uD14C\uB9AC\uC5B4",
+  "50000005": "\uCD9C\uC0B0/\uC721\uC544",
+  "50000006": "\uC2DD\uD488",
+  "50000007": "\uC2A4\uD3EC\uCE20/\uB808\uC800",
+  "50000008": "\uC0DD\uD65C/\uAC74\uAC15",
+  "50000009": "\uC5EC\uAC00/\uC0DD\uD65C\uD3B8\uC758",
+  "50000010": "\uBA74\uC138\uC810",
+  "50005542": "\uB3C4\uC11C"
+};
+
+// server/naverShoppingCategories.ts
+var categoryFilterInput = z2.object({
+  startDate: z2.string(),
+  endDate: z2.string(),
+  timeUnit: z2.enum(["date", "week", "month"]),
+  device: z2.string().optional(),
+  gender: z2.string().optional(),
+  ages: z2.array(z2.string()).optional()
+});
+var categoryTrendInput = categoryFilterInput.extend({ categoryCode: z2.string() });
+var trendPoints = z2.array(z2.object({ period: z2.string(), ratio: z2.number() }));
+async function fetchNaverCategoryTrend(input) {
+  const { NAVER_CLIENT_ID: clientId, NAVER_CLIENT_SECRET: clientSecret } = process.env;
+  if (!clientId || !clientSecret) return { success: false, error: "Naver API credentials not configured", data: [] };
+  const { categoryCode, startDate, endDate, timeUnit, device, gender, ages } = input;
+  const name = Object.hasOwn(naverShoppingCategories, categoryCode) ? naverShoppingCategories[categoryCode] : categoryCode;
+  const cacheKey = generateCacheKey("category-click-index", [], categoryCode, startDate, endDate, timeUnit, device, gender, ages);
+  const cached = getFromCache(cacheKey);
+  if (cached) return cached;
+  try {
+    const response = await fetch("https://openapi.naver.com/v1/datalab/shopping/categories", {
+      method: "POST",
+      headers: { "X-Naver-Client-Id": clientId, "X-Naver-Client-Secret": clientSecret, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        startDate,
+        endDate,
+        timeUnit,
+        category: [{ name, param: [categoryCode] }],
+        device: device && device !== "all" ? device : void 0,
+        gender: gender && gender !== "all" ? gender : void 0,
+        ages: ages?.length ? ages : void 0
+      }),
+      signal: AbortSignal.timeout(8e3)
+    });
+    const payload = await response.json();
+    if (!response.ok) return { success: false, error: payload.message || "\uB370\uC774\uD130\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.", data: [] };
+    const points = trendPoints.safeParse(payload.results?.[0]?.data);
+    if (!points.success || !points.data.length) return { success: false, error: "\uC120\uD0DD\uD55C \uC870\uAC74\uC758 \uD074\uB9AD \uCD94\uC774 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.", data: [] };
+    const result = { success: true, data: points.data };
+    setInCache(cacheKey, result);
+    return result;
+  } catch {
+    return { success: false, error: "\uB370\uC774\uD130\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.", data: [] };
+  }
+}
+var categoryTrendProcedure = naverAnalysisProcedure.input(categoryTrendInput).mutation(({ input }) => fetchNaverCategoryTrend(input));
+var catalogResponse = z2.object({
+  childList: z2.array(z2.object({
+    cid: z2.number().int(),
+    pid: z2.number().int(),
+    level: z2.number().int(),
+    name: z2.string().min(1),
+    deleted: z2.boolean(),
+    svcUse: z2.boolean()
+  }))
+});
+var categoryCache = /* @__PURE__ */ new Map();
+async function fetchCategoryChildren(input) {
+  const key = `${input.parent}:${input.level}`;
+  const cached = categoryCache.get(key);
+  if (cached && cached.expires > Date.now()) return cached.list;
+  const url = new URL("https://datalab.naver.com/shoppingInsight/getCategory.naver");
+  url.searchParams.set("cid", input.parent);
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+        Referer: "https://datalab.naver.com/shoppingInsight/sCategory.naver",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+      },
+      signal: AbortSignal.timeout(6e3)
+    });
+    if (!response.ok) throw new Error("Category request failed");
+    const { childList } = catalogResponse.parse(await response.json());
+    const list = childList.filter((item) => String(item.pid) === input.parent && item.level === input.level && !item.deleted && item.svcUse).map(({ cid, name }) => ({ value: String(cid), label: name }));
+    if (categoryCache.size >= 512) categoryCache.clear();
+    categoryCache.set(key, { list, expires: Date.now() + 6 * 60 * 60 * 1e3 });
+    return list;
+  } catch {
+    if (cached) return cached.list;
+    throw new TRPCError4({ code: "BAD_GATEWAY", message: "\uD558\uC704 \uCE74\uD14C\uACE0\uB9AC\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4." });
+  }
+}
+var shoppingCategoryChildrenProcedure = publicProcedure.input(z2.object({ parent: z2.string().regex(/^(0|\d{8})$/), level: z2.union([z2.literal(1), z2.literal(2), z2.literal(3)]) })).query(({ input }) => fetchCategoryChildren(input));
+var categoryNameSeparators = new RegExp("[^\\p{L}\\p{N}]", "gu");
+function matchingCategory(options, keyword) {
+  const normalize = (value) => value.normalize("NFKC").toLowerCase().replace(categoryNameSeparators, "");
+  const term = normalize(keyword);
+  const scored = options.map((option) => ({ option, score: Math.max(0, ...option.label.split("/").map((label) => {
+    const key = normalize(label);
+    return key.length >= 2 && term.includes(key) ? key.length + (key === term ? 100 : 0) : 0;
+  })) })).filter((item) => item.score > 0).sort((a, b) => b.score - a.score);
+  return scored[0]?.score !== scored[1]?.score ? scored[0]?.option : void 0;
+}
+async function resolveShoppingCategoryPath(root, keyword) {
+  const first = { value: root, label: naverShoppingCategories[root] ?? root };
+  const children = await fetchCategoryChildren({ parent: root, level: 2 }).catch(() => []);
+  const second = matchingCategory(children, keyword);
+  if (second) {
+    const leaves = await fetchCategoryChildren({ parent: second.value, level: 3 }).catch(() => []);
+    const third2 = matchingCategory(leaves, keyword);
+    return third2 ? [first, second, third2] : [first, second];
+  }
+  if (!children.length || children.length > 8) return [first];
+  const groups = await Promise.all(children.map(async (parent) => {
+    const leaves = await fetchCategoryChildren({ parent: parent.value, level: 3 }).catch(() => []);
+    return leaves.map((item) => ({ ...item, parent }));
+  }));
+  const third = matchingCategory(groups.flat(), keyword);
+  return third ? [first, third.parent, { value: third.value, label: third.label }] : [first];
+}
+
+// server/naver.unifiedInsight.ts
 var REQUEST_TIMEOUT_MS = 8e3;
 var NAVER_SEARCH_AD_PROVIDER = "naver-search-ad";
 var NAVER_SEARCH_MAX_START = 901;
@@ -1553,15 +1687,15 @@ async function fetchWithTimeout(url, options, timeoutMs = REQUEST_TIMEOUT_MS) {
     throw error;
   }
 }
-var unifiedInsightInput = z2.object({
-  keywords: z2.array(z2.string()).min(0).max(5),
-  category: z2.string().optional(),
-  startDate: z2.string(),
-  endDate: z2.string(),
-  timeUnit: z2.enum(["date", "week", "month"]),
-  device: z2.string().optional(),
-  gender: z2.string().optional(),
-  ages: z2.array(z2.string()).optional()
+var unifiedInsightInput = z3.object({
+  keywords: z3.array(z3.string()).min(0).max(5),
+  category: z3.string().optional(),
+  startDate: z3.string(),
+  endDate: z3.string(),
+  timeUnit: z3.enum(["date", "week", "month"]),
+  device: z3.string().optional(),
+  gender: z3.string().optional(),
+  ages: z3.array(z3.string()).optional()
 });
 async function fetchShoppingComparison(input) {
   const keywords = uniqueValues(input.keywords.map(normalizeKeywordInput));
@@ -1586,6 +1720,7 @@ async function fetchShoppingComparison(input) {
   const cached = getFromCache(cacheKey);
   if (cached) return cached;
   const shopping = /* @__PURE__ */ Object.create(null);
+  const matchedCategories = /* @__PURE__ */ Object.create(null);
   const pending = new Map(keywords.map((keyword) => [keyword, generateShoppingKeywordVariants(keyword)]));
   const signal = AbortSignal.timeout(12e3);
   let hasError = false;
@@ -1628,6 +1763,7 @@ async function fetchShoppingComparison(input) {
         const row = variants.map((variant) => rows.find((item) => getShoppingResultNames(item).includes(variant))).find(Boolean);
         if (!row) continue;
         shopping[keyword] = row.data;
+        matchedCategories[keyword] = categoryCode;
         pending.delete(keyword);
       }
     }
@@ -1638,6 +1774,7 @@ async function fetchShoppingComparison(input) {
   const result = {
     success: Object.keys(shopping).length > 0,
     shopping,
+    matchedCategories,
     ...hasError ? { error: "\uB124\uC774\uBC84 \uC1FC\uD551\uC778\uC0AC\uC774\uD2B8 \uB370\uC774\uD130\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." } : {}
   };
   if (!hasError) setInCache(cacheKey, result);
@@ -2191,7 +2328,32 @@ async function fetchUnifiedInsight(input) {
   }
 }
 var unifiedInsightProcedure = naverAnalysisProcedure.input(unifiedInsightInput).mutation(({ input }) => fetchUnifiedInsight(input));
-var unifiedInsightBatchProcedure = naverAnalysisProcedure.input(z2.object({ requests: z2.array(unifiedInsightInput).min(1).max(12), metric: z2.literal("shopping").optional() })).mutation(({ input }) => input.metric === "shopping" ? Promise.all(input.requests.map(fetchShoppingComparison)) : Promise.all(input.requests.map(fetchUnifiedInsight)));
+var unifiedInsightBatchProcedure = naverAnalysisProcedure.input(z3.object({ requests: z3.array(unifiedInsightInput).min(1).max(12), metric: z3.literal("shopping").optional() })).mutation(({ input }) => input.metric === "shopping" ? Promise.all(input.requests.map(async (request) => {
+  const { matchedCategories: _matchedCategories, ...comparison } = await fetchShoppingComparison(request);
+  return comparison;
+})) : Promise.all(input.requests.map(fetchUnifiedInsight)));
+var shoppingStatisticsProcedure = naverAnalysisProcedure.input(z3.object({
+  requests: z3.array(unifiedInsightInput).max(12),
+  categoryCode: z3.string().regex(/^\d{8}$/).optional(),
+  keywordForCategory: z3.string().trim().min(1).max(100).optional(),
+  categoryFilters: categoryFilterInput
+}).refine((input) => input.requests.length > 0 || input.categoryCode, "\uAC80\uC0C9\uC5B4\uB098 \uCE74\uD14C\uACE0\uB9AC\uB97C \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.")).mutation(async ({ input }) => {
+  const comparisonsPromise = Promise.all(input.requests.map((request) => fetchShoppingComparison({ ...request, category: "auto" })));
+  const fetchCategory = async (categoryCode) => ({
+    categoryCode,
+    ...await fetchNaverCategoryTrend({ ...input.categoryFilters, categoryCode })
+  });
+  const manualCategory = input.categoryCode ? fetchCategory(input.categoryCode) : null;
+  const comparisons = await comparisonsPromise;
+  const focusedKeyword = input.keywordForCategory ? normalizeKeywordInput(input.keywordForCategory) : void 0;
+  const firstMatch = focusedKeyword ? comparisons.map((result) => result.matchedCategories?.[focusedKeyword]).find(Boolean) : input.requests.flatMap(
+    (request, index) => request.keywords.map((keyword) => comparisons[index].matchedCategories?.[normalizeKeywordInput(keyword)])
+  ).find(Boolean);
+  const categoryPath = !manualCategory && focusedKeyword && firstMatch ? await resolveShoppingCategoryPath(firstMatch, focusedKeyword) : [];
+  const autoCode = categoryPath.at(-1)?.value ?? firstMatch;
+  const category = manualCategory ? await manualCategory : autoCode ? await fetchCategory(autoCode) : null;
+  return { success: Boolean(category?.success) || comparisons.some((result) => result.success), comparisons, category, categoryPath };
+});
 
 // server/naver.diagnostic.ts
 async function testSearchTrendAPI(clientId, clientSecret, keywords, startDate, endDate, timeUnit) {
@@ -2552,7 +2714,7 @@ async function updateApiKeyTestStatus2(user, provider, testStatus, testError = n
 import * as cheerio2 from "cheerio";
 import { createClient as createClient6 } from "@supabase/supabase-js";
 import { createRequire } from "module";
-import { createHmac as createHmac3 } from "crypto";
+import { createHmac as createHmac4 } from "crypto";
 
 // server/youtubeRising.ts
 import { createClient as createClient5 } from "@supabase/supabase-js";
@@ -3259,7 +3421,7 @@ function createLatestNewsLoader(fetchFeed = (...args) => fetch(...args), now = D
 var getLatestRssNews = createLatestNewsLoader();
 
 // shared/partnershipConsent.ts
-import { z as z3 } from "zod";
+import { z as z4 } from "zod";
 var PARTNERSHIP_CONSENT_VERSION = "2026-10-31-v1";
 var PARTNERSHIP_RETENTION_NOTICE = "\uC811\uC218\uC77C\uB85C\uBD80\uD130 1\uB144 \uBCF4\uAD00 \uD6C4 \uB2E4\uC74C \uC77C\uC77C \uC0AD\uC81C \uC791\uC5C5\uC5D0\uC11C \uD30C\uAE30";
 var PARTNERSHIP_COLLECTION_NOTICE = {
@@ -3278,14 +3440,14 @@ var PARTNERSHIP_TRANSFER_NOTICE = {
   retention: "\uBB38\uC758 \uBCF8\uBB38\uC740 \uC694\uCCAD \uCC98\uB9AC\uC5D0 \uC0AC\uC6A9\uB418\uBA70 \uBCC4\uB3C4\uC758 \uBCF8\uBB38 \uB85C\uADF8\uB85C \uC800\uC7A5\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uC11C\uBE44\uC2A4 \uC0DD\uC131\xB7\uBCF4\uC548 \uC815\uBCF4\uB294 Vercel\uC758 \uCC98\uB9AC \uBAA9\uC801 \uB2EC\uC131 \uC2DC \uC0AD\uC81C \uB610\uB294 \uC775\uBA85\uD654\uB418\uBA70, \uB7F0\uD0C0\uC784 \uB85C\uADF8\uC758 \uC5F4\uB78C \uAE30\uAC04\uC740 \uC774\uC6A9 \uC694\uAE08\uC81C\uC5D0 \uB530\uB77C \uB2E4\uB985\uB2C8\uB2E4.",
   refusal: "\uB3D9\uC758\uB97C \uAC70\uBD80\uD560 \uC218 \uC788\uC73C\uBA70, \uAC70\uBD80 \uC2DC \uC628\uB77C\uC778 \uBB38\uC758\uB97C \uC81C\uCD9C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uC81C\uCD9C \uD6C4 \uCCA0\uD68C\xB7\uC0AD\uC81C \uC694\uCCAD\uC740 edenofcls@gmail.com\uC73C\uB85C \uBCF4\uB0B4 \uC8FC\uC138\uC694."
 };
-var partnershipInquiryInput = z3.object({
-  name: z3.string().trim().min(1).max(100),
-  phone: z3.string().trim().min(7).max(30).regex(/^[+\d()\s-]+$/).refine((value) => value.replace(/\D/g, "").length >= 7),
-  email: z3.email().trim().max(254),
-  message: z3.string().trim().min(10).max(5e3),
-  privacyConsent: z3.literal(true),
-  overseasConsent: z3.literal(true),
-  consentVersion: z3.literal(PARTNERSHIP_CONSENT_VERSION)
+var partnershipInquiryInput = z4.object({
+  name: z4.string().trim().min(1).max(100),
+  phone: z4.string().trim().min(7).max(30).regex(/^[+\d()\s-]+$/).refine((value) => value.replace(/\D/g, "").length >= 7),
+  email: z4.email().trim().max(254),
+  message: z4.string().trim().min(10).max(5e3),
+  privacyConsent: z4.literal(true),
+  overseasConsent: z4.literal(true),
+  consentVersion: z4.literal(PARTNERSHIP_CONSENT_VERSION)
 });
 function partnershipConsentRecord() {
   return {
@@ -3299,37 +3461,37 @@ function partnershipConsentRecord() {
 }
 
 // server/accountWithdrawal.ts
-import { TRPCError as TRPCError4 } from "@trpc/server";
-import { z as z4 } from "zod";
+import { TRPCError as TRPCError5 } from "@trpc/server";
+import { z as z5 } from "zod";
 
 // shared/accountWithdrawal.ts
 var ACCOUNT_WITHDRAWAL_CONFIRMATION = "\uD68C\uC6D0\uD0C8\uD1F4";
 
 // server/accountWithdrawal.ts
 function createAccountWithdrawalProcedure(client) {
-  return protectedProcedure.input(z4.object({ confirmation: z4.literal(ACCOUNT_WITHDRAWAL_CONFIRMATION) }).strict()).mutation(async ({ ctx }) => {
+  return protectedProcedure.input(z5.object({ confirmation: z5.literal(ACCOUNT_WITHDRAWAL_CONFIRMATION) }).strict()).mutation(async ({ ctx }) => {
     if (!client) {
-      throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "\uD0C8\uD1F4 \uAE30\uB2A5\uC5D0 \uC5F0\uACB0\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
+      throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "\uD0C8\uD1F4 \uAE30\uB2A5\uC5D0 \uC5F0\uACB0\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
     }
-    if (ctx.user.loginMethod !== "supabase" || !z4.string().uuid().safeParse(ctx.user.openId).success) {
-      throw new TRPCError4({ code: "FORBIDDEN", message: "\uC774 \uACC4\uC815\uC758 \uD0C8\uD1F4\uB294 edenofcls@gmail.com\uC73C\uB85C \uBB38\uC758\uD574 \uC8FC\uC138\uC694." });
+    if (ctx.user.loginMethod !== "supabase" || !z5.string().uuid().safeParse(ctx.user.openId).success) {
+      throw new TRPCError5({ code: "FORBIDDEN", message: "\uC774 \uACC4\uC815\uC758 \uD0C8\uD1F4\uB294 edenofcls@gmail.com\uC73C\uB85C \uBB38\uC758\uD574 \uC8FC\uC138\uC694." });
     }
     const header = ctx.req.headers.authorization;
     const token = typeof header === "string" ? /^Bearer\s+(\S+)$/i.exec(header)?.[1] : void 0;
     if (!token) {
-      throw new TRPCError4({ code: "UNAUTHORIZED", message: "\uB2E4\uC2DC \uB85C\uADF8\uC778\uD55C \uD6C4 \uD0C8\uD1F4\uD574 \uC8FC\uC138\uC694." });
+      throw new TRPCError5({ code: "UNAUTHORIZED", message: "\uB2E4\uC2DC \uB85C\uADF8\uC778\uD55C \uD6C4 \uD0C8\uD1F4\uD574 \uC8FC\uC138\uC694." });
     }
     const { data, error: authError } = await client.auth.getUser(token);
     if (authError || data.user?.id !== ctx.user.openId) {
-      throw new TRPCError4({ code: "UNAUTHORIZED", message: "\uB2E4\uC2DC \uB85C\uADF8\uC778\uD55C \uD6C4 \uD0C8\uD1F4\uD574 \uC8FC\uC138\uC694." });
+      throw new TRPCError5({ code: "UNAUTHORIZED", message: "\uB2E4\uC2DC \uB85C\uADF8\uC778\uD55C \uD6C4 \uD0C8\uD1F4\uD574 \uC8FC\uC138\uC694." });
     }
     const { error: signOutError } = await client.auth.admin.signOut(token, "global");
     if (signOutError) {
-      throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "\uB85C\uADF8\uC778 \uC5F0\uACB0\uC744 \uD574\uC81C\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uB2E4\uC2DC \uB85C\uADF8\uC778\uD55C \uD6C4 \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
+      throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "\uB85C\uADF8\uC778 \uC5F0\uACB0\uC744 \uD574\uC81C\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uB2E4\uC2DC \uB85C\uADF8\uC778\uD55C \uD6C4 \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
     }
     const { error: deleteError } = await client.auth.admin.deleteUser(ctx.user.openId, false);
     if (deleteError) {
-      throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "\uD0C8\uD1F4\uB97C \uC644\uB8CC\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uB2E4\uC2DC \uB85C\uADF8\uC778\uD558\uC5EC \uC2DC\uB3C4\uD558\uAC70\uB098 edenofcls@gmail.com\uC73C\uB85C \uBB38\uC758\uD574 \uC8FC\uC138\uC694." });
+      throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "\uD0C8\uD1F4\uB97C \uC644\uB8CC\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uB2E4\uC2DC \uB85C\uADF8\uC778\uD558\uC5EC \uC2DC\uB3C4\uD558\uAC70\uB098 edenofcls@gmail.com\uC73C\uB85C \uBB38\uC758\uD574 \uC8FC\uC138\uC694." });
     }
     const options = getSessionCookieOptions(ctx.req);
     ctx.res.clearCookie(COOKIE_NAME, { ...options, maxAge: -1 });
@@ -3339,16 +3501,16 @@ function createAccountWithdrawalProcedure(client) {
 }
 
 // server/aiTest.ts
-import { TRPCError as TRPCError5 } from "@trpc/server";
-import { z as z5 } from "zod";
+import { TRPCError as TRPCError6 } from "@trpc/server";
+import { z as z6 } from "zod";
 var DEFAULT_MODEL = "gemini-3.5-flash-lite";
 var WEB_SEARCH_ENABLED = false;
-var groundingSchema = z5.object({
-  groundingChunks: z5.array(z5.object({
-    web: z5.object({ uri: z5.string(), title: z5.string().optional() }).optional()
+var groundingSchema = z6.object({
+  groundingChunks: z6.array(z6.object({
+    web: z6.object({ uri: z6.string(), title: z6.string().optional() }).optional()
   })).optional(),
-  webSearchQueries: z5.array(z5.string()).optional(),
-  searchEntryPoint: z5.object({ renderedContent: z5.string().max(5e4) }).optional()
+  webSearchQueries: z6.array(z6.string()).optional(),
+  searchEntryPoint: z6.object({ renderedContent: z6.string().max(5e4) }).optional()
 });
 function readGrounding(metadata) {
   const { data } = groundingSchema.safeParse(metadata);
@@ -3369,12 +3531,12 @@ function readGrounding(metadata) {
     searchSuggestions: data?.searchEntryPoint?.renderedContent ?? null
   };
 }
-var chatInput = z5.object({
-  consent: z5.literal(true),
-  webSearch: z5.boolean().default(false),
-  messages: z5.array(z5.object({
-    role: z5.enum(["user", "assistant"]),
-    text: z5.string().trim().min(1).max(4e3)
+var chatInput = z6.object({
+  consent: z6.literal(true),
+  webSearch: z6.boolean().default(false),
+  messages: z6.array(z6.object({
+    role: z6.enum(["user", "assistant"]),
+    text: z6.string().trim().min(1).max(4e3)
   }).strict()).min(1).max(11)
 }).strict().superRefine(({ messages }, ctx) => {
   if (messages.length % 2 !== 1 || messages.some((message, i) => message.role !== (i % 2 ? "assistant" : "user"))) {
@@ -3399,9 +3561,9 @@ function createAiTestRouter(options = {}) {
     chat: adminProcedure.input(chatInput).mutation(async ({ ctx, input }) => {
       const useWebSearch = WEB_SEARCH_ENABLED && input.webSearch;
       const key = getKey()?.trim();
-      if (!key) throw new TRPCError5({ code: "PRECONDITION_FAILED", message: "\uC11C\uBC84\uC5D0 GEMINI_API_KEY\uB97C \uC124\uC815\uD55C \uB4A4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
+      if (!key) throw new TRPCError6({ code: "PRECONDITION_FAILED", message: "\uC11C\uBC84\uC5D0 GEMINI_API_KEY\uB97C \uC124\uC815\uD55C \uB4A4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
       const model = getModel();
-      if (!/^[a-zA-Z0-9._-]+$/.test(model)) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "GEMINI_MODEL \uC124\uC815\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694." });
+      if (!/^[a-zA-Z0-9._-]+$/.test(model)) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "GEMINI_MODEL \uC124\uC815\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694." });
       const time = now();
       const day = Math.floor(time / 864e5);
       usage.forEach((record2, id2) => {
@@ -3410,7 +3572,7 @@ function createAiTestRouter(options = {}) {
       const id = ctx.user.openId;
       const record = usage.get(id) ?? { day, count: 0, last: -Infinity, busy: false };
       if (record.busy || time - record.last < 3e3 || record.count >= 60) {
-        throw new TRPCError5({ code: "TOO_MANY_REQUESTS", message: "\uD14C\uC2A4\uD2B8 \uC694\uCCAD\uC774 \uB108\uBB34 \uB9CE\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD558\uAC70\uB098 \uB2E4\uC74C \uB0A0 \uC774\uC6A9\uD574 \uC8FC\uC138\uC694." });
+        throw new TRPCError6({ code: "TOO_MANY_REQUESTS", message: "\uD14C\uC2A4\uD2B8 \uC694\uCCAD\uC774 \uB108\uBB34 \uB9CE\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD558\uAC70\uB098 \uB2E4\uC74C \uB0A0 \uC774\uC6A9\uD574 \uC8FC\uC138\uC694." });
       }
       Object.assign(record, { day, count: record.count + 1, last: time, busy: true });
       usage.set(id, record);
@@ -3430,22 +3592,237 @@ function createAiTestRouter(options = {}) {
           })
         });
         if (!response.ok) {
-          if (response.status === 429) throw new TRPCError5({ code: "TOO_MANY_REQUESTS", message: useWebSearch ? "Google\uC774 \uC0AC\uC6A9\uB7C9 \uC81C\uD55C\uC744 \uBC18\uD658\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD558\uAC70\uB098 \uC6F9\uAC80\uC0C9\uC744 \uB044\uACE0 \uC77C\uBC18 \uB2F5\uBCC0\uC744 \uBC1B\uC544\uBCF4\uC138\uC694." : "Gemini \uC0AC\uC6A9 \uD55C\uB3C4\uC5D0 \uB3C4\uB2EC\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
-          if (response.status === 400 || response.status === 401 || response.status === 403) throw new TRPCError5({ code: "PRECONDITION_FAILED", message: "Gemini API \uD0A4\uC640 \uD504\uB85C\uC81D\uD2B8 \uAD8C\uD55C\xB7\uBAA8\uB378 \uC0AC\uC6A9 \uAC00\uB2A5 \uC5EC\uBD80\uB97C \uD655\uC778\uD574 \uC8FC\uC138\uC694." });
-          if (response.status === 404) throw new TRPCError5({ code: "PRECONDITION_FAILED", message: "\uC124\uC815\uD55C Gemini \uBAA8\uB378\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. GEMINI_MODEL\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694." });
-          throw new TRPCError5({ code: "BAD_GATEWAY", message: "Gemini\uC5D0 \uC5F0\uACB0\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
+          if (response.status === 429) throw new TRPCError6({ code: "TOO_MANY_REQUESTS", message: useWebSearch ? "Google\uC774 \uC0AC\uC6A9\uB7C9 \uC81C\uD55C\uC744 \uBC18\uD658\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD558\uAC70\uB098 \uC6F9\uAC80\uC0C9\uC744 \uB044\uACE0 \uC77C\uBC18 \uB2F5\uBCC0\uC744 \uBC1B\uC544\uBCF4\uC138\uC694." : "Gemini \uC0AC\uC6A9 \uD55C\uB3C4\uC5D0 \uB3C4\uB2EC\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
+          if (response.status === 400 || response.status === 401 || response.status === 403) throw new TRPCError6({ code: "PRECONDITION_FAILED", message: "Gemini API \uD0A4\uC640 \uD504\uB85C\uC81D\uD2B8 \uAD8C\uD55C\xB7\uBAA8\uB378 \uC0AC\uC6A9 \uAC00\uB2A5 \uC5EC\uBD80\uB97C \uD655\uC778\uD574 \uC8FC\uC138\uC694." });
+          if (response.status === 404) throw new TRPCError6({ code: "PRECONDITION_FAILED", message: "\uC124\uC815\uD55C Gemini \uBAA8\uB378\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. GEMINI_MODEL\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694." });
+          throw new TRPCError6({ code: "BAD_GATEWAY", message: "Gemini\uC5D0 \uC5F0\uACB0\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
         }
         const data = await response.json();
         const candidate = data.candidates?.[0];
         const reply = candidate?.content?.parts?.filter((part) => typeof part.text === "string" && !part.thought).map((part) => part.text).join("\n").trim();
-        if (!reply) throw new TRPCError5({ code: "BAD_GATEWAY", message: "Gemini\uAC00 \uB2F5\uBCC0\uC744 \uBC18\uD658\uD558\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uC9C8\uBB38\uC744 \uBC14\uAFD4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
+        if (!reply) throw new TRPCError6({ code: "BAD_GATEWAY", message: "Gemini\uAC00 \uB2F5\uBCC0\uC744 \uBC18\uD658\uD558\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uC9C8\uBB38\uC744 \uBC14\uAFD4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
         return { reply, model, ...readGrounding(useWebSearch ? candidate?.groundingMetadata : void 0) };
       } catch (error) {
-        if (error instanceof TRPCError5) throw error;
-        throw new TRPCError5({ code: "BAD_GATEWAY", message: "Gemini \uC751\uB2F5\uC744 \uBC1B\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC5F0\uACB0 \uC0C1\uD0DC\uB97C \uD655\uC778\uD558\uACE0 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
+        if (error instanceof TRPCError6) throw error;
+        throw new TRPCError6({ code: "BAD_GATEWAY", message: "Gemini \uC751\uB2F5\uC744 \uBC1B\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC5F0\uACB0 \uC0C1\uD0DC\uB97C \uD655\uC778\uD558\uACE0 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
       } finally {
         record.busy = false;
       }
+    })
+  });
+}
+
+// server/coupangPartners.ts
+import { createCipheriv, createDecipheriv, createHmac as createHmac3, randomBytes } from "node:crypto";
+import { TRPCError as TRPCError7 } from "@trpc/server";
+import { z as z7 } from "zod";
+
+// shared/coupangPartners.ts
+var coupangCategories = [
+  { id: "1016", label: "\uAC00\uC804\xB7\uB514\uC9C0\uD138" },
+  { id: "1010", label: "\uBDF0\uD2F0" },
+  { id: "1012", label: "\uC2DD\uD488" },
+  { id: "1014", label: "\uC0DD\uD65C\uC6A9\uD488" },
+  { id: "1001", label: "\uC5EC\uC131\uD328\uC158" },
+  { id: "1002", label: "\uB0A8\uC131\uD328\uC158" },
+  { id: "1030", label: "\uC720\uC544\uB3D9\uD328\uC158" },
+  { id: "1011", label: "\uCD9C\uC0B0\xB7\uC720\uC544\uB3D9" },
+  { id: "1013", label: "\uC8FC\uBC29\uC6A9\uD488" },
+  { id: "1015", label: "\uD648\uC778\uD14C\uB9AC\uC5B4" },
+  { id: "1017", label: "\uC2A4\uD3EC\uCE20\xB7\uB808\uC800" },
+  { id: "1018", label: "\uC790\uB3D9\uCC28\uC6A9\uD488" },
+  { id: "1019", label: "\uB3C4\uC11C\xB7\uC74C\uBC18\xB7DVD" },
+  { id: "1020", label: "\uC644\uAD6C\xB7\uCDE8\uBBF8" },
+  { id: "1021", label: "\uBB38\uAD6C\xB7\uC624\uD53C\uC2A4" },
+  { id: "1024", label: "\uD5EC\uC2A4\xB7\uAC74\uAC15\uC2DD\uD488" },
+  { id: "1025", label: "\uAD6D\uB0B4\uC5EC\uD589" },
+  { id: "1026", label: "\uD574\uC678\uC5EC\uD589" },
+  { id: "1029", label: "\uBC18\uB824\uB3D9\uBB3C\uC6A9\uD488" }
+];
+
+// server/coupangPartners.ts
+var GATEWAY = "https://api-gateway.coupang.com";
+var PRODUCT_PATH = "/v2/providers/affiliate_open_api/apis/openapi/v1/products";
+var TABLE = "coupang_partners_settings";
+var CACHE_MS = 10 * 60 * 1e3;
+var credentialsSchema = z7.object({
+  accessKey: z7.string().trim().min(1).max(200).regex(/^[a-zA-Z0-9_.+/=-]+$/),
+  secretKey: z7.string().trim().min(1).max(300).regex(/^[^\s\x00-\x1f]+$/)
+});
+var productQuery = z7.discriminatedUnion("feed", [
+  z7.object({ feed: z7.literal("popular"), category: z7.enum(coupangCategories.map(({ id }) => id)) }),
+  z7.object({ feed: z7.literal("deals") })
+]);
+var upstreamProduct = z7.object({
+  productId: z7.number().int().positive(),
+  productName: z7.string().trim().min(1).max(500),
+  productPrice: z7.number().finite().nonnegative(),
+  productImage: z7.string().optional(),
+  isRocket: z7.boolean().optional(),
+  discountRate: z7.unknown().optional(),
+  productDiscountRate: z7.unknown().optional()
+});
+var upstreamEnvelope = z7.object({
+  rCode: z7.union([z7.string(), z7.number()]),
+  data: z7.unknown().optional()
+});
+function credentialKey(secret) {
+  return createHmac3("sha256", secret).update("contents-view:coupang-partners:v1").digest();
+}
+function sealCoupangCredentials(credentials, secret) {
+  const nonce = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", credentialKey(secret), nonce);
+  const payload = Buffer.concat([cipher.update(JSON.stringify(credentials), "utf8"), cipher.final()]);
+  return [nonce, cipher.getAuthTag(), payload].map((part) => part.toString("base64url")).join(".");
+}
+function openCoupangCredentials(value, secret) {
+  const [nonce, tag, payload] = value.split(".").map((part) => Buffer.from(part, "base64url"));
+  const decipher = createDecipheriv("aes-256-gcm", credentialKey(secret), nonce);
+  decipher.setAuthTag(tag);
+  return credentialsSchema.parse(JSON.parse(Buffer.concat([decipher.update(payload), decipher.final()]).toString("utf8")));
+}
+function signCoupangRequest(credentials, path, query, now) {
+  const signedDate = now.toISOString().slice(2, 19).replace(/[-:]/g, "") + "Z";
+  const signature = createHmac3("sha256", credentials.secretKey).update(signedDate + "GET" + path + query).digest("hex");
+  return `CEA algorithm=HmacSHA256, access-key=${credentials.accessKey}, signed-date=${signedDate}, signature=${signature}`;
+}
+function safeUrl(value, hosts) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.username || url.password || url.port) return null;
+    return hosts.some((host) => url.hostname === host || url.hostname.endsWith("." + host)) ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+function parseDiscountRate(value) {
+  const rate = typeof value === "number" ? value : typeof value === "string" && /^\d{1,3}(\.\d+)?%?$/.test(value.trim()) ? Number(value.trim().replace(/%$/, "")) : NaN;
+  return rate > 0 && rate <= 100 ? rate : void 0;
+}
+async function fetchCoupangProducts(credentials, input, request = fetch, now = /* @__PURE__ */ new Date()) {
+  const isSearch = "keyword" in input;
+  const path = isSearch ? `${PRODUCT_PATH}/search` : input.feed === "deals" ? `${PRODUCT_PATH}/goldbox` : `${PRODUCT_PATH}/bestcategories/${input.category}`;
+  const limit = isSearch ? 10 : input.feed === "deals" ? 20 : 50;
+  const query = new URLSearchParams(isSearch ? { keyword: input.keyword, limit: String(limit) } : { limit: String(limit) }).toString();
+  const authorization = signCoupangRequest(credentials, path, query, now);
+  let response;
+  try {
+    response = await request(`${GATEWAY}${path}?${query}`, {
+      headers: { Authorization: authorization, Accept: "application/json" },
+      redirect: "error",
+      signal: AbortSignal.timeout(7e3)
+    });
+  } catch {
+    throw new TRPCError7({ code: "BAD_GATEWAY", message: "\uCFE0\uD321\uC5D0\uC11C \uC0C1\uD488\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4." });
+  }
+  if (response.status === 429) {
+    throw new TRPCError7({ code: "TOO_MANY_REQUESTS", message: "\uCFE0\uD321 API \uC870\uD68C \uD55C\uB3C4\uC5D0 \uB3C4\uB2EC\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
+  }
+  const result = upstreamEnvelope.safeParse(await response.json().catch(() => null));
+  if (!response.ok || !result.success || String(result.data.rCode) !== "0") {
+    throw new TRPCError7({ code: "BAD_GATEWAY", message: "\uCFE0\uD321 \uD30C\uD2B8\uB108\uC2A4 API \uC5F0\uACB0\uC744 \uD655\uC778\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. API \uD0A4\uC640 \uC0C1\uD488 API \uAD8C\uD55C\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694." });
+  }
+  const data = result.data.data;
+  const items = isSearch && data && typeof data === "object" && "productData" in data ? data.productData : data;
+  if (!Array.isArray(items)) {
+    throw new TRPCError7({ code: "BAD_GATEWAY", message: "\uCFE0\uD321 \uC0C1\uD488 \uC751\uB2F5\uC744 \uD655\uC778\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+  }
+  const products = /* @__PURE__ */ new Map();
+  for (const entry of items) {
+    const parsed = upstreamProduct.safeParse(entry);
+    if (!parsed.success) continue;
+    const { productId, productName, productPrice, productImage, isRocket } = parsed.data;
+    const discountRate = parseDiscountRate(parsed.data.discountRate) ?? parseDiscountRate(parsed.data.productDiscountRate);
+    products.set(productId, {
+      id: productId,
+      name: productName,
+      price: productPrice,
+      url: `https://www.coupang.com/vp/products/${productId}`,
+      image: safeUrl(productImage, ["coupangcdn.com", "coupang.com"]),
+      isRocket: isRocket === true,
+      ...discountRate !== void 0 && { discountRate }
+    });
+    if (products.size >= limit) break;
+  }
+  return Array.from(products.values());
+}
+function createCoupangPartnersRouter(db, encryptionSecret) {
+  const cache2 = /* @__PURE__ */ new Map();
+  const inFlight = /* @__PURE__ */ new Map();
+  function unavailable() {
+    return new TRPCError7({ code: "SERVICE_UNAVAILABLE", message: "\uCFE0\uD321 \uD30C\uD2B8\uB108\uC2A4 \uC5F0\uB3D9\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+  }
+  function store() {
+    if (!db || !encryptionSecret) throw unavailable();
+    return db;
+  }
+  async function settings() {
+    const { data, error } = await store().from(TABLE).select("credentials,updated_at").eq("id", 1).single();
+    if (error || !data) throw unavailable();
+    return data;
+  }
+  async function reserveCall(isSearch) {
+    const { data, error } = await store().rpc("reserve_coupang_partners_call", { p_search: isSearch });
+    if (error) throw unavailable();
+    if (data !== true) throw new TRPCError7({
+      code: "TOO_MANY_REQUESTS",
+      message: "\uCFE0\uD321 \uC0C1\uD488 \uC870\uD68C \uD55C\uB3C4\uC5D0 \uB3C4\uB2EC\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694."
+    });
+  }
+  async function products(input) {
+    const record = await settings();
+    if (!record.credentials) return { configured: false, productList: [], fetchedAt: null };
+    const key = record.updated_at + ":" + JSON.stringify(input);
+    const cached = cache2.get(key);
+    if (cached && cached.expiresAt > Date.now()) {
+      return { configured: true, productList: cached.productList, fetchedAt: cached.fetchedAt };
+    }
+    let pending = inFlight.get(key);
+    if (!pending) {
+      let credentials;
+      try {
+        credentials = openCoupangCredentials(record.credentials, encryptionSecret);
+      } catch {
+        throw unavailable();
+      }
+      pending = (async () => {
+        await reserveCall("keyword" in input);
+        const productList = await fetchCoupangProducts(credentials, input);
+        const fetchedAt = (/* @__PURE__ */ new Date()).toISOString();
+        if (cache2.size >= 100) cache2.delete(cache2.keys().next().value);
+        cache2.set(key, { productList, fetchedAt, expiresAt: Date.now() + CACHE_MS });
+        return { productList, fetchedAt };
+      })().finally(() => inFlight.delete(key));
+      inFlight.set(key, pending);
+    }
+    return { configured: true, ...await pending };
+  }
+  return router({
+    products: publicProcedure.input(productQuery).query(({ input }) => products(input)),
+    search: protectedProcedure.input(z7.object({
+      keyword: z7.string().trim().min(1).max(80).transform((value) => value.normalize("NFC").replace(/\s+/g, " "))
+    })).mutation(({ input }) => products(input)),
+    adminStatus: adminProcedure.query(async () => {
+      const current = await settings();
+      return { configured: Boolean(current.credentials) };
+    }),
+    save: adminProcedure.input(credentialsSchema).mutation(async ({ input }) => {
+      await reserveCall(false);
+      await fetchCoupangProducts(input, { feed: "popular", category: coupangCategories[0].id });
+      const { error } = await store().from(TABLE).update({
+        credentials: sealCoupangCredentials(input, encryptionSecret),
+        updated_at: (/* @__PURE__ */ new Date()).toISOString()
+      }).eq("id", 1);
+      if (error) throw unavailable();
+      cache2.clear();
+      return { configured: true };
+    }),
+    remove: adminProcedure.mutation(async () => {
+      const { error } = await store().from(TABLE).update({ credentials: null, updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", 1);
+      if (error) throw unavailable();
+      cache2.clear();
+      return { configured: false };
     })
   });
 }
@@ -3545,7 +3922,7 @@ function maskNaverSearchAdCredentials(credentials) {
   };
 }
 function getNaverSearchAdSignature2(timestamp2, method, uri, secretKey) {
-  return createHmac3("sha256", secretKey).update(`${timestamp2}.${method}.${uri}`).digest("base64");
+  return createHmac4("sha256", secretKey).update(`${timestamp2}.${method}.${uri}`).digest("base64");
 }
 function getNaverSearchAdHeaders(credentials, method, uri) {
   const timestamp2 = Date.now().toString();
@@ -4228,6 +4605,33 @@ async function attachGoogleTrendRankChanges(countryCode, items, now) {
 async function getGoogleTrendHistoryFallback(countryCode) {
   return mergeGoogleTrendHistory(countryCode, [], Date.now());
 }
+async function getSavedGoogleTrendRanking() {
+  const bounds = getSeoulDayBounds(getSeoulDate());
+  if (!supabaseAdmin4 || !bounds) return [];
+  const { data: snapshots, error } = await supabaseAdmin4.from("google_trend_rank_snapshots").select("rankings,captured_at").eq("country_code", "KR").gte("captured_at", bounds.start).lt("captured_at", bounds.end).order("captured_at", { ascending: false }).limit(2);
+  if (error) throw new TRPCError8({ code: "INTERNAL_SERVER_ERROR", message: "\uC800\uC7A5\uB41C \uAD6C\uAE00 \uC21C\uC704\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4." });
+  const [latest, previous] = snapshots ?? [];
+  if (!latest?.rankings || typeof latest.rankings !== "object" || Array.isArray(latest.rankings)) return [];
+  const entries = Object.entries(latest.rankings).filter(([keyword, rank]) => keyword && Number.isInteger(rank) && rank > 0 && rank <= 50).sort((a, b) => a[1] - b[1]);
+  if (entries.length === 0) return [];
+  const { data: history } = await supabaseAdmin4.from("google_trend_history").select("keyword_key,keyword,traffic,traffic_count,news,last_seen_at").eq("country_code", "KR").in("keyword_key", entries.map(([key]) => key));
+  const details = new Map((history ?? []).map((row) => [row.keyword_key, row]));
+  return compareGoogleTrendRanks(entries.map(([key, rank]) => {
+    const item = details.get(key);
+    return {
+      rank,
+      rankChange: "same",
+      keyword: item?.keyword ?? key,
+      country: "KR",
+      source: "Google Trends",
+      traffic: item?.traffic ?? "",
+      trafficCount: Number(item?.traffic_count) || 0,
+      news: Array.isArray(item?.news) ? item.news : [],
+      isCurrent: false,
+      lastSeenAt: latest.captured_at
+    };
+  }), previous?.rankings && typeof previous.rankings === "object" && !Array.isArray(previous.rankings) ? previous.rankings : null);
+}
 var GOOGLE_TRENDS_RSS_URLS = {
   KR: "https://trends.google.com/trending/rss?geo=KR",
   US: "https://trends.google.com/trending/rss?geo=US",
@@ -4391,35 +4795,42 @@ function translateYouTubeError(error) {
 }
 async function getContentsViewDailyRanks(date, outsideLiveRanking = false) {
   if (!supabaseAdmin4) {
-    throw new TRPCError6({ code: "PRECONDITION_FAILED", message: "\uC800\uC7A5\uB41C \uAC80\uC0C9\uC5B4\uB97C \uC870\uD68C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+    throw new TRPCError8({ code: "PRECONDITION_FAILED", message: "\uC800\uC7A5\uB41C \uAC80\uC0C9\uC5B4\uB97C \uC870\uD68C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
   }
   const query = supabaseAdmin4.from("contents_view_keyword_daily_rankings").select("rank,keyword,points,appearances,rank_change").eq("ranking_date", date).order("rank");
   const { data, error } = await (outsideLiveRanking ? query.eq("rank_change", "new").gt("rank", CONTENTS_LIVE_RANK_LIMIT).limit(20) : query.limit(CONTENTS_LIVE_RANK_LIMIT));
-  if (error) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "\uCEE8\uD150\uCE20\uBDF0 \uC21C\uC704\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4." });
+  if (error) throw new TRPCError8({ code: "INTERNAL_SERVER_ERROR", message: "\uCEE8\uD150\uCE20\uBDF0 \uC21C\uC704\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4." });
   const rankings = data ?? [];
   return { rankings: rankings.map(({ rank_change, ...entry }) => ({ ...entry, rankChange: rank_change })) };
 }
 async function getContentsViewLiveRanks() {
   const date = getSeoulDate();
-  const cumulative = await getContentsViewDailyRanks(date);
-  if (!supabaseAdmin4 || cumulative.rankings.length === 0) return cumulative;
-  const { data: published, error } = await supabaseAdmin4.from("hero_search_settings").select("keywords,updated_at").eq("id", 1).maybeSingle();
-  if (error || !published || getSeoulDate(new Date(published.updated_at)) !== date) return cumulative;
+  if (!supabaseAdmin4) {
+    throw new TRPCError8({ code: "PRECONDITION_FAILED", message: "\uC800\uC7A5\uB41C \uAC80\uC0C9\uC5B4\uB97C \uC870\uD68C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+  }
+  const [cumulative, { data: published, error }] = await Promise.all([
+    getContentsViewDailyRanks(date),
+    supabaseAdmin4.from("hero_search_settings").select("keywords,updated_at").eq("id", 1).maybeSingle()
+  ]);
+  if (!cumulative.rankings.length || error || !published || getSeoulDate(new Date(published.updated_at)) !== date) {
+    return { date, ...cumulative };
+  }
   const outside = cumulative.rankings.length === CONTENTS_LIVE_RANK_LIMIT ? await getContentsViewDailyRanks(date, true) : { rankings: [] };
-  return { rankings: placeNewContentsKeywords([...cumulative.rankings, ...outside.rankings], published.keywords) };
+  return { date, rankings: placeNewContentsKeywords([...cumulative.rankings, ...outside.rankings], published.keywords) };
 }
 var appRouter = router({
   // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   aiTest: createAiTestRouter(),
+  coupang: createCoupangPartnersRouter(supabaseAdmin4, process.env.API_KEY_ENCRYPTION_SECRET?.trim() || ENV.supabaseServiceRoleKey),
   partnership: router({
     submit: publicProcedure.input(partnershipInquiryInput).mutation(async ({ input }) => {
-      if (!supabaseAdmin4) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uC811\uC218\uB97C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+      if (!supabaseAdmin4) throw new TRPCError8({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uC811\uC218\uB97C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
       const email = input.email.toLowerCase();
       const phone = input.phone.replace(/[^\d+]/g, "");
       const { data: recent, error: lookupError } = await supabaseAdmin4.from("partnership_inquiries").select("id").eq("email", email).gte("created_at", new Date(Date.now() - 10 * 60 * 1e3).toISOString()).limit(1);
-      if (lookupError) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uC811\uC218\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4." });
-      if (recent?.length) throw new TRPCError6({ code: "TOO_MANY_REQUESTS", message: "\uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC81C\uCD9C\uD574 \uC8FC\uC138\uC694." });
+      if (lookupError) throw new TRPCError8({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uC811\uC218\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4." });
+      if (recent?.length) throw new TRPCError8({ code: "TOO_MANY_REQUESTS", message: "\uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC81C\uCD9C\uD574 \uC8FC\uC138\uC694." });
       const { error } = await supabaseAdmin4.from("partnership_inquiries").insert({
         name: input.name,
         phone,
@@ -4427,13 +4838,13 @@ var appRouter = router({
         message: input.message,
         ...partnershipConsentRecord()
       });
-      if (error) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uC811\uC218\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4." });
+      if (error) throw new TRPCError8({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uC811\uC218\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4." });
       return { success: true };
     }),
     list: adminProcedure.query(async () => {
-      if (!supabaseAdmin4) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uB0B4\uC5ED\uC744 \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+      if (!supabaseAdmin4) throw new TRPCError8({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uB0B4\uC5ED\uC744 \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
       const { data, error } = await supabaseAdmin4.from("partnership_inquiries").select("id,name,phone,email,message,created_at").order("created_at", { ascending: false }).limit(100);
-      if (error) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uB0B4\uC5ED\uC744 \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+      if (error) throw new TRPCError8({ code: "INTERNAL_SERVER_ERROR", message: "\uBB38\uC758 \uB0B4\uC5ED\uC744 \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
       return data ?? [];
     })
   }),
@@ -4452,7 +4863,7 @@ var appRouter = router({
     /**
      * Update user name
      */
-    updateName: protectedProcedure.input(z6.object({ name: z6.string().min(1).max(50) })).mutation(async ({ ctx, input }) => {
+    updateName: protectedProcedure.input(z8.object({ name: z8.string().min(1).max(50) })).mutation(async ({ ctx, input }) => {
       if (!ctx.user?.openId) {
         throw new Error("User not authenticated");
       }
@@ -4463,7 +4874,7 @@ var appRouter = router({
      * API Key management
      */
     apiKey: router({
-      save: protectedProcedure.input(z6.object({ provider: z6.string().min(1), apiKey: z6.string().min(1) })).mutation(async ({ ctx, input }) => {
+      save: protectedProcedure.input(z8.object({ provider: z8.string().min(1), apiKey: z8.string().min(1) })).mutation(async ({ ctx, input }) => {
         if (!ctx.user) {
           throw new Error("User not authenticated");
         }
@@ -4474,7 +4885,7 @@ var appRouter = router({
         await saveUserApiKey2(ctx.user, input.provider, trimmedKey);
         return { success: true };
       }),
-      delete: protectedProcedure.input(z6.object({ provider: z6.string().min(1) })).mutation(async ({ ctx, input }) => {
+      delete: protectedProcedure.input(z8.object({ provider: z8.string().min(1) })).mutation(async ({ ctx, input }) => {
         if (!ctx.user) {
           throw new Error("User not authenticated");
         }
@@ -4484,7 +4895,7 @@ var appRouter = router({
       /**
        * Test YouTube API connection
        */
-      testConnection: protectedProcedure.input(z6.object({ provider: z6.string().min(1) })).mutation(async ({ ctx, input }) => {
+      testConnection: protectedProcedure.input(z8.object({ provider: z8.string().min(1) })).mutation(async ({ ctx, input }) => {
         if (!ctx.user) {
           throw new Error("User not authenticated");
         }
@@ -4528,7 +4939,7 @@ var appRouter = router({
       /**
        * Get API key with test status
        */
-      getWithStatus: protectedProcedure.input(z6.object({ provider: z6.string().min(1) })).query(async ({ ctx, input }) => {
+      getWithStatus: protectedProcedure.input(z8.object({ provider: z8.string().min(1) })).query(async ({ ctx, input }) => {
         if (!ctx.user) {
           throw new Error("User not authenticated");
         }
@@ -4552,10 +4963,10 @@ var appRouter = router({
           updatedAt: apiKey.updatedAt
         };
       }),
-      saveNaverSearchAd: adminProcedure.input(z6.object({
-        customerId: z6.string().min(1),
-        accessLicense: z6.string().min(1),
-        secretKey: z6.string().min(1)
+      saveNaverSearchAd: adminProcedure.input(z8.object({
+        customerId: z8.string().min(1),
+        accessLicense: z8.string().min(1),
+        secretKey: z8.string().min(1)
       })).mutation(async ({ ctx, input }) => {
         if (!ctx.user) {
           throw new Error("User not authenticated");
@@ -4672,7 +5083,7 @@ var appRouter = router({
     /**
      * Admin: Approve a pending user
      */
-    approve: adminProcedure.input(z6.object({ userId: z6.number() })).mutation(async ({ input }) => {
+    approve: adminProcedure.input(z8.object({ userId: z8.number() })).mutation(async ({ input }) => {
       const db = await require2("./db").getDb();
       if (!db) {
         throw new Error("Database not available");
@@ -4685,7 +5096,7 @@ var appRouter = router({
     /**
      * Admin: Reject a pending user
      */
-    reject: adminProcedure.input(z6.object({ userId: z6.number() })).mutation(async ({ input }) => {
+    reject: adminProcedure.input(z8.object({ userId: z8.number() })).mutation(async ({ input }) => {
       const db = await require2("./db").getDb();
       if (!db) {
         throw new Error("Database not available");
@@ -4697,13 +5108,13 @@ var appRouter = router({
     })
   }),
   youtube: router({
-    getCollectedRisingVideos: publicProcedure.input(z6.object({
-      regionCode: z6.string().min(2).max(2),
-      videoCategoryId: z6.number().optional(),
-      period: z6.enum(["realtime", "1h", "6h", "24h"]).default("1h"),
-      subscriberRange: z6.enum(["all", "lt10k", "10k-100k", "100k-1m", "gt1m"]).default("all"),
-      sortBy: z6.enum(["score", "hourly", "outlier", "newest"]).default("score"),
-      maxResults: z6.number().min(1).max(50).default(30)
+    getCollectedRisingVideos: publicProcedure.input(z8.object({
+      regionCode: z8.string().min(2).max(2),
+      videoCategoryId: z8.number().optional(),
+      period: z8.enum(["realtime", "1h", "6h", "24h"]).default("1h"),
+      subscriberRange: z8.enum(["all", "lt10k", "10k-100k", "100k-1m", "gt1m"]).default("all"),
+      sortBy: z8.enum(["score", "hourly", "outlier", "newest"]).default("score"),
+      maxResults: z8.number().min(1).max(50).default(30)
     })).query(async ({ input }) => {
       try {
         const result = await getStoredYouTubeRisingVideos(input);
@@ -4730,7 +5141,7 @@ var appRouter = router({
     /**
      * Fetch a fresh, normalized analysis payload for every YouTube video modal.
      */
-    getVideoAnalysis: protectedProcedure.input(z6.object({ videoId: z6.string().min(1).max(32) })).query(async ({ ctx, input }) => {
+    getVideoAnalysis: protectedProcedure.input(z8.object({ videoId: z8.string().min(1).max(32) })).query(async ({ ctx, input }) => {
       if (!ctx.user) throw new Error("User not authenticated");
       const apiKeyRecord = await getUserApiKey2(ctx.user, "youtube");
       if (!apiKeyRecord || apiKeyRecord.testStatus !== "success") {
@@ -4801,11 +5212,11 @@ var appRouter = router({
     /**
      * Get trending videos for a specific country
      */
-    getTrendingVideos: protectedProcedure.input(z6.object({
-      regionCode: z6.string().min(2).max(2),
-      sortBy: z6.enum(["trending", "viewCount", "publishedAt"]).default("trending"),
-      maxResults: z6.number().min(1).max(50).default(12),
-      videoCategoryId: z6.number().optional()
+    getTrendingVideos: protectedProcedure.input(z8.object({
+      regionCode: z8.string().min(2).max(2),
+      sortBy: z8.enum(["trending", "viewCount", "publishedAt"]).default("trending"),
+      maxResults: z8.number().min(1).max(50).default(12),
+      videoCategoryId: z8.number().optional()
     })).query(async ({ ctx, input }) => {
       if (!ctx.user) {
         throw new Error("User not authenticated");
@@ -4961,13 +5372,13 @@ var appRouter = router({
      * Discover recently published videos that are outperforming their channel size.
      * This is an on-demand discovery score. Snapshot-based velocity is added separately.
      */
-    getRisingVideos: protectedProcedure.input(z6.object({
-      regionCode: z6.string().min(2).max(2),
-      videoCategoryId: z6.number().optional(),
-      period: z6.enum(["realtime", "1h", "6h", "24h"]).default("1h"),
-      subscriberRange: z6.enum(["all", "lt10k", "10k-100k", "100k-1m", "gt1m"]).default("all"),
-      sortBy: z6.enum(["score", "hourly", "outlier", "newest"]).default("score"),
-      maxResults: z6.number().min(1).max(50).default(30)
+    getRisingVideos: protectedProcedure.input(z8.object({
+      regionCode: z8.string().min(2).max(2),
+      videoCategoryId: z8.number().optional(),
+      period: z8.enum(["realtime", "1h", "6h", "24h"]).default("1h"),
+      subscriberRange: z8.enum(["all", "lt10k", "10k-100k", "100k-1m", "gt1m"]).default("all"),
+      sortBy: z8.enum(["score", "hourly", "outlier", "newest"]).default("score"),
+      maxResults: z8.number().min(1).max(50).default(30)
     })).query(async ({ ctx, input }) => {
       if (!ctx.user) throw new Error("User not authenticated");
       try {
@@ -5106,12 +5517,12 @@ var appRouter = router({
     /**
      * Search popular YouTube videos by keyword
      */
-    searchVideos: protectedProcedure.input(z6.object({
-      query: z6.string().min(1).max(120),
-      regionCode: z6.string().min(2).max(2).default("KR"),
-      sortBy: z6.enum(["relevance", "publishedAt", "viewCount"]).default("relevance"),
-      durationType: z6.enum(["all", "shorts", "long"]).default("all"),
-      maxResults: z6.number().min(1).max(50).default(50)
+    searchVideos: protectedProcedure.input(z8.object({
+      query: z8.string().min(1).max(120),
+      regionCode: z8.string().min(2).max(2).default("KR"),
+      sortBy: z8.enum(["relevance", "publishedAt", "viewCount"]).default("relevance"),
+      durationType: z8.enum(["all", "shorts", "long"]).default("all"),
+      maxResults: z8.number().min(1).max(50).default(50)
     })).query(async ({ ctx, input }) => {
       if (!ctx.user) {
         throw new Error("User not authenticated");
@@ -5283,10 +5694,10 @@ var appRouter = router({
      * Get trending shorts (videos <= 60 seconds)
      * Uses videos.list with duration filtering
      */
-    getTrendingShorts: protectedProcedure.input(z6.object({
-      regionCode: z6.string().min(2).max(2),
-      sortBy: z6.enum(["trending", "viewCount", "publishedAt"]).default("trending"),
-      maxResults: z6.number().min(1).max(50).default(24)
+    getTrendingShorts: protectedProcedure.input(z8.object({
+      regionCode: z8.string().min(2).max(2),
+      sortBy: z8.enum(["trending", "viewCount", "publishedAt"]).default("trending"),
+      maxResults: z8.number().min(1).max(50).default(24)
     })).query(async ({ ctx, input }) => {
       if (!ctx.user) {
         throw new Error("User not authenticated");
@@ -5479,24 +5890,25 @@ var appRouter = router({
     })
   }),
   googleTrends: router({
+    savedGoogleRanking: publicProcedure.query(getSavedGoogleTrendRanking),
     contentsLiveRanking: publicProcedure.query(getContentsViewLiveRanks),
-    dailyRanking: protectedProcedure.input(z6.object({ source: z6.enum(["google", "contents"]), date: z6.string().length(10) })).query(async ({ input }) => {
+    dailyRanking: protectedProcedure.input(z8.object({ source: z8.enum(["google", "contents"]), date: z8.string().length(10) })).query(async ({ input }) => {
       const bounds = getSeoulDayBounds(input.date);
       if (!bounds || input.date > getSeoulDate()) {
-        throw new TRPCError6({ code: "BAD_REQUEST", message: "\uC870\uD68C\uD560 \uB0A0\uC9DC\uB97C \uD655\uC778\uD574 \uC8FC\uC138\uC694." });
+        throw new TRPCError8({ code: "BAD_REQUEST", message: "\uC870\uD68C\uD560 \uB0A0\uC9DC\uB97C \uD655\uC778\uD574 \uC8FC\uC138\uC694." });
       }
       if (input.source === "contents") return getContentsViewDailyRanks(input.date);
       if (!supabaseAdmin4) {
-        throw new TRPCError6({ code: "PRECONDITION_FAILED", message: "\uC800\uC7A5\uB41C \uAC80\uC0C9\uC5B4\uB97C \uC870\uD68C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+        throw new TRPCError8({ code: "PRECONDITION_FAILED", message: "\uC800\uC7A5\uB41C \uAC80\uC0C9\uC5B4\uB97C \uC870\uD68C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
       }
       const { data, error } = await supabaseAdmin4.from("google_trend_rank_snapshots").select("rankings").eq("country_code", "KR").gte("captured_at", bounds.start).lt("captured_at", bounds.end).order("captured_at", { ascending: false });
-      if (error) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "\uAD6C\uAE00 \uC21C\uC704\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4." });
+      if (error) throw new TRPCError8({ code: "INTERNAL_SERVER_ERROR", message: "\uAD6C\uAE00 \uC21C\uC704\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4." });
       return { rankings: aggregateDailySearchRanks((data ?? []).map(
         ({ rankings }) => Object.entries(rankings).map(([keyword, rank]) => ({ keyword, rank }))
       )) };
     }),
-    realtimeTrending: publicProcedure.input(z6.object({
-      country: z6.string().default("KR")
+    realtimeTrending: publicProcedure.input(z8.object({
+      country: z8.string().default("KR")
     })).query(async ({ input }) => {
       try {
         const data = await getGoogleTrendingSearches(input.country);
@@ -5516,114 +5928,13 @@ var appRouter = router({
     })
   }),
   naver: router({
-    categoryTrend: publicProcedure.input(z6.object({
-      categoryCode: z6.string(),
-      startDate: z6.string(),
-      endDate: z6.string(),
-      timeUnit: z6.enum(["date", "week", "month"]),
-      device: z6.string().optional(),
-      gender: z6.string().optional(),
-      ages: z6.array(z6.string()).optional()
-    })).mutation(async ({ input }) => {
-      try {
-        const clientId = process.env.NAVER_CLIENT_ID;
-        const clientSecret = process.env.NAVER_CLIENT_SECRET;
-        console.log("[Naver API] NAVER_CLIENT_ID configured:", !!clientId);
-        console.log("[Naver API] NAVER_CLIENT_SECRET configured:", !!clientSecret);
-        console.log("[Naver API] Input received:", JSON.stringify(input));
-        if (!clientId || !clientSecret) {
-          console.error("[Naver API] Missing credentials");
-          return {
-            success: false,
-            error: "Naver API credentials not configured",
-            data: []
-          };
-        }
-        const categoryNameMap = {
-          "50000000": "\uD328\uC158\uC758\uB958",
-          "50000001": "\uD328\uC158\uC7A1\uD654",
-          "50000002": "\uD654\uC7A5\uD488/\uBBF8\uC6A9",
-          "50000003": "\uB514\uC9C0\uD138/\uAC00\uC804",
-          "50000004": "\uC2DD\uD488",
-          "50000005": "\uB3C4\uC11C/\uC74C\uBC18/\uC601\uC0C1\uBB3C",
-          "50000006": "\uC2A4\uD3EC\uCE20/\uB808\uC800",
-          "50000007": "\uAC00\uAD6C/\uC778\uD14C\uB9AC\uC5B4",
-          "50000008": "\uCD9C\uC0B0/\uC721\uC544",
-          "50000009": "\uBC18\uB824\uB3D9\uBB3C\uC6A9\uD488",
-          "50000010": "\uAC74\uAC15/\uC758\uB8CC",
-          "50000011": "\uC0DD\uD65C/\uD3B8\uC758"
-        };
-        const categoryName = categoryNameMap[input.categoryCode] || "\uAE30\uD0C0";
-        const requestBody = {
-          startDate: input.startDate,
-          endDate: input.endDate,
-          timeUnit: input.timeUnit,
-          category: [
-            {
-              name: categoryName,
-              param: [input.categoryCode]
-            }
-          ]
-        };
-        if (input.device && input.device !== "all") {
-          requestBody.device = input.device;
-        }
-        if (input.gender && input.gender !== "all") {
-          requestBody.gender = input.gender;
-        }
-        if (input.ages && input.ages.length > 0) {
-          requestBody.ages = input.ages;
-        }
-        console.log("[Naver API] Request body:", JSON.stringify(requestBody));
-        const response = await fetch(
-          "https://openapi.naver.com/v1/datalab/shopping/categories",
-          {
-            method: "POST",
-            headers: {
-              "X-Naver-Client-Id": clientId,
-              "X-Naver-Client-Secret": clientSecret,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify(requestBody)
-          }
-        );
-        console.log("[Naver API] HTTP Status:", response.status);
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error("[Naver API] Error response:", JSON.stringify(errorData));
-          const errorMessage = errorData.message || "\uB370\uC774\uD130\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.";
-          return {
-            success: false,
-            error: errorMessage,
-            data: []
-          };
-        }
-        const data = await response.json();
-        if (!data.results || !data.results[0] || !data.results[0].data) {
-          return {
-            success: false,
-            error: "\uC120\uD0DD\uD55C \uC870\uAC74\uC758 \uD074\uB9AD \uCD94\uC774 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
-            data: []
-          };
-        }
-        return {
-          success: true,
-          data: data.results[0].data
-        };
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : "Connection failed";
-        console.error("[Naver API] Exception:", errorMsg);
-        return {
-          success: false,
-          error: "\uB370\uC774\uD130\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.",
-          data: []
-        };
-      }
-    }),
+    categoryTrend: categoryTrendProcedure,
+    shoppingCategoryChildren: shoppingCategoryChildrenProcedure,
+    shoppingStatistics: shoppingStatisticsProcedure,
     unifiedInsight: unifiedInsightProcedure,
     unifiedInsightBatch: unifiedInsightBatchProcedure,
-    blogAnalysis: naverAnalysisProcedure.input(z6.object({
-      blogUrl: z6.string().min(1)
+    blogAnalysis: naverAnalysisProcedure.input(z8.object({
+      blogUrl: z8.string().min(1)
     })).mutation(async ({ input }) => {
       try {
         return await fetchNaverBlogRss(input.blogUrl);
@@ -5637,8 +5948,8 @@ var appRouter = router({
         };
       }
     }),
-    blogPostDetails: naverAnalysisProcedure.input(z6.object({
-      postUrl: z6.string().min(1)
+    blogPostDetails: naverAnalysisProcedure.input(z8.object({
+      postUrl: z8.string().min(1)
     })).mutation(async ({ input }) => {
       try {
         return await fetchNaverBlogPostDetails(input.postUrl);
@@ -5653,8 +5964,8 @@ var appRouter = router({
         };
       }
     }),
-    blogPostEngagement: publicProcedure.input(z6.object({
-      postUrl: z6.string().min(1)
+    blogPostEngagement: publicProcedure.input(z8.object({
+      postUrl: z8.string().min(1)
     })).mutation(async ({ input }) => {
       try {
         const engagement = await fetchNaverBlogPostEngagement(input.postUrl);
@@ -5673,10 +5984,10 @@ var appRouter = router({
         };
       }
     }),
-    blogPostAnalysis: naverAnalysisProcedure.input(z6.object({
-      postUrl: z6.string().min(1),
-      title: z6.string().optional(),
-      keywords: z6.array(z6.string()).min(1).max(10)
+    blogPostAnalysis: naverAnalysisProcedure.input(z8.object({
+      postUrl: z8.string().min(1),
+      title: z8.string().optional(),
+      keywords: z8.array(z8.string()).min(1).max(10)
     })).mutation(async ({ input }) => {
       try {
         const clientId = process.env.NAVER_CLIENT_ID;
@@ -5759,12 +6070,12 @@ var appRouter = router({
         };
       }
     }),
-    diagnostic: publicProcedure.input(z6.object({
-      keywords: z6.array(z6.string()).min(1).max(5),
-      category: z6.string(),
-      startDate: z6.string(),
-      endDate: z6.string(),
-      timeUnit: z6.enum(["date", "week", "month"])
+    diagnostic: publicProcedure.input(z8.object({
+      keywords: z8.array(z8.string()).min(1).max(5),
+      category: z8.string(),
+      startDate: z8.string(),
+      endDate: z8.string(),
+      timeUnit: z8.enum(["date", "week", "month"])
     })).mutation(async ({ input }) => {
       try {
         const result = await runDiagnostics(
@@ -5812,7 +6123,7 @@ var appRouter = router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const userId = supabaseBookmarkUserId(ctx.user);
       if (!userId || !supabaseAdmin4) {
-        throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Instagram \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+        throw new TRPCError8({ code: "INTERNAL_SERVER_ERROR", message: "Instagram \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
       }
       const { data, error } = await supabaseAdmin4.from("instagram_bookmarks").select("shortcode,media_type,post_url,title,author_name,author_url,thumbnail_url,created_at").eq("user_id", userId).order("created_at", { ascending: false });
       if (error) throw error;
@@ -5827,14 +6138,14 @@ var appRouter = router({
         savedAt: String(row.created_at)
       }));
     }),
-    addFromUrl: protectedProcedure.input(z6.object({ url: z6.string().trim().min(1).max(2048) })).mutation(async ({ ctx, input }) => {
+    addFromUrl: protectedProcedure.input(z8.object({ url: z8.string().trim().min(1).max(2048) })).mutation(async ({ ctx, input }) => {
       const userId = supabaseBookmarkUserId(ctx.user);
       if (!userId || !supabaseAdmin4) {
-        throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Instagram \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+        throw new TRPCError8({ code: "INTERNAL_SERVER_ERROR", message: "Instagram \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
       }
       const parsed = parseInstagramUrl(input.url);
       if (!parsed) {
-        throw new TRPCError6({ code: "BAD_REQUEST", message: "Instagram \uAC8C\uC2DC\uBB3C \uB610\uB294 \uB9B4\uC2A4 URL\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694." });
+        throw new TRPCError8({ code: "BAD_REQUEST", message: "Instagram \uAC8C\uC2DC\uBB3C \uB610\uB294 \uB9B4\uC2A4 URL\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694." });
       }
       const { data: existing, error: lookupError } = await supabaseAdmin4.from("instagram_bookmarks").select("id").eq("user_id", userId).eq("media_type", parsed.mediaType).eq("shortcode", parsed.shortcode).maybeSingle();
       if (lookupError) throw lookupError;
@@ -5853,10 +6164,10 @@ var appRouter = router({
       if (error) throw error;
       return { shortcode: parsed.shortcode, alreadySaved: false };
     }),
-    remove: protectedProcedure.input(z6.object({ shortcode: z6.string().regex(/^[A-Za-z0-9_-]{5,32}$/), mediaType: z6.enum(["p", "reel"]) })).mutation(async ({ ctx, input }) => {
+    remove: protectedProcedure.input(z8.object({ shortcode: z8.string().regex(/^[A-Za-z0-9_-]{5,32}$/), mediaType: z8.enum(["p", "reel"]) })).mutation(async ({ ctx, input }) => {
       const userId = supabaseBookmarkUserId(ctx.user);
       if (!userId || !supabaseAdmin4) {
-        throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Instagram \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+        throw new TRPCError8({ code: "INTERNAL_SERVER_ERROR", message: "Instagram \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
       }
       const { error } = await supabaseAdmin4.from("instagram_bookmarks").delete().eq("user_id", userId).eq("media_type", input.mediaType).eq("shortcode", input.shortcode);
       if (error) throw error;
@@ -5867,7 +6178,7 @@ var appRouter = router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const userId = supabaseBookmarkUserId(ctx.user);
       if (!userId || !supabaseAdmin4) {
-        throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "TikTok \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+        throw new TRPCError8({ code: "INTERNAL_SERVER_ERROR", message: "TikTok \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
       }
       const { data, error } = await supabaseAdmin4.from("tiktok_bookmarks").select("video_id,video_url,title,author_name,author_url,thumbnail_url,created_at").eq("user_id", userId).order("created_at", { ascending: false });
       if (error) throw error;
@@ -5881,24 +6192,24 @@ var appRouter = router({
         savedAt: String(row.created_at)
       }));
     }),
-    addFromUrl: protectedProcedure.input(z6.object({ url: z6.string().trim().min(1).max(2048) })).mutation(async ({ ctx, input }) => {
+    addFromUrl: protectedProcedure.input(z8.object({ url: z8.string().trim().min(1).max(2048) })).mutation(async ({ ctx, input }) => {
       const userId = supabaseBookmarkUserId(ctx.user);
       if (!userId || !supabaseAdmin4) {
-        throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "TikTok \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+        throw new TRPCError8({ code: "INTERNAL_SERVER_ERROR", message: "TikTok \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
       }
       const parsed = parseTikTokVideoUrl(input.url);
       if (!parsed) {
-        throw new TRPCError6({ code: "BAD_REQUEST", message: "\uC62C\uBC14\uB978 TikTok \uC601\uC0C1 URL\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694." });
+        throw new TRPCError8({ code: "BAD_REQUEST", message: "\uC62C\uBC14\uB978 TikTok \uC601\uC0C1 URL\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694." });
       }
       let video;
       try {
         video = await fetchTikTokBookmarkVideo(parsed);
       } catch (error2) {
         console.error("[TikTok bookmarks] Failed to fetch video metadata", error2);
-        throw new TRPCError6({ code: "BAD_GATEWAY", message: "TikTok \uC601\uC0C1 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
+        throw new TRPCError8({ code: "BAD_GATEWAY", message: "TikTok \uC601\uC0C1 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
       }
       if (!video) {
-        throw new TRPCError6({ code: "NOT_FOUND", message: "\uACF5\uAC1C\uB41C TikTok \uC601\uC0C1\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. URL\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694." });
+        throw new TRPCError8({ code: "NOT_FOUND", message: "\uACF5\uAC1C\uB41C TikTok \uC601\uC0C1\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. URL\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694." });
       }
       const { data: existing, error: lookupError } = await supabaseAdmin4.from("tiktok_bookmarks").select("id").eq("user_id", userId).eq("video_id", video.videoId).maybeSingle();
       if (lookupError) throw lookupError;
@@ -5915,10 +6226,10 @@ var appRouter = router({
       if (error) throw error;
       return { videoId: video.videoId, alreadySaved: false };
     }),
-    remove: protectedProcedure.input(z6.object({ videoId: z6.string().regex(/^\d{10,25}$/) })).mutation(async ({ ctx, input }) => {
+    remove: protectedProcedure.input(z8.object({ videoId: z8.string().regex(/^\d{10,25}$/) })).mutation(async ({ ctx, input }) => {
       const userId = supabaseBookmarkUserId(ctx.user);
       if (!userId || !supabaseAdmin4) {
-        throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "TikTok \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
+        throw new TRPCError8({ code: "INTERNAL_SERVER_ERROR", message: "TikTok \uBCF4\uAD00\uD568\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4." });
       }
       const { error } = await supabaseAdmin4.from("tiktok_bookmarks").delete().eq("user_id", userId).eq("video_id", input.videoId);
       if (error) throw error;
@@ -5927,10 +6238,10 @@ var appRouter = router({
   }),
   // YouTube Bookmarks router
   youtubeBookmarks: router({
-    addFromUrl: protectedProcedure.input(z6.object({ url: z6.string().trim().min(1).max(2048) })).mutation(async ({ ctx, input }) => {
+    addFromUrl: protectedProcedure.input(z8.object({ url: z8.string().trim().min(1).max(2048) })).mutation(async ({ ctx, input }) => {
       const parsed = parseYouTubeVideoUrl(input.url);
       if (!parsed) {
-        throw new TRPCError6({ code: "BAD_REQUEST", message: "\uC62C\uBC14\uB978 YouTube \uC601\uC0C1 URL\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694." });
+        throw new TRPCError8({ code: "BAD_REQUEST", message: "\uC62C\uBC14\uB978 YouTube \uC601\uC0C1 URL\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694." });
       }
       const existing = await listYouTubeBookmarks(ctx.user);
       if (existing.some((bookmark) => bookmark.videoId === parsed.videoId)) {
@@ -5938,22 +6249,22 @@ var appRouter = router({
       }
       const apiKey = process.env.YOUTUBE_API_KEY?.trim();
       if (!apiKey) {
-        throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "\uC601\uC0C1 \uC815\uBCF4\uB97C \uAC00\uC838\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
+        throw new TRPCError8({ code: "INTERNAL_SERVER_ERROR", message: "\uC601\uC0C1 \uC815\uBCF4\uB97C \uAC00\uC838\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
       }
       let video;
       try {
         video = await fetchYouTubeBookmarkVideo(parsed, apiKey);
       } catch (error) {
         console.error("[YouTube bookmarks] Failed to fetch video metadata", error);
-        throw new TRPCError6({ code: "BAD_GATEWAY", message: "\uC601\uC0C1 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
+        throw new TRPCError8({ code: "BAD_GATEWAY", message: "\uC601\uC0C1 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694." });
       }
       if (!video) {
-        throw new TRPCError6({ code: "NOT_FOUND", message: "\uC601\uC0C1\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. URL\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694." });
+        throw new TRPCError8({ code: "NOT_FOUND", message: "\uC601\uC0C1\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. URL\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694." });
       }
       await addYouTubeBookmark2(ctx.user, { userId: ctx.user.id, ...video });
       return { videoId: parsed.videoId, alreadySaved: false };
     }),
-    trackSavedVideos: protectedProcedure.input(z6.object({ accountKey: z6.string() })).query(async ({ ctx }) => {
+    trackSavedVideos: protectedProcedure.input(z8.object({ accountKey: z8.string() })).query(async ({ ctx }) => {
       const bookmarks = await listYouTubeBookmarks(ctx.user);
       if (bookmarks.length === 0) {
         return { checkedAt: (/* @__PURE__ */ new Date()).toISOString(), videos: [], channels: [] };
@@ -6077,9 +6388,9 @@ var appRouter = router({
      * Check if a specific video is bookmarked
      */
     isBookmarked: protectedProcedure.input(
-      z6.object({
-        videoId: z6.string(),
-        contentType: z6.enum(["video", "shorts"])
+      z8.object({
+        videoId: z8.string(),
+        contentType: z8.enum(["video", "shorts"])
       })
     ).query(async ({ ctx, input }) => {
       return await isYouTubeBookmark(ctx.user, input.videoId, input.contentType);
@@ -6088,18 +6399,18 @@ var appRouter = router({
      * Add a video to bookmarks
      */
     add: protectedProcedure.input(
-      z6.object({
-        videoId: z6.string(),
-        contentType: z6.enum(["video", "shorts"]),
-        title: z6.string(),
-        thumbnailUrl: z6.string().optional(),
-        channelId: z6.string().optional(),
-        channelTitle: z6.string().optional(),
-        channelThumbnailUrl: z6.string().optional(),
-        videoUrl: z6.string().optional(),
-        duration: z6.string().optional(),
-        viewCount: z6.union([z6.string(), z6.number()]).optional(),
-        publishedAt: z6.string().optional()
+      z8.object({
+        videoId: z8.string(),
+        contentType: z8.enum(["video", "shorts"]),
+        title: z8.string(),
+        thumbnailUrl: z8.string().optional(),
+        channelId: z8.string().optional(),
+        channelTitle: z8.string().optional(),
+        channelThumbnailUrl: z8.string().optional(),
+        videoUrl: z8.string().optional(),
+        duration: z8.string().optional(),
+        viewCount: z8.union([z8.string(), z8.number()]).optional(),
+        publishedAt: z8.string().optional()
       })
     ).mutation(async ({ ctx, input }) => {
       const bookmarkData = {
@@ -6124,9 +6435,9 @@ var appRouter = router({
      * Remove a video from bookmarks
      */
     remove: protectedProcedure.input(
-      z6.object({
-        videoId: z6.string(),
-        contentType: z6.enum(["video", "shorts"])
+      z8.object({
+        videoId: z8.string(),
+        contentType: z8.enum(["video", "shorts"])
       })
     ).mutation(async ({ ctx, input }) => {
       await removeYouTubeBookmark2(ctx.user, input.videoId, input.contentType);
@@ -6138,8 +6449,8 @@ var appRouter = router({
      * Fetch popular posts from DC Inside Best Gallery
      * Returns normalized data for the community content list
      */
-    getDcinside: publicProcedure.input(z6.object({
-      sort: z6.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
+    getDcinside: publicProcedure.input(z8.object({
+      sort: z8.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
     }).optional()).query(async ({ input }) => {
       console.log("[DC Inside] getDcinside called");
       const cacheKey = "dcinside_posts_cache";
@@ -6282,7 +6593,7 @@ var appRouter = router({
      * Returns normalized data for the community content list
      * Handles EUC-KR encoding
      */
-    getPpomppu: publicProcedure.input(z6.object({ forceRefresh: z6.boolean().optional() }).optional()).query(async ({ input }) => {
+    getPpomppu: publicProcedure.input(z8.object({ forceRefresh: z8.boolean().optional() }).optional()).query(async ({ input }) => {
       const cacheKey = "ppomppu_posts_cache";
       const cacheDuration = 10 * 60 * 1e3;
       const forceRefresh = input?.forceRefresh || false;
@@ -6399,8 +6710,8 @@ var appRouter = router({
      * Fetch popular posts from Nate Pann Ranking
      * Returns normalized data for the community content list
      */
-    getNatePann: publicProcedure.input(z6.object({
-      sort: z6.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
+    getNatePann: publicProcedure.input(z8.object({
+      sort: z8.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
     }).optional()).query(async ({ input }) => {
       const cacheKey = "natepann_posts_cache";
       const cacheDuration = 10 * 60 * 1e3;
@@ -6529,8 +6840,8 @@ var appRouter = router({
      * Fetch popular posts from Ruliweb Best
      * Returns normalized data for the community content list
      */
-    getRuliweb: publicProcedure.input(z6.object({
-      sort: z6.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
+    getRuliweb: publicProcedure.input(z8.object({
+      sort: z8.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
     }).optional()).query(async ({ input }) => {
       const cacheKey = "ruliweb_posts_cache";
       const cacheDuration = 10 * 60 * 1e3;
@@ -6678,8 +6989,8 @@ var appRouter = router({
         };
       }
     }),
-    getInven: publicProcedure.input(z6.object({
-      sort: z6.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
+    getInven: publicProcedure.input(z8.object({
+      sort: z8.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
     }).optional()).query(async ({ input }) => {
       const cacheKey = "inven_best";
       const cacheDuration = 10 * 60 * 1e3;
@@ -6835,8 +7146,8 @@ var appRouter = router({
         };
       }
     }),
-    getBobaedream: publicProcedure.input(z6.object({
-      sort: z6.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
+    getBobaedream: publicProcedure.input(z8.object({
+      sort: z8.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
     }).optional()).query(async ({ input }) => {
       const cacheKey = "bobaedream_posts_cache";
       const cacheDuration = 10 * 60 * 1e3;
@@ -7005,8 +7316,8 @@ var appRouter = router({
         };
       }
     }),
-    getHumorUniv: publicProcedure.input(z6.object({
-      sort: z6.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
+    getHumorUniv: publicProcedure.input(z8.object({
+      sort: z8.enum(["source", "popular", "recommend", "views", "comments"]).default("popular")
     }).optional()).query(async ({ input }) => {
       const cacheKey = "humoruniv_posts_cache";
       const cacheDuration = 10 * 60 * 1e3;
@@ -7241,13 +7552,13 @@ var appRouter = router({
     /**
      * Get latest news from RSS
      */
-    getLatestNews: publicProcedure.input(z6.object({ limit: z6.number().default(20), category: z6.string().default("all") }).optional()).query(({ input }) => getLatestRssNews(input?.category ?? "all", input?.limit ?? 20)),
+    getLatestNews: publicProcedure.input(z8.object({ limit: z8.number().default(20), category: z8.string().default("all") }).optional()).query(({ input }) => getLatestRssNews(input?.category ?? "all", input?.limit ?? 20)),
     /**
      * Search news from Naver News API
      */
-    searchNews: protectedProcedure.input(z6.object({
-      query: z6.string().min(1).max(100),
-      limit: z6.number().default(10)
+    searchNews: protectedProcedure.input(z8.object({
+      query: z8.string().min(1).max(100),
+      limit: z8.number().default(10)
     })).query(async ({ input }) => {
       try {
         const { query, limit } = input;

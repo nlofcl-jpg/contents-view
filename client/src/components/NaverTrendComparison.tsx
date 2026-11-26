@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { AnalysisProgress } from "@/components/AnalysisProgress";
 import { UnifiedChart } from "@/components/UnifiedChart";
@@ -71,7 +71,7 @@ type ComparisonOptions = {
   isLoading?: boolean;
   metric: "trend" | "shopping";
   title?: string;
-  shoppingCategory?: { code?: string; label?: string; filters: ReactNode };
+  shoppingCategory?: { code?: string; label?: string; filters: ReactNode; onAutoCategory?: (path: { value: string; label: string }[]) => void };
   onError: (error: unknown, fallback: string) => string;
 };
 
@@ -90,6 +90,8 @@ export function useNaverTrendComparison({
   const [trendFilterError, setTrendFilterError] = useState("");
   const [categoryResult, setCategoryResult] = useState<{ label: string; points: InsightPoint[]; startDate: string; endDate: string; timeUnit: string; error?: string } | null>(null);
   const [openTrendFilterMenu, setOpenTrendFilterMenu] = useState<TrendFilterMenu>(null);
+  const [showShoppingFilters, setShowShoppingFilters] = useState(false);
+  const extraFiltersId = useId();
   const [selectedPeriod, setSelectedPeriod] = useState<(typeof PERIOD_OPTIONS)[number]["value"]>("30");
   const [selectedTimeUnit, setSelectedTimeUnit] = useState<(typeof TIME_UNIT_OPTIONS)[number]["value"]>("date");
   const [selectedDevices, setSelectedDevices] = useState<string[]>(["전체"]);
@@ -221,6 +223,7 @@ export function useNaverTrendComparison({
     clearComparison();
     setComparisonKeywordInput("");
     setOpenTrendFilterMenu(null);
+    setShowShoppingFilters(false);
     setSelectedPeriod("30");
     setSelectedTimeUnit("date");
     setSelectedDevices(["전체"]);
@@ -248,7 +251,7 @@ export function useNaverTrendComparison({
     };
   };
 
-  const loadTrendComparison = async (nextKeywords: string[]) => {
+  const loadTrendComparison = async (nextKeywords: string[], submittedKeyword?: string) => {
     if (authLoading || isLoading || isTrendFilterLoading || (!nextKeywords.length && !shoppingCategory?.code)) return false;
 
     const combinations = getChartFilterCombinations();
@@ -274,12 +277,14 @@ export function useNaverTrendComparison({
           ages: combination.age.values,
         })) : [];
       let responses: unknown[];
+      let hasCategoryPoints = false;
       if (shoppingCategory) {
         const device = selectedDevices.length === 1 ? selectedDevices[0] : undefined;
         const gender = selectedGenders.length === 1 ? selectedGenders[0] : undefined;
         const result = await queryShoppingStatistics({
           requests,
-          categoryCode: shoppingCategory.code,
+          categoryCode: submittedKeyword ? undefined : shoppingCategory.code,
+          keywordForCategory: submittedKeyword,
           categoryFilters: {
             startDate: startDateStr, endDate: endDateStr, timeUnit,
             device: device === "PC" ? "pc" : device === "모바일" ? "mo" : undefined,
@@ -288,8 +293,11 @@ export function useNaverTrendComparison({
           },
         });
         responses = result.comparisons;
+        hasCategoryPoints = Boolean(result.category?.data.length);
+        const autoPath = result.categoryPath ?? [];
+        if (autoPath.length) shoppingCategory.onAutoCategory?.(autoPath);
         setCategoryResult(result.category ? {
-          label: shoppingCategory.label || naverShoppingCategories[result.category.categoryCode as keyof typeof naverShoppingCategories] || result.category.categoryCode,
+          label: autoPath.map(item => item.label).join(" › ") || (!submittedKeyword && shoppingCategory.label) || naverShoppingCategories[result.category.categoryCode as keyof typeof naverShoppingCategories] || result.category.categoryCode,
           points: result.category.data,
           startDate: startDateStr, endDate: endDateStr, timeUnit,
           error: result.category.error,
@@ -319,6 +327,7 @@ export function useNaverTrendComparison({
       });
 
       if (chartKeywords.length === 0) {
+        if (hasCategoryPoints) setTrendComparisonData(null);
         const shoppingError = shoppingOnly && results.find(({ response }) => response?.error)?.response?.error;
         setTrendFilterError(shoppingError || (shoppingOnly ? "선택한 조건의 쇼핑 클릭 데이터를 찾지 못했습니다." : "선택한 조건의 검색 트렌드 데이터를 찾지 못했습니다."));
         return false;
@@ -355,7 +364,7 @@ export function useNaverTrendComparison({
       setTrendFilterError(`비교 키워드는 최대 ${MAX_COMPARISON_KEYWORDS}개까지 추가할 수 있습니다.`);
       return false;
     }
-    return loadTrendComparison([...comparisonKeywords, keyword]);
+    return loadTrendComparison([...comparisonKeywords, keyword], keyword);
   };
 
   const addComparisonKeyword = async () => {
@@ -446,13 +455,29 @@ export function useNaverTrendComparison({
             className={TREND_FILTER_BUTTON_CLASS}
             disabled={!canSubmitKeyword}
           >
-            {shoppingOnly ? "분석" : "추가"}
+            추가
           </button>
         </form>
       </div>
       <div className="rounded-lg border border-slate-700/70 bg-slate-950/35 p-3">
         {shoppingCategory?.filters}
+        {shoppingCategory && (
+          <button
+            type="button"
+            aria-expanded={showShoppingFilters}
+            aria-controls={extraFiltersId}
+            className="mx-auto flex w-fit items-center justify-center gap-1.5 rounded-md px-2 py-2 text-center text-xs font-medium text-slate-200 outline-sky-300 focus-visible:outline-2 md:hidden"
+            onClick={() => {
+              if (showShoppingFilters) setOpenTrendFilterMenu(null);
+              setShowShoppingFilters(open => !open);
+            }}
+          >
+            필터 더보기
+            <ChevronDown size={15} className={`text-slate-400 transition-transform motion-reduce:transition-none${showShoppingFilters ? " rotate-180" : ""}`} aria-hidden="true" />
+          </button>
+        )}
         <div className={TREND_FILTER_GRID_CLASS}>
+          <div id={shoppingCategory ? extraFiltersId : undefined} className={shoppingCategory && !showShoppingFilters ? "hidden md:contents" : "contents"}>
           {renderSingleCheckFilter("period", "기간", PERIOD_OPTIONS.map(option => ({
             value: option.value,
             label: option.label,
@@ -499,6 +524,7 @@ export function useNaverTrendComparison({
           >
             필터 적용
           </button>
+          </div>
         </div>
         {trendComparisonData && comparisonKeywords.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2" aria-label="비교 키워드 목록">
@@ -543,43 +569,39 @@ export function useNaverTrendComparison({
 
       {/* Chart Container */}
       {isTrendFilterLoading && <AnalysisProgress />}
-      {(hasComparisonResults || !shoppingCategory) && <div className="relative h-[300px] md:h-[480px]" aria-busy={isTrendFilterLoading}>
-        {hasComparisonResults && <UnifiedChart
-          data={comparisonChartData}
+      {renderCategorySummary()}
+      {(hasComparisonResults || categoryResult?.points.length || !shoppingCategory) ? <div className="relative h-[300px] md:h-[480px]" aria-busy={isTrendFilterLoading}>
+        {(hasComparisonResults || categoryResult?.points.length) ? <UnifiedChart
+          data={{ ...comparisonChartData, categorySeries: categoryResult?.points.length ? { name: categoryResult.label.split(" › ").at(-1) ?? categoryResult.label, points: categoryResult.points } : undefined }}
           visibleLayers={comparisonChartLayers}
-          timeUnit={timeUnitForChart}
-          startDate={startDateForChart}
-          endDate={endDateForChart}
-        />}
-      </div>}
+          timeUnit={categoryResult?.timeUnit ?? timeUnitForChart}
+          startDate={categoryResult?.startDate ?? startDateForChart}
+          endDate={categoryResult?.endDate ?? endDateForChart}
+        /> : null}
+      </div> : null}
     </div>
   );
 
-  const renderCategoryPanel = () => {
+  const renderCategorySummary = () => {
     if (!categoryResult) return null;
-    const { label, points, startDate, endDate, timeUnit, error } = categoryResult;
+    const { label, points, error } = categoryResult;
     const latest = points.at(-1);
     return (
-      <section className="trend-comparison-glass min-w-0 rounded-lg border px-4 py-4 md:px-6 md:py-6" aria-labelledby="shopping-category-stats">
-        <h3 id="shopping-category-stats" className="text-base font-medium text-white md:text-lg md:font-semibold">카테고리 통계</h3>
-        <p className="mt-1 text-xs text-slate-400">{label} · {startDate} ~ {endDate}</p>
+      <div aria-label="카테고리 통계">
         {error ? <p role="alert" className="mt-4 text-sm text-red-300">{error}</p> : latest && (
           <>
             <div className="mb-3 mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
-              <span>최신 클릭 지수 <strong className="ml-1 text-base tabular-nums text-sky-200">{clickIndexFormat.format(latest.ratio)}</strong></span>
+              <span>{label} · 최신 클릭 지수 <strong className="ml-1 text-base tabular-nums text-sky-200">{clickIndexFormat.format(latest.ratio)}</strong></span>
               <span>{latest.period} 기준 · 기간 내 최대 100</span>
-            </div>
-            <div className="relative h-[300px] md:h-[480px]">
-              <UnifiedChart data={{ keywords: [label], shopping: { [label]: points }, trend: {} }} visibleLayers={{ trend: false, shopping: true }} timeUnit={timeUnit} startDate={startDate} endDate={endDate} />
             </div>
           </>
         )}
-      </section>
+      </div>
     );
   };
 
   return {
-    renderPanel, renderCategoryPanel, getBaseRequest, clearComparison, resetComparison, isTrendFilterLoading,
+    renderPanel, getBaseRequest, clearComparison, resetComparison, isTrendFilterLoading,
     submitComparisonKeyword,
   };
 }

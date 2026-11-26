@@ -14,6 +14,12 @@ import { naverShoppingCategories } from "@shared/naverShoppingCategories";
 const rootCategoryFallback = Object.entries(naverShoppingCategories).map(([value, label]) => ({ value, label }));
 const categoryOptionsQuery = { staleTime: 6 * 60 * 60_000, retry: false, refetchOnWindowFocus: false };
 
+type CategoryOption = { value: string; label: string };
+
+function withSelectedCategory(options: CategoryOption[] = [], selected?: CategoryOption) {
+  return !selected || options.some(option => option.value === selected.value) ? options : [selected, ...options];
+}
+
 function CategoryFilter({ label, value, options, disabled, onChange }: {
   label: string;
   value: string;
@@ -43,15 +49,18 @@ export default function CommerceTrends() {
   const [firstCategory, setFirstCategory] = useState("");
   const [secondCategory, setSecondCategory] = useState("");
   const [thirdCategory, setThirdCategory] = useState("");
+  const [autoCategoryPath, setAutoCategoryPath] = useState<CategoryOption[]>([]);
   const firstOptions = trpc.naver.shoppingCategoryChildren.useQuery({ parent: "0", level: 1 }, { ...categoryOptionsQuery, enabled: !coupangActive });
   const secondOptions = trpc.naver.shoppingCategoryChildren.useQuery({ parent: firstCategory, level: 2 }, { ...categoryOptionsQuery, enabled: !coupangActive && Boolean(firstCategory) });
   const thirdOptions = trpc.naver.shoppingCategoryChildren.useQuery({ parent: secondCategory, level: 3 }, { ...categoryOptionsQuery, enabled: !coupangActive && Boolean(secondCategory) });
-  const roots = firstOptions.data ?? rootCategoryFallback;
+  const roots = withSelectedCategory(firstOptions.data ?? rootCategoryFallback, autoCategoryPath[0]);
+  const secondCategories = withSelectedCategory(secondOptions.data, autoCategoryPath[1]);
+  const thirdCategories = withSelectedCategory(thirdOptions.data, autoCategoryPath[2]);
   const categoryCode = thirdCategory || secondCategory || firstCategory || undefined;
   const categoryLabel = [
     roots.find(option => option.value === firstCategory)?.label,
-    secondOptions.data?.find(option => option.value === secondCategory)?.label,
-    thirdOptions.data?.find(option => option.value === thirdCategory)?.label,
+    secondCategories.find(option => option.value === secondCategory)?.label,
+    thirdCategories.find(option => option.value === thirdCategory)?.label,
   ].filter(Boolean).join(" › ");
   const failedOptions = [Boolean(firstCategory) && secondOptions, Boolean(secondCategory) && thirdOptions].find(query => query && query.isError);
   const handleAnalysisError = (error: unknown, fallback: string) => {
@@ -62,7 +71,7 @@ export default function CommerceTrends() {
     }
     return message === NAVER_MEMBER_DAILY_LIMIT_MESSAGE ? message : fallback;
   };
-  const { renderPanel, renderCategoryPanel, resetComparison, submitComparisonKeyword, isTrendFilterLoading } = useNaverTrendComparison({
+  const { renderPanel, resetComparison, submitComparisonKeyword, isTrendFilterLoading } = useNaverTrendComparison({
     authLoading,
     metric: "shopping",
     title: "쇼핑 트렌드 비교",
@@ -70,6 +79,12 @@ export default function CommerceTrends() {
     shoppingCategory: {
       code: categoryCode,
       label: categoryLabel,
+      onAutoCategory: path => {
+        setAutoCategoryPath(path);
+        setFirstCategory(path[0]?.value ?? "");
+        setSecondCategory(path[1]?.value ?? "");
+        setThirdCategory(path[2]?.value ?? "");
+      },
       filters: (
         <div className="mb-3 border-b border-slate-700/60 pb-3">
           <div className="grid grid-cols-3 gap-2">
@@ -77,18 +92,23 @@ export default function CommerceTrends() {
               setFirstCategory(value);
               setSecondCategory("");
               setThirdCategory("");
+              setAutoCategoryPath([]);
             }} />
             <CategoryFilter label="2차" value={secondCategory} options={[
               { value: "", label: !firstCategory ? "1차 선택" : secondOptions.isPending ? "로딩 중" : secondOptions.data?.length ? "전체" : "하위 없음" },
-              ...(secondOptions.data ?? []),
+              ...secondCategories,
             ]} disabled={!firstCategory || !secondOptions.data?.length} onChange={value => {
               setSecondCategory(value);
               setThirdCategory("");
+              setAutoCategoryPath(path => path.slice(0, 1));
             }} />
             <CategoryFilter label="3차" value={thirdCategory} options={[
               { value: "", label: !secondCategory ? "2차 선택" : thirdOptions.isPending ? "로딩 중" : thirdOptions.data?.length ? "전체" : "하위 없음" },
-              ...(thirdOptions.data ?? []),
-            ]} disabled={!secondCategory || !thirdOptions.data?.length} onChange={setThirdCategory} />
+              ...thirdCategories,
+            ]} disabled={!secondCategory || !thirdOptions.data?.length} onChange={value => {
+              setThirdCategory(value);
+              setAutoCategoryPath(path => path.slice(0, 2));
+            }} />
           </div>
           {failedOptions && <button type="button" onClick={() => void failedOptions.refetch()} className="mt-2 inline-flex items-center gap-1.5 text-xs text-slate-300 hover:text-white">
             <RefreshCw size={13} aria-hidden="true" /> 하위 카테고리 다시 불러오기
@@ -104,6 +124,7 @@ export default function CommerceTrends() {
     setFirstCategory("");
     setSecondCategory("");
     setThirdCategory("");
+    setAutoCategoryPath([]);
   };
 
   const goToAuth = (mode: "login" | "signup") => {
@@ -164,7 +185,6 @@ export default function CommerceTrends() {
       {renderPanel(
         <TrendResetButton name="쇼핑 트렌드 비교" description="입력한 검색어, 선택한 필터와 그래프가 모두 초기화됩니다." onReset={resetShoppingStatistics} disabled={isTrendFilterLoading} />
       )}
-      {renderCategoryPanel()}
       <GuestAccessPrompt
         open={guestPromptOpen}
         description={NAVER_GUEST_DAILY_LIMIT_MESSAGE}

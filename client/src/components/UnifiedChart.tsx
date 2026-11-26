@@ -35,6 +35,7 @@ interface UnifiedChartData {
   keywords: string[];
   trend: Record<string, DataPoint[]>;
   shopping: Record<string, DataPoint[]>;
+  categorySeries?: { name: string; points: DataPoint[] };
   shoppingStatus?: Record<string, 'AVAILABLE' | 'NO_DATA'>;
 }
 
@@ -105,6 +106,7 @@ const getAllDates = (data: UnifiedChartData): string[] => {
     }
   });
 
+  data.categorySeries?.points.forEach(point => dates.add(point.period));
   return Array.from(dates).sort();
 };
 
@@ -197,6 +199,23 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
   const chartData = useMemo(() => {
     const datasets: any[] = [];
 
+    if (data.categorySeries) {
+      const { name, points } = data.categorySeries;
+      const label = `${name} · 카테고리 클릭량`;
+      const values = new Map(points.map(point => [point.period, point.ratio]));
+      datasets.push({
+        label,
+        data: allDates.map(date => ({ x: date, y: values.get(date) ?? null })),
+        hidden: hiddenSeries.has(label),
+        borderColor: "#34d399",
+        borderWidth: isMobile ? 1.6 : 2,
+        pointRadius: 0,
+        pointHoverRadius: isMobile ? 3 : 5,
+        tension: 0.3,
+        fill: false,
+      });
+    }
+
     data.keywords.forEach((keyword, keywordIndex) => {
       const palette = colorPalettes[keywordIndex % colorPalettes.length];
 
@@ -257,7 +276,7 @@ export const UnifiedChart: React.FC<UnifiedChartProps> = ({
       labels: allDates, // 원본 모든 날짜 (데이터 전체 기준)
       datasets,
     };
-  }, [data, visibleLayers, allDates, hiddenSeries]);
+  }, [data, visibleLayers, allDates, hiddenSeries, isMobile]);
 
   const legendItems = useMemo(
     () =>

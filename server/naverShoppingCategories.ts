@@ -60,12 +60,10 @@ const catalogResponse = z.object({
     deleted: z.boolean(), svcUse: z.boolean(),
   })),
 });
-type CategoryOption = { value: string; label: string };
+export type CategoryOption = { value: string; label: string };
 const categoryCache = new Map<string, { list: CategoryOption[]; expires: number }>();
 
-export const shoppingCategoryChildrenProcedure = publicProcedure
-  .input(z.object({ parent: z.string().regex(/^(0|\d{8})$/), level: z.union([z.literal(1), z.literal(2), z.literal(3)]) }))
-  .query(async ({ input }) => {
+async function fetchCategoryChildren(input: { parent: string; level: 1 | 2 | 3 }) {
     const key = `${input.parent}:${input.level}`;
     const cached = categoryCache.get(key);
     if (cached && cached.expires > Date.now()) return cached.list;
@@ -91,4 +89,40 @@ export const shoppingCategoryChildrenProcedure = publicProcedure
       if (cached) return cached.list;
       throw new TRPCError({ code: "BAD_GATEWAY", message: "하위 카테고리를 불러오지 못했습니다." });
     }
-  });
+}
+
+export const shoppingCategoryChildrenProcedure = publicProcedure
+  .input(z.object({ parent: z.string().regex(/^(0|\d{8})$/), level: z.union([z.literal(1), z.literal(2), z.literal(3)]) }))
+  .query(({ input }) => fetchCategoryChildren(input));
+
+const categoryNameSeparators = new RegExp("[^\\p{L}\\p{N}]", "gu");
+
+function matchingCategory<T extends CategoryOption>(options: T[], keyword: string): T | undefined {
+  const normalize = (value: string) => value.normalize("NFKC").toLowerCase().replace(categoryNameSeparators, "");
+  const term = normalize(keyword);
+  const scored = options.map(option => ({ option, score: Math.max(0, ...option.label.split("/").map(label => {
+    const key = normalize(label);
+    return key.length >= 2 && term.includes(key) ? key.length + (key === term ? 100 : 0) : 0;
+  })) })).filter(item => item.score > 0).sort((a, b) => b.score - a.score);
+  return scored[0]?.score !== scored[1]?.score ? scored[0]?.option : undefined;
+}
+
+export async function resolveShoppingCategoryPath(root: string, keyword: string): Promise<CategoryOption[]> {
+  const first = { value: root, label: naverShoppingCategories[root as keyof typeof naverShoppingCategories] ?? root };
+  const children = await fetchCategoryChildren({ parent: root, level: 2 }).catch(() => []);
+  const second = matchingCategory(children, keyword);
+  if (second) {
+    const leaves = await fetchCategoryChildren({ parent: second.value, level: 3 }).catch(() => []);
+    const third = matchingCategory(leaves, keyword);
+    return third ? [first, second, third] : [first, second];
+  }
+
+  // Avoid fanning out across large categories when the keyword gives no useful parent match.
+  if (!children.length || children.length > 8) return [first];
+  const groups = await Promise.all(children.map(async parent => {
+    const leaves = await fetchCategoryChildren({ parent: parent.value, level: 3 }).catch(() => []);
+    return leaves.map(item => ({ ...item, parent }));
+  }));
+  const third = matchingCategory(groups.flat(), keyword);
+  return third ? [first, third.parent, { value: third.value, label: third.label }] : [first];
+}
