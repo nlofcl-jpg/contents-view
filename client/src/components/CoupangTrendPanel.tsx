@@ -192,6 +192,14 @@ export default function CoupangTrendPanel() {
             <button key={item.id} type="button" className={`tabButton${item.id === feed ? " active" : ""}`} aria-pressed={item.id === feed} onClick={() => setFeed(item.id)}>{item.label}</button>
           ))}
         </div>
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="coupang-products-title" className="min-w-0 break-words text-lg font-semibold text-white">
+            {feed === "deals" ? "골드박스 특가" : categoryLabel}
+          </h2>
+          {feedResult.isError && <button type="button" className="grid size-8 shrink-0 place-items-center rounded-md border-0 bg-transparent text-inherit opacity-65 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 disabled:opacity-40" title="다시 불러오기" aria-label="다시 불러오기" disabled={feedResult.isFetching} onClick={() => void feedResult.refetch()}>
+            <RefreshCw size={16} aria-hidden="true" />
+          </button>}
+        </div>
         {feed === "popular" && (
           <div className="hidden min-w-0 items-center gap-1 md:flex">
             <button type="button" className="hidden size-7 shrink-0 place-items-center rounded text-slate-400 hover:bg-white/10 hover:text-white sm:grid" aria-label="이전 카테고리 보기" title="이전 카테고리 보기" aria-controls="coupang-category-rail" onClick={() => slideCategories(-1)}>
@@ -207,14 +215,6 @@ export default function CoupangTrendPanel() {
             </button>
           </div>
         )}
-        <div className="flex items-center justify-between gap-3">
-          <h2 id="coupang-products-title" className="min-w-0 break-words text-lg font-semibold text-white">
-            {feed === "deals" ? "골드박스 특가" : categoryLabel}
-          </h2>
-          {feedResult.isError && <button type="button" className="refreshButton refreshButtonIconOnly" title="다시 불러오기" aria-label="다시 불러오기" disabled={feedResult.isFetching} onClick={() => void feedResult.refetch()}>
-            <RefreshCw size={16} aria-hidden="true" />
-          </button>}
-        </div>
         <ProductResults key={feed === "deals" ? feed : category} result={feedResult} layout="feed" ranked={feed === "popular"} />
       </section>
       <Popover open={mobileCategoriesOpen} onOpenChange={setMobileCategoriesOpen}>

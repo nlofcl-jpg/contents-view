@@ -4,6 +4,7 @@ import { generateCacheKey, getFromCache, setInCache } from "./naver.cache";
 import { ENV } from "./_core/env";
 import { createClient } from "@supabase/supabase-js";
 import { createHmac } from "crypto";
+import { categoryFilterInput, fetchNaverCategoryTrend } from "./naverShoppingCategories";
 
 const REQUEST_TIMEOUT_MS = 8000; // 8 seconds
 const NAVER_SEARCH_AD_PROVIDER = "naver-search-ad";
@@ -586,7 +587,7 @@ const unifiedInsightInput = z.object({
   });
 
 type ShoppingSeries = Record<string, { period: string; ratio: number }[]>;
-type ShoppingComparisonResponse = { success: boolean; shopping: ShoppingSeries; error?: string };
+type ShoppingComparisonResponse = { success: boolean; shopping: ShoppingSeries; matchedCategories?: Record<string, string>; error?: string };
 
 async function fetchShoppingComparison(input: z.infer<typeof unifiedInsightInput>): Promise<ShoppingComparisonResponse> {
   const keywords = uniqueValues(input.keywords.map(normalizeKeywordInput));
@@ -604,6 +605,7 @@ async function fetchShoppingComparison(input: z.infer<typeof unifiedInsightInput
   if (cached) return cached;
 
   const shopping: ShoppingSeries = Object.create(null);
+  const matchedCategories: Record<string, string> = Object.create(null);
   const pending = new Map(keywords.map(keyword => [keyword, generateShoppingKeywordVariants(keyword)]));
   const signal = AbortSignal.timeout(12_000);
   let hasError = false;
@@ -649,6 +651,7 @@ async function fetchShoppingComparison(input: z.infer<typeof unifiedInsightInput
         const row = variants.map(variant => rows.find((item: unknown) => getShoppingResultNames(item).includes(variant))).find(Boolean);
         if (!row) continue;
         shopping[keyword] = row.data;
+        matchedCategories[keyword] = categoryCode;
         pending.delete(keyword);
       }
     }
@@ -660,6 +663,7 @@ async function fetchShoppingComparison(input: z.infer<typeof unifiedInsightInput
   const result = {
     success: Object.keys(shopping).length > 0,
     shopping,
+    matchedCategories,
     ...(hasError ? { error: "네이버 쇼핑인사이트 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." } : {}),
   };
   if (!hasError) setInCache(cacheKey, result);
@@ -1325,5 +1329,29 @@ export const unifiedInsightProcedure = naverAnalysisProcedure
 export const unifiedInsightBatchProcedure = naverAnalysisProcedure
   .input(z.object({ requests: z.array(unifiedInsightInput).min(1).max(12), metric: z.literal("shopping").optional() }))
   .mutation(({ input }) => input.metric === "shopping"
-    ? Promise.all(input.requests.map(fetchShoppingComparison))
+    ? Promise.all(input.requests.map(async request => {
+      const { matchedCategories: _matchedCategories, ...comparison } = await fetchShoppingComparison(request);
+      return comparison;
+    }))
     : Promise.all(input.requests.map(fetchUnifiedInsight)));
+
+export const shoppingStatisticsProcedure = naverAnalysisProcedure
+  .input(z.object({
+    requests: z.array(unifiedInsightInput).max(12),
+    categoryCode: z.string().regex(/^\d{8}$/).optional(),
+    categoryFilters: categoryFilterInput,
+  }).refine(input => input.requests.length > 0 || input.categoryCode, "검색어나 카테고리를 선택해 주세요."))
+  .mutation(async ({ input }) => {
+    const comparisonsPromise = Promise.all(input.requests.map(request => fetchShoppingComparison({ ...request, category: "auto" })));
+    const fetchCategory = async (categoryCode: string) => ({
+      categoryCode,
+      ...await fetchNaverCategoryTrend({ ...input.categoryFilters, categoryCode }),
+    });
+    const manualCategory = input.categoryCode ? fetchCategory(input.categoryCode) : null;
+    const comparisons = await comparisonsPromise;
+    const firstMatch = input.requests.flatMap((request, index) =>
+      request.keywords.map(keyword => comparisons[index].matchedCategories?.[normalizeKeywordInput(keyword)])
+    ).find(Boolean);
+    const category = manualCategory ? await manualCategory : firstMatch ? await fetchCategory(firstMatch) : null;
+    return { success: Boolean(category?.success) || comparisons.some(result => result.success), comparisons, category };
+  });

@@ -1,17 +1,19 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from "vitest";
 import { appRouter } from "./routers";
+import { clearCache } from "./naver.cache";
 
 describe("Naver Category Trend API", () => {
   let caller: ReturnType<typeof appRouter.createCaller>;
+  beforeEach(clearCache);
 
   beforeAll(() => {
     // Set environment variables for testing
     process.env.NAVER_CLIENT_ID = "test-client-id";
     process.env.NAVER_CLIENT_SECRET = "test-client-secret";
 
-    // Create caller with empty context (publicProcedure doesn't require auth)
+    // Use the admin bypass to test the upstream response without a quota database.
     caller = appRouter.createCaller({
-      user: null,
+      user: { role: "admin" } as any,
       req: {} as any,
       res: {} as any,
     });
@@ -25,14 +27,7 @@ describe("Naver Category Trend API", () => {
     delete process.env.NAVER_CLIENT_ID;
     delete process.env.NAVER_CLIENT_SECRET;
 
-    // Create new caller with unset credentials
-    const testCaller = appRouter.createCaller({
-      user: null,
-      req: {} as any,
-      res: {} as any,
-    });
-
-    const result = await testCaller.naver.categoryTrend({
+    const result = await caller.naver.categoryTrend({
       categoryCode: "50000000",
       startDate: "2026-05-14",
       endDate: "2026-06-12",
@@ -98,7 +93,7 @@ describe("Naver Category Trend API", () => {
     });
 
     await caller.naver.categoryTrend({
-      categoryCode: "50000000",
+      categoryCode: "50000006",
       startDate: "2026-05-14",
       endDate: "2026-06-12",
       timeUnit: "date",
@@ -111,6 +106,7 @@ describe("Naver Category Trend API", () => {
     const callArgs = mockFetch.mock.calls[0];
     const requestBody = JSON.parse(callArgs[1].body);
 
+    expect(requestBody.category).toEqual([{ name: "식품", param: ["50000006"] }]);
     expect(requestBody.device).toBe("pc");
     expect(requestBody.gender).toBe("m");
     expect(requestBody.ages).toEqual(["20", "30"]);

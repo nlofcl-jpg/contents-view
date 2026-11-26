@@ -5,8 +5,9 @@ import * as db from "./db";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { COOKIE_NAME } from "@shared/const";
-import { unifiedInsightProcedure, unifiedInsightBatchProcedure } from "./naver.unifiedInsight";
+import { shoppingStatisticsProcedure, unifiedInsightProcedure, unifiedInsightBatchProcedure } from "./naver.unifiedInsight";
 import { naverAnalysisProcedure } from "./naverAnalysisQuota";
+import { categoryTrendProcedure, shoppingCategoryChildrenProcedure } from "./naverShoppingCategories";
 import { runDiagnostics } from "./naver.diagnostic";
 import * as userApiKeys from "./_core/userApiKeys";
 import * as cheerio from "cheerio";
@@ -2701,127 +2702,9 @@ export const appRouter = router({
   }),
 
   naver: router({
-    categoryTrend: publicProcedure
-      .input(z.object({
-        categoryCode: z.string(),
-        startDate: z.string(),
-        endDate: z.string(),
-        timeUnit: z.enum(["date", "week", "month"]),
-        device: z.string().optional(),
-        gender: z.string().optional(),
-        ages: z.array(z.string()).optional(),
-      }))
-      .mutation(async ({ input }) => {
-        try {
-          const clientId = process.env.NAVER_CLIENT_ID;
-          const clientSecret = process.env.NAVER_CLIENT_SECRET;
-
-          // Log environment variable status
-          console.log('[Naver API] NAVER_CLIENT_ID configured:', !!clientId);
-          console.log('[Naver API] NAVER_CLIENT_SECRET configured:', !!clientSecret);
-          console.log('[Naver API] Input received:', JSON.stringify(input));
-
-          if (!clientId || !clientSecret) {
-            console.error('[Naver API] Missing credentials');
-            return {
-              success: false,
-              error: "Naver API credentials not configured",
-              data: [],
-            };
-          }
-
-          // Category code to name mapping
-          const categoryNameMap: Record<string, string> = {
-            "50000000": "패션의류",
-            "50000001": "패션잡화",
-            "50000002": "화장품/미용",
-            "50000003": "디지털/가전",
-            "50000004": "식품",
-            "50000005": "도서/음반/영상물",
-            "50000006": "스포츠/레저",
-            "50000007": "가구/인테리어",
-            "50000008": "출산/육아",
-            "50000009": "반려동물용품",
-            "50000010": "건강/의료",
-            "50000011": "생활/편의",
-          };
-
-          const categoryName = categoryNameMap[input.categoryCode] || "기타";
-
-          const requestBody: any = {
-            startDate: input.startDate,
-            endDate: input.endDate,
-            timeUnit: input.timeUnit,
-            category: [
-              {
-                name: categoryName,
-                param: [input.categoryCode],
-              },
-            ],
-          };
-
-          if (input.device && input.device !== "all") {
-            requestBody.device = input.device;
-          }
-          if (input.gender && input.gender !== "all") {
-            requestBody.gender = input.gender;
-          }
-          if (input.ages && input.ages.length > 0) {
-            requestBody.ages = input.ages;
-          }
-
-          console.log('[Naver API] Request body:', JSON.stringify(requestBody));
-
-          const response = await fetch(
-            "https://openapi.naver.com/v1/datalab/shopping/categories",
-            {
-              method: "POST",
-              headers: {
-                "X-Naver-Client-Id": clientId,
-                "X-Naver-Client-Secret": clientSecret,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(requestBody),
-            }
-          );
-
-          console.log('[Naver API] HTTP Status:', response.status);
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            console.error('[Naver API] Error response:', JSON.stringify(errorData));
-            const errorMessage = errorData.message || "데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.";
-            return {
-              success: false,
-              error: errorMessage,
-              data: [],
-            };
-          }
-
-          const data = await response.json();
-
-          if (!data.results || !data.results[0] || !data.results[0].data) {
-            return {
-              success: false,
-              error: "선택한 조건의 클릭 추이 데이터가 없습니다.",
-              data: [],
-            };
-          }
-
-          return {
-            success: true,
-            data: data.results[0].data,
-          };
-        } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : "Connection failed";
-          console.error('[Naver API] Exception:', errorMsg);
-          return {
-            success: false,
-            error: "데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.",
-            data: [],
-          };
-        }
-      }),
+    categoryTrend: categoryTrendProcedure,
+    shoppingCategoryChildren: shoppingCategoryChildrenProcedure,
+    shoppingStatistics: shoppingStatisticsProcedure,
 
     unifiedInsight: unifiedInsightProcedure,
     unifiedInsightBatch: unifiedInsightBatchProcedure,

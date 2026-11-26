@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { clearCache } from "./naver.cache";
-import { unifiedInsightBatchProcedure } from "./naver.unifiedInsight";
+import { shoppingStatisticsProcedure, unifiedInsightBatchProcedure } from "./naver.unifiedInsight";
 import { router } from "./_core/trpc";
 
 vi.mock("./naverAnalysisQuota", async () => {
@@ -8,7 +8,7 @@ vi.mock("./naverAnalysisQuota", async () => {
   return { naverAnalysisProcedure: publicProcedure };
 });
 
-const caller = router({ compare: unifiedInsightBatchProcedure }).createCaller({ user: null, req: {} as any, res: {} as any });
+const caller = router({ compare: unifiedInsightBatchProcedure, statistics: shoppingStatisticsProcedure }).createCaller({ user: null, req: {} as any, res: {} as any });
 const request = {
   keywords: ["러닝 화", "노트북"],
   startDate: "2026-05-01",
@@ -62,5 +62,45 @@ describe("shopping trend comparison", () => {
     await expect(caller.compare({ requests: [request], metric: "shopping" }))
       .resolves.toEqual([{ success: false, shopping: {}, error: expect.stringContaining("쇼핑인사이트") }]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps keyword classification automatic and reads the selected subcategory separately", async () => {
+    const fetchMock = vi.fn(async (url: string, options: RequestInit) => {
+      const body = JSON.parse(String(options.body));
+      if (url === endpoint) {
+        const results = body.category === "50000000" ? [{ title: "노트북", data: [point] }] : [];
+        return Response.json({ results });
+      }
+      expect(url).toBe("https://openapi.naver.com/v1/datalab/shopping/categories");
+      expect(body.category[0].param).toEqual(["50000815"]);
+      return Response.json({ results: [{ data: [{ ...point, ratio: 75 }] }] });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await caller.statistics({
+      requests: [{ ...request, keywords: ["노트북"] }],
+      categoryCode: "50000815",
+      categoryFilters: { startDate: request.startDate, endDate: request.endDate, timeUnit: request.timeUnit },
+    });
+    expect(result).toMatchObject({
+      success: true,
+      comparisons: [{ matchedCategories: { 노트북: "50000000" }, shopping: { 노트북: [point] } }],
+      category: { categoryCode: "50000815", data: [{ ...point, ratio: 75 }] },
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses the auto-matched category for the second chart when no category is selected", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (url: string, options: RequestInit) => {
+      const body = JSON.parse(String(options.body));
+      if (url === endpoint) return Response.json({ results: [{ title: "노트북", data: [point] }] });
+      expect(body.category[0].param).toEqual(["50000000"]);
+      return Response.json({ results: [{ data: [point] }] });
+    }));
+
+    await expect(caller.statistics({
+      requests: [{ ...request, keywords: ["노트북"] }],
+      categoryFilters: { startDate: request.startDate, endDate: request.endDate, timeUnit: request.timeUnit },
+    })).resolves.toMatchObject({ category: { success: true, categoryCode: "50000000" } });
   });
 });

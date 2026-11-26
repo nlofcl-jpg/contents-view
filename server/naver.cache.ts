@@ -15,7 +15,7 @@ const cache = new Map<string, CacheEntry<any>>();
  * Generate cache key from request parameters
  */
 export function generateCacheKey(
-  type: "unified" | "shopping",
+  type: "unified" | "shopping" | "category-click-index",
   keywords: string[],
   category: string,
   startDate: string,

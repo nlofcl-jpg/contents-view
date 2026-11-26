@@ -15,7 +15,6 @@ const aiPlatform = { value: "ai", label: "AI 모드", className: "isAi" };
 const searchPlatforms = [
   { value: "youtube", label: "YOUTUBE", className: "isYoutube" },
   { value: "naver", label: "NAVER", className: "isNaver" },
-  { value: "google", label: "GOOGLE", className: "isGoogle" },
   { value: "news", label: "뉴스", className: "isNews" },
   aiPlatform,
 ];
@@ -96,10 +95,7 @@ export default function Hero() {
 
   const getSearchPath = (searchKeyword: string) => {
     const trimmedKeyword = searchKeyword.trim();
-    const platform = isAiMode ? "naver" : selectedPlatform?.value ?? "naver";
-    if (platform === "naver") {
-      return `/trends/naver?keyword=${encodeURIComponent(trimmedKeyword)}`;
-    }
+    const platform = selectedPlatform?.value;
 
     if (platform === "news") {
       return `/news/search?keyword=${encodeURIComponent(trimmedKeyword)}`;
@@ -109,7 +105,7 @@ export default function Hero() {
       return `/trends/youtube?tab=analysis&keyword=${encodeURIComponent(trimmedKeyword)}`;
     }
 
-    return `/trends/google?trend=${encodeURIComponent(trimmedKeyword)}`;
+    return `/trends/naver?keyword=${encodeURIComponent(trimmedKeyword)}`;
   };
 
   const handleHeroSearch = (searchKeyword = keyword) => {
