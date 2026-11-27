@@ -1,19 +1,14 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
-import { useLocation, useSearch } from "wouter";
-import { ChevronDown, X, Home, LogOut, User, ShieldCheck, Bookmark, MessageCircle, FileText, Send, Handshake } from "lucide-react";
+import { Link, useLocation, useSearch } from "wouter";
+import { ChevronDown, X, Home, LogOut, User, Shield, ShieldCheck, Bookmark, MessageCircle, Send, Handshake } from "lucide-react";
 import { useState } from "react";
 import { getActiveNewsPath, newsLinks } from "@/lib/newsNavigation";
 import { commerceLinks, getCommerceTab } from "@/lib/commerceNavigation";
 import { getStudioActiveHref, studioLinks } from "@/lib/studioNavigation";
 import SocialIcons from "@/components/SocialIcons";
+import PartnershipInquiryDialog from "@/components/PartnershipInquiryDialog";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-
-const accountPlaceholders = [
-  { label: "약관 및 정책", Icon: FileText },
-  { label: "의견 보내기", Icon: Send },
-  { label: "제휴 문의", Icon: Handshake },
-];
 
 interface MobileMenuDrawerProps {
   panelType: "account" | "menu" | null;
@@ -37,6 +32,7 @@ export function MobileMenuDrawer({
   const [isNewsOpen, setIsNewsOpen] = useState(false);
   const [isCommerceOpen, setIsCommerceOpen] = useState(false);
   const [isStudioOpen, setIsStudioOpen] = useState(false);
+  const [inquiryOpen, setInquiryOpen] = useState(false);
 
   const isOpen = panelType === "menu";
   const isAccountOpen = panelType === "account" && isAuthenticated && Boolean(user);
@@ -80,7 +76,7 @@ export function MobileMenuDrawer({
           id="mobile-account-drawer"
           side="right"
           aria-describedby={undefined}
-          className="mobileAccountDrawer z-[10020] w-[min(100%,320px)] gap-0 overflow-y-auto overscroll-contain border-0 text-slate-100 motion-reduce:animate-none"
+          className="mobileAccountDrawer z-[10020] gap-0 overflow-y-auto overscroll-contain border-0 text-slate-100 motion-reduce:animate-none"
           overlayClassName="z-[10010] bg-black/50 motion-reduce:animate-none"
         >
           <SheetTitle className="sr-only">내 정보</SheetTitle>
@@ -98,15 +94,31 @@ export function MobileMenuDrawer({
               <Bookmark size={18} aria-hidden="true" />
               <span>내 보관함</span>
             </button>
-            {accountPlaceholders.map(({ label, Icon }) => (
-              <button key={label} className="mobileMenuAction" type="button" disabled>
-                <Icon size={18} aria-hidden="true" />
-                <span>{label}</span>
-              </button>
-            ))}
+            <details className="group">
+              <summary className="mobileMenuAction list-none [&::-webkit-details-marker]:hidden">
+                <ShieldCheck size={18} aria-hidden="true" />
+                <span>약관 및 정책</span>
+                <ChevronDown size={16} className="ml-auto transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
+              </summary>
+              <ul className="mb-2 pl-7">
+                <li><Link href="/privacy" className="mobileMenuAction" onClick={onClose}>개인정보처리방침</Link></li>
+                <li><Link href="/terms" className="mobileMenuAction" onClick={onClose}>이용약관</Link></li>
+              </ul>
+            </details>
+            <a className="mobileMenuAction" href="mailto:edenofcls@gmail.com">
+              <Send size={18} aria-hidden="true" />
+              <span>의견 보내기</span>
+            </a>
+            <button className="mobileMenuAction" type="button" onClick={() => {
+              onClose();
+              setInquiryOpen(true);
+            }}>
+              <Handshake size={18} aria-hidden="true" />
+              <span>제휴 문의</span>
+            </button>
             {isAdmin && (
               <button className="mobileMenuAction" type="button" onClick={() => handleNavigation("/admin")}>
-                <ShieldCheck size={18} aria-hidden="true" />
+                <Shield size={18} aria-hidden="true" />
                 <span>Admin</span>
               </button>
             )}
@@ -119,6 +131,7 @@ export function MobileMenuDrawer({
           </div>
         </SheetContent>
       </Sheet>
+      <PartnershipInquiryDialog open={inquiryOpen} onOpenChange={setInquiryOpen} />
 
       {/* Overlay */}
       {isOpen && (

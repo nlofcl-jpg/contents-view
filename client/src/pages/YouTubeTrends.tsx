@@ -1,52 +1,28 @@
-import { useState, useEffect, useLayoutEffect, useRef, type FormEvent, type ReactNode } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
-import { SearchGlowForm } from "@/components/SearchGlowForm";
 import { YouTubeApiStatusCard } from "@/components/YouTubeApiStatusCard";
 import { YouTubeVideoDetailModal } from "@/components/YouTubeVideoDetailModal";
-import { AlertCircle, CircleAlert, Clock, Play, ChevronDown, RotateCw, Bookmark, Search, Copy, ExternalLink, Plus, X } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertCircle, CircleAlert, Clock, Play, ChevronDown, RotateCw, Bookmark } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useBookmark } from "@/contexts/BookmarkContext";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
 import { useIsMobile } from "@/hooks/useMobile";
 import "./youtubeRisingPreview.css";
 
-type TabType = "analysis" | "trending" | "category" | "shorts" | "rising";
-type AnalysisSortType = "relevance" | "publishedAt" | "viewCount";
-type AnalysisDurationType = "all" | "shorts" | "long";
-
 const YOUTUBE_API_KEY_ERROR_MESSAGE = "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.";
 
 const TABS = [
-  { id: "analysis", label: "영상 분석" },
   { id: "rising", label: "급상승 영상" },
   { id: "trending", label: "유튜브 추천 영상" },
   { id: "category", label: "카테고리별 인기" },
   { id: "shorts", label: "인기 쇼츠" },
 ] as const;
 
-const DEFAULT_YOUTUBE_TAB: TabType = "analysis";
-
-function getInitialYouTubeTab(): TabType {
-  if (typeof window === "undefined") return DEFAULT_YOUTUBE_TAB;
-  const requestedTab = new URLSearchParams(window.location.search).get("tab");
-  return TABS.some(tab => tab.id === requestedTab) ? requestedTab as TabType : DEFAULT_YOUTUBE_TAB;
-}
-
-const ANALYSIS_SORT_OPTIONS: { value: AnalysisSortType; label: string }[] = [
-  { value: "relevance", label: "관련도순" },
-  { value: "publishedAt", label: "최신순" },
-  { value: "viewCount", label: "인기순" },
-];
-
-const ANALYSIS_DURATION_OPTIONS: { value: AnalysisDurationType; label: string }[] = [
-  { value: "all", label: "전체" },
-  { value: "shorts", label: "쇼츠" },
-  { value: "long", label: "롱영상" },
-];
+type TabType = (typeof TABS)[number]["id"];
+const DEFAULT_YOUTUBE_TAB: TabType = "rising";
 
 const COUNTRIES = [
   { value: "KR", label: "한국" },
@@ -99,22 +75,6 @@ const SORT_OPTIONS = {
   ],
 };
 
-const TAB_MESSAGES = {
-  analysis: "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.",
-  trending: "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.",
-  category: "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.",
-  shorts: "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.",
-  rising: "YouTube API 키 오류입니다.\nAPI 키 확인 후 다시 입력해주세요.",
-};
-
-const EMPTY_STATE_MESSAGES = {
-  analysis: "분석할 YouTube 영상 URL이나 키워드를 입력해주세요.",
-  trending: "선택한 국가의 인기 영상 데이터를 찾을 수 없습니다.",
-  category: "선택한 국가와 카테고리의 인기 영상을 찾을 수 없습니다.",
-  shorts: "선택한 조건에서 쇼츠 영상을 찾을 수 없습니다.",
-  rising: "선택한 조건에서 새롭게 상승하는 영상을 찾을 수 없습니다.",
-};
-
 const RISING_PERIOD_OPTIONS = [
   { value: "realtime", label: "실시간" },
   { value: "1h", label: "1시간" },
@@ -135,73 +95,6 @@ function formatDuration(duration: string): string {
     return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
   }
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
-}
-
-// Format Korean number (e.g., 81400000 -> 8140만, 461500000000 -> 461.5억)
-function formatKoreanNumber(value: number): string {
-  if (!Number.isFinite(value)) return "-";
-
-  // 1억 이상: 억 단위
-  if (value >= 100000000) {
-    const eok = value / 100000000;
-    const formatted = Number(eok.toFixed(1));
-    return formatted % 1 === 0 ? `${Math.floor(formatted)}억` : `${formatted}억`;
-  }
-
-  // 1만 이상: 만 단위
-  if (value >= 10000) {
-    const man = value / 10000;
-    const formatted = Number(man.toFixed(1));
-    return formatted % 1 === 0 ? `${Math.floor(formatted)}만` : `${formatted}만`;
-  }
-
-  // 1만 미만: 그대로 표시
-  return value.toLocaleString("ko-KR");
-}
-
-function isYouTubeUrl(value: string): boolean {
-  const trimmedValue = value.trim();
-  if (!trimmedValue) return false;
-
-  try {
-    const url = new URL(trimmedValue);
-    return url.hostname.includes("youtube.com") || url.hostname.includes("youtu.be");
-  } catch {
-    return /(?:youtube\.com|youtu\.be|youtube\.com\/shorts)/i.test(trimmedValue);
-  }
-}
-
-function extractYouTubeVideoId(value: string): string | null {
-  const trimmedValue = value.trim();
-  if (!trimmedValue) return null;
-
-  try {
-    const url = new URL(trimmedValue);
-    const host = url.hostname.replace(/^www\./, "");
-    let candidate = "";
-
-    if (host === "youtu.be") {
-      candidate = url.pathname.split("/").filter(Boolean)[0] || "";
-    } else if (host.endsWith("youtube.com")) {
-      candidate = url.searchParams.get("v") || "";
-      if (!candidate) {
-        const pathParts = url.pathname.split("/").filter(Boolean);
-        if (["shorts", "embed", "live"].includes(pathParts[0])) candidate = pathParts[1] || "";
-      }
-    }
-
-    return /^[A-Za-z0-9_-]{11}$/.test(candidate) ? candidate : null;
-  } catch {
-    const match = trimmedValue.match(/(?:v=|youtu\.be\/|shorts\/|embed\/|live\/)([A-Za-z0-9_-]{11})/);
-    return match?.[1] || null;
-  }
-}
-
-function getSearchParamsFromLocation(location: string) {
-  const browserQueryString =
-    typeof window !== "undefined" ? window.location.search.replace(/^\?/, "") : "";
-  const queryString = browserQueryString || (location.includes("?") ? location.split("?")[1] : "");
-  return new URLSearchParams(queryString);
 }
 
 // Format view count (e.g., 1000000 -> 100만)
@@ -276,10 +169,11 @@ function YouTubeFilterRow({ children, label, mobile }: { children: ReactNode; la
 
 export default function YouTubeTrends() {
   const isMobile = useIsMobile();
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
+  const requestedTab = new URLSearchParams(useSearch()).get("tab");
+  const activeTab = TABS.find(tab => tab.id === requestedTab)?.id ?? DEFAULT_YOUTUBE_TAB;
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { toggleYouTubeBookmark, isYouTubeVideoBookmarked, isBookmarkPending } = useBookmark();
-  const [activeTab, setActiveTab] = useState<TabType>(getInitialYouTubeTab);
   const tabMenuRef = useRef<HTMLDivElement>(null);
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
   const [selectedRisingVideo, setSelectedRisingVideo] = useState<any>(null);
@@ -318,17 +212,6 @@ export default function YouTubeTrends() {
       {guestLoginButton("youtubeGuestLoginButtonEmpty")}
     </div>
   );
-  const [analysisInput, setAnalysisInput] = useState("");
-  const [analysisInputType, setAnalysisInputType] = useState<"keyword" | "url" | null>(null);
-  const analysisTypeTriggerRef = useRef<HTMLButtonElement>(null);
-  const [isAnalysisGuestPromptOpen, setIsAnalysisGuestPromptOpen] = useState(false);
-  const [submittedAnalysisKeyword, setSubmittedAnalysisKeyword] = useState("");
-  const [submittedAnalysisVideoId, setSubmittedAnalysisVideoId] = useState("");
-  const [analysisMode, setAnalysisMode] = useState<"keyword" | "url" | null>(null);
-  const [analysisSort, setAnalysisSort] = useState<AnalysisSortType>("relevance");
-  const [analysisDurationType, setAnalysisDurationType] = useState<AnalysisDurationType>("all");
-  const [analysisFilterKeyword, setAnalysisFilterKeyword] = useState("");
-  const [visibleAnalysisCount, setVisibleAnalysisCount] = useState(10);
   const [visiblePreviousRecommendedCount, setVisiblePreviousRecommendedCount] = useState(0);
   const [visiblePreviousRisingCount, setVisiblePreviousRisingCount] = useState(0);
   const [visiblePreviousShortsCount, setVisiblePreviousShortsCount] = useState(0);
@@ -340,32 +223,11 @@ export default function YouTubeTrends() {
   const [shouldForceRefresh, setShouldForceRefresh] = useState(false);
 
   useEffect(() => {
-    const searchParams = getSearchParamsFromLocation(location);
-    const targetTab = searchParams.get("tab");
-    const keywordFromUrl = searchParams.get("keyword")?.trim() || "";
-
-    if (!TABS.some(tab => tab.id === targetTab)) {
-      setActiveTab(DEFAULT_YOUTUBE_TAB);
-      return;
-    }
-
-    setActiveTab(targetTab as TabType);
-    if (targetTab !== "analysis" || !keywordFromUrl || isYouTubeUrl(keywordFromUrl)) return;
-
-    setAnalysisInput(keywordFromUrl);
-    setSubmittedAnalysisKeyword(keywordFromUrl);
-    setAnalysisMode("keyword");
-    setAnalysisSort("relevance");
-    setAnalysisDurationType("all");
-    setVisibleAnalysisCount(10);
-  }, [location]);
+    if (requestedTab === "analysis") setLocation("/trends/youtube", { replace: true });
+  }, [requestedTab, setLocation]);
 
   // Manage filters per tab
   const [filtersByTab, setFiltersByTab] = useState({
-    analysis: {
-      country: "KR",
-      sort: "trending",
-    },
     trending: {
       country: "KR",
       sort: "trending",
@@ -406,55 +268,6 @@ export default function YouTubeTrends() {
   const sortBy = currentFilters.sort;
   const category = activeTab === "trending" ? "all" : (currentFilters as any).category || "all";
   const risingPeriod = (currentFilters as any).period || "realtime";
-
-  const analysisInputValue = analysisInput.trim();
-  const isAnalysisUrl = isYouTubeUrl(analysisInputValue);
-  const analysisVideoId = extractYouTubeVideoId(analysisInputValue);
-  const canSearchAnalysisKeyword = analysisInputType !== "url" && analysisInputValue.length > 0 && !isAnalysisUrl;
-  const canAnalyzeVideoUrl = analysisInputType !== "keyword" && Boolean(analysisVideoId);
-
-  const {
-    data: analysisSearchData,
-    isLoading: isAnalysisSearchLoading,
-    error: analysisSearchError,
-  } = trpc.youtube.searchVideos.useQuery(
-    {
-      query: submittedAnalysisKeyword,
-      regionCode: "KR",
-      sortBy: analysisSort,
-      durationType: analysisDurationType,
-      maxResults: 50,
-    },
-    {
-      enabled:
-        activeTab === "analysis" &&
-        isAuthenticated &&
-        Boolean(submittedAnalysisKeyword) &&
-        apiKeyData?.exists &&
-        apiKeyData?.testStatus === "success",
-      retry: false,
-      refetchOnWindowFocus: false,
-    }
-  );
-
-  const {
-    data: analysisUrlData,
-    isLoading: isAnalysisUrlLoading,
-    error: analysisUrlError,
-  } = trpc.youtube.getVideoAnalysis.useQuery(
-    { videoId: submittedAnalysisVideoId },
-    {
-      enabled:
-        activeTab === "analysis" &&
-        analysisMode === "url" &&
-        isAuthenticated &&
-        Boolean(submittedAnalysisVideoId) &&
-        apiKeyData?.exists &&
-        apiKeyData?.testStatus === "success",
-      retry: false,
-      refetchOnWindowFocus: false,
-    }
-  );
 
   const regionCode = country;
 
@@ -700,7 +513,6 @@ export default function YouTubeTrends() {
   };
 
   const currentSortOptions = SORT_OPTIONS[activeTab as keyof typeof SORT_OPTIONS] || SORT_OPTIONS.trending;
-  const tabMessage = TAB_MESSAGES[activeTab as keyof typeof TAB_MESSAGES];
 
   // Handler functions for current tab
   const handleCountryChange = (value: string) => {
@@ -720,7 +532,6 @@ export default function YouTubeTrends() {
     setVisiblePreviousRisingCount(0);
   };
   const handleTabChange = (tabId: TabType) => {
-    setActiveTab(tabId);
     setVisiblePreviousRecommendedCount(0);
     setVisiblePreviousShortsCount(0);
     setIsExposureCountryInfoOpen(false);
@@ -737,58 +548,6 @@ export default function YouTubeTrends() {
     menu.scrollTo({ left: menu.scrollLeft + selectedBounds.left - menuBounds.left - 8, behavior: "smooth" });
   }, [activeTab, isMobile]);
 
-  const handleAnalysisKeywordSearch = () => {
-    if (!canSearchAnalysisKeyword || authLoading) return;
-    if (!isAuthenticated) {
-      setIsAnalysisGuestPromptOpen(true);
-      return;
-    }
-    setAnalysisMode("keyword");
-    setSubmittedAnalysisVideoId("");
-    if (!isMobile || submittedAnalysisKeyword !== analysisInputValue) {
-      setAnalysisSort("relevance");
-      setAnalysisDurationType("all");
-      setAnalysisFilterKeyword("");
-    }
-    setSubmittedAnalysisKeyword(analysisInputValue);
-    setVisibleAnalysisCount(10);
-  };
-
-  const handleAnalysisUrlAnalyze = () => {
-    if (!analysisVideoId || authLoading) return;
-    if (!isAuthenticated) {
-      setIsAnalysisGuestPromptOpen(true);
-      return;
-    }
-    setAnalysisMode("url");
-    setSubmittedAnalysisKeyword("");
-    setSubmittedAnalysisVideoId(analysisVideoId);
-    setVisibleAnalysisCount(10);
-  };
-
-  const handleAnalysisSortChange = (sortValue: AnalysisSortType) => {
-    setAnalysisFilterKeyword(submittedAnalysisKeyword);
-    setAnalysisSort(sortValue);
-    setVisibleAnalysisCount(10);
-  };
-
-  const handleAnalysisDurationChange = (durationType: AnalysisDurationType) => {
-    setAnalysisFilterKeyword(submittedAnalysisKeyword);
-    setAnalysisDurationType(durationType);
-    setVisibleAnalysisCount(10);
-  };
-
-  const handleAnalysisSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (canSearchAnalysisKeyword) {
-      handleAnalysisKeywordSearch();
-      return;
-    }
-    if (canAnalyzeVideoUrl) {
-      handleAnalysisUrlAnalyze();
-    }
-  };
-
   const formatLastUpdateTime = (timestamp: number) => {
     const date = new Date(timestamp);
     const year = date.getFullYear();
@@ -797,355 +556,6 @@ export default function YouTubeTrends() {
     const hours = String(date.getHours()).padStart(2, "0");
     const minutes = String(date.getMinutes()).padStart(2, "0");
     return `${year}.${month}.${day} ${hours}:${minutes} 기준`;
-  };
-
-  // Render trending videos
-  const renderAnalysisTab = () => {
-    const analysisVideos = analysisSearchData?.success ? analysisSearchData.videos || [] : [];
-    const visibleAnalysisVideos = analysisVideos.slice(0, visibleAnalysisCount);
-    const showSearchFilters = isMobile && isAuthenticated && apiKeyData?.exists && apiKeyData.testStatus === "success"
-      && analysisMode === "keyword" && Boolean(submittedAnalysisKeyword)
-      && (analysisVideos.length > 0 || analysisFilterKeyword === submittedAnalysisKeyword);
-    const analysisUrlVideo = analysisUrlData?.success ? analysisUrlData.video : null;
-    const analysisUrlErrorMessage = analysisUrlData && "error" in analysisUrlData
-      ? analysisUrlData.error
-      : null;
-    const engagementRate = analysisUrlVideo && analysisUrlVideo.viewCount > 0
-      ? ((Number(analysisUrlVideo.likeCount || 0) + Number(analysisUrlVideo.commentCount || 0)) / analysisUrlVideo.viewCount) * 100
-      : 0;
-    const analysisCategory = analysisUrlVideo
-      ? CATEGORIES.find(item => item.categoryId === Number(analysisUrlVideo.categoryId))?.label || "분류 없음"
-      : "분류 없음";
-    const analysisTags: string[] = analysisUrlVideo
-      ? Array.from(new Set<string>((analysisUrlVideo.tags || []).map((tag: string) => tag.trim()).filter(Boolean))).slice(0, 12)
-      : [];
-
-    return (
-      <section className="youtubeAnalysisPanel" aria-label="영상 분석">
-        <SearchGlowForm className="heroSearch youtubeAnalysisComposer" role="search" aria-label="유튜브 영상 분석" onSubmit={handleAnalysisSubmit}>
-            <div className="heroSearchPlatformControls">
-                <DropdownMenu modal={false}>
-                  <DropdownMenuTrigger
-                    ref={analysisTypeTriggerRef}
-                    className={`heroSearchFilterButton ${analysisInputType ? "isYoutube" : "isUnselected"}`}
-                    aria-label={analysisInputType ? `입력 방식 선택: ${analysisInputType === "keyword" ? "키워드" : "URL"}` : "입력 방식 선택"}
-                    title="입력 방식 선택"
-                  >
-                    <Plus size={18} aria-hidden="true" />
-                    {analysisInputType && <span>{analysisInputType === "keyword" ? "키워드" : "URL"}</span>}
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" sideOffset={8} collisionPadding={12} className="heroSearchMenu" aria-label="입력 방식">
-                    <DropdownMenuRadioGroup value={analysisInputType ?? ""} onValueChange={value => {
-                      if (value === "keyword" || value === "url") setAnalysisInputType(value);
-                    }}>
-                      <DropdownMenuRadioItem value="keyword" className="heroSearchMenuItem youtubeAnalysisModeOption">키워드</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="url" className="heroSearchMenuItem youtubeAnalysisModeOption">URL</DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                {analysisInputType && <button
-                  type="button"
-                  className="heroSearchClearPlatform"
-                  aria-label="입력 방식 선택 취소"
-                  title="입력 방식 선택 취소"
-                  onClick={() => {
-                    setAnalysisInputType(null);
-                    analysisTypeTriggerRef.current?.focus();
-                  }}
-                ><X size={14} aria-hidden="true" /></button>}
-            </div>
-            <input
-              type="text"
-              value={analysisInput}
-              onChange={(event) => setAnalysisInput(event.target.value)}
-              placeholder={analysisInputType === "url" ? "YouTube URL 입력" : analysisInputType === "keyword" ? "키워드 입력" : "키워드 또는 YouTube URL 입력"}
-              aria-label={analysisInputType === "url" ? "YouTube 영상 URL" : analysisInputType === "keyword" ? "분석할 키워드" : "키워드 또는 YouTube URL"}
-              className="heroSearchInput"
-            />
-            <button
-              type="submit"
-              className="heroSearchButton"
-              aria-label="분석"
-              title="분석"
-              disabled={authLoading || !(canSearchAnalysisKeyword || canAnalyzeVideoUrl)}
-            ><Search size={18} aria-hidden="true" /></button>
-        </SearchGlowForm>
-
-        {showSearchFilters && (
-          <div className="youtubeAnalysisResults">
-            <div className="youtubeAnalysisResultHeader">
-              <div className="youtubeAnalysisResultTitle">
-                <span>검색 결과</span>
-                <strong>{submittedAnalysisKeyword}</strong>
-              </div>
-            </div>
-            {analysisFilters}
-          </div>
-        )}
-
-        {!isAuthenticated || !analysisMode ? (
-          <div className="grid min-h-[250px] place-items-center px-4 text-center md:min-h-[300px]">
-            <p className="m-0 text-xs text-slate-400">검색 결과 목록이 여기에 표시됩니다.</p>
-          </div>
-        ) : !apiKeyData?.exists || apiKeyData?.testStatus !== "success" ? (
-          <div className="emptyStateContainer youtubeAnalysisState">
-            <AlertCircle className="emptyStateIcon" size={42} />
-            <p className="emptyStateText">
-              YouTube API 키 오류입니다.
-              <br />
-              API 키 확인 후 다시 입력해주세요.
-            </p>
-          </div>
-        ) : analysisMode === "url" && isAnalysisUrlLoading ? (
-          <YouTubeLoadingState message="영상 정보를 분석하는 중입니다..." />
-        ) : analysisMode === "url" && (analysisUrlError || analysisUrlErrorMessage || !analysisUrlVideo) ? (
-          <div className="emptyStateContainer youtubeAnalysisState">
-            <AlertCircle className="emptyStateIcon" size={42} />
-            <p className="emptyStateText">
-              {analysisUrlErrorMessage || "영상 분석 정보를 불러오지 못했습니다."}
-            </p>
-          </div>
-        ) : analysisMode === "url" && analysisUrlVideo ? (
-          <div className="youtubeUrlAnalysisResult">
-            <div className="youtubeUrlAnalysisOverview">
-              <div className="youtubeUrlAnalysisPlayer">
-                <iframe
-                  src={`https://www.youtube.com/embed/${analysisUrlVideo.id}`}
-                  title={analysisUrlVideo.title}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-              </div>
-              <div className="youtubeUrlAnalysisSummary">
-                <span className="youtubeUrlAnalysisEyebrow">개별 영상 분석</span>
-                <h3>{analysisUrlVideo.title}</h3>
-                <div className="youtubeUrlAnalysisChannel">
-                  {analysisUrlVideo.channelThumbnail ? (
-                    <img src={analysisUrlVideo.channelThumbnail} alt="" />
-                  ) : null}
-                  <div>
-                    <strong>{analysisUrlVideo.channelTitle}</strong>
-                    <span>
-                      {analysisUrlVideo.hiddenSubscribers
-                        ? "구독자 비공개"
-                        : `구독자 ${formatKoreanNumber(analysisUrlVideo.subscriberCount || 0)}`}
-                    </span>
-                  </div>
-                </div>
-                <div className="youtubeUrlAnalysisMeta">
-                  <span>{formatDate(analysisUrlVideo.publishedAt)}</span>
-                  <span>{formatDuration(analysisUrlVideo.duration)}</span>
-                  <span>{analysisCategory}</span>
-                </div>
-                <div className="youtubeUrlAnalysisActions">
-                  <button
-                    type="button"
-                    onClick={() => navigator.clipboard.writeText(`https://www.youtube.com/watch?v=${analysisUrlVideo.id}`)}
-                  >
-                    <Copy size={15} aria-hidden="true" />
-                    링크 복사
-                  </button>
-                  <a
-                    href={`https://www.youtube.com/watch?v=${analysisUrlVideo.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <ExternalLink size={15} aria-hidden="true" />
-                    원문 보기
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            <div className="youtubeUrlAnalysisMetrics" aria-label="영상 핵심 지표">
-              {[
-                ["조회수", `${formatKoreanNumber(analysisUrlVideo.viewCount)}회`],
-                ["좋아요", `${formatKoreanNumber(analysisUrlVideo.likeCount || 0)}개`],
-                ["댓글", `${formatKoreanNumber(analysisUrlVideo.commentCount || 0)}개`],
-                ["구독자", analysisUrlVideo.hiddenSubscribers ? "비공개" : `${formatKoreanNumber(analysisUrlVideo.subscriberCount || 0)}명`],
-                ["게시 후 평균 시간당", `${formatKoreanNumber(analysisUrlVideo.averageHourlyViews || 0)}회`],
-                ["채널 대비", analysisUrlVideo.outlierScore === null ? "-" : `${analysisUrlVideo.outlierScore}배`],
-              ].map(([label, value]) => (
-                <div key={label} className="youtubeUrlAnalysisMetric">
-                  <span>{label}</span>
-                  <strong>{value}</strong>
-                </div>
-              ))}
-            </div>
-
-            <div className="youtubeUrlAnalysisSignals">
-              <div>
-                <span>참여율</span>
-                <strong>{engagementRate.toFixed(2)}%</strong>
-                <small>좋아요와 댓글을 조회수로 계산</small>
-              </div>
-              <div>
-                <span>상승 지수</span>
-                <strong>{analysisUrlVideo.discoveryScore ?? "-"}</strong>
-                <small>현재 수집값 기준</small>
-              </div>
-              <div>
-                <span>카테고리</span>
-                <strong>{analysisCategory}</strong>
-                <small>유튜브 등록 분류</small>
-              </div>
-            </div>
-
-            {analysisTags.length > 0 ? (
-              <div className="youtubeUrlAnalysisTags" aria-label="영상 태그">
-                {analysisTags.map((tag: string) => <span key={tag}>#{tag}</span>)}
-              </div>
-            ) : null}
-
-            {analysisUrlVideo.description ? (
-              <div className="youtubeUrlAnalysisDescription">
-                <span>영상 설명</span>
-                <p>{analysisUrlVideo.description}</p>
-              </div>
-            ) : null}
-          </div>
-        ) : isAnalysisSearchLoading ? (
-          <YouTubeVideoListLoading message="키워드 관련 인기 영상을 불러오는 중입니다..." />
-        ) : analysisSearchError ? (
-          <div className="emptyStateContainer youtubeAnalysisState">
-            <AlertCircle className="emptyStateIcon" size={42} />
-            <p className="emptyStateText">YouTube 검색 데이터를 불러오지 못했습니다.</p>
-          </div>
-        ) : analysisMode === "keyword" && !analysisSearchData?.success ? (
-          <div className="emptyStateContainer youtubeAnalysisState">
-            <AlertCircle className="emptyStateIcon" size={42} />
-            <p className="emptyStateText">
-              {analysisSearchData?.error || "검색 결과를 불러오지 못했습니다."}
-            </p>
-          </div>
-        ) : analysisMode === "keyword" && analysisVideos.length === 0 && submittedAnalysisKeyword ? (
-          <div className="emptyStateContainer youtubeAnalysisState">
-            <AlertCircle className="emptyStateIcon" size={42} />
-            <p className="emptyStateText">관련 인기 영상을 찾을 수 없습니다.</p>
-          </div>
-        ) : analysisMode === "keyword" && analysisVideos.length > 0 ? (
-          <div className="youtubeAnalysisResults">
-            {!isMobile && (
-              <>
-                <div className="youtubeAnalysisResultHeader">
-                  <div className="youtubeAnalysisResultTitle">
-                    <span>검색 결과</span>
-                    <strong>{submittedAnalysisKeyword}</strong>
-                  </div>
-                </div>
-                <div className="youtubeAnalysisFilterBar">
-                  <div className="youtubeAnalysisSegmentGroup" aria-label="영상 유형 필터">
-                    {ANALYSIS_DURATION_OPTIONS.map(option => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        className={`youtubeAnalysisSegmentButton ${analysisDurationType === option.value ? "active" : ""}`}
-                        onClick={() => handleAnalysisDurationChange(option.value)}
-                      >{option.label}</button>
-                    ))}
-                  </div>
-                  <div className="youtubeAnalysisSegmentGroup" aria-label="영상 분석 결과 정렬">
-                    {ANALYSIS_SORT_OPTIONS.map(option => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        className={`youtubeAnalysisSegmentButton ${analysisSort === option.value ? "active" : ""}`}
-                        onClick={() => handleAnalysisSortChange(option.value)}
-                      >{option.label}</button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-            <div className="videosGrid">
-              {visibleAnalysisVideos.map((video: any) => {
-                const isBookmarked = isYouTubeVideoBookmarked(video.id);
-                return (
-                  <article key={video.id} className="videoCardWrapper">
-                    <div
-                      className="videoCard"
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => {
-                        setSelectedVideo(video);
-                        setIsModalOpen(true);
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          setSelectedVideo(video);
-                          setIsModalOpen(true);
-                        }
-                      }}
-                    >
-                      <div className="videoThumbnail">
-                        <img src={video.thumbnail} alt={video.title} />
-                        <div className="videoDurationBadge">{formatDuration(video.duration)}</div>
-                        <div className="videoPlayIcon">
-                          <Play size={32} fill="currentColor" />
-                        </div>
-                      </div>
-                      <div className="videoInfo">
-                        <h3 className="videoTitle">{video.title}</h3>
-                        <div className="videoChannelRow">
-                          <div className="channelProfileImage">
-                            {video.channelThumbnail ? (
-                              <img src={video.channelThumbnail} alt={video.channelTitle} />
-                            ) : (
-                              <div className="channelProfilePlaceholder">
-                                {video.channelTitle.charAt(0).toUpperCase()}
-                              </div>
-                            )}
-                          </div>
-                          <p className="videoChannel">{video.channelTitle}</p>
-                        </div>
-                        <div className="videoMeta">
-                          <span>{formatViewCount(video.viewCount)} 조회 · {formatDate(video.publishedAt)}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        toggleYouTubeBookmark({
-                          id: video.id,
-                          title: video.title,
-                          thumbnail: video.thumbnail,
-                          channelId: video.channelId,
-                          channelTitle: video.channelTitle,
-                          channelThumbnail: video.channelThumbnail,
-                          viewCount: video.viewCount,
-                          publishedAt: video.publishedAt,
-                          duration: video.duration,
-                        }, "video");
-                      }}
-                      disabled={isBookmarkPending(video.id)}
-                      className={`bookmarkButton ${isBookmarked ? "bookmarked" : ""} ${isBookmarkPending(video.id) ? "pending" : ""}`}
-                      title={isBookmarked ? "북마크 해제" : "북마크"}
-                      aria-label={isBookmarked ? "북마크 해제" : "북마크"}
-                    >
-                      <Bookmark size={20} fill={isBookmarked ? "currentColor" : "none"} />
-                    </button>
-                  </article>
-                );
-              })}
-            </div>
-            {visibleAnalysisCount < analysisVideos.length && (
-              <button
-                type="button"
-                className="youtubeAnalysisMoreButton"
-                onClick={() => setVisibleAnalysisCount((count) => Math.min(count + 10, analysisVideos.length))}
-                aria-label="유튜브 검색 결과 더보기"
-              >
-                <ChevronDown size={24} strokeWidth={1.8} />
-              </button>
-            )}
-          </div>
-        ) : null}
-      </section>
-    );
   };
 
   const renderRecommendationCard = (video: any, isPrevious = false) => {
@@ -1729,30 +1139,7 @@ export default function YouTubeTrends() {
     );
   };
 
-  const analysisFilters = (
-    <YouTubeFilterRow label="영상 분석 필터" mobile>
-      <div className="filterGroup">
-        <label htmlFor="analysis-duration-select" className="filterLabel">영상 유형</label>
-        <div className="selectWrapper">
-          <select id="analysis-duration-select" className="youtubeSelect" value={analysisDurationType} onChange={event => handleAnalysisDurationChange(event.target.value as AnalysisDurationType)}>
-            {ANALYSIS_DURATION_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
-          <ChevronDown className="selectChevron" aria-hidden="true" />
-        </div>
-      </div>
-      <div className="filterGroup">
-        <label htmlFor="analysis-sort-select" className="filterLabel">정렬</label>
-        <div className="selectWrapper">
-          <select id="analysis-sort-select" className="youtubeSelect" value={analysisSort} onChange={event => handleAnalysisSortChange(event.target.value as AnalysisSortType)}>
-            {ANALYSIS_SORT_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
-          <ChevronDown className="selectChevron" aria-hidden="true" />
-        </div>
-      </div>
-    </YouTubeFilterRow>
-  );
-
-  const tabFilters = activeTab !== "analysis" && (
+  const tabFilters = (
     <YouTubeFilterRow key={activeTab} mobile={isMobile} label={`${TABS.find(tab => tab.id === activeTab)?.label} 필터`}>
         <div className="filterGroup">
           <div className="filterLabelRow">
@@ -1853,7 +1240,7 @@ export default function YouTubeTrends() {
   );
 
   return (
-    <div className={`youtubePageContainer ${!isAuthenticated && activeTab !== "analysis" ? "youtubeGuestUnframed" : ""}`}>
+    <div className={`youtubePageContainer ${!isAuthenticated ? "youtubeGuestUnframed" : ""}`}>
       <div className="pageHeader">
         <h1 className="pageTitle">유튜브 트렌드</h1>
         <p className="pageDescription">
@@ -1882,16 +1269,14 @@ export default function YouTubeTrends() {
       ) && <YouTubeVideoListLoading message="영상 목록을 새로고침하는 중입니다..." />}
 
       {/* Content Section */}
-      {activeTab === "analysis" ? (
-        renderAnalysisTab()
-      ) : authLoading ? (
+      {authLoading ? (
         <YouTubeLoadingState message="인증 상태를 확인하는 중입니다..." />
       ) : activeTab === "rising" ? (
         renderRisingTab()
       ) : !isAuthenticated ? (
         renderGuestLoginNotice("유튜브 트렌드와 개인 API 키 기능은 로그인 후 이용할 수 있습니다.")
       ) : isAuthenticated && !apiKeyData?.exists ? (
-        <YouTubeApiStatusCard activeTab={activeTab} apiKeyMessage={TAB_MESSAGES.trending} />
+        <YouTubeApiStatusCard activeTab={activeTab} apiKeyMessage={YOUTUBE_API_KEY_ERROR_MESSAGE} />
       ) : activeTab === "trending" || activeTab === "category" ? (
         renderTrendingTab()
       ) : activeTab === "shorts" ? (
@@ -1903,15 +1288,6 @@ export default function YouTubeTrends() {
         description="로그인하거나 가입하면 급상승 영상 전체 목록을 볼 수 있어요."
         onBrowse={() => setIsRisingGuestPromptOpen(false)}
         onLogin={goToRisingAuth}
-      />
-
-      <GuestAccessPrompt
-        open={isAnalysisGuestPromptOpen}
-        onBrowse={() => setIsAnalysisGuestPromptOpen(false)}
-        onLogin={() => {
-          setIsAnalysisGuestPromptOpen(false);
-          setLocation("/login?redirect=" + encodeURIComponent("/trends/youtube?tab=analysis"));
-        }}
       />
 
       {/* Video Detail Modal */}

@@ -128,12 +128,12 @@ function App() {
     setLocation(`/login${params.size ? `?${params.toString()}` : ""}`);
   };
 
-  const navigateFromMobileMenu = (path: string, direct = false) => {
+  const navigateFromMobileMenu = (path: string) => {
     const navigate = () => {
       mainContentRef.current?.scrollTo({ top: 0 });
       setLocation(path);
     };
-    if (direct || path === "/" || !requestGuestMenuAccess(path, navigate)) navigate();
+    if (path === "/" || !requestGuestMenuAccess(path, navigate)) navigate();
   };
 
   const openMobileAccount = () => {
@@ -170,7 +170,7 @@ function App() {
                 {isTermsPage ? <TermsOfService /> : <PrivacyPolicy />}
               </main>
             ) : (
-            <div className="app">
+            <div className="app" data-account-menu-open={mobilePanelType === "account" && isAuthenticated}>
             <Header
               onOpenMyPageModal={() => setIsMyPageModalOpen(true)}
               onGuestMenuAccess={requestGuestMenuAccess}

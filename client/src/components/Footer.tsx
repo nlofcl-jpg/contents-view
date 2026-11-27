@@ -1,11 +1,8 @@
 import { Link } from "wouter";
-import { useState } from "react";
-import PartnershipInquiryDialog from "@/components/PartnershipInquiryDialog";
 import SocialIcons from "@/components/SocialIcons";
 
 export default function Footer() {
   const year = new Date().getFullYear();
-  const [inquiryOpen, setInquiryOpen] = useState(false);
 
   return (
     <footer className="siteFooter">
@@ -24,10 +21,8 @@ export default function Footer() {
         </div>
 
         <nav className="siteFooterLegalLinks" aria-label="하단 안내">
-            <Link href="/privacy">개인정보처리방침</Link>
-            <Link href="/terms">이용약관</Link>
-            <a href="mailto:edenofcls@gmail.com">이메일</a>
-            <button type="button" className="siteFooterInquiryButton" onClick={() => setInquiryOpen(true)}>제휴 문의</button>
+          <Link href="/privacy">개인정보처리방침</Link>
+          <Link href="/terms">이용약관</Link>
         </nav>
 
         <SocialIcons className="siteFooterSocialIcons" />
@@ -37,7 +32,6 @@ export default function Footer() {
         <span>© {year} CONTENTS VIEW</span>
         <span>Trend, news, community, and creator intelligence.</span>
       </div>
-      <PartnershipInquiryDialog open={inquiryOpen} onOpenChange={setInquiryOpen} />
     </footer>
   );
 }

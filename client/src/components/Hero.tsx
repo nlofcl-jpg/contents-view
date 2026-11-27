@@ -1,7 +1,7 @@
 import { ArrowUp, Plus, X } from "lucide-react";
 import HeroKeywordSlot from "@/components/HeroKeywordSlot";
 import HeroAiChat from "@/components/HeroAiChat";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useGoogleLiveRanking } from "@/lib/useLiveSearchRankings";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -38,6 +38,7 @@ export default function Hero() {
   const platformTriggerRef = useRef<HTMLButtonElement>(null);
   const aiEntryButtonRef = useRef<HTMLButtonElement>(null);
   const aiInputRef = useRef<HTMLTextAreaElement>(null);
+  const submitOpeningAnalysisRef = useRef(false);
   const searchFormRef = useRef<HTMLFormElement>(null);
   const [, setLocation] = useLocation();
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -90,6 +91,12 @@ export default function Hero() {
     if (input) resizeAiInput(input);
   }, [isAiPageOpen, keyword]);
 
+  useEffect(() => {
+    if (!isAiPageOpen || !submitOpeningAnalysisRef.current) return;
+    submitOpeningAnalysisRef.current = false;
+    aiInputRef.current?.form?.requestSubmit();
+  }, [isAiPageOpen]);
+
   useLayoutEffect(() => {
     const input = aiInputRef.current;
     if (!input) return;
@@ -111,15 +118,20 @@ export default function Hero() {
       return `/news/search?keyword=${encodeURIComponent(trimmedKeyword)}`;
     }
 
-    if (platform === "youtube") {
-      return `/trends/youtube?tab=analysis&keyword=${encodeURIComponent(trimmedKeyword)}`;
-    }
+    if (platform === "youtube") return "/";
 
     return `/trends/naver?keyword=${encodeURIComponent(trimmedKeyword)}`;
   };
 
   const handleHeroSearch = (searchKeyword = keyword) => {
     if (!searchKeyword.trim()) return;
+    if (selectedPlatform?.value === "youtube") {
+      setKeyword(searchKeyword);
+      submitOpeningAnalysisRef.current = true;
+      setAiEntryOrigin(searchFormRef.current?.getBoundingClientRect() ?? null);
+      setIsAiPageOpen(true);
+      return;
+    }
     setLocation(getSearchPath(searchKeyword));
   };
 
