@@ -39,7 +39,7 @@ const navButtons = [
   { id: "studio", label: "스튜디오", Icon: RoundedPlay },
 ] as const;
 
-const itemClass = "grid h-12 w-full min-w-0 place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-sky-300";
+const itemClass = "grid h-14 w-full min-w-0 place-items-center rounded focus-visible:outline-2 focus-visible:outline-sky-300";
 const drawerItemClass = "block w-full rounded py-2 text-left text-[13px] text-slate-300 no-underline hover:text-white focus-visible:outline-2 focus-visible:outline-sky-300 aria-[current=page]:text-sky-300";
 
 export default function MobilePrimaryNav({ onNavigate }: {
@@ -113,7 +113,7 @@ export default function MobilePrimaryNav({ onNavigate }: {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <nav ref={navRef} data-drawer-open={open} aria-label="모바일 메인 메뉴" className="mobilePrimaryNav fixed inset-x-0 bottom-[calc(12px+env(safe-area-inset-bottom,0px))] z-40 mx-auto grid w-[calc(100%-24px)] max-w-80 grid-cols-4 rounded-full border border-white/15 px-2 shadow-lg md:hidden">
+      <nav ref={navRef} data-drawer-open={open} aria-label="모바일 메인 메뉴" className="mobilePrimaryNav fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-white/10 px-2 pb-[env(safe-area-inset-bottom,0px)] md:hidden">
         {navButtons.map(({ id, label, Icon }) => {
           const drawerButton = id === "sections";
           const current = id === "home" && location === "/"

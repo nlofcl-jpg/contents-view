@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from "react";
 import { useLocation, useSearch, Link } from "wouter";
 import { ChevronDown, Menu, UserRound } from "lucide-react";
 import FlowDownloadBanner from "@/components/FlowDownloadBanner";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { newsLinks } from "@/lib/newsNavigation";
 import { commerceLinks, getCommerceTab } from "@/lib/commerceNavigation";
 import { studioLinks } from "@/lib/studioNavigation";
@@ -330,7 +331,16 @@ export default function Header({
             disabled={authLoading}
             onClick={onMobileProfileClick}
           >
-            <UserRound size={22} aria-hidden="true" />
+            {isAuthenticated && user ? (
+              <Avatar className="size-7" aria-hidden="true">
+                {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt="" className="object-cover" />}
+                <AvatarFallback className="bg-slate-700 text-xs font-semibold text-slate-100">
+                  {user.name?.trim().charAt(0).toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
+            ) : (
+              <UserRound size={22} aria-hidden="true" />
+            )}
           </button>
           {isNoticeOpen && (
             <div className="noticePopover mobileNoticePopover">

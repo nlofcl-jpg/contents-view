@@ -89,15 +89,6 @@ export function MobileMenuDrawer({
               <Home size={18} aria-hidden="true" />
               <span>홈</span>
             </button>
-            <div className="mobileAccountCard">
-              <div className="mobileAccountHeader">
-                <div className="mobileAccountAvatar">{user?.name?.trim().charAt(0).toUpperCase() || "U"}</div>
-                <div className="mobileAccountInfo">
-                  <div className="mobileAccountName">{user?.name || "사용자"}</div>
-                  {user?.email && <div className="mobileAccountEmail">{user.email}</div>}
-                </div>
-              </div>
-            </div>
             <div className="mobileMenuSectionTitle">계정</div>
             <button className="mobileMenuAction" type="button" onClick={handleMyPage}>
               <User size={18} aria-hidden="true" />
