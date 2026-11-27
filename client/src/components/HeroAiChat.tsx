@@ -1,39 +1,48 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Globe, LoaderCircle, RotateCcw, X } from "lucide-react";
 import { toast } from "sonner";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import HeroAnalysisResult from "@/components/HeroAnalysisResult";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
+import { getHeroAnalysisRange, heroAnalysisLabels, type HeroAnalysisPlatform, type HeroAnalysisResult as AnalysisResult, type NaverKeywordResult } from "@/lib/heroAnalysis";
+import { NAVER_GUEST_DAILY_LIMIT_MESSAGE, NAVER_MEMBER_DAILY_LIMIT_MESSAGE } from "@shared/naverAnalysisQuota";
 
 type ChatText = { role: "user" | "assistant"; text: string };
-type Message = ChatText & {
+type ChatMessage = ChatText & {
   sources?: { title: string; url: string }[];
 };
+
+type AnalysisRequest = { keyword: string; platform: HeroAnalysisPlatform };
+type AnalysisMessage = AnalysisRequest & { role: "analysis"; result: AnalysisResult };
 
 type HeroAiChatProps = {
   input: string;
   setInput: (value: string) => void;
   renderInput: (sendDisabled: boolean) => ReactNode;
-  onAnalyze?: () => void;
+  analysisPlatform?: HeroAnalysisPlatform;
   onClose: () => void;
   entryOrigin: DOMRectReadOnly | null;
 };
 
-export default function HeroAiChat({ input, setInput, renderInput, onAnalyze, onClose, entryOrigin }: HeroAiChatProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
+export default function HeroAiChat({ input, setInput, renderInput, analysisPlatform, onClose, entryOrigin }: HeroAiChatProps) {
+  const [messages, setMessages] = useState<(ChatMessage | AnalysisMessage)[]>([]);
   const [consent, setConsent] = useState(false);
   const [consentOpen, setConsentOpen] = useState(false);
-  const [analysisConfirmOpen, setAnalysisConfirmOpen] = useState(false);
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
+  const [pendingAnalysis, setPendingAnalysis] = useState<AnalysisRequest | null>(null);
   const [headerPinned, setHeaderPinned] = useState(false);
   const headerTriggerRef = useRef<HTMLButtonElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const logRef = useRef<HTMLDivElement>(null);
-  const status = trpc.aiTest.status.useQuery(undefined, { retry: false });
+  const latestAnalysisRef = useRef<HTMLDivElement>(null);
+  const status = trpc.aiTest.status.useQuery(undefined, { retry: false, enabled: !analysisPlatform });
   const chat = trpc.aiTest.chat.useMutation();
-  const busy = chat.isPending;
-  const sendDisabled = !input.trim() || (!onAnalyze && (busy || status.isLoading));
+  const api = trpc.useUtils();
+  const naverAnalysis = trpc.naver.unifiedInsight.useMutation();
+  const shoppingAnalysis = trpc.naver.shoppingStatistics.useMutation();
+  const busy = Boolean(pendingAnalysis || pendingQuestion || chat.isPending);
+  const sendDisabled = !input.trim() || busy || (!analysisPlatform && status.isLoading);
 
   useLayoutEffect(() => {
     const form = formRef.current;
@@ -52,8 +61,14 @@ export default function HeroAiChat({ input, setInput, renderInput, onAnalyze, on
 
   useEffect(() => {
     const log = logRef.current;
-    if (log) log.scrollTop = log.scrollHeight;
-  }, [messages, pendingQuestion]);
+    if (!log) return;
+    const latestAnalysis = latestAnalysisRef.current;
+    if (latestAnalysis && !pendingQuestion && !pendingAnalysis) {
+      log.scrollTop += latestAnalysis.getBoundingClientRect().top - log.getBoundingClientRect().top - 10;
+    } else {
+      log.scrollTop = log.scrollHeight;
+    }
+  }, [messages, pendingQuestion, pendingAnalysis]);
 
   useEffect(() => {
     if (!headerPinned) return;
@@ -83,11 +98,12 @@ export default function HeroAiChat({ input, setInput, renderInput, onAnalyze, on
     if (status.error || !status.data?.configured || !question || busy) return;
     setPendingQuestion(question);
     setInput("");
-    const nextMessage: Message = { role: "user", text: question };
+    const nextMessage: ChatMessage = { role: "user", text: question };
     const history: ChatText[] = [nextMessage];
+    const chatMessages = messages.filter(message => message.role !== "analysis");
     let remaining = 16000 - question.length;
-    for (let i = messages.length - 2; i >= 0 && history.length < 11; i -= 2) {
-      const pair = messages.slice(i, i + 2).map(({ role, text }) => ({ role, text: text.slice(0, 4000) }));
+    for (let i = chatMessages.length - 2; i >= 0 && history.length < 11; i -= 2) {
+      const pair = chatMessages.slice(i, i + 2).map(({ role, text }) => ({ role, text: text.slice(0, 4000) }));
       const length = pair[0].text.length + pair[1].text.length;
       if (length > remaining) break;
       remaining -= length;
@@ -106,11 +122,56 @@ export default function HeroAiChat({ input, setInput, renderInput, onAnalyze, on
     }
   };
 
+  const analyze = async (platform: HeroAnalysisPlatform) => {
+    const keyword = input.trim().replace(/\s+/g, " ");
+    const max = platform === "youtube" ? 120 : 100;
+    if (keyword.length > max) {
+      toast.error(`키워드는 ${max}자까지 입력할 수 있습니다.`);
+      return;
+    }
+    setPendingAnalysis({ keyword, platform });
+    setInput("");
+
+    let result: AnalysisResult;
+    try {
+      const range = getHeroAnalysisRange();
+      const request = { keywords: [keyword], ...range };
+      switch (platform) {
+        case "youtube":
+          result = { kind: platform, data: await api.youtube.searchVideos.fetch({ query: keyword, regionCode: "KR", sortBy: "relevance", durationType: "all", maxResults: 50 }) };
+          break;
+        case "news":
+          result = { kind: platform, data: await api.news.searchNews.fetch({ query: keyword, limit: 80 }) };
+          break;
+        case "naver":
+          result = { kind: platform, data: await naverAnalysis.mutateAsync(request) as NaverKeywordResult, range };
+          break;
+        case "shopping":
+          result = { kind: platform, data: await shoppingAnalysis.mutateAsync({ requests: [request], keywordForCategory: keyword, categoryFilters: range }), range };
+          break;
+      }
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "";
+      const code = (cause as { data?: { code?: string } } | null)?.data?.code;
+      const loginRequired = code === "UNAUTHORIZED" || message === NAVER_GUEST_DAILY_LIMIT_MESSAGE;
+      result = {
+        kind: "error",
+        message: code === "UNAUTHORIZED" ? "로그인 후 이용할 수 있습니다."
+          : loginRequired || message === NAVER_MEMBER_DAILY_LIMIT_MESSAGE ? message
+          : "분석 결과를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+        loginRequired,
+      };
+    }
+
+    setMessages(previous => [...previous, { role: "analysis", keyword, platform, result }]);
+    setPendingAnalysis(null);
+  };
+
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (sendDisabled) return;
-    if (onAnalyze) {
-      setAnalysisConfirmOpen(true);
+    if (analysisPlatform) {
+      void analyze(analysisPlatform);
       return;
     }
     if (status.error || !status.data?.configured) {
@@ -170,7 +231,15 @@ export default function HeroAiChat({ input, setInput, renderInput, onAnalyze, on
           </div>
         </header>
         <div className="aiTestLog" ref={logRef} role="log" aria-label="Gemini 테스트 대화" aria-live="polite">
-          {messages.map((message, index) => message.role === "user" ? (
+          {messages.map((message, index) => message.role === "analysis" ? (
+            <div key={index} ref={index === messages.length - 1 ? latestAnalysisRef : undefined}>
+              <div className="aiTestUserMessage"><span className="sr-only">나</span><p>{message.keyword}</p></div>
+              <article className="aiTestReply min-w-0" aria-label={heroAnalysisLabels[message.platform]}>
+                <h3 className="mb-3 text-sm font-semibold text-slate-100">{heroAnalysisLabels[message.platform]}</h3>
+                <HeroAnalysisResult result={message.result} />
+              </article>
+            </div>
+          ) : message.role === "user" ? (
             <div className="aiTestUserMessage" key={index}>
               <span className="sr-only">나</span>
               <p>{message.text}</p>
@@ -197,10 +266,19 @@ export default function HeroAiChat({ input, setInput, renderInput, onAnalyze, on
               </div>
             </>
           )}
+          {pendingAnalysis && (
+            <>
+              <div className="aiTestUserMessage"><span className="sr-only">나</span><p>{pendingAnalysis.keyword}</p></div>
+              <div role="status" className="flex items-center gap-2 text-xs text-slate-400">
+                <LoaderCircle size={16} aria-hidden="true" className="text-sky-300 motion-safe:animate-spin" />
+                {heroAnalysisLabels[pendingAnalysis.platform]} 중
+              </div>
+            </>
+          )}
         </div>
       </section>
       <div className="heroAiComposer">
-        <form ref={formRef} className="heroSearch heroSearchAi" aria-label={onAnalyze ? "트렌드 분석" : "Gemini 대화"} onSubmit={submit}>
+        <form ref={formRef} className="heroSearch heroSearchAi" aria-label={analysisPlatform ? heroAnalysisLabels[analysisPlatform] : "Gemini 대화"} onSubmit={submit}>
           {renderInput(sendDisabled)}
         </form>
         <p className="aiTestFootnote">AI 답변은 부정확할 수 있습니다.</p>
@@ -220,18 +298,6 @@ export default function HeroAiChat({ input, setInput, renderInput, onAnalyze, on
         </DialogFooter>
       </DialogContent>
     </Dialog>
-      <AlertDialog open={analysisConfirmOpen} onOpenChange={setAnalysisConfirmOpen}>
-        <AlertDialogContent className="sm:max-w-sm" onCloseAutoFocus={restoreInputFocus}>
-          <AlertDialogHeader className="sm:text-center">
-            <AlertDialogTitle>분석 화면으로 이동할까요?</AlertDialogTitle>
-            <AlertDialogDescription>이동하면 현재 AI 대화가 모두 삭제됩니다.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="mx-auto grid w-full max-w-52 grid-cols-2">
-            <AlertDialogCancel>취소</AlertDialogCancel>
-            <AlertDialogAction onClick={() => onAnalyze?.()}>확인</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </section>
   );
 }

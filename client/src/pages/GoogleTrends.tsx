@@ -8,7 +8,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
-import LiveTrendNavigation from "@/components/LiveTrendNavigation";
 import { GoogleTrendRankChange, type RankChange } from "@/components/GoogleTrendRankChange";
 import { readHeroKeywords } from "@/lib/heroKeywords";
 import { supabase } from "@/lib/supabase";
@@ -396,7 +395,6 @@ export default function GoogleTrends() {
         <p className="pageDescription">
           현재 검색 흐름과 실시간 인기 검색어 트렌드를 확인하세요.
         </p>
-        <LiveTrendNavigation active="search" />
       </div>
 
       <div className="searchTrendTabMenu mb-5 grid grid-cols-2 lg:hidden" role="tablist" aria-label="검색 트렌드 종류">

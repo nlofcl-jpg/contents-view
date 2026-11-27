@@ -4,14 +4,17 @@ import { trpc } from "@/lib/trpc";
 import { supabase } from "@/lib/supabase";
 import { useState, useRef, useEffect } from "react";
 import { useLocation, useSearch, Link } from "wouter";
-import { ChevronDown, Menu } from "lucide-react";
+import { ChevronDown, Menu, UserRound } from "lucide-react";
 import FlowDownloadBanner from "@/components/FlowDownloadBanner";
 import { newsLinks } from "@/lib/newsNavigation";
 import { commerceLinks, getCommerceTab } from "@/lib/commerceNavigation";
+import { studioLinks } from "@/lib/studioNavigation";
 
 interface HeaderProps {
   onOpenMyPageModal?: () => void;
   onToggleMobileMenu?: (panelType: "menu" | "account") => void;
+  onMobileProfileClick?: () => void;
+  mobileAccountOpen?: boolean;
   onGuestMenuAccess?: (path?: string, onBrowse?: () => void) => boolean;
 }
 
@@ -27,9 +30,11 @@ const NOTICE_LAST_SEEN_KEY = "contents-view-last-seen-notice-id";
 export default function Header({ 
   onOpenMyPageModal, 
   onToggleMobileMenu,
+  onMobileProfileClick,
+  mobileAccountOpen,
   onGuestMenuAccess,
 }: HeaderProps) {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
   const [location, setLocation] = useLocation();
   const search = useSearch();
   const activeCommerceTab = location === "/commerce" ? getCommerceTab(search) : null;
@@ -57,13 +62,6 @@ export default function Header({
     { name: "네이버 트렌드", path: "/trends/naver" },
     { name: "커뮤니티 트렌드", path: "/community" },
     { name: "검색 트렌드", path: "/trends/google" },
-  ];
-
-  const studioItems = [
-    { name: "콘텐츠 제작", path: "/ai-studio/video" },
-    { name: "프로그램", path: "/ai-studio/programs" },
-    { name: "오픈소스", path: "/ai-studio/open-source" },
-    { name: "도구", path: "/ai-studio/resources" },
   ];
 
   const latestNoticeId = notices[0]?.id ?? null;
@@ -322,6 +320,18 @@ export default function Header({
           >
             <Menu size={24} />
           </button>
+          <button
+            className="mobileMenuButton mobileProfileButton"
+            type="button"
+            aria-label="프로필"
+            aria-haspopup={isAuthenticated ? "dialog" : undefined}
+            aria-expanded={isAuthenticated ? Boolean(mobileAccountOpen) : undefined}
+            aria-controls={mobileAccountOpen ? "mobile-account-drawer" : undefined}
+            disabled={authLoading}
+            onClick={onMobileProfileClick}
+          >
+            <UserRound size={22} aria-hidden="true" />
+          </button>
           {isNoticeOpen && (
             <div className="noticePopover mobileNoticePopover">
               <div className="noticePopoverHeader">공지사항</div>
@@ -490,14 +500,14 @@ export default function Header({
           </button>
           {openStudioMenu && (
             <div id="header-studio-submenu" className="headerNavDropdown" onMouseEnter={() => handleStudioMenuHover(true)} onMouseLeave={() => handleStudioMenuHover(false)}>
-              {studioItems.map((item) => (
+              {studioLinks.map(({ href, label }) => (
                 <button
-                  key={item.name}
+                  key={href}
                   type="button"
                   className="headerNavDropdownItem"
-                  onClick={() => handleStudioItemClick(item.path)}
+                  onClick={() => handleStudioItemClick(href)}
                 >
-                  {item.name}
+                  {label}
                 </button>
               ))}
             </div>

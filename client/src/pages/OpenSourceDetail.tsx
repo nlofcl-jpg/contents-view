@@ -3,6 +3,7 @@ import { ArrowLeft, ExternalLink, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Link, useParams } from "wouter";
 import NotFound from "@/pages/NotFound";
+import StudioSubnav from "@/components/StudioSubnav";
 import { loadKakaoSdk, shareOpenSourceOnKakao } from "@/lib/kakaoShare";
 
 const projects = {
@@ -89,6 +90,7 @@ export default function OpenSourceDetail() {
           </div>
         </div>
       </header>
+      <StudioSubnav />
 
       <div className="openSourceDetailContent">
         <section aria-labelledby="open-source-about">

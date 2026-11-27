@@ -4,6 +4,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { downloadFlowAutomationFile } from "@/lib/protectedDownload";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
+import StudioSubnav from "@/components/StudioSubnav";
 
 const installSteps = [
   {
@@ -73,6 +74,7 @@ export default function FlowAutomation() {
         <span className="flowAutomationCategory">Chrome 확장프로그램</span>
         <h1>Google Flow 오토메이션</h1>
         <p>Google Flow에서 이미지 작업을 자동화하여 빠르게 작업하세요.</p>
+        <StudioSubnav />
         <button
           type="button"
           className="flowAutomationDownloadButton"

@@ -92,8 +92,7 @@ export default function NewsSearchResults() {
     <div className="pageContainer newsPageContainer">
       <NewsTrendHeader />
 
-      <section className="newsSearchSection" aria-labelledby="news-search-result-title">
-        <h2 id="news-search-result-title" className="newsSearchTitle">뉴스 검색</h2>
+      <div className="newsSearchSection">
         <SearchGlowForm onSubmit={handleSearch} className="heroSearch newsAnalysisComposer" role="search" aria-label="뉴스 검색">
           <input
             ref={searchInputRef}
@@ -107,7 +106,7 @@ export default function NewsSearchResults() {
             <Search size={18} aria-hidden="true" />
           </button>
         </SearchGlowForm>
-      </section>
+      </div>
 
       <section className={keyword ? "newsSearchResultsSection" : "analysisEmptyState"}>
         {keyword && (

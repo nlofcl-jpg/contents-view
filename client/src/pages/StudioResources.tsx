@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import StudioSubnav from "@/components/StudioSubnav";
+import StudioSectionHeader from "@/components/StudioSectionHeader";
 import DeskClockFace from "./DeskClockFace";
 import FlipClockFace from "./FlipClockFace";
 import LuxuryClockFace from "./LuxuryClockFace";
@@ -405,17 +407,19 @@ function ClockGallery() {
 export default function StudioResources({ showClocks = false }: { showClocks?: boolean }) {
   return (
     <div className="aiStudioPageContainer">
-      <section className="aiStudioVideoCatalog" aria-labelledby="studio-resources-title">
-        <header className="studioResourceHeader">
-          {showClocks && (
-            <Link href="/ai-studio/resources" className="issueBackButton">
-              <ChevronLeft size={15} aria-hidden="true" />도구
-            </Link>
-          )}
-          <h1 id="studio-resources-title" className={showClocks ? "sr-only" : "pageTitle"}>
-            {showClocks ? "시계" : "도구"}
-          </h1>
-        </header>
+      {!showClocks && <StudioSectionHeader title="도구">콘텐츠 제작에 필요한 도구를 한곳에서</StudioSectionHeader>}
+      <section className="aiStudioVideoCatalog" aria-label={showClocks ? "시계" : "도구 목록"}>
+        {showClocks && (
+          <>
+            <header className="studioResourceHeader">
+              <Link href="/ai-studio/resources" className="issueBackButton">
+                <ChevronLeft size={15} aria-hidden="true" />도구
+              </Link>
+              <h1 className="sr-only">시계</h1>
+            </header>
+            <StudioSubnav />
+          </>
+        )}
         {showClocks ? <ClockGallery /> : (
           <ul className="studioResourceGrid">
             <li>

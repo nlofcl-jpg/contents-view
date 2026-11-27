@@ -1,24 +1,20 @@
-import { Link } from "wouter";
+import { getStudioActiveHref, studioLinks } from "@/lib/studioNavigation";
+import { Link, useLocation, useSearch } from "wouter";
 
-type StudioSection = "production" | "programs" | "openSource";
-
-const sections: { id: StudioSection; label: string; href: string }[] = [
-  { id: "production", label: "콘텐츠 제작", href: "/ai-studio/video" },
-  { id: "programs", label: "프로그램", href: "/ai-studio/programs" },
-  { id: "openSource", label: "오픈소스", href: "/ai-studio/open-source" },
-];
-
-export default function StudioSubnav({ active }: { active: StudioSection }) {
+export default function StudioSubnav() {
+  const [location] = useLocation();
+  const path = location.replace(/\/$/, "");
+  const activeHref = getStudioActiveHref(path, useSearch());
   return (
-    <nav className="studioSubnav" aria-label="스튜디오 하위 메뉴">
-      {sections.map(section => (
+    <nav className="tabMenu youtubeTabMenu studioSubnav" aria-label="스튜디오 하위 메뉴">
+      {studioLinks.map(({ href, label }) => (
         <Link
-          key={section.id}
-          href={section.href}
-          className={`studioSubnavLink${active === section.id ? " active" : ""}`}
-          aria-current={active === section.id ? "page" : undefined}
+          key={href}
+          href={href}
+          className={`tabButton${activeHref === href ? " active" : ""}`}
+          aria-current={activeHref === href ? "page" : undefined}
         >
-          {section.label}
+          {label}
         </Link>
       ))}
     </nav>

@@ -1,11 +1,19 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { useLocation, useSearch } from "wouter";
-import { ChevronDown, X, Home, LogOut, User, ShieldCheck, Bookmark, MessageCircle } from "lucide-react";
+import { ChevronDown, X, Home, LogOut, User, ShieldCheck, Bookmark, MessageCircle, FileText, Send, Handshake } from "lucide-react";
 import { useState } from "react";
 import { getActiveNewsPath, newsLinks } from "@/lib/newsNavigation";
 import { commerceLinks, getCommerceTab } from "@/lib/commerceNavigation";
+import { getStudioActiveHref, studioLinks } from "@/lib/studioNavigation";
 import SocialIcons from "@/components/SocialIcons";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+
+const accountPlaceholders = [
+  { label: "약관 및 정책", Icon: FileText },
+  { label: "의견 보내기", Icon: Send },
+  { label: "제휴 문의", Icon: Handshake },
+];
 
 interface MobileMenuDrawerProps {
   panelType: "account" | "menu" | null;
@@ -30,7 +38,8 @@ export function MobileMenuDrawer({
   const [isCommerceOpen, setIsCommerceOpen] = useState(false);
   const [isStudioOpen, setIsStudioOpen] = useState(false);
 
-  const isOpen = panelType !== null;
+  const isOpen = panelType === "menu";
+  const isAccountOpen = panelType === "account" && isAuthenticated && Boolean(user);
 
   const handleLogout = async () => {
     await logout();
@@ -59,16 +68,67 @@ export function MobileMenuDrawer({
   const isCommunityPage = location === "/community";
   const isCommercePage = location === "/commerce";
   const activeCommerceTab = isCommercePage ? getCommerceTab(search) : null;
-  const isAIStudioPage = location?.startsWith("/ai-studio");
-  const isVideoProductionPage = location === "/ai-studio/video" || location.startsWith("/ai-studio/video/") ||
-    (location === "/ai-studio" && new URLSearchParams(window.location.search).get("tab") === "upcoming");
-  const isOpenSourcePage = location?.startsWith("/ai-studio/open-source");
-  const isStudioResourcesPage = location === "/ai-studio/resources" || location.startsWith("/ai-studio/resources/");
+  const isAIStudioPage = location === "/ai-studio" || location.startsWith("/ai-studio/");
+  const activeStudioHref = isAIStudioPage ? getStudioActiveHref(location.replace(/\/$/, ""), search) : null;
   const isAdminPage = location === "/admin";
   const isAdmin = isAuthenticated && user?.role === "admin";
 
   return (
     <>
+      <Sheet open={isAccountOpen} onOpenChange={open => { if (!open) onClose(); }}>
+        <SheetContent
+          id="mobile-account-drawer"
+          side="right"
+          aria-describedby={undefined}
+          className="mobileAccountDrawer z-[10020] w-[min(100%,320px)] gap-0 overflow-y-auto overscroll-contain border-0 text-slate-100 motion-reduce:animate-none"
+          overlayClassName="z-[10010] bg-black/50 motion-reduce:animate-none"
+        >
+          <SheetTitle className="sr-only">내 정보</SheetTitle>
+          <div className="px-4 pt-14 pb-6">
+            <button className="mobileNavItem" type="button" aria-current={isHomePage ? "page" : undefined} onClick={() => handleNavigation("/")}>
+              <Home size={18} aria-hidden="true" />
+              <span>홈</span>
+            </button>
+            <div className="mobileAccountCard">
+              <div className="mobileAccountHeader">
+                <div className="mobileAccountAvatar">{user?.name?.trim().charAt(0).toUpperCase() || "U"}</div>
+                <div className="mobileAccountInfo">
+                  <div className="mobileAccountName">{user?.name || "사용자"}</div>
+                  {user?.email && <div className="mobileAccountEmail">{user.email}</div>}
+                </div>
+              </div>
+            </div>
+            <div className="mobileMenuSectionTitle">계정</div>
+            <button className="mobileMenuAction" type="button" onClick={handleMyPage}>
+              <User size={18} aria-hidden="true" />
+              <span>내 정보</span>
+            </button>
+            <button className={`mobileMenuAction ${isSavedContentsPage ? "active" : ""}`} type="button" onClick={() => handleNavigation("/saved-contents")}>
+              <Bookmark size={18} aria-hidden="true" />
+              <span>내 보관함</span>
+            </button>
+            {accountPlaceholders.map(({ label, Icon }) => (
+              <button key={label} className="mobileMenuAction" type="button" disabled>
+                <Icon size={18} aria-hidden="true" />
+                <span>{label}</span>
+              </button>
+            ))}
+            {isAdmin && (
+              <button className="mobileMenuAction" type="button" onClick={() => handleNavigation("/admin")}>
+                <ShieldCheck size={18} aria-hidden="true" />
+                <span>Admin</span>
+              </button>
+            )}
+          </div>
+          <div className="mt-auto px-4 pb-[calc(12px+env(safe-area-inset-bottom,0px))]">
+            <button className="mobileMenuAction logout" type="button" onClick={handleLogout}>
+              <LogOut size={18} aria-hidden="true" />
+              <span>로그아웃</span>
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {/* Overlay */}
       {isOpen && (
         <div
@@ -79,7 +139,7 @@ export function MobileMenuDrawer({
       )}
 
       {/* Drawer */}
-      <div className={`mobileMenuDrawer ${isOpen ? "open" : ""}`}>
+      <div className={`mobileMenuDrawer ${isOpen ? "open" : ""}`} inert={!isOpen}>
         {/* 닫기 버튼 */}
         <button
           className="mobileMenuClose"
@@ -91,69 +151,16 @@ export function MobileMenuDrawer({
         </button>
 
         <div className={`mobileDrawerContent${panelType === "menu" ? " mobileDrawerNavigation" : ""}`}>
-          {/* 계정 패널 */}
-          {panelType === "account" && (
-            <>
-              {isAuthenticated && user ? (
-                <div className="mobileMenuSection">
-                  <div className="mobileAccountCard">
-                    <div className="mobileAccountHeader">
-                      <div className="mobileAccountAvatar">
-                        {user.name?.charAt(0).toUpperCase() || "U"}
-                      </div>
-                      <div className="mobileAccountInfo">
-                        <div className="mobileAccountName">{user.name || "사용자"}</div>
-                        {user.email && (
-                          <div className="mobileAccountEmail">{user.email}</div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mobileMenuSectionTitle">계정</div>
-
-                  <button
-                    className="mobileMenuAction"
-                    onClick={handleMyPage}
-                    type="button"
-                  >
-                    <User size={18} />
-                    <span>내 정보</span>
-                  </button>
-                  <button className={`mobileMenuAction ${isSavedContentsPage ? "active" : ""}`} onClick={() => handleNavigation("/saved-contents")} type="button">
-                    <Bookmark size={18} />
-                    <span>내 보관함</span>
-                  </button>
-                  {isAdmin && (
-                    <button
-                      className="mobileMenuAction"
-                      onClick={() => handleNavigation("/admin")}
-                      type="button"
-                    >
-                      <ShieldCheck size={18} />
-                      <span>Admin</span>
-                    </button>
-                  )}
-                  <button
-                    className="mobileMenuAction logout"
-                    onClick={handleLogout}
-                    type="button"
-                  >
-                    <LogOut size={18} />
-                    <span>로그아웃</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="mobileMenuSection">
-                  <div className="mobileLoginPrompt">
-                    로그인하여 모든 기능을 이용하세요
-                  </div>
-                  <a href={getLoginUrl()} className="neonAuthLink">
-                    로그인 / 가입
-                  </a>
-                </div>
-              )}
-            </>
+          {isOpen && (
+            <button
+              className={`mobileNavItem ${isHomePage ? "active" : ""}`}
+              aria-current={isHomePage ? "page" : undefined}
+              onClick={() => handleNavigation("/")}
+              type="button"
+            >
+              <Home size={18} aria-hidden="true" />
+              <span>홈</span>
+            </button>
           )}
 
           {/* 메뉴 패널 */}
@@ -166,15 +173,6 @@ export function MobileMenuDrawer({
                   </a>
                 </div>
               )}
-
-              <button
-                className={`mobileNavItem ${isHomePage ? "active" : ""}`}
-                onClick={() => handleNavigation("/")}
-                type="button"
-              >
-                <Home size={18} />
-                <span>홈</span>
-              </button>
 
               {/* 크리에이터 트렌드 그룹 */}
               <button
@@ -300,35 +298,17 @@ export function MobileMenuDrawer({
 
               {isStudioOpen && (
                 <div id="mobile-studio-submenu">
-                  <button
-                    className={`mobileNavItem subNavItem ${isVideoProductionPage ? "active" : ""}`}
-                    onClick={() => handleNavigation("/ai-studio/video")}
-                    type="button"
-                  >
-                    <span>콘텐츠 제작</span>
-                  </button>
-                  <button
-                    className={`mobileNavItem subNavItem ${isAIStudioPage && !isVideoProductionPage && !isOpenSourcePage && !isStudioResourcesPage ? "active" : ""}`}
-                    onClick={() => handleNavigation("/ai-studio/programs")}
-                    type="button"
-                  >
-                    <span>프로그램</span>
-                  </button>
-                  <button
-                    className={`mobileNavItem subNavItem ${isOpenSourcePage ? "active" : ""}`}
-                    onClick={() => handleNavigation("/ai-studio/open-source")}
-                    type="button"
-                  >
-                    <span>오픈소스</span>
-                  </button>
-                  <button
-                    className={`mobileNavItem subNavItem ${isStudioResourcesPage ? "active" : ""}`}
-                    aria-current={isStudioResourcesPage ? "page" : undefined}
-                    onClick={() => handleNavigation("/ai-studio/resources")}
-                    type="button"
-                  >
-                    <span>도구</span>
-                  </button>
+                  {studioLinks.map(({ href, label }) => (
+                    <button
+                      key={href}
+                      className={`mobileNavItem subNavItem ${activeStudioHref === href ? "active" : ""}`}
+                      aria-current={activeStudioHref === href ? "page" : undefined}
+                      onClick={() => handleNavigation(href)}
+                      type="button"
+                    >
+                      <span>{label}</span>
+                    </button>
+                  ))}
                 </div>
               )}
 

@@ -8,23 +8,11 @@ import VoiceSearchButton from "@/components/VoiceSearchButton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NAVER_GUEST_DAILY_LIMIT_MESSAGE, NAVER_MEMBER_DAILY_LIMIT_MESSAGE } from "@shared/naverAnalysisQuota";
 import { trpc } from "@/lib/trpc";
+import { formatDecimal, formatDelta, formatNumber, formatPercent, formatRatio, getBlogCompetitionStrength, getBlogSearchRatio, getCompetitionLabel, getSeriesSummary, type KeywordMetric } from "@/lib/naverKeywordMetrics";
 import { useNaverTrendComparison } from "@/components/NaverTrendComparison";
 import { ChevronDown, CircleAlert, ExternalLink, Heart, ListFilter, Loader2, MessageCircle, RotateCcw, Search, UserRound } from "lucide-react";
 import { useLocation } from "wouter";
 
-
-type KeywordMetric = {
-  keyword: string;
-  monthlyPcSearches: number | null;
-  monthlyMobileSearches: number | null;
-  monthlyTotalSearches: number | null;
-  monthlyPcClicks: number | null;
-  monthlyMobileClicks: number | null;
-  monthlyTotalClicks: number | null;
-  competition: string | null;
-  averageAdDepth: number | null;
-  similarity: number | null;
-};
 
 type BlogAnalysisPost = {
   rank: number;
@@ -188,28 +176,6 @@ export default function UnifiedInsights() {
     return new URLSearchParams(window.location.search).get("keyword")?.trim() || "";
   };
 
-  const getSeriesSummary = (series?: { ratio: number }[]) => {
-    if (!series || series.length === 0) {
-      return { latest: null as number | null, delta: null as number | null, peak: null as number | null };
-    }
-
-    const latest = series[series.length - 1]?.ratio ?? null;
-    const previous = series.length > 1 ? series[series.length - 2]?.ratio : null;
-    const delta = latest !== null && previous !== null ? latest - previous : null;
-    const peak = Math.max(...series.map((item) => item.ratio));
-    return { latest, delta, peak };
-  };
-
-  const formatRatio = (value: number | null) => {
-    if (value === null || Number.isNaN(value)) return "-";
-    return `${Math.round(value * 10) / 10}`;
-  };
-
-  const formatDelta = (value: number | null) => {
-    if (value === null || Number.isNaN(value)) return "비교 데이터 없음";
-    if (value === 0) return "변동 없음";
-    return `${value > 0 ? "+" : ""}${Math.round(value * 10) / 10}p`;
-  };
 
   const primaryKeyword = chartData?.keywords?.[0] || keywords[0] || "";
   const primaryTrendSummary = getSeriesSummary(primaryKeyword ? chartData?.trend?.[primaryKeyword] : undefined);
@@ -227,24 +193,8 @@ export default function UnifiedInsights() {
   const visibleRelatedKeywords = sortedRelatedKeywords.slice(0, 1);
   const contentVolume = chartData?.meta?.contentVolume;
   const blogTotalDocuments = contentVolume?.sources?.find((item: any) => item.key === "blog")?.totalDocuments ?? null;
-  const searchRatio = primaryMetric?.monthlyTotalSearches
-    ? blogTotalDocuments / primaryMetric.monthlyTotalSearches
-    : null;
+  const searchRatio = getBlogSearchRatio(blogTotalDocuments, primaryMetric?.monthlyTotalSearches);
 
-  const formatNumber = (value: number | null | undefined, suffix = "") => {
-    if (value === null || value === undefined || Number.isNaN(value)) return "-";
-    return `${Math.round(value).toLocaleString("ko-KR")}${suffix}`;
-  };
-
-  const formatDecimal = (value: number | null | undefined, suffix = "") => {
-    if (value === null || value === undefined || Number.isNaN(value)) return "-";
-    return `${Math.round(value * 10) / 10}${suffix}`;
-  };
-
-  const formatPercent = (value: number | null | undefined) => {
-    if (value === null || value === undefined || Number.isNaN(value)) return "-";
-    return `${Math.round(value)}%`;
-  };
 
   const formatBlogDate = (value: string | undefined) => {
     if (!value) return "";
@@ -257,26 +207,6 @@ export default function UnifiedInsights() {
     });
   };
 
-  const getCompetitionLabel = (competition: string | null | undefined) => {
-    if (!competition) return "-";
-    const labels: Record<string, string> = {
-      높음: "높음",
-      중간: "중간",
-      낮음: "낮음",
-      HIGH: "높음",
-      MID: "중간",
-      LOW: "낮음",
-    };
-    return labels[competition] || competition;
-  };
-
-  const getBlogCompetitionStrength = (ratio: number | null) => {
-    if (ratio === null || Number.isNaN(ratio)) return "-";
-    if (ratio < 1) return "낮음";
-    if (ratio < 5) return "보통";
-    if (ratio < 20) return "높음";
-    return "포화";
-  };
 
 
   // tRPC mutation

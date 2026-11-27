@@ -17,7 +17,9 @@ export default function Home() {
   return (
     <div className="homePage">
       <Hero />
-      <div className="homeTrendContent"><ServiceCards /></div>
+      <div className="homeTrendContent">
+        <ServiceCards />
+      </div>
     </div>
   );
 }

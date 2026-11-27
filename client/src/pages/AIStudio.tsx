@@ -3,6 +3,8 @@ import { useState } from "react";
 import { Link, Redirect, useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import GuestAccessPrompt from "@/components/GuestAccessPrompt";
+import StudioSubnav from "@/components/StudioSubnav";
+import StudioSectionHeader from "@/components/StudioSectionHeader";
 import "./studioProductionBanners.css";
 
 type StudioTab = "programs" | "upcoming" | "openSource";
@@ -121,26 +123,17 @@ export default function AIStudio() {
 
   return (
     <div className="aiStudioPageContainer">
-      {!styleGroup && !productionFormat && <section className={`aiStudioHero ${activeTab === "upcoming" ? "aiStudioHeroVideo" : ""}`} aria-labelledby="ai-studio-title">
-        <div className="aiStudioHeroContent">
-          <span className="aiStudioHeroEyebrow">CONTENTS VIEW</span>
-          <h1 id="ai-studio-title" className="aiStudioHeroTitle">
-            <span className="aiStudioHeroEnglish">STUDIO</span>
-            {activeTab === "upcoming" ? (
-              <span className="aiStudioHeroKorean">아이디어를 콘텐츠로, <strong>더 빠르게</strong></span>
-            ) : activeTab === "openSource" ? (
-              <span className="aiStudioHeroKorean">열린 도구로, <strong>더 자유롭게</strong></span>
-            ) : (
-              <span className="aiStudioHeroKorean">다양한 도구로, <strong>제작을 더 효율적으로</strong></span>
-            )}
-          </h1>
-        </div>
-        <div className="aiStudioHeroMedia" aria-hidden="true">
-          {activeTab === "upcoming" && (
-            <img src="/ai-studio-video-hero.png" alt="" />
+      {!styleGroup && !productionFormat && (
+        <StudioSectionHeader image={activeTab === "upcoming" ? "/ai-studio-video-hero.png" : undefined}>
+          {activeTab === "upcoming" ? (
+            <>아이디어를 콘텐츠로, <strong>더 빠르게</strong></>
+          ) : activeTab === "openSource" ? (
+            <>열린 도구로, <strong>더 자유롭게</strong></>
+          ) : (
+            <>다양한 도구로, <strong>제작을 더 효율적으로</strong></>
           )}
-        </div>
-      </section>}
+        </StudioSectionHeader>
+      )}
 
       {styleGroup ? (
         <section className="aiStudioVideoCatalog" aria-labelledby="studio-style-title">
@@ -148,6 +141,7 @@ export default function AIStudio() {
             <Link href="/ai-studio/video/styles" className="issueBackButton"><ChevronLeft size={15} aria-hidden="true" />영상</Link>
             <h1 id="studio-style-title" className="pageTitle">{styleGroup.title}</h1>
           </header>
+          <StudioSubnav />
           {styleGroup.sections.map(({ id, title, styles }) => {
             const CardTitle = title ? "h3" : "h2";
             return (
@@ -234,6 +228,7 @@ export default function AIStudio() {
             <Link href="/ai-studio/video" className="issueBackButton"><ChevronLeft size={15} aria-hidden="true" />콘텐츠 제작</Link>
             <h1 id="studio-format-title" className="pageTitle">{productionFormat.label}</h1>
           </header>
+          <StudioSubnav />
         </section>
       ) : (
         <nav className="studioProductionBanners studioProductionThumbnails" aria-label="콘텐츠 제작 유형">

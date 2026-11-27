@@ -147,7 +147,7 @@ describe("Gemini test access", () => {
 
   it("opens AI from a dedicated button and keeps ordinary analysis routes intact", () => {
     const hero = readFileSync(new URL("../client/src/components/Hero.tsx", import.meta.url), "utf8");
-    const menu = hero.match(/const searchPlatforms = \[([\s\S]*?)\];/)?.[1];
+    const menu = hero.match(/const searchPlatforms = \[([\s\S]*?)\] as const;/)?.[1];
     expect(menu?.match(/value: "(.*?)"/g)).toEqual(['value: "youtube"', 'value: "naver"', 'value: "news"']);
     expect(menu).not.toContain("aiPlatform");
     expect(hero).toContain('onClick={() => selectPlatform("ai")}');

@@ -3,7 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SupportChat from "@/components/SupportChat";
-import StudioMobileNav from "@/components/StudioMobileNav";
+import MobilePrimaryNav from "@/components/MobilePrimaryNav";
 
 import NotFound from "@/pages/NotFound";
 import Home from "@/pages/Home";
@@ -82,9 +82,9 @@ function App() {
   const [location, setLocation] = useLocation();
   const isPrivacyPage = location === "/privacy" || location === "/privacy/";
   const isTermsPage = location === "/terms" || location === "/terms/";
-  const isStudioPage = location === "/ai-studio" || location.startsWith("/ai-studio/");
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [isMyPageModalOpen, setIsMyPageModalOpen] = useState(false);
+  const mainContentRef = useRef<HTMLElement>(null);
 
   const [mobilePanelType, setMobilePanelType] = useState<"account" | "menu" | null>(null);
   const [guestMenuTarget, setGuestMenuTarget] = useState<string | null | undefined>(undefined);
@@ -128,6 +128,23 @@ function App() {
     setLocation(`/login${params.size ? `?${params.toString()}` : ""}`);
   };
 
+  const navigateFromMobileMenu = (path: string, direct = false) => {
+    const navigate = () => {
+      mainContentRef.current?.scrollTo({ top: 0 });
+      setLocation(path);
+    };
+    if (direct || path === "/" || !requestGuestMenuAccess(path, navigate)) navigate();
+  };
+
+  const openMobileAccount = () => {
+    if (authLoading) return;
+    if (isAuthenticated) setMobilePanelType("account");
+    else if (location !== "/login") {
+      const params = new URLSearchParams({ redirect: location + window.location.search });
+      setLocation(`/login?${params}`);
+    }
+  };
+
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
 
@@ -157,6 +174,8 @@ function App() {
             <Header
               onOpenMyPageModal={() => setIsMyPageModalOpen(true)}
               onGuestMenuAccess={requestGuestMenuAccess}
+              onMobileProfileClick={openMobileAccount}
+              mobileAccountOpen={mobilePanelType === "account"}
               onToggleMobileMenu={(panelType) => {
                 setMobilePanelType(panelType || null);
               }}
@@ -169,14 +188,14 @@ function App() {
               onGuestMenuAccess={requestGuestMenuAccess}
             />
 
-            <main className="mainContent">
+            <main ref={mainContentRef} className="mainContent">
               <WouterRouter>
                 <Router />
                 <Footer />
               </WouterRouter>
             </main>
 
-            {isStudioPage && <StudioMobileNav key={location} path={location.replace(/\/$/, "")} />}
+            <MobilePrimaryNav onNavigate={navigateFromMobileMenu} />
             <SupportChat />
 
             <MyPageModal isOpen={isMyPageModalOpen} onClose={() => setIsMyPageModalOpen(false)} />
