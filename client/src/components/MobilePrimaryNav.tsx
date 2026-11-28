@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, type MouseEvent } from "react";
-import { ChevronRight, createLucideIcon, LayoutGrid } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { ChevronRight, createLucideIcon, LayoutGrid, X } from "lucide-react";
+import { Drawer } from "vaul";
 import { Link, useLocation, useSearch } from "wouter";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { commerceLinks, getCommerceTab } from "@/lib/commerceNavigation";
@@ -62,8 +63,121 @@ const navButtons = [
   { id: "studio", label: "스튜디오", Icon: RoundedPlay },
 ] as const;
 
-const itemClass = "grid h-14 w-full min-w-0 place-items-center rounded focus-visible:outline-2 focus-visible:outline-sky-300";
+const itemClass = "grid h-16 w-full min-w-0 place-items-center rounded focus-visible:outline-2 focus-visible:outline-sky-300";
 const drawerItemClass = "block w-full rounded py-2 text-left text-[13px] text-slate-300 no-underline hover:text-white focus-visible:outline-2 focus-visible:outline-sky-300 aria-[current=page]:text-sky-300";
+const bottomMenuTitleClearance = 28;
+
+function MobileBottomMenu({ menu, open, currentHref, onOpenChange, onLink, restoreFocus }: {
+  menu: MenuGroup;
+  open: boolean;
+  currentHref: string;
+  onOpenChange: (open: boolean) => void;
+  onLink: (event: MouseEvent<HTMLAnchorElement>, href: string) => void;
+  restoreFocus: (event: Event) => void;
+}) {
+  const [viewportHeight, setViewportHeight] = useState(() => typeof window === "undefined" ? 800 : window.innerHeight);
+  const [expanded, setExpanded] = useState(false);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const dragStartY = useRef<number | null>(null);
+  const compactHeight = Math.min(302, Math.round(viewportHeight * 0.64)) + bottomMenuTitleClearance;
+  const expandedHeight = Math.min(compactHeight + 104, Math.round(viewportHeight * 0.84));
+  const compact = `${compactHeight}px`;
+  const full = `${expandedHeight}px`;
+  const snapPoints = useMemo(() => [compact, full], [compact, full]);
+
+  useEffect(() => {
+    if (!open) return;
+    const measure = () => setViewportHeight(window.innerHeight);
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [open]);
+
+  function closeFromPosition(top = drawerRef.current?.getBoundingClientRect().top) {
+    if (top !== undefined) {
+      drawerRef.current?.style.setProperty("--mobile-section-exit-offset", `${top}px`);
+    }
+    onOpenChange(false);
+  }
+
+  return (
+    <Drawer.Root
+      open={open}
+      onOpenChange={nextOpen => {
+        if (nextOpen) onOpenChange(true);
+        else closeFromPosition();
+      }}
+      direction="bottom"
+      snapPoints={snapPoints}
+      activeSnapPoint={expanded ? full : compact}
+      setActiveSnapPoint={point => setExpanded(point === full)}
+      onRelease={event => {
+        const start = dragStartY.current;
+        dragStartY.current = null;
+        if (!expanded && start !== null && event.clientY - start > 80) {
+          // Vaul resets to the nearest snap point before invoking onRelease.
+          closeFromPosition(Math.min(viewportHeight, viewportHeight - compactHeight + event.clientY - start));
+        }
+      }}
+      snapToSequentialPoint
+      fadeFromIndex={0}
+      noBodyStyles
+      autoFocus
+    >
+      <Drawer.Portal>
+        <Drawer.Overlay className="fixed inset-0 z-[10029] bg-black/30 md:hidden" />
+        <Drawer.Content
+          ref={drawerRef}
+          aria-describedby={undefined}
+          className="mobileSectionSheet fixed inset-x-0 bottom-0 z-[10030] h-dvh rounded-t-3xl border-t border-white/15 bg-background text-slate-100 md:hidden"
+          onCloseAutoFocus={restoreFocus}
+          onPointerDownCapture={event => { dragStartY.current = event.clientY; }}
+        >
+          <div className="flex flex-col px-5 pt-4 pb-[calc(12px+env(safe-area-inset-bottom,0px))]" style={{ maxHeight: expanded ? expandedHeight : compactHeight }}>
+            <Drawer.Handle
+              role="button"
+              tabIndex={0}
+              aria-hidden={false}
+              aria-label={expanded ? "메뉴 손잡이: 닫기" : "메뉴 손잡이: 높이기"}
+              className="mb-3 shrink-0 cursor-grab focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sky-300 active:cursor-grabbing"
+              onKeyDown={event => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                if (expanded) closeFromPosition();
+                else setExpanded(true);
+              }}
+            />
+            <Drawer.Title className="mb-3 px-10 text-center text-lg font-semibold text-slate-100" style={{ marginTop: bottomMenuTitleClearance }}>
+              {menu.title}
+            </Drawer.Title>
+            <Drawer.Close asChild>
+              <button type="button" className="absolute top-3 right-4 grid size-9 place-items-center rounded-full text-slate-300 hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-sky-300" aria-label="메뉴 닫기">
+                <X size={18} aria-hidden="true" />
+              </button>
+            </Drawer.Close>
+            <div data-vaul-no-drag className="min-h-0 overflow-y-auto overscroll-contain">
+              <ul className="divide-y divide-white/10 overflow-hidden rounded-2xl bg-slate-950/40 px-3">
+                {menu.pages.map(({ href, label }) => (
+                  <li key={href}>
+                    <Link
+                      href={href}
+                      aria-current={href === currentHref ? "page" : undefined}
+                      className={cn(drawerItemClass, "mobileSectionLink flex min-h-11 items-center justify-between gap-3 rounded-md text-sm transition-colors focus-visible:-outline-offset-2 motion-reduce:transition-none")}
+                      onClick={event => onLink(event, href)}
+                    >
+                      {label}
+                      <ChevronRight size={16} className="shrink-0 text-slate-400" aria-hidden="true" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </Drawer.Content>
+      </Drawer.Portal>
+    </Drawer.Root>
+  );
+}
 
 export default function MobilePrimaryNav({ onNavigate }: {
   onNavigate: (path: string) => void;
@@ -76,6 +190,12 @@ export default function MobilePrimaryNav({ onNavigate }: {
   const bottomMenu = view === "sections" ? null : bottomMenus[view];
   const navRef = useRef<HTMLElement>(null);
   const openerRef = useRef<HTMLButtonElement>(null);
+
+  function restoreFocus(event: Event) {
+    if (!openerRef.current) return;
+    event.preventDefault();
+    openerRef.current.focus({ preventScroll: true });
+  }
 
   function closeForAction() {
     openerRef.current = null;
@@ -138,7 +258,7 @@ export default function MobilePrimaryNav({ onNavigate }: {
   }, []);
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <>
       <nav ref={navRef} data-drawer-open={open && view === "sections"} aria-label="모바일 메인 메뉴" className="mobilePrimaryNav fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-white/10 px-2 pb-[env(safe-area-inset-bottom,0px)] md:hidden">
         {navButtons.map(({ id, label, Icon }) => {
           const drawerButton = id !== "home";
@@ -171,43 +291,25 @@ export default function MobilePrimaryNav({ onNavigate }: {
           );
         })}
       </nav>
-      <SheetContent
-        side={bottomMenu ? "bottom" : "left"}
-        aria-describedby={undefined}
-        className={cn(
-          "z-[10030] gap-0 overflow-y-auto overscroll-contain text-slate-100 motion-reduce:animate-none md:hidden",
-          bottomMenu
-            ? "mobileSectionSheet max-h-[75dvh] rounded-t-lg border-white/15 px-5 pt-5 pb-[calc(16px+env(safe-area-inset-bottom,0px))]"
-            : "mobilePrimaryDrawer border-0 pb-[env(safe-area-inset-bottom,0px)]"
-        )}
-        overlayClassName="z-[10029] bg-black/30 motion-reduce:animate-none md:hidden"
-        onCloseAutoFocus={event => {
-          if (!openerRef.current) return;
-          event.preventDefault();
-          openerRef.current.focus({ preventScroll: true });
-        }}
-      >
-        {bottomMenu ? (
-          <>
-            <SheetTitle className="mb-3 pr-10 text-base text-slate-100">{bottomMenu.title}</SheetTitle>
-            <ul className="divide-y divide-white/10 overflow-hidden rounded-lg bg-slate-950/40 px-3">
-              {bottomMenu.pages.map(({ href, label }) => (
-                <li key={href}>
-                  <Link
-                    href={href}
-                    aria-current={href === currentHref ? "page" : undefined}
-                    className={cn(drawerItemClass, "flex min-h-11 items-center justify-between gap-3 rounded-none text-sm hover:bg-white/5 focus-visible:-outline-offset-2")}
-                    onClick={event => handleLink(event, href)}
-                  >
-                    {label}
-                    <ChevronRight size={16} aria-hidden="true" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <>
+      {bottomMenu ? (
+        <MobileBottomMenu
+          key={view}
+          menu={bottomMenu}
+          open={open}
+          currentHref={currentHref}
+          onOpenChange={setOpen}
+          onLink={handleLink}
+          restoreFocus={restoreFocus}
+        />
+      ) : (
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetContent
+            side="left"
+            aria-describedby={undefined}
+            className="mobilePrimaryDrawer z-[10030] gap-0 overflow-y-auto overscroll-contain border-0 pb-[env(safe-area-inset-bottom,0px)] text-slate-100 motion-reduce:animate-none md:hidden"
+            overlayClassName="z-[10029] bg-black/30 motion-reduce:animate-none md:hidden"
+            onCloseAutoFocus={restoreFocus}
+          >
             <SheetTitle className="sr-only">전체 메뉴</SheetTitle>
             <div className="space-y-5 px-5 pt-14 pb-6">
               <Link
@@ -239,9 +341,9 @@ export default function MobilePrimaryNav({ onNavigate }: {
                 </section>
               ))}
             </div>
-          </>
-        )}
-      </SheetContent>
-    </Sheet>
+          </SheetContent>
+        </Sheet>
+      )}
+    </>
   );
 }

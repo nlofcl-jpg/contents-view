@@ -5416,14 +5416,6 @@ a {
     animation: mobileAccountDrawerOut var(--mobile-nav-motion) both;
   }
 
-  .mobileSectionSheet[data-state="open"] {
-    animation: mobileSectionSheetIn var(--mobile-nav-motion) both;
-  }
-
-  .mobileSectionSheet[data-state="closed"] {
-    animation: mobileSectionSheetOut var(--mobile-nav-motion) both;
-  }
-
   .app:has(> .mobilePrimaryNav):not(:has(.heroAiPage)) .supportChatLauncher {
     bottom: calc(78px + env(safe-area-inset-bottom, 0px));
   }
@@ -10274,6 +10266,12 @@ input[type="date"].youtubeSelect {
   margin: 12px 0 0;
 }
 
+@media (width < 768px) {
+  .studioSubnav.tabMenu {
+    display: none;
+  }
+}
+
 @media (max-width: 768px) {
   .newsTrendHeader .pageDescription {
     display: none;
@@ -11650,19 +11648,23 @@ input[type="date"].youtubeSelect {
   to { transform: translateX(100%); }
 }
 
-@keyframes mobileSectionSheetIn {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
+@keyframes mobileSectionSheetExit {
+  from { transform: translateY(var(--mobile-section-exit-offset, var(--snap-point-height, 0px))); }
+  to { transform: translateY(100%); }
 }
 
-@keyframes mobileSectionSheetOut {
-  from { transform: translateY(0); }
-  to { transform: translateY(100%); }
+.mobileSectionSheet[data-vaul-drawer][data-vaul-drawer-direction="bottom"][data-vaul-snap-points="false"][data-state="closed"] {
+  animation: mobileSectionSheetExit var(--mobile-nav-motion) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root {
     --mobile-nav-motion: 0ms linear;
+  }
+
+  .mobileSectionSheet[data-vaul-drawer] {
+    animation-duration: 0ms;
+    transition: none !important;
   }
 }
 
@@ -11682,6 +11684,28 @@ input[type="date"].youtubeSelect {
     background: var(--trend-glass-background);
     -webkit-backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);
+  }
+
+  .mobileSectionSheet [data-vaul-handle] {
+    width: 28px;
+    height: 2px;
+    background: rgb(226 232 240 / 0.24);
+  }
+
+  .mobileSectionSheet .mobileSectionLink {
+    color: var(--color-slate-300);
+  }
+
+  .mobileSectionSheet .mobileSectionLink[aria-current="page"] {
+    color: var(--color-sky-300);
+  }
+
+  .mobileSectionSheet .mobileSectionLink:is(:hover, :focus-visible, :active) {
+    color: var(--color-sky-400);
+  }
+
+  .mobileSectionSheet .mobileSectionLink[aria-current="page"]:is(:hover, :focus-visible, :active) {
+    color: var(--color-sky-100);
   }
 }
 
